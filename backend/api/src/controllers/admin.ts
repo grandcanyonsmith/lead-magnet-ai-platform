@@ -1,7 +1,7 @@
 import { db } from "../utils/db";
 import { RouteResponse } from "../routes";
 import { RequestContext } from "../routes/router";
-import { requireSuperAdmin, requireAdmin } from "../utils/rbac";
+import { requireSuperAdmin, requireAdmin, requireUser } from "../utils/rbac";
 import { ApiError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { env } from "../utils/env";
@@ -76,6 +76,70 @@ class AdminController {
       };
     } catch (error) {
       logger.error("[Admin] Error listing users", {
+        error: error instanceof Error ? error.message : String(error),
+        searchTerm,
+      });
+      throw new ApiError("Failed to list users", 500);
+    }
+  }
+
+  /**
+   * List users for the current tenant (authenticated users only).
+   * GET /admin/users/tenant
+   */
+  async listTenantUsers(
+    _params: Record<string, string>,
+    _body: any,
+    query: Record<string, string | undefined>,
+    _tenantId: string | undefined,
+    context?: RequestContext,
+  ): Promise<RouteResponse> {
+    const auth = requireUser(context);
+
+    const searchTerm = query.q;
+    const limit = parseInt(query.limit || "50", 10);
+
+    try {
+      const allUsers = await db.scan(USERS_TABLE, 1000);
+      let users = allUsers.filter(
+        (user: any) => user.customer_id === auth.customerId,
+      );
+
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        users = users.filter((user: any) => {
+          const email = (user.email || "").toLowerCase();
+          const name = (user.name || "").toLowerCase();
+          return email.includes(searchLower) || name.includes(searchLower);
+        });
+      }
+
+      users = users.slice(0, limit);
+
+      const sanitizedUsers = users.map((user: any) => ({
+        user_id: user.user_id,
+        email: user.email,
+        name: user.name,
+        customer_id: user.customer_id,
+        role: user.role || "USER",
+        created_at: user.created_at,
+      }));
+
+      logger.debug("[Admin] Listed tenant users", {
+        count: sanitizedUsers.length,
+        searchTerm,
+        customerId: auth.customerId,
+      });
+
+      return {
+        statusCode: 200,
+        body: {
+          users: sanitizedUsers,
+          count: sanitizedUsers.length,
+        },
+      };
+    } catch (error) {
+      logger.error("[Admin] Error listing tenant users", {
         error: error instanceof Error ? error.message : String(error),
         searchTerm,
       });

@@ -44,6 +44,40 @@ def _to_dict(value: Any) -> Dict[str, Any]:
         return value.dict()
     return {}
 
+FILE_LIKE_TLDS = {
+    "pdf", "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "tif", "tiff",
+    "txt", "csv", "json", "xml", "html", "htm", "md",
+    "zip", "tar", "gz", "tgz", "bz2", "7z", "rar",
+    "mp3", "mp4", "mov", "avi", "mkv", "wav", "flac",
+}
+
+def _is_likely_filename_domain(domain: str) -> bool:
+    if not domain or "." not in domain:
+        return False
+    tld = domain.rsplit(".", 1)[-1].lower()
+    return tld in FILE_LIKE_TLDS
+
+def _supports_responses_api(openai_client: Any) -> bool:
+    try:
+        supports = getattr(openai_client, "supports_responses", None)
+        if callable(supports):
+            return bool(supports())
+    except Exception:
+        return False
+    try:
+        client = getattr(openai_client, "client", openai_client)
+        responses_client = getattr(client, "responses", None)
+        return callable(getattr(responses_client, "create", None))
+    except Exception:
+        return False
+
+def _get_responses_client(openai_client: Any) -> Any:
+    try:
+        client = getattr(openai_client, "client", openai_client)
+        return getattr(client, "responses", None)
+    except Exception:
+        return None
+
 def _is_incomplete_openai_stream_error(err: Exception) -> bool:
     """
     The OpenAI Python SDK streaming iterator expects a terminal `response.completed`
@@ -290,6 +324,26 @@ class CUAgent:
             await self.env.initialize(display_width, display_height)
             yield LogEvent(type='log', timestamp=time.time(), level='info', message='Environment ready.')
 
+            if not _supports_responses_api(openai_client):
+                yield LogEvent(
+                    type='log',
+                    timestamp=time.time(),
+                    level='error',
+                    message=(
+                        "❌ OpenAI SDK missing Responses API; update worker dependency "
+                        "(openai>=2.7.2) to run shell/computer_use tools."
+                    ),
+                )
+                yield LoopCompleteEvent(
+                    type='complete',
+                    timestamp=time.time(),
+                    final_text="",
+                    screenshots=screenshot_urls,
+                    usage={},
+                    reason='error',
+                )
+                return
+
             # Check if instructions/input_text contain a URL and navigate there
             import re
             url_search_text = f"{instructions or ''}\n{input_text or ''}".strip()
@@ -310,6 +364,9 @@ class CUAgent:
                     domain = domain_match.group(1)
                     # Don't match common non-URL words
                     if domain and not domain.lower() in ['com', 'org', 'net', 'io', 'ai', 'the', 'and', 'for']:
+                        if _is_likely_filename_domain(domain):
+                            domain = None
+                    if domain:
                         initial_url = f"https://{domain}"
             
             # Navigate to URL if found, otherwise use default
@@ -449,12 +506,16 @@ class CUAgent:
                 # Stream model output live (delta events) and still capture the final response object
                 # for tool parsing and loop continuation.
                 response = None
+                responses_client = _get_responses_client(openai_client)
                 max_stream_attempts = 2
                 for attempt in range(1, max_stream_attempts + 1):
                     buffer = ""
                     last_flush = time.time()
                     try:
-                        with openai_client.client.responses.stream(**api_params) as stream:
+                        stream_fn = getattr(responses_client, "stream", None)
+                        if not callable(stream_fn):
+                            raise AttributeError("Responses API stream unavailable")
+                        with stream_fn(**api_params) as stream:
                             for ev in stream:
                                 ev_type = getattr(ev, "type", "") or ""
                                 if ev_type == "response.output_text.delta":
@@ -487,6 +548,21 @@ class CUAgent:
                             )
                             buffer = ""
 
+                        if isinstance(stream_err, AttributeError):
+                            yield LogEvent(
+                                type="log",
+                                timestamp=time.time(),
+                                level="warning",
+                                message="Responses stream unavailable; falling back to non-streaming call…",
+                            )
+                            if hasattr(openai_client, "make_api_call"):
+                                response = openai_client.make_api_call(initial_params)
+                                break
+                            if responses_client and callable(getattr(responses_client, "create", None)):
+                                response = responses_client.create(**api_params)
+                                break
+                            raise
+
                         if _is_incomplete_openai_stream_error(stream_err) and attempt < max_stream_attempts:
                             yield LogEvent(
                                 type="log",
@@ -510,8 +586,13 @@ class CUAgent:
                                     "Falling back to non-streaming call…"
                                 ),
                             )
-                            response = openai_client.client.responses.create(**api_params)
-                            break
+                            if responses_client and callable(getattr(responses_client, "create", None)):
+                                response = responses_client.create(**api_params)
+                                break
+                            if hasattr(openai_client, "make_api_call"):
+                                response = openai_client.make_api_call(initial_params)
+                                break
+                            raise
 
                         raise
 
@@ -1368,12 +1449,16 @@ class CUAgent:
                         )
 
                         response = None
+                        responses_client = _get_responses_client(openai_client)
                         max_stream_attempts = 2
                         for attempt in range(1, max_stream_attempts + 1):
                             buffer = ""
                             last_flush = time.time()
                             try:
-                                with openai_client.client.responses.stream(**api_params) as stream:
+                                stream_fn = getattr(responses_client, "stream", None)
+                                if not callable(stream_fn):
+                                    raise AttributeError("Responses API stream unavailable")
+                                with stream_fn(**api_params) as stream:
                                     for ev in stream:
                                         ev_type = getattr(ev, "type", "") or ""
                                         if ev_type == "response.output_text.delta":
@@ -1405,6 +1490,21 @@ class CUAgent:
                                     )
                                     buffer = ""
 
+                                if isinstance(stream_err, AttributeError):
+                                    yield LogEvent(
+                                        type="log",
+                                        timestamp=time.time(),
+                                        level="warning",
+                                        message="Responses stream unavailable; falling back to non-streaming call…",
+                                    )
+                                    if hasattr(openai_client, "make_api_call"):
+                                        response = openai_client.make_api_call(next_params)
+                                        break
+                                    if responses_client and callable(getattr(responses_client, "create", None)):
+                                        response = responses_client.create(**api_params)
+                                        break
+                                    raise
+
                                 if _is_incomplete_openai_stream_error(stream_err) and attempt < max_stream_attempts:
                                     yield LogEvent(
                                         type="log",
@@ -1428,8 +1528,13 @@ class CUAgent:
                                             "Falling back to non-streaming call…"
                                         ),
                                     )
-                                    response = openai_client.client.responses.create(**api_params)
-                                    break
+                                    if responses_client and callable(getattr(responses_client, "create", None)):
+                                        response = responses_client.create(**api_params)
+                                        break
+                                    if hasattr(openai_client, "make_api_call"):
+                                        response = openai_client.make_api_call(next_params)
+                                        break
+                                    raise
 
                                 raise
 

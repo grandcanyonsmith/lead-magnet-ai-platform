@@ -206,6 +206,21 @@ export function registerAdminRoutes(): void {
     },
   );
 
+  router.register(
+    "GET",
+    "/admin/users/tenant",
+    async (_params, _body, query, tenantId, context) => {
+      logger.info("[Admin Routes] GET /admin/users/tenant");
+      return await adminController.listTenantUsers(
+        _params,
+        _body,
+        query,
+        tenantId,
+        context,
+      );
+    },
+  );
+
   // Agency management routes (super admin only)
   router.register(
     "GET",

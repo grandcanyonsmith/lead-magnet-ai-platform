@@ -3,7 +3,7 @@
  */
 
 import { BaseEntity } from "./common";
-import { ServiceTier } from "./workflow";
+import { ReasoningEffort, ServiceTier } from "./workflow";
 
 export interface OnboardingChecklist {
   complete_profile?: boolean;
@@ -26,6 +26,9 @@ export interface Settings extends BaseEntity {
   default_ai_model?: string;
   default_tool_choice?: "auto" | "required" | "none";
   default_service_tier?: ServiceTier;
+  default_workflow_improvement_user_id?: string;
+  default_workflow_improvement_service_tier?: ServiceTier;
+  default_workflow_improvement_reasoning_effort?: ReasoningEffort;
   logo_url?: string;
   webhook_url?: string;
   ghl_webhook_url?: string;
@@ -57,6 +60,9 @@ export interface SettingsUpdateRequest {
   default_ai_model?: string;
   default_tool_choice?: "auto" | "required" | "none";
   default_service_tier?: ServiceTier;
+  default_workflow_improvement_user_id?: string;
+  default_workflow_improvement_service_tier?: ServiceTier;
+  default_workflow_improvement_reasoning_effort?: ReasoningEffort;
   logo_url?: string;
   ghl_webhook_url?: string;
   custom_domain?: string;
@@ -80,6 +86,9 @@ export interface SettingsFormData {
   default_ai_model: string;
   default_tool_choice: "auto" | "required" | "none";
   default_service_tier: ServiceTier;
+  default_workflow_improvement_user_id: string;
+  default_workflow_improvement_service_tier: ServiceTier;
+  default_workflow_improvement_reasoning_effort: ReasoningEffort;
   logo_url: string;
   ghl_webhook_url: string;
   custom_domain: string;

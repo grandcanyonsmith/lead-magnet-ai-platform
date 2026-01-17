@@ -20,7 +20,11 @@ import { truncate } from "@/utils/formatting";
 
 import type { Artifact } from "@/types/artifact";
 import type { ArtifactGalleryItem, Job } from "@/types/job";
-import type { Workflow, WorkflowVersionSummary } from "@/types";
+import type {
+  Workflow,
+  WorkflowVersionRecord,
+  WorkflowVersionSummary,
+} from "@/types";
 
 const formatTimestamp = (value?: string) => {
   if (!value) return "—";
@@ -64,6 +68,12 @@ export default function WorkflowVersionsClient() {
     Record<string, Artifact[]>
   >({});
   const [artifactsLoading, setArtifactsLoading] = useState(false);
+  const [versionDetailsByNumber, setVersionDetailsByNumber] = useState<
+    Record<number, WorkflowVersionRecord>
+  >({});
+  const [versionDetailsLoading, setVersionDetailsLoading] = useState<
+    number | null
+  >(null);
 
   const { previewItem, openPreview, closePreview } =
     usePreviewModal<ArtifactGalleryItem>();
@@ -107,6 +117,30 @@ export default function WorkflowVersionsClient() {
     if (!selectedVersion) return null;
     return sortedVersions.find((version) => version.version === selectedVersion);
   }, [sortedVersions, selectedVersion]);
+
+  const selectedVersionRecord = useMemo(() => {
+    if (!selectedVersion) return null;
+    return versionDetailsByNumber[selectedVersion] ?? null;
+  }, [selectedVersion, versionDetailsByNumber]);
+
+  const selectedVersionSteps = useMemo(() => {
+    return selectedVersionRecord?.snapshot?.steps ?? [];
+  }, [selectedVersionRecord]);
+
+  const workflowTitle = workflow?.workflow_name ?? "—";
+  const workflowTitleShort = workflow?.workflow_name
+    ? truncate(workflow.workflow_name, 56)
+    : "Lead magnet details";
+  const workflowSubtitle = workflow?.workflow_name
+    ? `Lead magnet: ${workflowTitleShort}`
+    : "Lead magnet details";
+  const lastUpdatedLabel = useMemo(() => {
+    const latestTimestamp = sortedVersions[0]?.created_at;
+    const fallbackTimestamp = workflow?.updated_at;
+    if (latestTimestamp) return formatRelativeTime(latestTimestamp);
+    if (fallbackTimestamp) return formatRelativeTime(fallbackTimestamp);
+    return "—";
+  }, [sortedVersions, workflow?.updated_at]);
 
   const jobsByVersion = useMemo(() => {
     const byVersion: Record<number, Job[]> = {};
@@ -188,6 +222,47 @@ export default function WorkflowVersionsClient() {
   }, [currentVersion, selectedVersion, sortedVersions]);
 
   useEffect(() => {
+    setVersionDetailsByNumber({});
+    setVersionDetailsLoading(null);
+  }, [workflowId]);
+
+  useEffect(() => {
+    if (!workflowId || !selectedVersion) return;
+    if (versionDetailsByNumber[selectedVersion]) return;
+
+    let isActive = true;
+    setVersionDetailsLoading(selectedVersion);
+
+    api
+      .getWorkflowVersion(workflowId, selectedVersion)
+      .then((response) => {
+        if (!isActive) return;
+        setVersionDetailsByNumber((prev) => ({
+          ...prev,
+          [selectedVersion]: response,
+        }));
+      })
+      .catch((err: any) => {
+        if (!isActive) return;
+        toast.error(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to load version details",
+        );
+      })
+      .finally(() => {
+        if (!isActive) return;
+        setVersionDetailsLoading((current) =>
+          current === selectedVersion ? null : current,
+        );
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedVersion, versionDetailsByNumber, workflowId]);
+
+  useEffect(() => {
     if (!selectedVersion) {
       setSelectedJobId(null);
       return;
@@ -204,8 +279,14 @@ export default function WorkflowVersionsClient() {
   }, [jobsByVersion, selectedJobId, selectedVersion]);
 
   useEffect(() => {
-    if (!selectedJobId) return;
-    if (artifactsByJobId[selectedJobId]) return;
+    if (!selectedJobId) {
+      setArtifactsLoading(false);
+      return;
+    }
+    if (artifactsByJobId[selectedJobId]) {
+      setArtifactsLoading(false);
+      return;
+    }
 
     let isActive = true;
     setArtifactsLoading(true);
@@ -246,9 +327,22 @@ export default function WorkflowVersionsClient() {
     previewItem?.artifact?.content_type ||
     (previewItem?.kind === "imageUrl" ? "image/png" : undefined);
 
+  const previewFileNameFromUrl = (() => {
+    if (!previewObjectUrl) return undefined;
+    try {
+      const url = new URL(previewObjectUrl);
+      const name = url.pathname.split("/").pop();
+      return name || undefined;
+    } catch {
+      const name = previewObjectUrl.split("/").pop();
+      return name || undefined;
+    }
+  })();
+
   const previewFileName =
     previewItem?.artifact?.file_name ||
     previewItem?.artifact?.artifact_name ||
+    previewFileNameFromUrl ||
     previewItem?.label;
 
   const currentPreviewIndex = useMemo(() => {
@@ -305,41 +399,70 @@ export default function WorkflowVersionsClient() {
   };
 
   return (
-    <div className="container mx-auto max-w-6xl space-y-6 pb-16">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sticky top-0 z-20 bg-background/95 backdrop-blur py-4 border-b">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleBack}
-            className="h-9 w-9 text-muted-foreground hover:text-foreground -ml-2"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
+    <div className="container mx-auto max-w-7xl space-y-10 pb-16">
+      <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur shadow-sm">
+        <div className="flex flex-col gap-3 py-4 sm:gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                Version history
-              </h1>
-              {currentVersion ? (
-                <Badge variant="secondary">v{currentVersion}</Badge>
-              ) : null}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleBack}
+                className="-ml-2 h-9 w-9 text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                    Version history
+                  </h1>
+                  {currentVersion ? (
+                    <Badge variant="secondary" className="font-medium">
+                      Current v{currentVersion}
+                    </Badge>
+                  ) : null}
+                </div>
+                <p
+                  className="mt-1 truncate text-sm text-muted-foreground"
+                  title={workflow?.workflow_name || undefined}
+                >
+                  {workflowSubtitle}
+                </p>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Track and restore previous lead magnet configurations.
-            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={loadData}
+                disabled={!workflowId || loading}
+                className="gap-2"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={loadData}
-            disabled={!workflowId || loading}
-            className="gap-2"
-          >
-            <RefreshCcw className="h-4 w-4" />
-            Refresh
-          </Button>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <Badge
+              variant="outline"
+              className="border-border/60 text-muted-foreground font-medium"
+            >
+              {sortedVersions.length} versions
+            </Badge>
+            <Badge
+              variant="outline"
+              className="border-border/60 text-muted-foreground font-medium"
+            >
+              {jobs.length} jobs
+            </Badge>
+            <Badge
+              variant="outline"
+              className="border-border/60 text-muted-foreground font-medium"
+            >
+              Updated {lastUpdatedLabel}
+            </Badge>
+          </div>
         </div>
       </div>
 
@@ -355,11 +478,14 @@ export default function WorkflowVersionsClient() {
       {loading ? (
         <LoadingState message="Loading version history..." />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
           <SectionCard
             title={`All versions (${sortedVersions.length})`}
             description="Restore an earlier configuration to create a new version."
             padding="sm"
+            stickyHeader
+            className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-hidden"
+            contentClassName="lg:max-h-[calc(100vh-14rem)] lg:overflow-y-auto lg:pr-1"
           >
             {sortedVersions.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
@@ -372,6 +498,13 @@ export default function WorkflowVersionsClient() {
                   const isSelected = version.version === selectedVersion;
                   const versionJobsCount =
                     jobsByVersion[version.version]?.length ?? 0;
+                  const versionMeta = [
+                    `Saved ${formatTimestamp(version.created_at)}`,
+                    `${version.step_count} steps`,
+                    version.template_version
+                      ? `template v${version.template_version}`
+                      : "no template version",
+                  ].join(" • ");
                   return (
                     <div
                       key={version.version}
@@ -384,19 +517,27 @@ export default function WorkflowVersionsClient() {
                           setSelectedVersion(version.version);
                         }
                       }}
-                      className={`flex w-full cursor-pointer flex-col gap-3 rounded-lg border px-4 py-3 text-left transition-colors sm:flex-row sm:items-center sm:justify-between ${
+                      className={`group flex w-full cursor-pointer flex-col gap-3 rounded-xl border px-4 py-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 sm:flex-row sm:items-center sm:justify-between ${
                         isSelected
-                          ? "border-primary/40 bg-primary/5"
-                          : "border-border bg-card hover:bg-muted/30"
+                          ? "border-primary/40 bg-primary/5 shadow-sm"
+                          : "border-border bg-card hover:border-muted-foreground/30 hover:bg-muted/30"
                       }`}
                     >
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm font-semibold text-foreground">
                             v{version.version}
                           </span>
                           {isCurrent ? (
                             <Badge variant="success">Current</Badge>
+                          ) : null}
+                          {isSelected ? (
+                            <Badge
+                              variant="outline"
+                              className="border-primary/40 text-primary"
+                            >
+                              Selected
+                            </Badge>
                           ) : null}
                           {versionJobsCount > 0 ? (
                             <Badge variant="secondary">
@@ -405,13 +546,7 @@ export default function WorkflowVersionsClient() {
                           ) : null}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Saved {formatTimestamp(version.created_at)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {version.step_count} steps ·{" "}
-                          {version.template_version
-                            ? `template v${version.template_version}`
-                            : "no template version"}
+                          {versionMeta}
                         </div>
                       </div>
 
@@ -424,6 +559,7 @@ export default function WorkflowVersionsClient() {
                             event.stopPropagation();
                             handleRestore(version.version);
                           }}
+                          className="shrink-0"
                         >
                           Restore
                         </Button>
@@ -436,157 +572,246 @@ export default function WorkflowVersionsClient() {
           </SectionCard>
 
           <div className="space-y-4">
-            <SectionCard
-              title="Selected version"
-              description="Details for the version you are reviewing."
-              padding="sm"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-semibold text-foreground">
-                    {selectedVersion ? `v${selectedVersion}` : "—"}
-                  </span>
-                  {selectedVersion === currentVersion ? (
-                    <Badge variant="success">Active</Badge>
-                  ) : null}
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)] xl:items-start">
+              <SectionCard
+                title="Selected version"
+                description="Details for the version you are reviewing."
+                padding="sm"
+              >
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-3xl font-semibold text-foreground">
+                      {selectedVersion ? `v${selectedVersion}` : "—"}
+                    </span>
+                    {selectedVersion === currentVersion ? (
+                      <Badge variant="success">Active</Badge>
+                    ) : null}
+                    {selectedVersionSummary?.template_version ? (
+                      <Badge variant="secondary">
+                        Template v{selectedVersionSummary.template_version}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Saved {formatTimestamp(selectedVersionSummary?.created_at)}
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                      <p className="text-xs text-muted-foreground">Lead magnet</p>
+                      <p
+                        className="mt-1 truncate text-sm font-medium text-foreground"
+                        title={workflow?.workflow_name || undefined}
+                      >
+                        {workflowTitle}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                      <p className="text-xs text-muted-foreground">Steps</p>
+                      <p className="mt-1 text-sm font-medium text-foreground">
+                        {selectedVersionSummary
+                          ? selectedVersionSummary.step_count
+                          : "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                      <p className="text-xs text-muted-foreground">Template</p>
+                      <p className="mt-1 text-sm font-medium text-foreground">
+                        {selectedVersionSummary
+                          ? selectedVersionSummary.template_version
+                            ? `v${selectedVersionSummary.template_version}`
+                            : "None"
+                          : "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                      <p className="text-xs text-muted-foreground">
+                        Jobs generated
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-foreground">
+                        {selectedVersion ? selectedVersionJobs.length : "—"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Saved {formatTimestamp(selectedVersionSummary?.created_at)}
-                </p>
-                <div className="space-y-2 text-sm text-foreground">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Lead magnet</span>
-                    <span className="font-medium">
-                      {workflow?.workflow_name || "—"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Steps</span>
-                    <span className="font-medium">
-                      {selectedVersionSummary?.step_count ?? "—"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Template</span>
-                    <span className="font-medium">
-                      {selectedVersionSummary?.template_version
-                        ? `v${selectedVersionSummary.template_version}`
-                        : "None"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </SectionCard>
+              </SectionCard>
+
+              <SectionCard
+                title="About restores"
+                description="Restores create a new version."
+                padding="sm"
+                className="border-dashed bg-muted/20"
+              >
+                <ul className="list-disc space-y-2 pl-4 text-sm text-muted-foreground">
+                  <li>Restoring does not delete existing versions.</li>
+                  <li>The restored configuration becomes the latest version.</li>
+                  <li>Make sure to review steps after a restore.</li>
+                </ul>
+              </SectionCard>
+            </div>
 
             <SectionCard
-              title={`Generated lead mags (${selectedVersionJobs.length})`}
-              description="Select a job to preview the generated deliverables."
+              title="Execution step instructions"
+              description="See the saved instructions for each step in this version."
               padding="sm"
+              contentClassName="xl:max-h-[520px] xl:overflow-y-auto xl:pr-1"
             >
-              {selectedVersionJobs.length === 0 ? (
+              {!selectedVersion ? (
                 <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
-                  No jobs have been generated for this version yet.
+                  Select a version to view its step instructions.
+                </div>
+              ) : versionDetailsLoading === selectedVersion ? (
+                <div
+                  className="flex items-center gap-2 text-sm text-muted-foreground"
+                  role="status"
+                >
+                  <span
+                    className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-primary"
+                    aria-hidden="true"
+                  />
+                  Loading step instructions...
+                </div>
+              ) : selectedVersionSteps.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
+                  No steps are available for this version.
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {selectedVersionJobs.map((job) => {
-                    const isSelected = job.job_id === selectedJobId;
-                    const subtitle = [
-                      formatRelativeTime(job.created_at),
-                      job.status ? `Status: ${job.status}` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" • ");
-
+                <div className="space-y-4">
+                  {selectedVersionSteps.map((step, index) => {
+                    const stepLabel = step.step_name || `Step ${index + 1}`;
                     return (
-                      <button
-                        key={job.job_id}
-                        type="button"
-                        onClick={() => setSelectedJobId(job.job_id)}
-                        className={`w-full rounded-lg border px-3 py-3 text-left transition-colors ${
-                          isSelected
-                            ? "border-primary/40 bg-primary/5"
-                            : "border-border bg-background hover:bg-muted/30"
-                        }`}
+                      <div
+                        key={`${step.step_name}-${index}`}
+                        className="rounded-xl border bg-card/60 px-4 py-3 shadow-sm"
                       >
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p
-                              className="text-sm font-semibold text-foreground truncate"
-                              title={job.job_id}
-                            >
-                              {truncate(job.job_id, 32)}
+                            <p className="truncate text-sm font-semibold text-foreground">
+                              {stepLabel}
                             </p>
-                            <p
-                              className="mt-1 text-xs text-muted-foreground truncate"
-                              title={subtitle}
-                            >
-                              {subtitle}
-                            </p>
+                            {step.step_description ? (
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {step.step_description}
+                              </p>
+                            ) : null}
                           </div>
-                          <StatusBadge status={job.status} />
+                          <Badge variant="outline">Step {index + 1}</Badge>
                         </div>
-                      </button>
+                        <div className="mt-3 rounded-lg border bg-background/80 px-3 py-2">
+                          <p className="text-xs font-medium text-muted-foreground">
+                            Instructions
+                          </p>
+                          <pre className="mt-2 whitespace-pre-wrap text-sm text-foreground font-sans">
+                            {step.instructions || "—"}
+                          </pre>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
               )}
             </SectionCard>
 
-            <SectionCard
-              title="Artifacts & preview"
-              description="Rendered deliverables and supporting artifacts for the selected job."
-              padding="sm"
-            >
-              {selectedJob ? (
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        Job {truncate(selectedJob.job_id, 28)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Created {formatRelativeTime(selectedJob.created_at)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={selectedJob.status} />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          router.push(`/dashboard/jobs/${selectedJob.job_id}`)
-                        }
-                      >
-                        View job
-                      </Button>
-                    </div>
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)] xl:items-start">
+              <SectionCard
+                title={`Generated lead magnets (${selectedVersionJobs.length})`}
+                description="Select a job to preview the generated deliverables."
+                padding="sm"
+                contentClassName="xl:max-h-[520px] xl:overflow-y-auto xl:pr-1"
+              >
+                {selectedVersionJobs.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
+                    No jobs have been generated for this version yet.
                   </div>
+                ) : (
+                  <div className="space-y-2">
+                    {selectedVersionJobs.map((job) => {
+                      const isSelected = job.job_id === selectedJobId;
+                      const subtitle = [
+                        formatRelativeTime(job.created_at),
+                        job.status ? `Status: ${job.status}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" • ");
 
-                  <ArtifactGallery
-                    items={artifactGalleryItems}
-                    loading={artifactsLoading}
-                    onPreview={openPreview}
-                  />
-                </div>
-              ) : (
-                <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
-                  Select a job to preview its artifacts.
-                </div>
-              )}
-            </SectionCard>
+                      return (
+                        <button
+                          key={job.job_id}
+                          type="button"
+                          onClick={() => setSelectedJobId(job.job_id)}
+                          className={`group w-full rounded-lg border px-3 py-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 ${
+                            isSelected
+                              ? "border-primary/40 bg-primary/5 shadow-sm"
+                              : "border-border bg-background hover:border-muted-foreground/30 hover:bg-muted/30"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p
+                                className="truncate text-sm font-semibold text-foreground"
+                                title={job.job_id}
+                              >
+                                {truncate(job.job_id, 32)}
+                              </p>
+                              <p
+                                className="mt-1 truncate text-xs text-muted-foreground"
+                                title={subtitle}
+                              >
+                                {subtitle}
+                              </p>
+                            </div>
+                            <StatusBadge status={job.status} />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </SectionCard>
 
-            <SectionCard
-              title="About restores"
-              description="Restores create a new version."
-              padding="sm"
-            >
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>Restoring does not delete existing versions.</li>
-                <li>The restored configuration becomes the latest version.</li>
-                <li>Make sure to review steps after a restore.</li>
-              </ul>
-            </SectionCard>
+              <SectionCard
+                title="Artifacts & preview"
+                description="Rendered deliverables and supporting artifacts for the selected job."
+                padding="sm"
+              >
+                {selectedJob ? (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">
+                          Job {truncate(selectedJob.job_id, 28)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Created {formatRelativeTime(selectedJob.created_at)}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusBadge status={selectedJob.status} />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            router.push(`/dashboard/jobs/${selectedJob.job_id}`)
+                          }
+                          className="shrink-0"
+                        >
+                          View job
+                        </Button>
+                      </div>
+                    </div>
+
+                    <ArtifactGallery
+                      items={artifactGalleryItems}
+                      loading={artifactsLoading}
+                      onPreview={openPreview}
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
+                    Select a job to preview its artifacts.
+                  </div>
+                )}
+              </SectionCard>
+            </div>
           </div>
         </div>
       )}

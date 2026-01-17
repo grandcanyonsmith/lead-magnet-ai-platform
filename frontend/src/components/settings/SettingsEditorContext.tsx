@@ -82,6 +82,13 @@ function sanitizeDomain(value?: string): string | undefined {
   }
 }
 
+function normalizeReviewUserId(value?: string): string {
+  if (!value) return "";
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "auto") return "";
+  return trimmed;
+}
+
 function validateForm(formData: Partial<Settings>): Record<string, string> {
   const newErrors: Record<string, string> = {};
 
@@ -159,6 +166,13 @@ export function SettingsEditorProvider({
         default_ai_model: settings.default_ai_model || "gpt-5.2",
         default_tool_choice: settings.default_tool_choice || "required",
         default_service_tier: settings.default_service_tier || "auto",
+        default_workflow_improvement_user_id: normalizeReviewUserId(
+          settings.default_workflow_improvement_user_id,
+        ),
+        default_workflow_improvement_service_tier:
+          settings.default_workflow_improvement_service_tier || "priority",
+        default_workflow_improvement_reasoning_effort:
+          settings.default_workflow_improvement_reasoning_effort || "high",
         logo_url: sanitizeUrl(settings.logo_url) || "",
         ghl_webhook_url: sanitizeUrl(settings.ghl_webhook_url) || "",
         custom_domain: settings.custom_domain || "",
@@ -191,6 +205,13 @@ export function SettingsEditorProvider({
         default_ai_model: settings.default_ai_model || "gpt-5.2",
         default_tool_choice: settings.default_tool_choice || "required",
         default_service_tier: settings.default_service_tier || "auto",
+        default_workflow_improvement_user_id: normalizeReviewUserId(
+          settings.default_workflow_improvement_user_id,
+        ),
+        default_workflow_improvement_service_tier:
+          settings.default_workflow_improvement_service_tier || "priority",
+        default_workflow_improvement_reasoning_effort:
+          settings.default_workflow_improvement_reasoning_effort || "high",
         logo_url: settings.logo_url || "",
         ghl_webhook_url: settings.ghl_webhook_url || "",
         custom_domain: settings.custom_domain || "",
@@ -228,6 +249,14 @@ export function SettingsEditorProvider({
         (compareTo.default_tool_choice || "required") ||
       formData.default_service_tier !==
         (compareTo.default_service_tier || "auto") ||
+      formData.default_workflow_improvement_user_id !==
+        normalizeReviewUserId(
+          compareTo.default_workflow_improvement_user_id as string | undefined,
+        ) ||
+      formData.default_workflow_improvement_service_tier !==
+        (compareTo.default_workflow_improvement_service_tier || "priority") ||
+      formData.default_workflow_improvement_reasoning_effort !==
+        (compareTo.default_workflow_improvement_reasoning_effort || "high") ||
       formData.logo_url !== (compareTo.logo_url || "") ||
       formData.ghl_webhook_url !== (compareTo.ghl_webhook_url || "") ||
       formDomain !== compareDomain ||
@@ -282,6 +311,13 @@ export function SettingsEditorProvider({
             default_ai_model: settings.default_ai_model || "gpt-5.2",
             default_tool_choice: settings.default_tool_choice || "required",
             default_service_tier: settings.default_service_tier || "auto",
+            default_workflow_improvement_user_id: normalizeReviewUserId(
+              settings.default_workflow_improvement_user_id,
+            ),
+            default_workflow_improvement_service_tier:
+              settings.default_workflow_improvement_service_tier || "priority",
+            default_workflow_improvement_reasoning_effort:
+              settings.default_workflow_improvement_reasoning_effort || "high",
             logo_url: sanitizeUrl(settings.logo_url) || "",
             ghl_webhook_url: sanitizeUrl(settings.ghl_webhook_url) || "",
             custom_domain: settings.custom_domain || "",
@@ -316,6 +352,11 @@ export function SettingsEditorProvider({
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return false;
 
+    const normalizedReviewUserId =
+      formData.default_workflow_improvement_user_id === undefined
+        ? undefined
+        : normalizeReviewUserId(formData.default_workflow_improvement_user_id);
+
     const payload: SettingsUpdateRequest = {
       organization_name: formData.organization_name?.trim() || undefined,
       contact_email: formData.contact_email?.trim() || undefined,
@@ -323,6 +364,11 @@ export function SettingsEditorProvider({
       default_ai_model: formData.default_ai_model,
       default_tool_choice: formData.default_tool_choice,
       default_service_tier: formData.default_service_tier || "auto",
+      default_workflow_improvement_user_id: normalizedReviewUserId,
+      default_workflow_improvement_service_tier:
+        formData.default_workflow_improvement_service_tier || "priority",
+      default_workflow_improvement_reasoning_effort:
+        formData.default_workflow_improvement_reasoning_effort || "high",
       logo_url: sanitizeUrl(formData.logo_url),
       ghl_webhook_url: sanitizeUrl(formData.ghl_webhook_url),
       custom_domain: sanitizeDomain(formData.custom_domain),
@@ -348,6 +394,12 @@ export function SettingsEditorProvider({
       default_ai_model: payload.default_ai_model || "gpt-5.1-codex",
       default_tool_choice: payload.default_tool_choice || "required",
       default_service_tier: payload.default_service_tier || "auto",
+      default_workflow_improvement_user_id:
+        payload.default_workflow_improvement_user_id || "",
+      default_workflow_improvement_service_tier:
+        payload.default_workflow_improvement_service_tier || "priority",
+      default_workflow_improvement_reasoning_effort:
+        payload.default_workflow_improvement_reasoning_effort || "high",
       logo_url: payload.logo_url || "",
       ghl_webhook_url: payload.ghl_webhook_url || "",
       custom_domain: payload.custom_domain || "",

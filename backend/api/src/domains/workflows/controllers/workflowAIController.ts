@@ -1,5 +1,6 @@
 import { ApiError } from '@utils/errors';
 import { RouteResponse } from '@routes/routes';
+import { RequestContext } from '@routes/router';
 import { WorkflowStepAIService, AIStepGenerationRequest } from '@domains/workflows/services/workflowStepAIService';
 import { workflowInstructionsService } from '@domains/workflows/services/workflowInstructionsService';
 import { logger } from '@utils/logger';
@@ -666,7 +667,12 @@ export class WorkflowAIController {
   /**
    * Edit a workflow using AI.
    */
-  async aiEditWorkflow(tenantId: string, workflowId: string, body: any): Promise<RouteResponse> {
+  async aiEditWorkflow(
+    tenantId: string,
+    workflowId: string,
+    body: any,
+    context?: RequestContext,
+  ): Promise<RouteResponse> {
     const { db } = await import('@utils/db');
     const { env } = await import('@utils/env');
     const WORKFLOWS_TABLE = env.workflowsTable;
@@ -705,6 +711,7 @@ export class WorkflowAIController {
         workflowId,
         userPrompt,
         ...(contextJobId ? { contextJobId } : {}),
+        requestedByUserId: context?.auth?.actingUserId,
       });
 
       return {
