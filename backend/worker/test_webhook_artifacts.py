@@ -18,10 +18,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 from datetime import datetime
 import boto3
-try:
-    from ulid import new as ulid
-except ImportError:
-    from ulid import ULID as ulid
+from utils.ulid_utils import new_ulid
 
 # NOTE:
 # This file is intended to be run manually (see Usage above). It depends on real AWS resources
@@ -82,7 +79,7 @@ def setup_test_environment():
 
 def create_test_workflow_with_webhook(tenant_id: str) -> Dict[str, Any]:
     """Create a test workflow with webhook delivery configured."""
-    workflow_id = f"wf_test_webhook_artifacts_{ulid()}"
+    workflow_id = f"wf_test_webhook_artifacts_{new_ulid()}"
     
     workflow = {
         'workflow_id': workflow_id,
@@ -118,12 +115,12 @@ def create_test_workflow_with_webhook(tenant_id: str) -> Dict[str, Any]:
 
 def create_test_submission(tenant_id: str, workflow_id: str) -> Dict[str, Any]:
     """Create a test submission."""
-    submission_id = f"sub_test_webhook_artifacts_{ulid()}"
+    submission_id = f"sub_test_webhook_artifacts_{new_ulid()}"
     
     submission = {
         'submission_id': submission_id,
         'tenant_id': tenant_id,
-        'form_id': f"form_test_{ulid()}",
+        'form_id': f"form_test_{new_ulid()}",
         'workflow_id': workflow_id,
         'submission_data': {
             'name': 'Test User',
@@ -141,7 +138,7 @@ def create_test_submission(tenant_id: str, workflow_id: str) -> Dict[str, Any]:
 
 def create_test_job(tenant_id: str, workflow_id: str, submission_id: str) -> Dict[str, Any]:
     """Create a test job."""
-    job_id = f"job_test_webhook_artifacts_{ulid()}"
+    job_id = f"job_test_webhook_artifacts_{new_ulid()}"
     
     job = {
         'job_id': job_id,

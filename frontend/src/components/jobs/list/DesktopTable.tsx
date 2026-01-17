@@ -1,8 +1,5 @@
 import React, { useState } from "react";
-import {
-  getStatusBadge,
-  getJobSubmissionPreview,
-} from "@/utils/jobs/listHelpers";
+import { getStatusDot, getJobSubmissionPreview } from "@/utils/jobs/listHelpers";
 import { formatRelativeTime, formatDuration } from "@/utils/date";
 import { truncate } from "@/utils/formatting";
 import type { SortField } from "@/hooks/useJobFilters";
@@ -65,9 +62,6 @@ export function JobsDesktopTable({
             <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Lead Magnet
             </th>
-            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Status
-            </th>
             <th
               className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors"
               onClick={() => onSort("date")}
@@ -75,20 +69,6 @@ export function JobsDesktopTable({
               <div className="flex items-center gap-1">
                 Date
                 {sortField === "date" &&
-                  (sortDirection === "asc" ? (
-                    <ChevronUpIcon className="w-3.5 h-3.5" />
-                  ) : (
-                    <ChevronDownIcon className="w-3.5 h-3.5" />
-                  ))}
-              </div>
-            </th>
-            <th
-              className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors"
-              onClick={() => onSort("duration")}
-            >
-              <div className="flex items-center gap-1">
-                Time
-                {sortField === "duration" &&
                   (sortDirection === "asc" ? (
                     <ChevronUpIcon className="w-3.5 h-3.5" />
                   ) : (
@@ -114,6 +94,8 @@ export function JobsDesktopTable({
                       1000,
                   )
                 : null;
+            const durationLabel =
+              duration !== null ? formatDuration(duration) : null;
             const hasError = job.status === "failed" && job.error_message;
             const errorPreview =
               hasError && job.error_message
@@ -130,6 +112,10 @@ export function JobsDesktopTable({
               workflowName,
               WORKFLOW_NAME_MAX_LENGTH,
             );
+            const secondaryLine =
+              submissionPreview && durationLabel
+                ? `${submissionPreview} | ${durationLabel}`
+                : submissionPreview || durationLabel;
 
             return (
               <React.Fragment key={job.job_id}>
@@ -141,24 +127,24 @@ export function JobsDesktopTable({
                   onClick={() => onNavigate(job.job_id)}
                 >
                   <td className="px-6 py-4">
-                    <div className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                      <span className="block truncate" title={workflowName}>
-                        {displayWorkflowName}
+                    <div className="flex items-start gap-2">
+                      <span className="mt-1.5" data-tour="job-status">
+                        {getStatusDot(job.status)}
                       </span>
-                    </div>
-                    {submissionPreview && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium truncate max-w-xs">
-                        {submissionPreview}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4" data-tour="job-status">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-2">
-                        {/* Status badge and icon handled by helpers, but could be cleaner */}
-                        <div className="scale-90 origin-left">
-                          {getStatusBadge(job.status)}
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                          <span className="block truncate" title={workflowName}>
+                            {displayWorkflowName}
+                          </span>
                         </div>
+                        {secondaryLine && (
+                          <div
+                            className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium truncate max-w-xs"
+                            title={secondaryLine}
+                          >
+                            {secondaryLine}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -169,13 +155,6 @@ export function JobsDesktopTable({
                     <div className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
                       {new Date(job.created_at).toLocaleDateString()}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400">
-                    {duration !== null ? (
-                      formatDuration(duration)
-                    ) : (
-                      <span className="text-gray-300 dark:text-gray-600">—</span>
-                    )}
                   </td>
                   <td
                     className="px-6 py-4"
@@ -222,7 +201,7 @@ export function JobsDesktopTable({
                     className="bg-red-50/50 dark:bg-red-900/10 hover:bg-red-100/50 dark:hover:bg-red-900/20 cursor-pointer transition-all duration-150 border-t-0"
                     onClick={() => onNavigate(job.job_id)}
                   >
-                    <td colSpan={6} className="px-6 py-3">
+                    <td colSpan={4} className="px-6 py-3">
                       <div className="flex items-start bg-white/50 dark:bg-black/20 rounded-lg p-3 border border-red-100 dark:border-red-900/30">
                         <XCircleIcon className="w-5 h-5 text-red-500 dark:text-red-400 mt-0.5 mr-3 flex-shrink-0" />
                         <div className="flex-1 min-w-0">

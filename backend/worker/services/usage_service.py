@@ -7,10 +7,8 @@ import logging
 from datetime import datetime
 from decimal import Decimal
 from typing import Dict, Any
-try:
-    from ulid import new as ulid
-except ImportError:
-    from ulid import ULID as ulid
+
+from utils.ulid_utils import new_ulid
 
 from db_service import DynamoDBService
 
@@ -50,7 +48,7 @@ class UsageService:
                 - service_type: Optional service type (defaults to parameter)
         """
         try:
-            usage_id = f"usage_{ulid()}"
+            usage_id = f"usage_{new_ulid()}"
             
             # Convert cost_usd to Decimal for DynamoDB compatibility
             cost_usd = usage_info.get('cost_usd', 0.0)

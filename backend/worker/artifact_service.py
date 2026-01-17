@@ -8,10 +8,8 @@ import os
 import requests
 from datetime import datetime
 from typing import Dict, Any, Optional
-try:
-    from ulid import new as ulid
-except ImportError:
-    from ulid import ULID as ulid
+
+from utils.ulid_utils import new_ulid
 
 from db_service import DynamoDBService
 from s3_service import S3Service
@@ -60,7 +58,7 @@ class ArtifactService:
         })
         
         # Generate artifact ID
-        artifact_id = f"art_{ulid()}"
+        artifact_id = f"art_{new_ulid()}"
         
         # Upload to S3
         s3_key = f"{tenant_id}/jobs/{job_id}/{filename}"
@@ -274,7 +272,7 @@ class ArtifactService:
                             ext = 'jpg'
                         elif 'png' in content_type:
                             ext = 'png'
-                        filename = f"image_{int(time.time())}_{str(ulid())[:8]}.{ext}"
+                        filename = f"image_{int(time.time())}_{new_ulid()[:8]}.{ext}"
                 
                 # Generate S3 key
                 s3_key = f"{tenant_id}/jobs/{job_id}/{filename}"
@@ -314,7 +312,7 @@ class ArtifactService:
                     s3_key = f"{tenant_id}/jobs/{job_id}/{filename}"
                 else:
                     import time
-                    filename = f"image-{int(time.time())}-{str(ulid())[:8]}.png"
+                    filename = f"image-{int(time.time())}-{new_ulid()[:8]}.png"
                     s3_key = f"{tenant_id}/jobs/{job_id}/{filename}"
             elif not filename:
                 # Extract filename from s3_key
@@ -324,7 +322,7 @@ class ArtifactService:
             public_url = image_url
         
         # Generate artifact ID
-        artifact_id = f"art_{ulid()}"
+        artifact_id = f"art_{new_ulid()}"
         
         # Determine content type from filename
         content_type = self.get_content_type(filename)

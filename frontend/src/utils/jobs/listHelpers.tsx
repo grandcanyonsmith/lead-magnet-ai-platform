@@ -42,6 +42,26 @@ export const getStatusBadge = (status: string): ReactNode => {
   );
 };
 
+export const getStatusDot = (status: string): ReactNode => {
+  const normalized = typeof status === "string" ? status.toLowerCase() : "";
+  const colors: Record<string, string> = {
+    completed: "bg-emerald-500",
+    failed: "bg-red-500",
+    processing: "bg-amber-400",
+    pending: "bg-amber-400",
+  };
+  const label = getStatusLabel(normalized || status);
+
+  return (
+    <span
+      className={`inline-flex h-2 w-2 shrink-0 rounded-full ring-1 ring-black/10 dark:ring-white/30 ${colors[normalized] || "bg-gray-400"}`}
+      role="img"
+      aria-label={label}
+      title={label}
+    />
+  );
+};
+
 // Check if a step has completed (matches the logic from components/jobs/utils.ts and useMergedSteps.ts)
 function hasCompleted(step: any): boolean {
   // Check explicit status first (most reliable)
