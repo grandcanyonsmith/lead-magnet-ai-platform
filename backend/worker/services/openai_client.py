@@ -180,7 +180,28 @@ class OpenAIClient:
             pass
         # #endregion
 
+        requested_tool_types: List[str] = []
+        tools_param = api_params.get("tools")
+        if isinstance(tools_param, list):
+            for tool in tools_param:
+                if isinstance(tool, dict):
+                    tool_type = tool.get("type")
+                    if isinstance(tool_type, str) and tool_type:
+                        requested_tool_types.append(tool_type)
+
+        response_required_tools = sorted({
+            t for t in requested_tool_types
+            if t in {"shell", "code_interpreter", "computer_use_preview"}
+        })
+
         if not self.supports_responses():
+            if response_required_tools:
+                raise RuntimeError(
+                    "Responses API unavailable; tools require Responses API: "
+                    f"{', '.join(response_required_tools)}. "
+                    "Upgrade the OpenAI SDK (openai>=2.7.2) and redeploy, "
+                    "or remove those tools from the step."
+                )
             logger.warning("[OpenAI Client] Responses API unavailable; using chat.completions fallback", extra={
                 "job_id": job_id,
                 "tenant_id": tenant_id,

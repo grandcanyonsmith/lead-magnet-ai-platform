@@ -58,6 +58,8 @@ export class ComputeStack extends cdk.Stack {
           // Playwright environment variables
           // Set browsers path to match Dockerfile installation location
           [ENV_VAR_NAMES.PLAYWRIGHT_BROWSERS_PATH]: PLAYWRIGHT_BROWSERS_PATH,
+          // Shell tool configuration (defaults can be overridden at deploy time)
+          [ENV_VAR_NAMES.SHELL_TOOL_ENABLED]: process.env.SHELL_TOOL_ENABLED || (props.shellExecutor ? 'true' : 'false'),
           ...(props.shellExecutor ? {
             [ENV_VAR_NAMES.SHELL_EXECUTOR_FUNCTION_NAME]: props.shellExecutor.functionName,
           } : {}),
