@@ -54,6 +54,7 @@ test.describe('Dashboard', () => {
   test('should have accessible navigation', async ({ page }) => {
     const dashboardPage = new DashboardPage(page)
     await dashboardPage.goto()
+    await dashboardPage.openSidebar()
     
     // Check sidebar is visible
     await expect(dashboardPage.sidebar).toBeVisible()

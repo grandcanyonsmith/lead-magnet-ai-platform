@@ -6,6 +6,7 @@ export class DashboardPage {
   readonly createLeadMagnetButton: Locator
   readonly statsCards: Locator
   readonly sidebar: Locator
+  readonly sidebarToggle: Locator
   readonly workflowsLink: Locator
   readonly jobsLink: Locator
   readonly mainContent: Locator
@@ -25,6 +26,7 @@ export class DashboardPage {
       'text=/Leads Collected|Reports Generated|Active Magnets/'
     )
     this.sidebar = page.locator('aside')
+    this.sidebarToggle = page.getByRole('button', { name: /toggle navigation/i })
     // Sidebar links are the most stable/unique targets (dashboard page also has quick-action links).
     this.workflowsLink = page.locator(
       'aside a[href="/dashboard/workflows"]:has-text("Lead Magnets")'
@@ -57,12 +59,16 @@ export class DashboardPage {
   }
 
   async navigateToWorkflows() {
+    await this.openSidebar()
+    await this.workflowsLink.scrollIntoViewIfNeeded()
     await this.workflowsLink.click()
     // Use waitForURL with a longer timeout for Next.js client-side routing
     await this.page.waitForURL('/dashboard/workflows', { timeout: 10000 })
   }
 
   async navigateToJobs() {
+    await this.openSidebar()
+    await this.jobsLink.scrollIntoViewIfNeeded()
     await this.jobsLink.click()
     // Use waitForURL with a longer timeout for Next.js client-side routing
     await this.page.waitForURL('/dashboard/jobs', { timeout: 10000 })
@@ -74,5 +80,13 @@ export class DashboardPage {
     await this.createLeadMagnetButton.click()
     // Use waitForURL with a longer timeout for Next.js client-side routing
     await this.page.waitForURL('/dashboard/workflows/new', { timeout: 10000 })
+  }
+
+  async openSidebar() {
+    const expanded = await this.sidebarToggle.getAttribute('aria-expanded')
+    if (expanded !== 'true') {
+      await this.sidebarToggle.click()
+    }
+    await this.sidebar.waitFor({ timeout: 10000, state: 'visible' })
   }
 }
