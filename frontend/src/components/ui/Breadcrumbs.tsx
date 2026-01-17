@@ -74,7 +74,7 @@ export function Breadcrumbs({ className, listClassName }: BreadcrumbsProps = {})
                   }`}
                   aria-current={isLast ? "page" : undefined}
                 >
-                  <span className="block max-w-[10rem] truncate sm:max-w-[16rem]">
+                  <span className="inline-block max-w-[10rem] truncate sm:max-w-[16rem]">
                     {label}
                   </span>
                 </Link>

@@ -55,7 +55,7 @@ export function Sidebar({
       {/* Mobile sidebar backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 lg:hidden"
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
           onClick={() => setIsOpen(false)}
           aria-hidden="true"
         />
@@ -63,13 +63,11 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "fixed top-0 left-0 z-40 h-screen w-[280px] max-w-[85vw] sm:max-w-[320px] bg-card border-r border-border transform transition-transform duration-300 ease-in-out flex flex-col",
-          isOpen ? "translate-x-0" : "-translate-x-full",
-          "lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:shrink-0 lg:w-72 lg:max-w-none"
+          "fixed top-0 left-0 z-50 h-screen w-[280px] max-w-[85vw] sm:max-w-[320px] bg-card border-r border-border transform transition-transform duration-300 ease-in-out flex flex-col",
+          isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Mobile Header */}
-        <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/60 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center shadow-sm">
               <svg
@@ -93,33 +91,10 @@ export function Sidebar({
             size="icon"
             onClick={() => setIsOpen(false)}
             className="text-muted-foreground"
+            aria-label="Close navigation"
           >
             <X className="h-5 w-5" />
           </Button>
-        </div>
-
-        {/* Desktop Header */}
-        <div className="hidden lg:flex items-center justify-between px-6 py-5 border-b border-border/40 bg-card/50 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 bg-primary/10 rounded-lg flex items-center justify-center shadow-sm border border-primary/20">
-              <svg
-                className="w-5 h-5 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-            </div>
-            <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              Lead Magnet AI
-            </span>
-          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto min-h-0 py-6 px-4">
@@ -191,79 +166,10 @@ export function Sidebar({
           </div>
         </div>
 
-        <div className="mt-auto border-t border-border bg-card/50 p-4 space-y-4">
+        <div className="mt-auto border-t border-border bg-card/50 p-4">
           <div className="flex items-center justify-between px-1">
              <span className="text-xs font-medium text-muted-foreground">Theme</span>
              <ThemeToggle />
-          </div>
-          
-          <div className="relative w-full">
-            <DropdownMenu>
-              <DropdownMenuTrigger as={Fragment}>
-                <Button
-                  variant="ghost"
-                  aria-label="User menu"
-                  className="w-full justify-start px-3 py-3 h-auto hover:bg-accent/50 border border-transparent hover:border-border/50 rounded-xl transition-all duration-200 group"
-                >
-                <Avatar
-                  className="h-9 w-9 rounded-lg border-2 border-background shadow-sm mr-3"
-                  fallback={user?.name?.[0] || user?.email?.[0] || "U"}
-                />
-                <div className="flex flex-col items-start min-w-0 flex-1">
-                  <span className="text-sm font-medium truncate w-full text-left group-hover:text-accent-foreground">
-                    {user?.name || "User Account"}
-                  </span>
-                  <span className="text-xs text-muted-foreground truncate w-full text-left">
-                    {user?.email}
-                  </span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto group-hover:text-accent-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64" align="start" side="top">
-              <div className="flex items-center justify-between px-2 py-1.5">
-                <span className="text-sm font-medium">Notifications</span>
-                <NotificationBell layer="account_menu" />
-              </div>
-              
-              <DropdownMenuSeparator />
-              
-              <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <Link href="/dashboard/settings" className="cursor-pointer flex w-full items-center">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-
-              {(role === "ADMIN" || role === "SUPER_ADMIN") && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>Admin Tools</DropdownMenuLabel>
-                  <DropdownMenuGroup>
-                    {role === "SUPER_ADMIN" && (
-                       <div className="px-2 py-1">
-                         <ViewSwitcher />
-                       </div>
-                    )}
-                    <div className="px-2 py-1 mt-1">
-                      <UserImpersonation />
-                    </div>
-                  </DropdownMenuGroup>
-                </>
-              )}
-
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
-                onClick={signOut}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
           </div>
         </div>
       </aside>

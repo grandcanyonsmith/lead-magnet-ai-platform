@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import {
   BugAntIcon,
   ChartBarIcon,
@@ -202,21 +203,25 @@ export function JobTabs({
   };
 
   return (
-    <div className="mt-8 grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-      <aside className="space-y-4">
-        <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
-          <nav role="tablist" aria-label="Job detail sections" className="space-y-4">
-            {TAB_GROUPS.map((group) => {
+    <section className="mt-6">
+      <div className="-mx-3 border-b border-border/60 bg-muted/20 sm:-mx-4 md:-mx-6 lg:-mx-8">
+        <div className="px-3 sm:px-4 md:px-6 lg:px-8">
+          <nav
+            role="tablist"
+            aria-label="Job detail sections"
+            className="flex items-center gap-6 overflow-x-auto py-2"
+          >
+            {TAB_GROUPS.map((group, groupIndex) => {
               const groupTabs = TAB_CONFIG.filter((tab) => tab.group === group.id);
               if (!groupTabs.length) {
                 return null;
               }
               return (
-                <div key={group.id} className="space-y-1">
-                  <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <div key={group.id} className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     {group.label}
-                  </p>
-                  <div className="space-y-1">
+                  </span>
+                  <div className="flex items-center gap-2">
                     {groupTabs.map((tab) => {
                       const isActive = activeTab === tab.id;
                       const badgeValue = badgeValues[tab.id];
@@ -232,54 +237,50 @@ export function JobTabs({
                           aria-current={isActive ? "page" : undefined}
                           role="tab"
                           aria-selected={isActive}
-                          className={`group flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                          className={cn(
+                            "inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors sm:text-sm",
                             isActive
-                              ? "bg-primary/10 text-foreground"
-                              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                          }`}
+                              ? "border-border bg-background text-foreground shadow-sm"
+                              : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-background/60 hover:text-foreground"
+                          )}
                         >
-                          <span
-                            className={`mt-0.5 flex h-7 w-7 items-center justify-center rounded-md border text-xs transition-colors ${
-                              isActive
-                                ? "border-primary/30 bg-background text-primary-600 dark:text-primary-300"
-                                : "border-border bg-muted/40 text-muted-foreground group-hover:border-primary/20"
-                            }`}
+                          <Icon
+                            className={cn(
+                              "h-4 w-4",
+                              isActive ? "text-primary" : "text-muted-foreground"
+                            )}
                             aria-hidden="true"
-                          >
-                            <Icon className="h-4 w-4" />
-                          </span>
-                          <span className="flex-1 space-y-0.5">
-                            <span className="flex items-center justify-between gap-2">
-                              <span className="font-semibold text-foreground">
-                                {tab.label}
-                              </span>
-                              {badgeText && (
-                                <span
-                                  className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
-                                    isActive
-                                      ? "border-primary/20 bg-primary/10 text-primary-700 dark:text-primary-300"
-                                      : "border-transparent bg-muted text-muted-foreground"
-                                  }`}
-                                >
-                                  {badgeText}
-                                </span>
+                          />
+                          <span>{tab.label}</span>
+                          {badgeText && (
+                            <span
+                              className={cn(
+                                "whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold sm:text-[11px]",
+                                isActive
+                                  ? "bg-primary/10 text-primary-700 dark:text-primary-300"
+                                  : "bg-muted text-muted-foreground"
                               )}
+                            >
+                              {badgeText}
                             </span>
-                            <span className="hidden text-xs text-muted-foreground sm:block">
-                              {tab.description}
-                            </span>
-                          </span>
+                          )}
                         </Link>
                       );
                     })}
                   </div>
+                  {groupIndex < TAB_GROUPS.length - 1 && (
+                    <span
+                      className="mx-2 hidden h-5 w-px bg-border/60 sm:inline-block"
+                      aria-hidden="true"
+                    />
+                  )}
                 </div>
               );
             })}
           </nav>
         </div>
-      </aside>
-      <div className="min-w-0">
+      </div>
+      <div className="min-w-0 pt-6">
         {activeTab === "overview" && (
           <JobSummaryTab
             job={job}
@@ -333,6 +334,6 @@ export function JobTabs({
         )}
         {activeTab === "raw" && <JobDebugTab data={job} />}
       </div>
-    </div>
+    </section>
   );
 }
