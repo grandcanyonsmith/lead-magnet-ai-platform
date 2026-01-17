@@ -411,18 +411,17 @@ function FlowchartContent({
         <div className="absolute inset-0 z-10 flex items-center justify-center">
           <div className="rounded-2xl border border-dashed border-primary-200 dark:border-primary/30 bg-white/90 dark:bg-card/90 px-10 py-12 text-center shadow-lg shadow-primary-100/50 dark:shadow-primary/20 backdrop-blur">
             <p className="text-base font-semibold text-slate-700 dark:text-foreground">
-              No workflow steps yet
+              No steps yet
             </p>
             <p className="mt-2 text-sm text-slate-500 dark:text-muted-foreground">
-              Build your automation by adding research, generation, and delivery
-              steps.
+              Add a step, then click it to edit in the side panel.
             </p>
             <button
               onClick={onAddStep}
               className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary-300/50 transition hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/80 touch-target"
             >
               <FiPlus className="h-4 w-4" aria-hidden />
-              Create the first step
+              Add your first step
             </button>
           </div>
         </div>

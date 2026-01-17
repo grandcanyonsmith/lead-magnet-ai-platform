@@ -88,14 +88,14 @@ export default function FlowchartSidePanel({
               onMouseDown={(e) => e.stopPropagation()}
             >
               <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-gray-400 select-none">
-                Step {index + 1} of {totalSteps}
+                Editing Step {index + 1} of {totalSteps}
               </div>
               <h2 className="mt-1 text-2xl font-semibold text-slate-900 dark:text-white">
                 {step.step_name || `Step ${index + 1}`}
               </h2>
               <p className="mt-1 text-sm text-slate-500 dark:text-gray-400">
                 {step.step_description ||
-                  "Configure what this step should accomplish."}
+                  "Update the step details, instructions, and tools below."}
               </p>
             </div>
             <button

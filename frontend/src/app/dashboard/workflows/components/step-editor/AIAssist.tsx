@@ -12,6 +12,7 @@ interface AIAssistProps {
   index: number;
   useWorkflowStepAI: any; // Using the hook return type would be better if exported
   onAccept: (proposed: WorkflowStep) => void;
+  collapsible?: boolean;
 }
 
 export default function AIAssist({
@@ -20,8 +21,9 @@ export default function AIAssist({
   index,
   useWorkflowStepAI,
   onAccept,
+  collapsible = true,
 }: AIAssistProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(!collapsible);
   const [aiPrompt, setAiPrompt] = useState("");
 
   const {
@@ -67,6 +69,73 @@ export default function AIAssist({
     toast("AI proposal rejected");
   };
 
+  const assistContent = (
+    <div className="space-y-3">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Describe how you want to change this step, and AI will generate an updated
+        configuration for you to review.
+      </p>
+
+      <div className="space-y-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            What would you like to change?
+          </label>
+          <textarea
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            placeholder="e.g., 'Change the model to GPT-4o and add web search tool' or 'Update instructions to focus on competitive analysis'"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+            rows={3}
+            disabled={isGenerating}
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleAIGenerate}
+          disabled={!aiPrompt.trim() || isGenerating}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors"
+        >
+          {isGenerating ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <FiZap className="w-4 h-4" />
+              Generate with AI
+            </>
+          )}
+        </button>
+
+        {aiError && (
+          <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded border border-red-200 dark:border-red-900">
+            {aiError}
+          </div>
+        )}
+
+        {proposal && (
+          <div className="mt-4">
+            <StepDiffPreview
+              original={proposal.original}
+              proposed={proposal.proposed}
+              action={proposal.action}
+              onAccept={handleAcceptProposal}
+              onReject={handleRejectProposal}
+              isLoading={false}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  if (!collapsible) {
+    return <div className="space-y-3">{assistContent}</div>;
+  }
+
   return (
     <div className="mb-6">
       <button
@@ -90,64 +159,7 @@ export default function AIAssist({
 
       {isOpen && (
         <div className="mt-3 p-4 border border-purple-200 dark:border-purple-800 rounded-lg bg-white dark:bg-gray-800">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            Describe how you want to change this step, and AI will generate an
-            updated configuration for you to review.
-          </p>
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                What would you like to change?
-              </label>
-              <textarea
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="e.g., 'Change the model to GPT-4o and add web search tool' or 'Update instructions to focus on competitive analysis'"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                rows={3}
-                disabled={isGenerating}
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={handleAIGenerate}
-              disabled={!aiPrompt.trim() || isGenerating}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors"
-            >
-              {isGenerating ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <FiZap className="w-4 h-4" />
-                  Generate with AI
-                </>
-              )}
-            </button>
-
-            {aiError && (
-              <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded border border-red-200 dark:border-red-900">
-                {aiError}
-              </div>
-            )}
-
-            {proposal && (
-              <div className="mt-4">
-                <StepDiffPreview
-                  original={proposal.original}
-                  proposed={proposal.proposed}
-                  action={proposal.action}
-                  onAccept={handleAcceptProposal}
-                  onReject={handleRejectProposal}
-                  isLoading={false}
-                />
-              </div>
-            )}
-          </div>
+          {assistContent}
         </div>
       )}
     </div>

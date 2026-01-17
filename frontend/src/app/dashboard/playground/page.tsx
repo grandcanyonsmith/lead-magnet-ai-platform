@@ -1,53 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import {
-  FiPlay,
-  FiSkipForward,
-  FiRotateCcw,
-  FiSave,
-  FiDownload,
-  FiUpload,
-  FiPlus,
-  FiCheckCircle,
-  FiAlertCircle,
-  FiLoader,
-  FiCode,
-  FiSidebar,
-  FiTerminal,
-  FiDatabase,
-  FiFileText,
-  FiSettings,
-  FiX,
-  FiEdit2,
-  FiCheck
-} from "react-icons/fi";
 import { useWorkflowSteps } from "@/hooks/useWorkflowSteps";
-import WorkflowStepEditor from "../workflows/components/WorkflowStepEditor";
 import WorkflowFlowchart from "../workflows/components/WorkflowFlowchart";
 import { api } from "@/lib/api";
-import { JsonViewer } from "@/components/ui/JsonViewer";
 import toast from "react-hot-toast";
-import { WorkflowStep } from "@/types/workflow";
 import { useSettings } from "@/hooks/api/useSettings";
-
-import { LogViewer } from "./components/LogViewer";
-
-// Types
-interface AccumulatedContext {
-  [key: string]: any;
-}
-
-interface StepResult {
-  stepIndex: number;
-  output: any;
-  status: "success" | "error" | "pending";
-  error?: string;
-  duration?: number;
-}
-
-type SidebarTab = "input" | "step-config" | "context" | "logs";
+import { PlaygroundTopBar } from "./components/PlaygroundTopBar";
+import { PlaygroundSidebar } from "./components/PlaygroundSidebar";
+import { PlaygroundImportModal } from "./components/PlaygroundImportModal";
+import type { AccumulatedContext, SidebarTab, StepResult } from "./types";
 
 export default function PlaygroundPage() {
   const router = useRouter();
@@ -532,7 +495,7 @@ export default function PlaygroundPage() {
         </div>
 
         {/* Right Panel: Tabs */}
-        <div className="flex-1 w-full min-h-[260px] bg-background border-t border-border flex flex-col shadow-xl z-20 lg:min-h-0 lg:flex-none lg:w-[450px] lg:border-l lg:border-t-0">
+        <div className="flex-1 w-full min-h-[260px] bg-background border-t border-border flex flex-col shadow-xl z-20 lg:min-h-0 lg:flex-none lg:w-[520px] xl:w-[600px] lg:border-l lg:border-t-0">
             {/* Tab Header */}
             <div className="flex border-b border-border bg-muted/5">
                 <button 

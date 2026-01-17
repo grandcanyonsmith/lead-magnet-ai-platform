@@ -20,7 +20,6 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Button } from "@/components/ui/Button";
 import type { JobLiveStep } from "@/types/job";
 
 interface ExecutionStepsProps {
@@ -28,8 +27,6 @@ interface ExecutionStepsProps {
   variant?: "compact" | "expanded";
   steps: MergedStep[];
   expandedSteps: Set<number>;
-  showExecutionSteps: boolean;
-  onToggleShow: () => void;
   onToggleStep: (stepOrder: number) => void;
   onCopy: (text: string) => void;
   jobStatus?: string;
@@ -51,8 +48,6 @@ export function ExecutionSteps({
   variant = "compact",
   steps,
   expandedSteps,
-  showExecutionSteps,
-  onToggleShow,
   onToggleStep,
   onCopy,
   jobStatus,
@@ -120,18 +115,6 @@ export function ExecutionSteps({
         title="Execution timeline"
         description="Track step-by-step progress and outputs."
         className="mt-4 sm:mt-6"
-        actions={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onToggleShow}
-            aria-expanded={showExecutionSteps}
-            aria-controls="execution-steps-list"
-          >
-            {showExecutionSteps ? "Collapse steps" : "Expand steps"}
-          </Button>
-        }
       >
         <div className="space-y-4">
           <div className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2">
@@ -142,336 +125,314 @@ export function ExecutionSteps({
             />
           </div>
 
-          {showExecutionSteps ? (
-            <div
-              id="execution-steps-list"
-              className="relative pl-4 sm:pl-6 space-y-0"
-            >
-              <div className="absolute left-4 sm:left-6 top-4 bottom-4 w-px bg-border/70" />
+          <div
+            id="execution-steps-list"
+            className="relative pl-4 sm:pl-6 space-y-0"
+          >
+            <div className="absolute left-4 sm:left-6 top-4 bottom-4 w-px bg-border/70" />
 
-              {showSubmissionSummary && submission && (
-                <div
-                  className={`relative ${hasTimelineSteps ? "pb-8" : "pb-0"}`}
-                >
-                  <div className="absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-background bg-green-500" />
-                  <div className="ml-6">
-                    <SubmissionSummary
-                      submission={submission}
-                      onResubmit={onResubmit}
-                      resubmitting={resubmitting}
-                      className="mb-0 sm:mb-0"
+            {showSubmissionSummary && submission && (
+              <div className={`relative ${hasTimelineSteps ? "pb-8" : "pb-0"}`}>
+                <div className="absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-background bg-green-500" />
+                <div className="ml-6">
+                  <SubmissionSummary
+                    submission={submission}
+                    onResubmit={onResubmit}
+                    resubmitting={resubmitting}
+                    className="mb-0 sm:mb-0"
+                  />
+                </div>
+              </div>
+            )}
+
+            {stepsForTimeline.map((step) => {
+              const stepOrder = step.step_order ?? 0;
+              const isExpanded = expandedSteps.has(stepOrder);
+              const stepStatus = getStepStatusForStep(step);
+              const liveOutputForStep =
+                liveStep && liveStep.step_order === stepOrder
+                  ? liveStep.output_text
+                  : undefined;
+              const liveUpdatedAtForStep =
+                liveStep && liveStep.step_order === stepOrder
+                  ? liveStep.updated_at
+                  : undefined;
+
+              const detailsHref =
+                jobId && step.step_order !== undefined
+                  ? `/dashboard/jobs/${jobId}/steps/${step.step_order}`
+                  : undefined;
+
+              return (
+                <div key={stepOrder} className="relative pb-8 last:pb-0">
+                  <div
+                    className={`absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-background ${
+                      stepStatus === "completed"
+                        ? "bg-green-500"
+                        : stepStatus === "in_progress"
+                          ? "bg-blue-500 animate-pulse"
+                          : stepStatus === "failed"
+                            ? "bg-red-500"
+                            : "bg-muted-foreground/40"
+                    }`}
+                  />
+
+                  <div className="ml-6 rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md">
+                    <StepHeader
+                      step={step}
+                      status={stepStatus}
+                      jobStatus={jobStatus}
+                      canEdit={canEdit}
+                      rerunningStep={rerunningStep}
+                      onEditStep={onEditStep}
+                      onRerunStep={onRerunStep}
+                      onRerunStepClick={onRerunStepClick}
+                      detailsHref={detailsHref}
                     />
+                    {variant === "compact" ? (
+                      <div className="border-t border-border/60 px-4 pb-4 pt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                        {step.step_type !== "workflow_step" && (
+                          <span className="inline-flex items-center gap-2">
+                            {step.step_type.replace(/_/g, " ")}
+                          </span>
+                        )}
+                        {detailsHref && (
+                          <Link
+                            href={detailsHref}
+                            className="inline-flex items-center gap-2 font-semibold text-primary-600 hover:text-primary-700"
+                          >
+                            View details
+                            <ChevronDownIcon className="h-3.5 w-3.5 rotate-[-90deg]" />
+                          </Link>
+                        )}
+                      </div>
+                    ) : (
+                      <Disclosure defaultOpen={isExpanded}>
+                        {({ open }) => (
+                          <>
+                            <DisclosureButton
+                              className="w-full flex justify-center py-2 border-t border-border/60 hover:bg-muted/40 transition-colors text-xs font-medium text-muted-foreground"
+                              onClick={() => onToggleStep(stepOrder)}
+                            >
+                              {open ? (
+                                <span className="flex items-center gap-1">
+                                  Hide details{" "}
+                                  <ChevronUpIcon className="w-3 h-3" />
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1">
+                                  Show details{" "}
+                                  <ChevronDownIcon className="w-3 h-3" />
+                                </span>
+                              )}
+                            </DisclosureButton>
+                            <DisclosurePanel static>
+                              {open && (
+                                <div className="border-t border-border/60 bg-muted/30">
+                                  <StepInputOutput
+                                    step={step}
+                                    status={stepStatus}
+                                    onCopy={onCopy}
+                                    liveOutput={liveOutputForStep}
+                                    liveUpdatedAt={liveUpdatedAtForStep}
+                                    imageArtifacts={
+                                      imageArtifactsByStep.get(stepOrder) || []
+                                    }
+                                    loadingImageArtifacts={loadingImageArtifacts}
+                                    onEditStep={onEditStep}
+                                    canEdit={canEdit}
+                                    variant={variant}
+                                  />
+
+                                  {variant === "expanded" &&
+                                    (() => {
+                                      const stepImageUrls =
+                                        step.image_urls &&
+                                        Array.isArray(step.image_urls) &&
+                                        step.image_urls.length > 0
+                                          ? step.image_urls
+                                          : [];
+                                      const stepImageArtifacts =
+                                        imageArtifactsByStep.get(stepOrder) || [];
+                                      const mainArtifactId = step.artifact_id;
+
+                                      const getFilenameFromUrl = (
+                                        url: string,
+                                      ): string => {
+                                        try {
+                                          const urlObj = new URL(url);
+                                          const pathname = urlObj.pathname;
+                                          const filename =
+                                            pathname.split("/").pop() || "";
+                                          return filename;
+                                        } catch {
+                                          const parts = url.split("/");
+                                          return parts[parts.length - 1] || url;
+                                        }
+                                      };
+
+                                      const normalizeFilename = (
+                                        filename: string,
+                                      ): string => {
+                                        return filename.split("?")[0].toLowerCase();
+                                      };
+
+                                      const displayedFiles = new Set<string>();
+                                      const filesToShow: Array<{
+                                        type:
+                                          | "artifact"
+                                          | "imageArtifact"
+                                          | "imageUrl";
+                                        data: any;
+                                        key: string;
+                                      }> = [];
+
+                                      if (mainArtifactId) {
+                                        displayedFiles.add(`artifact:${mainArtifactId}`);
+                                      }
+
+                                      stepImageArtifacts.forEach(
+                                        (artifact: Artifact) => {
+                                          const artifactId = artifact.artifact_id;
+                                          const fileName =
+                                            artifact.file_name ||
+                                            artifact.artifact_name ||
+                                            "";
+                                          const normalizedName =
+                                            normalizeFilename(fileName);
+
+                                          if (artifactId === mainArtifactId) {
+                                            return;
+                                          }
+
+                                          if (
+                                            normalizedName &&
+                                            displayedFiles.has(
+                                              `filename:${normalizedName}`,
+                                            )
+                                          ) {
+                                            return;
+                                          }
+
+                                          displayedFiles.add(
+                                            `filename:${normalizedName}`,
+                                          );
+                                          displayedFiles.add(`artifact:${artifactId}`);
+                                          filesToShow.push({
+                                            type: "imageArtifact",
+                                            data: artifact,
+                                            key: `image-artifact-${artifactId}`,
+                                          });
+                                        },
+                                      );
+
+                                      stepImageUrls.forEach(
+                                        (imageUrl: string, idx: number) => {
+                                          const filename =
+                                            getFilenameFromUrl(imageUrl);
+                                          const normalizedName =
+                                            normalizeFilename(filename);
+
+                                          if (
+                                            normalizedName &&
+                                            displayedFiles.has(
+                                              `filename:${normalizedName}`,
+                                            )
+                                          ) {
+                                            return;
+                                          }
+
+                                          const matchesExistingArtifact =
+                                            stepImageArtifacts.some(
+                                              (artifact: Artifact) => {
+                                                const artifactUrl =
+                                                  artifact.object_url ||
+                                                  artifact.public_url;
+                                                return (
+                                                  artifactUrl === imageUrl ||
+                                                  normalizeFilename(
+                                                    artifact.file_name ||
+                                                      artifact.artifact_name ||
+                                                      "",
+                                                  ) === normalizedName
+                                                );
+                                              },
+                                            );
+
+                                          if (matchesExistingArtifact) {
+                                            return;
+                                          }
+
+                                          displayedFiles.add(
+                                            `filename:${normalizedName}`,
+                                          );
+                                          filesToShow.push({
+                                            type: "imageUrl",
+                                            data: imageUrl,
+                                            key: `image-url-${idx}`,
+                                          });
+                                        },
+                                      );
+
+                                      if (filesToShow.length > 0) {
+                                        return (
+                                          <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-muted/20">
+                                            {filesToShow.map((file) => {
+                                              if (file.type === "imageArtifact") {
+                                                return (
+                                                  <ImagePreview
+                                                    key={file.key}
+                                                    artifact={file.data}
+                                                    imageIndex={0}
+                                                    model={step.model}
+                                                    tools={
+                                                      step.input?.tools ||
+                                                      step.tools
+                                                    }
+                                                    toolChoice={
+                                                      step.input?.tool_choice ||
+                                                      step.tool_choice
+                                                    }
+                                                  />
+                                                );
+                                              } else if (file.type === "imageUrl") {
+                                                return (
+                                                  <ImagePreview
+                                                    key={file.key}
+                                                    imageUrl={file.data}
+                                                    imageIndex={0}
+                                                    model={step.model}
+                                                    tools={
+                                                      step.input?.tools ||
+                                                      step.tools
+                                                    }
+                                                    toolChoice={
+                                                      step.input?.tool_choice ||
+                                                      step.tool_choice
+                                                    }
+                                                  />
+                                                );
+                                              }
+                                              return null;
+                                            })}
+                                          </div>
+                                        );
+                                      }
+
+                                      return null;
+                                    })()}
+                                </div>
+                              )}
+                            </DisclosurePanel>
+                          </>
+                        )}
+                      </Disclosure>
+                    )}
                   </div>
                 </div>
-              )}
-
-              {stepsForTimeline.map((step) => {
-                const stepOrder = step.step_order ?? 0;
-                const isExpanded = expandedSteps.has(stepOrder);
-                const stepStatus = getStepStatusForStep(step);
-                const liveOutputForStep =
-                  liveStep && liveStep.step_order === stepOrder
-                    ? liveStep.output_text
-                    : undefined;
-                const liveUpdatedAtForStep =
-                  liveStep && liveStep.step_order === stepOrder
-                    ? liveStep.updated_at
-                    : undefined;
-
-                const detailsHref =
-                  jobId && step.step_order !== undefined
-                    ? `/dashboard/jobs/${jobId}/steps/${step.step_order}`
-                    : undefined;
-
-                return (
-                  <div key={stepOrder} className="relative pb-8 last:pb-0">
-                    <div
-                      className={`absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-background ${
-                        stepStatus === "completed"
-                          ? "bg-green-500"
-                          : stepStatus === "in_progress"
-                            ? "bg-blue-500 animate-pulse"
-                            : stepStatus === "failed"
-                              ? "bg-red-500"
-                              : "bg-muted-foreground/40"
-                      }`}
-                    />
-
-                    <div className="ml-6 rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md">
-                      <StepHeader
-                        step={step}
-                        status={stepStatus}
-                        jobStatus={jobStatus}
-                        canEdit={canEdit}
-                        rerunningStep={rerunningStep}
-                        onEditStep={onEditStep}
-                        onRerunStep={onRerunStep}
-                        onRerunStepClick={onRerunStepClick}
-                        detailsHref={detailsHref}
-                      />
-                      {variant === "compact" ? (
-                        <div className="border-t border-border/60 px-4 pb-4 pt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                          {step.step_type !== "workflow_step" && (
-                            <span className="inline-flex items-center gap-2">
-                              {step.step_type.replace(/_/g, " ")}
-                            </span>
-                          )}
-                          {detailsHref && (
-                            <Link
-                              href={detailsHref}
-                              className="inline-flex items-center gap-2 font-semibold text-primary-600 hover:text-primary-700"
-                            >
-                              View details
-                              <ChevronDownIcon className="h-3.5 w-3.5 rotate-[-90deg]" />
-                            </Link>
-                          )}
-                        </div>
-                      ) : (
-                        <Disclosure defaultOpen={isExpanded}>
-                          {({ open }) => (
-                            <>
-                              <DisclosureButton
-                                className="w-full flex justify-center py-2 border-t border-border/60 hover:bg-muted/40 transition-colors text-xs font-medium text-muted-foreground"
-                                onClick={() => onToggleStep(stepOrder)}
-                              >
-                                {open ? (
-                                  <span className="flex items-center gap-1">
-                                    Hide details{" "}
-                                    <ChevronUpIcon className="w-3 h-3" />
-                                  </span>
-                                ) : (
-                                  <span className="flex items-center gap-1">
-                                    Show details{" "}
-                                    <ChevronDownIcon className="w-3 h-3" />
-                                  </span>
-                                )}
-                              </DisclosureButton>
-                              <DisclosurePanel static>
-                                {open && (
-                                  <div className="border-t border-border/60 bg-muted/30">
-                                    <StepInputOutput
-                                      step={step}
-                                      status={stepStatus}
-                                      onCopy={onCopy}
-                                      liveOutput={liveOutputForStep}
-                                      liveUpdatedAt={liveUpdatedAtForStep}
-                                      imageArtifacts={
-                                        imageArtifactsByStep.get(stepOrder) || []
-                                      }
-                                      loadingImageArtifacts={
-                                        loadingImageArtifacts
-                                      }
-                                      onEditStep={onEditStep}
-                                      canEdit={canEdit}
-                                      variant={variant}
-                                    />
-
-                                    {variant === "expanded" &&
-                                      (() => {
-                                        const stepImageUrls =
-                                          step.image_urls &&
-                                          Array.isArray(step.image_urls) &&
-                                          step.image_urls.length > 0
-                                            ? step.image_urls
-                                            : [];
-                                        const stepImageArtifacts =
-                                          imageArtifactsByStep.get(stepOrder) ||
-                                          [];
-                                        const mainArtifactId = step.artifact_id;
-
-                                        const getFilenameFromUrl = (
-                                          url: string,
-                                        ): string => {
-                                          try {
-                                            const urlObj = new URL(url);
-                                            const pathname = urlObj.pathname;
-                                            const filename =
-                                              pathname.split("/").pop() || "";
-                                            return filename;
-                                          } catch {
-                                            const parts = url.split("/");
-                                            return parts[parts.length - 1] || url;
-                                          }
-                                        };
-
-                                        const normalizeFilename = (
-                                          filename: string,
-                                        ): string => {
-                                          return filename
-                                            .split("?")[0]
-                                            .toLowerCase();
-                                        };
-
-                                        const displayedFiles = new Set<string>();
-                                        const filesToShow: Array<{
-                                          type:
-                                            | "artifact"
-                                            | "imageArtifact"
-                                            | "imageUrl";
-                                          data: any;
-                                          key: string;
-                                        }> = [];
-
-                                        if (mainArtifactId) {
-                                          displayedFiles.add(
-                                            `artifact:${mainArtifactId}`,
-                                          );
-                                        }
-
-                                        stepImageArtifacts.forEach(
-                                          (artifact: Artifact) => {
-                                            const artifactId =
-                                              artifact.artifact_id;
-                                            const fileName =
-                                              artifact.file_name ||
-                                              artifact.artifact_name ||
-                                              "";
-                                            const normalizedName =
-                                              normalizeFilename(fileName);
-
-                                            if (artifactId === mainArtifactId) {
-                                              return;
-                                            }
-
-                                            if (
-                                              normalizedName &&
-                                              displayedFiles.has(
-                                                `filename:${normalizedName}`,
-                                              )
-                                            ) {
-                                              return;
-                                            }
-
-                                            displayedFiles.add(
-                                              `filename:${normalizedName}`,
-                                            );
-                                            displayedFiles.add(
-                                              `artifact:${artifactId}`,
-                                            );
-                                            filesToShow.push({
-                                              type: "imageArtifact",
-                                              data: artifact,
-                                              key: `image-artifact-${artifactId}`,
-                                            });
-                                          },
-                                        );
-
-                                        stepImageUrls.forEach(
-                                          (imageUrl: string, idx: number) => {
-                                            const filename =
-                                              getFilenameFromUrl(imageUrl);
-                                            const normalizedName =
-                                              normalizeFilename(filename);
-
-                                            if (
-                                              normalizedName &&
-                                              displayedFiles.has(
-                                                `filename:${normalizedName}`,
-                                              )
-                                            ) {
-                                              return;
-                                            }
-
-                                            const matchesExistingArtifact =
-                                              stepImageArtifacts.some(
-                                                (artifact: Artifact) => {
-                                                  const artifactUrl =
-                                                    artifact.object_url ||
-                                                    artifact.public_url;
-                                                  return (
-                                                    artifactUrl === imageUrl ||
-                                                    normalizeFilename(
-                                                      artifact.file_name ||
-                                                        artifact.artifact_name ||
-                                                        "",
-                                                    ) === normalizedName
-                                                  );
-                                                },
-                                              );
-
-                                            if (matchesExistingArtifact) {
-                                              return;
-                                            }
-
-                                            displayedFiles.add(
-                                              `filename:${normalizedName}`,
-                                            );
-                                            filesToShow.push({
-                                              type: "imageUrl",
-                                              data: imageUrl,
-                                              key: `image-url-${idx}`,
-                                            });
-                                          },
-                                        );
-
-                                        if (filesToShow.length > 0) {
-                                          return (
-                                            <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-muted/20">
-                                              {filesToShow.map((file) => {
-                                                if (
-                                                  file.type === "imageArtifact"
-                                                ) {
-                                                  return (
-                                                    <ImagePreview
-                                                      key={file.key}
-                                                      artifact={file.data}
-                                                      imageIndex={0}
-                                                      model={step.model}
-                                                      tools={
-                                                        step.input?.tools ||
-                                                        step.tools
-                                                      }
-                                                      toolChoice={
-                                                        step.input?.tool_choice ||
-                                                        step.tool_choice
-                                                      }
-                                                    />
-                                                  );
-                                                } else if (
-                                                  file.type === "imageUrl"
-                                                ) {
-                                                  return (
-                                                    <ImagePreview
-                                                      key={file.key}
-                                                      imageUrl={file.data}
-                                                      imageIndex={0}
-                                                      model={step.model}
-                                                      tools={
-                                                        step.input?.tools ||
-                                                        step.tools
-                                                      }
-                                                      toolChoice={
-                                                        step.input?.tool_choice ||
-                                                        step.tool_choice
-                                                      }
-                                                    />
-                                                  );
-                                                }
-                                                return null;
-                                              })}
-                                            </div>
-                                          );
-                                        }
-
-                                        return null;
-                                      })()}
-                                  </div>
-                                )}
-                              </DisclosurePanel>
-                            </>
-                          )}
-                        </Disclosure>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-6 text-sm text-muted-foreground">
-              Timeline collapsed. Expand to review each step.
-            </div>
-          )}
+              );
+            })}
+          </div>
         </div>
       </SectionCard>
     </ErrorBoundary>

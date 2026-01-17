@@ -44,13 +44,13 @@ export function StatPill({
       )}
     >
       {icon && <div className="text-base">{icon}</div>}
-      <div>
+      <div className="min-w-0">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {label}
         </p>
-        <p className="text-base font-semibold leading-6">{value}</p>
+        <p className="text-base font-semibold leading-6 break-words">{value}</p>
         {helperText && (
-          <p className="text-xs text-muted-foreground">{helperText}</p>
+          <p className="text-xs text-muted-foreground break-words">{helperText}</p>
         )}
       </div>
     </div>
