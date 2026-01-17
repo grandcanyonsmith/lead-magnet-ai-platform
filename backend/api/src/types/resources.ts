@@ -126,6 +126,7 @@ export interface Job {
   job_id: string;
   tenant_id: string;
   workflow_id: string;
+  workflow_version?: number;
   submission_id?: string;
   status: "pending" | "processing" | "completed" | "failed";
   result?: any;

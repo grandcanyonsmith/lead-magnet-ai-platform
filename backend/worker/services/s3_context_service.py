@@ -183,7 +183,14 @@ class S3ContextService:
 
         source_artifact_id = self._find_last_artifact_id(step_outputs)
         if not source_artifact_id:
-            raise ValueError("S3 upload requested but no previous step artifact_id was found")
+            logger.warning("[S3ContextService] S3 upload requested but no previous artifact_id found; skipping upload context", extra={
+                "job_id": job_id,
+                "tenant_id": tenant_id,
+                "step_index": step_index,
+                "dest_bucket": bucket,
+                "dest_region": region,
+            })
+            return current_step_context
 
         artifact = self.db.get_artifact(source_artifact_id)  # raises on DB issues
         if not artifact:

@@ -13,7 +13,8 @@ import { z } from "zod";
  *   orchestrator can forward it directly back to OpenAI.
  */
 
-export const SHELL_EXECUTOR_CONTRACT_VERSION = "2025-12-29" as const;
+// Try older version that container might support
+export const SHELL_EXECUTOR_CONTRACT_VERSION = "2024-12-29" as const;
 
 /**
  * Output outcome matches OpenAI shell tool expectations.
