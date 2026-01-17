@@ -4,10 +4,13 @@
 
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Settings } from "@/types";
 import { FormField } from "./FormField";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { BuildingOfficeIcon } from "@heroicons/react/24/outline";
+import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 interface GeneralSettingsProps {
   settings: Settings;
@@ -33,11 +36,92 @@ const SERVICE_TIER_OPTIONS = [
   { value: "scale", label: "Scale (High Volume)" },
 ];
 
+const REVIEW_REASONING_OPTIONS = [
+  { value: "high", label: "High (Default)" },
+  { value: "xhigh", label: "Extra High" },
+  { value: "medium", label: "Medium" },
+  { value: "low", label: "Low" },
+  { value: "none", label: "None" },
+];
+
+interface TenantUserOption {
+  user_id: string;
+  email?: string;
+  name?: string;
+  role?: string;
+}
+
 export function GeneralSettings({
   settings,
   onChange,
   errors,
 }: GeneralSettingsProps) {
+  const { user } = useAuth();
+  const [tenantUsers, setTenantUsers] = useState<TenantUserOption[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadUsers = async () => {
+      setUsersLoading(true);
+      try {
+        const response = await api.get<{ users?: TenantUserOption[] }>(
+          "/admin/users/tenant",
+          { params: { limit: 100 } },
+        );
+        if (isMounted) {
+          setTenantUsers(response.users || []);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setTenantUsers([]);
+        }
+      } finally {
+        if (isMounted) {
+          setUsersLoading(false);
+        }
+      }
+    };
+
+    void loadUsers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const reviewerOptions = useMemo(() => {
+    const currentLabelBase =
+      user?.name && user?.email
+        ? `${user.name} (${user.email})`
+        : user?.name || user?.email;
+    const currentLabel = currentLabelBase
+      ? `Current user (${currentLabelBase})`
+      : "Current user";
+    const options = [
+      { value: "", label: currentLabel },
+      ...tenantUsers.map((tenantUser) => {
+        const labelBase =
+          tenantUser.name && tenantUser.email
+            ? `${tenantUser.name} (${tenantUser.email})`
+            : tenantUser.name || tenantUser.email || tenantUser.user_id;
+        return {
+          value: tenantUser.user_id,
+          label: labelBase,
+        };
+      }),
+    ];
+
+    const seen = new Set<string>();
+    return options.filter((option) => {
+      if (!option.value) return true;
+      if (seen.has(option.value)) return false;
+      seen.add(option.value);
+      return true;
+    });
+  }, [tenantUsers, user]);
+
   return (
     <Card>
       <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
@@ -50,7 +134,7 @@ export function GeneralSettings({
           </CardTitle>
         </div>
         <CardDescription className="ml-12">
-          Configure your organization details and default AI model preferences.
+          Configure your organization details and default AI preferences.
         </CardDescription>
       </CardHeader>
 
@@ -121,6 +205,60 @@ export function GeneralSettings({
             options={SERVICE_TIER_OPTIONS}
             helpText="Default service tier for new AI steps (override per-step if needed)"
           />
+        </div>
+
+        <div className="space-y-3 border-t border-gray-100 dark:border-border pt-6">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground">
+              Review & Improve Defaults
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              Applies to AI-generated workflow improvement suggestions.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              label="Default Reviewer"
+              name="default_workflow_improvement_user_id"
+              type="text"
+              value={
+                settings.default_workflow_improvement_user_id &&
+                settings.default_workflow_improvement_user_id !== "auto"
+                  ? settings.default_workflow_improvement_user_id
+                  : ""
+              }
+              onChange={(value) =>
+                onChange("default_workflow_improvement_user_id", value)
+              }
+              options={reviewerOptions}
+              helpText="Use the selected user as the reviewer for improvements"
+              disabled={usersLoading}
+            />
+            <FormField
+              label="Review Service Tier"
+              name="default_workflow_improvement_service_tier"
+              type="text"
+              value={settings.default_workflow_improvement_service_tier || "priority"}
+              onChange={(value) =>
+                onChange("default_workflow_improvement_service_tier", value)
+              }
+              options={SERVICE_TIER_OPTIONS}
+              helpText="Service tier for generating improvement suggestions"
+            />
+            <FormField
+              label="Review Reasoning"
+              name="default_workflow_improvement_reasoning_effort"
+              type="text"
+              value={
+                settings.default_workflow_improvement_reasoning_effort || "high"
+              }
+              onChange={(value) =>
+                onChange("default_workflow_improvement_reasoning_effort", value)
+              }
+              options={REVIEW_REASONING_OPTIONS}
+              helpText="Reasoning depth for improvement suggestions"
+            />
+          </div>
         </div>
       </CardContent>
     </Card>

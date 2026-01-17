@@ -108,6 +108,14 @@ class OpenAIImageRetryHandler:
         api_params = dict(params)
         api_params.pop("job_id", None)
         api_params.pop("tenant_id", None)
+        if "max_output_tokens" not in api_params:
+            if api_params.get("max_completion_tokens") is not None:
+                api_params["max_output_tokens"] = api_params.pop("max_completion_tokens")
+            elif api_params.get("max_tokens") is not None:
+                api_params["max_output_tokens"] = api_params.pop("max_tokens")
+        else:
+            api_params.pop("max_completion_tokens", None)
+            api_params.pop("max_tokens", None)
         return api_params
 
     @staticmethod

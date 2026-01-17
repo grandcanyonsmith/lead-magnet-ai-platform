@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from services.openai_client import OpenAIClient
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 import openai
 
 def test_error_retry_loop():
@@ -70,6 +70,8 @@ def test_error_retry_loop():
                 # Third call succeeds (all bad URLs removed)
                 return mock_response
     
+    if not hasattr(client.client, "responses") or client.client.responses is None:
+        client.client.responses = Mock()
     client.client.responses.create = mock_create
     
     # Test with problematic URLs

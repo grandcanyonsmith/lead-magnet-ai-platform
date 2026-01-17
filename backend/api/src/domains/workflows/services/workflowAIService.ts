@@ -10,6 +10,14 @@ export interface WorkflowAIEditRequest {
   userPrompt: string;
   defaultToolChoice?: ToolChoice;
   defaultServiceTier?: string;
+  reviewServiceTier?: string;
+  reviewReasoningEffort?: string;
+  reviewerUser?: {
+    user_id: string;
+    name?: string;
+    email?: string;
+    role?: string;
+  };
   workflowContext: {
     workflow_id: string;
     workflow_name: string;
@@ -51,6 +59,7 @@ const AVAILABLE_TOOLS = [
 const DEFAULT_TOOL_CHOICE: ToolChoice = 'required';
 const VALID_TOOL_CHOICES = new Set<ToolChoice>(['auto', 'required', 'none']);
 const VALID_SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'scale', 'priority']);
+const VALID_REASONING_EFFORTS = new Set(['none', 'low', 'medium', 'high', 'xhigh']);
 
 const buildWorkflowAiSystemPrompt = (
   defaultToolChoice: ToolChoice,
@@ -138,6 +147,9 @@ export class WorkflowAIService {
       referenceExamples,
       defaultToolChoice,
       defaultServiceTier,
+      reviewServiceTier,
+      reviewReasoningEffort,
+      reviewerUser,
     } = request;
     const resolvedDefaultToolChoice = VALID_TOOL_CHOICES.has(defaultToolChoice as ToolChoice)
       ? (defaultToolChoice as ToolChoice)
@@ -149,6 +161,14 @@ export class WorkflowAIService {
     const shouldOverrideServiceTier =
       resolvedDefaultServiceTier !== undefined &&
       resolvedDefaultServiceTier !== "auto";
+    const resolvedReviewServiceTier =
+      reviewServiceTier && VALID_SERVICE_TIERS.has(reviewServiceTier)
+        ? reviewServiceTier
+        : "priority";
+    const resolvedReviewReasoningEffort =
+      reviewReasoningEffort && VALID_REASONING_EFFORTS.has(reviewReasoningEffort)
+        ? reviewReasoningEffort
+        : "high";
 
     // Build context message for AI
     const contextParts: string[] = [
@@ -176,6 +196,21 @@ export class WorkflowAIService {
           contextParts.push(`   ${step.step_description}`);
         }
       });
+    }
+
+    if (reviewerUser) {
+      const reviewerLabel =
+        reviewerUser.name || reviewerUser.email || reviewerUser.user_id;
+      const reviewerMeta = [
+        reviewerUser.role ? `Role: ${reviewerUser.role}` : null,
+        reviewerUser.email ? `Email: ${reviewerUser.email}` : null,
+      ]
+        .filter(Boolean)
+        .join(" • ");
+      contextParts.push("", "Reviewer Context:");
+      contextParts.push(
+        reviewerMeta ? `${reviewerLabel} (${reviewerMeta})` : reviewerLabel,
+      );
     }
 
     // Add Reference Examples (Few-Shot Learning)
@@ -277,8 +312,10 @@ Please generate the updated workflow configuration with all necessary changes.`;
                   resolvedDefaultServiceTier,
                 ),
                 input: userMessage,
-                reasoning: { effort: 'high' },
-                service_tier: 'priority',
+                reasoning: { effort: resolvedReviewReasoningEffort },
+                ...(resolvedReviewServiceTier !== "auto"
+                  ? { service_tier: resolvedReviewServiceTier }
+                  : {}),
               }),
             'Workflow AI Edit',
             0, // No timeout - allow up to 5 minutes for complex workflow edits

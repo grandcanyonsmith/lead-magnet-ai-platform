@@ -200,6 +200,19 @@ export interface UserSettings {
   lead_phone_field?: string;
   default_tool_choice?: "auto" | "required" | "none";
   default_service_tier?: "auto" | "default" | "flex" | "scale" | "priority";
+  default_workflow_improvement_user_id?: string;
+  default_workflow_improvement_service_tier?:
+    | "auto"
+    | "default"
+    | "flex"
+    | "scale"
+    | "priority";
+  default_workflow_improvement_reasoning_effort?:
+    | "none"
+    | "low"
+    | "medium"
+    | "high"
+    | "xhigh";
   created_at: string;
   updated_at: string;
 }
