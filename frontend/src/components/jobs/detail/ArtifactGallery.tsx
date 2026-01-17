@@ -15,6 +15,9 @@ import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { openJobDocumentInNewTab } from "@/utils/jobs/openJobDocument";
 import type { ArtifactGalleryItem } from "@/types/job";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import Link from "next/link";
 
 interface ArtifactGalleryProps {
@@ -90,16 +93,13 @@ export function ArtifactGallery({
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <div
-            key={i}
-            className="animate-pulse rounded-2xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-card p-4"
-          >
+          <Card key={i} className="animate-pulse p-4">
             <div className="aspect-[4/3] w-full rounded-xl bg-gray-100 dark:bg-gray-800" />
             <div className="mt-4 space-y-2">
               <div className="h-4 w-3/4 rounded bg-gray-100 dark:bg-gray-800" />
               <div className="h-3 w-1/2 rounded bg-gray-100 dark:bg-gray-800" />
             </div>
-          </div>
+          </Card>
         ))}
       </div>
     );
@@ -107,17 +107,12 @@ export function ArtifactGallery({
 
   if (!items.length) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 py-16 text-center">
-        <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-3">
-          <PhotoIcon className="h-6 w-6 text-gray-400 dark:text-gray-500" />
-        </div>
-        <h3 className="mt-4 text-sm font-semibold text-gray-900 dark:text-white">
-          No artifacts generated
-        </h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Artifacts will appear here once the job completes successfully.
-        </p>
-      </div>
+      <EmptyState
+        title="No artifacts generated"
+        message="Artifacts will appear here once the job completes successfully."
+        icon={<PhotoIcon className="h-6 w-6 text-gray-400 dark:text-gray-500" />}
+        className="rounded-2xl border border-dashed border-border bg-muted/40"
+      />
     );
   }
 
@@ -209,9 +204,9 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
     fileName.endsWith(".md");
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-card shadow transition-all hover:shadow-md hover:border-gray-400 dark:hover:border-gray-600">
+    <Card className="group relative flex flex-col overflow-hidden transition-all hover:shadow-md">
       {/* Preview Area */}
-      <div className="aspect-[4/3] bg-gray-50 dark:bg-gray-800 relative overflow-hidden group/preview">
+      <div className="aspect-[4/3] bg-muted/60 relative overflow-hidden group/preview">
         {artifactUrl && item.kind !== "jobOutput" ? (
           <div className="relative h-full w-full">
             <PreviewRenderer
@@ -260,7 +255,7 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
 
         {/* Type Badge */}
         <div className="absolute left-3 top-3">
-          <span className="inline-flex items-center rounded-md bg-white/90 dark:bg-black/80 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-200 shadow-sm backdrop-blur-sm">
+          <span className="inline-flex items-center rounded-md bg-background/90 px-2 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm">
             {isImage ? "Image" : isCode ? "Code" : "Document"}
           </span>
         </div>
@@ -270,32 +265,34 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
       <div className="flex flex-1 flex-col p-4">
         <div className="mb-4">
           <h3
-            className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-1"
+            className="text-sm font-semibold text-foreground line-clamp-1"
             title={item.label}
           >
             {item.label}
           </h3>
           {item.description && (
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
               {item.description}
             </p>
           )}
           {item.stepOrder !== undefined && (
-            <p className="mt-2 text-xs font-medium text-gray-400 dark:text-gray-500">
+            <p className="mt-2 text-xs font-medium text-muted-foreground/80">
               Step {item.stepOrder}
             </p>
           )}
         </div>
 
         {/* Footer Actions */}
-        <div className="mt-auto flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-3">
+        <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-3">
           <div className="flex items-center gap-1">
             {item.kind === "jobOutput" && item.jobId ? (
-              <button
+              <Button
                 type="button"
+                size="sm"
+                variant="secondary"
                 onClick={handleViewJobOutput}
                 disabled={openingJobOutput}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20 px-2.5 py-1.5 text-xs font-medium text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40 hover:text-primary-800 dark:hover:text-primary-200 transition-colors"
+                className="h-7 px-2.5 text-xs"
               >
                 {openingJobOutput ? (
                   <span className="animate-pulse">Opening...</span>
@@ -305,7 +302,7 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
                     View Output
                   </>
                 )}
-              </button>
+              </Button>
             ) : null}
           </div>
 
@@ -316,7 +313,7 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
                   href={artifactUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-lg p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
                   <ArrowTopRightOnSquareIcon className="h-4 w-4" />
                 </a>
@@ -326,7 +323,7 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
               <Tooltip content="Open in AI Editor" position="top">
                 <Link
                   href={editorHref}
-                  className="rounded-lg p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
                   <PencilSquareIcon className="h-4 w-4" />
                 </Link>
@@ -336,7 +333,7 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
               <Tooltip content="Copy Link" position="top">
                 <button
                   onClick={() => handleCopy(artifactUrl, "Link copied")}
-                  className="rounded-lg p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
                   <ClipboardDocumentIcon className="h-4 w-4" />
                 </button>
@@ -348,7 +345,7 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-lg p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                 >
                   <ArrowDownTrayIcon className="h-4 w-4" />
                 </a>
@@ -357,6 +354,6 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

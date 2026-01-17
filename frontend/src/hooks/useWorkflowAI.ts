@@ -1,16 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import type { WorkflowAIEditResponse } from "@/types/workflow";
 
 export interface WorkflowAIEditRequest {
   userPrompt: string;
-}
-
-export interface WorkflowAIEditResponse {
-  workflow_name?: string;
-  workflow_description?: string;
-  html_enabled?: boolean;
-  steps: any[];
-  changes_summary: string;
 }
 
 type WorkflowAIEditJobStatus = "pending" | "processing" | "completed" | "failed";
@@ -30,7 +23,10 @@ export function useWorkflowAI(workflowId: string) {
     };
   }, []);
 
-  const generateWorkflowEdit = async (userPrompt: string, contextJobId?: string) => {
+  const generateWorkflowEdit = async (
+    userPrompt: string,
+    contextJobId?: string,
+  ): Promise<{ jobId: string; result: WorkflowAIEditResponse }> => {
     setIsGenerating(true);
     setError(null);
     setProposal(null);
@@ -60,7 +56,7 @@ export function useWorkflowAI(workflowId: string) {
             throw new Error("Workflow AI edit completed but returned no result");
           }
           setProposal(statusRes.result);
-          return statusRes.result;
+          return { jobId, result: statusRes.result };
         }
 
         if (status === "failed") {

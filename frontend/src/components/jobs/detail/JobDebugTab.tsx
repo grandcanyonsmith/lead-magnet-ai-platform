@@ -1,6 +1,8 @@
 import { ClipboardDocumentIcon } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
 import { JsonViewer } from "@/components/ui/JsonViewer";
+import { SectionCard } from "@/components/ui/SectionCard";
+import { Button } from "@/components/ui/Button";
 
 interface JobDebugTabProps {
   data: unknown;
@@ -15,7 +17,7 @@ function RawJsonPanel({ data }: { data: unknown }) {
 
   if (!hasData) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/80 p-4 text-sm text-gray-600 dark:text-gray-400">
+      <div className="rounded-xl border border-dashed border-border bg-muted/40 p-4 text-sm text-muted-foreground">
         No raw JSON data is available for this run.
       </div>
     );
@@ -33,28 +35,17 @@ function RawJsonPanel({ data }: { data: unknown }) {
   };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-gray-950 text-gray-100">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-        <p className="text-sm font-semibold">Raw execution JSON</p>
-
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-700 px-3 py-1.5 text-xs font-semibold hover:bg-gray-800"
-        >
+    <SectionCard
+      title="Raw execution JSON"
+      description="Full payload captured for this run."
+      actions={
+        <Button type="button" size="sm" variant="outline" onClick={handleCopy}>
           <ClipboardDocumentIcon className="h-4 w-4" />
           Copy JSON
-        </button>
-      </div>
-
-      <div className="p-4">
-        <JsonViewer
-          value={data}
-          raw={jsonString}
-          defaultMode="tree"
-          defaultExpandedDepth={2}
-        />
-      </div>
-    </div>
+        </Button>
+      }
+    >
+      <JsonViewer value={data} raw={jsonString} defaultMode="tree" defaultExpandedDepth={2} />
+    </SectionCard>
   );
 }

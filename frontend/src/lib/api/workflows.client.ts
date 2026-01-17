@@ -19,6 +19,9 @@ import {
   FolderCreateRequest,
   FolderUpdateRequest,
   AIModelConfig,
+  WorkflowAIEditResponse,
+  WorkflowAIImprovement,
+  WorkflowImprovementStatus,
 } from "@/types";
 
 export class WorkflowsClient extends BaseApiClient {
@@ -165,19 +168,30 @@ export class WorkflowsClient extends BaseApiClient {
   async getWorkflowAIEditStatus(jobId: string): Promise<{
     job_id: string;
     status: "pending" | "processing" | "completed" | "failed";
-    result: {
-      workflow_name?: string;
-      workflow_description?: string;
-      html_enabled?: boolean;
-      steps: any[];
-      changes_summary: string;
-    } | null;
+    result: WorkflowAIEditResponse | null;
     error_message?: string | null;
     workflow_id?: string | null;
+    improvement_status?: WorkflowImprovementStatus | null;
+    reviewed_at?: string | null;
     created_at?: string;
     updated_at?: string;
   }> {
     return this.get(`/admin/workflows/ai-edit-status/${jobId}`);
+  }
+
+  async getWorkflowAIImprovements(
+    workflowId: string,
+  ): Promise<{ improvements: WorkflowAIImprovement[] }> {
+    return this.get(`/admin/workflows/${workflowId}/ai-improvements`);
+  }
+
+  async reviewWorkflowAIImprovement(
+    jobId: string,
+    status: WorkflowImprovementStatus,
+  ): Promise<{ improvement: WorkflowAIImprovement }> {
+    return this.post(`/admin/workflows/ai-improvements/${jobId}/review`, {
+      status,
+    });
   }
 
   async testStep(request: { step: any; input?: any }): Promise<{

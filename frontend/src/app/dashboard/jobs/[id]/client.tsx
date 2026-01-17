@@ -71,6 +71,10 @@ export default function JobDetailClient() {
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [showRerunDialog, setShowRerunDialog] = useState(false);
+  const [trackingSessionCount, setTrackingSessionCount] = useState<number | null>(
+    null,
+  );
+  const [trackingSessionsLoading, setTrackingSessionsLoading] = useState(false);
   const [stepIndexForRerun, setStepIndexForRerun] = useState<number | null>(
     null,
   );
@@ -471,6 +475,10 @@ export default function JobDetailClient() {
           onRerunStepClick={handleRerunStepClick}
           rerunningStep={rerunningStep}
           openPreview={openPreview}
+          trackingSessionCount={trackingSessionCount}
+          trackingSessionsLoading={trackingSessionsLoading}
+          onTrackingSessionsLoaded={setTrackingSessionCount}
+          onTrackingSessionsLoadingChange={setTrackingSessionsLoading}
         />
 
         {/* Artifact Preview Modal */}
@@ -559,6 +567,10 @@ interface JobTabsProps {
   onRerunStepClick: (stepIndex: number) => void;
   rerunningStep: number | null;
   openPreview: (item: ArtifactGalleryItem) => void;
+  trackingSessionCount?: number | null;
+  trackingSessionsLoading?: boolean;
+  onTrackingSessionsLoaded?: (count: number) => void;
+  onTrackingSessionsLoadingChange?: (loading: boolean) => void;
 }
 
 function JobTabs({
@@ -591,29 +603,70 @@ function JobTabs({
   onRerunStepClick,
   rerunningStep,
   openPreview,
+  trackingSessionCount,
+  trackingSessionsLoading,
+  onTrackingSessionsLoaded,
+  onTrackingSessionsLoadingChange,
 }: JobTabsProps) {
+  const stepsBadge = stepsSummary.total;
+  const artifactsBadge = artifactGalleryItems.length;
+  const trackingBadge =
+    trackingSessionsLoading && trackingSessionCount === null
+      ? "…"
+      : trackingSessionCount;
+
   return (
-    <div className="mt-8">
-      <nav className="flex space-x-8 border-b border-gray-300 dark:border-gray-700">
-        {TAB_CONFIG.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <Link
-              key={tab.id}
-              href={buildTabHref(tab.id)}
-              aria-current={isActive ? "page" : undefined}
-              className={`whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium outline-none transition-colors ${
-                isActive
-                  ? "border-primary-500 text-primary-600"
-                  : "border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-200"
-              }`}
-            >
-              {tab.name}
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="mt-6">
+    <div className="mt-8 space-y-6">
+      <div className="rounded-xl border border-border bg-card p-1 shadow-sm">
+        <nav className="flex flex-wrap gap-1">
+          {TAB_CONFIG.map((tab) => {
+            const isActive = activeTab === tab.id;
+            const badgeValue =
+              tab.id === "execution"
+                ? stepsBadge
+                : tab.id === "summary"
+                  ? artifactsBadge
+                  : tab.id === "tracking"
+                    ? trackingBadge
+                    : null;
+            const badgeLabel =
+              tab.id === "execution"
+                ? "Steps"
+                : tab.id === "summary"
+                  ? "Outputs"
+                  : tab.id === "tracking"
+                    ? "Sessions"
+                    : undefined;
+            return (
+              <Link
+                key={tab.id}
+                href={buildTabHref(tab.id)}
+                aria-current={isActive ? "page" : undefined}
+                className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold outline-none transition-colors ${
+                  isActive
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                }`}
+              >
+                <span>{tab.name}</span>
+                {badgeValue !== null && badgeValue !== undefined && (
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                      isActive
+                        ? "bg-primary/10 text-primary-700 dark:text-primary-300"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                    title={badgeLabel}
+                  >
+                    {badgeValue}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+      <div>
         {activeTab === "execution" && (
           <JobExecutionTab
             job={job}
@@ -659,7 +712,13 @@ function JobTabs({
             artifacts={artifacts}
           />
         )}
-        {activeTab === "tracking" && <JobTrackingTab jobId={job.job_id} />}
+        {activeTab === "tracking" && (
+          <JobTrackingTab
+            jobId={job.job_id}
+            onSessionsLoaded={onTrackingSessionsLoaded}
+            onSessionsLoadingChange={onTrackingSessionsLoadingChange}
+          />
+        )}
         {activeTab === "technical" && (
           <JobTechnicalTab
             job={job}
