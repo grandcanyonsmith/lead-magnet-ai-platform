@@ -607,6 +607,13 @@ export class WorkflowAIController {
         settings?.default_tool_choice === 'none'
           ? settings.default_tool_choice
           : undefined;
+      const defaultServiceTier =
+        settings?.default_service_tier &&
+        ["auto", "default", "flex", "scale", "priority"].includes(
+          settings.default_service_tier,
+        )
+          ? settings.default_service_tier
+          : undefined;
 
       // Get OpenAI client
       const openai = await getOpenAIClient();
@@ -617,6 +624,7 @@ export class WorkflowAIController {
         userPrompt: body.userPrompt,
         action: body.action,
         defaultToolChoice,
+        defaultServiceTier,
         workflowContext: {
           workflow_id: workflowId,
           workflow_name: workflow.workflow_name || 'Untitled Workflow',
