@@ -1,53 +1,16 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import {
-  FiPlay,
-  FiSkipForward,
-  FiRotateCcw,
-  FiSave,
-  FiDownload,
-  FiUpload,
-  FiPlus,
-  FiCheckCircle,
-  FiAlertCircle,
-  FiLoader,
-  FiCode,
-  FiSidebar,
-  FiTerminal,
-  FiDatabase,
-  FiFileText,
-  FiSettings,
-  FiX,
-  FiEdit2,
-  FiCheck
-} from "react-icons/fi";
 import { useWorkflowSteps } from "@/hooks/useWorkflowSteps";
-import WorkflowStepEditor from "../workflows/components/WorkflowStepEditor";
 import WorkflowFlowchart from "../workflows/components/WorkflowFlowchart";
 import { api } from "@/lib/api";
-import { JsonViewer } from "@/components/ui/JsonViewer";
 import toast from "react-hot-toast";
-import { WorkflowStep } from "@/types/workflow";
 import { useSettings } from "@/hooks/api/useSettings";
-
-import { LogViewer } from "./components/LogViewer";
-
-// Types
-interface AccumulatedContext {
-  [key: string]: any;
-}
-
-interface StepResult {
-  stepIndex: number;
-  output: any;
-  status: "success" | "error" | "pending";
-  error?: string;
-  duration?: number;
-}
-
-type SidebarTab = "input" | "step-config" | "context" | "logs";
+import { PlaygroundTopBar } from "./components/PlaygroundTopBar";
+import { PlaygroundSidebar } from "./components/PlaygroundSidebar";
+import { PlaygroundImportModal } from "./components/PlaygroundImportModal";
+import type { AccumulatedContext, SidebarTab, StepResult } from "./types";
 
 export default function PlaygroundPage() {
   const router = useRouter();
