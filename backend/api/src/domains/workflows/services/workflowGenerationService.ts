@@ -89,7 +89,8 @@ export class WorkflowGenerationService {
     jobId?: string,
     brandContext?: string,
     icpContext?: string,
-    defaultToolChoice?: "auto" | "required" | "none"
+    defaultToolChoice?: "auto" | "required" | "none",
+    defaultServiceTier?: string
   ): Promise<{ workflowData: any; usageInfo: UsageInfo }> {
     return this.workflowConfigService.generateWorkflowConfig(
       description,
@@ -99,6 +100,7 @@ export class WorkflowGenerationService {
       brandContext,
       icpContext,
       defaultToolChoice,
+      defaultServiceTier,
     );
   }
 

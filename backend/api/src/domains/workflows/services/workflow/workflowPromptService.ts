@@ -6,14 +6,29 @@ export interface WorkflowPromptContext {
   brandContext?: string;
   icpContext?: string;
   defaultToolChoice?: ToolChoice;
+  defaultServiceTier?: string;
 }
 
 export function buildWorkflowPrompt(context: WorkflowPromptContext): string {
-  const { description, brandContext, icpContext, defaultToolChoice } = context;
+  const {
+    description,
+    brandContext,
+    icpContext,
+    defaultToolChoice,
+    defaultServiceTier,
+  } = context;
   const resolvedDefaultToolChoice =
     defaultToolChoice === "auto" || defaultToolChoice === "required" || defaultToolChoice === "none"
       ? defaultToolChoice
       : "required";
+  const resolvedDefaultServiceTier =
+    defaultServiceTier === "auto" ||
+    defaultServiceTier === "default" ||
+    defaultServiceTier === "flex" ||
+    defaultServiceTier === "scale" ||
+    defaultServiceTier === "priority"
+      ? defaultServiceTier
+      : "auto";
 
   let contextSection = '';
   if (brandContext) {
@@ -71,6 +86,7 @@ Create a sophisticated workflow that delivers *tangible value* to the user. The 
 - **"flex"**: Lower cost, slower responses.
 - **"scale"**: Best for high-volume throughput.
 - **"priority"**: Fastest responses.
+${resolvedDefaultServiceTier ? `\n## Default Service Tier\n- Use **"${resolvedDefaultServiceTier}"** for each step unless the user explicitly asks for a different tier.` : ""}
 
 ## Available Models
 ${formatAllModelDescriptionsMarkdown()}

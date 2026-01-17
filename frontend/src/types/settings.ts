@@ -3,6 +3,7 @@
  */
 
 import { BaseEntity } from "./common";
+import { ServiceTier } from "./workflow";
 
 export interface OnboardingChecklist {
   complete_profile?: boolean;
@@ -24,6 +25,7 @@ export interface Settings extends BaseEntity {
   website_url?: string;
   default_ai_model?: string;
   default_tool_choice?: "auto" | "required" | "none";
+  default_service_tier?: ServiceTier;
   logo_url?: string;
   webhook_url?: string;
   ghl_webhook_url?: string;
@@ -54,6 +56,7 @@ export interface SettingsUpdateRequest {
   website_url?: string;
   default_ai_model?: string;
   default_tool_choice?: "auto" | "required" | "none";
+  default_service_tier?: ServiceTier;
   logo_url?: string;
   ghl_webhook_url?: string;
   custom_domain?: string;
@@ -76,6 +79,7 @@ export interface SettingsFormData {
   website_url: string;
   default_ai_model: string;
   default_tool_choice: "auto" | "required" | "none";
+  default_service_tier: ServiceTier;
   logo_url: string;
   ghl_webhook_url: string;
   custom_domain: string;

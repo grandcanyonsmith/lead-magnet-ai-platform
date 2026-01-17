@@ -107,7 +107,7 @@ const TOOL_CHOICE_OPTIONS = [
 
 const SERVICE_TIER_OPTIONS = [
   {
-    value: "",
+    value: "auto",
     label: "Auto",
     description: "Project Default",
     icon: FiZap,
@@ -797,12 +797,13 @@ export default function WorkflowStepEditor({
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                       {SERVICE_TIER_OPTIONS.map((option) => {
-                        const isSelected = (localStep.service_tier || "") === option.value;
+                        const currentTier = localStep.service_tier || "auto";
+                        const isSelected = currentTier === option.value;
                         const Icon = option.icon;
                         return (
                           <div
                             key={option.value}
-                            onClick={() => handleChange("service_tier", option.value || undefined)}
+                            onClick={() => handleChange("service_tier", option.value)}
                             className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border cursor-pointer transition-all text-center h-full ${
                               isSelected 
                                 ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/10" 

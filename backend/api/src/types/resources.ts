@@ -199,6 +199,7 @@ export interface UserSettings {
   custom_domain?: string;
   lead_phone_field?: string;
   default_tool_choice?: "auto" | "required" | "none";
+  default_service_tier?: "auto" | "default" | "flex" | "scale" | "priority";
   created_at: string;
   updated_at: string;
 }

@@ -7,6 +7,7 @@ export interface AIStepGenerationRequest {
   userPrompt: string;
   action?: 'update' | 'add';
   defaultToolChoice?: ToolChoice;
+  defaultServiceTier?: string;
   workflowContext: {
     workflow_id: string;
     workflow_name: string;
@@ -42,7 +43,10 @@ const DEFAULT_TOOL_CHOICE: ToolChoice = 'required';
 const VALID_TOOL_CHOICES = new Set<ToolChoice>(['auto', 'required', 'none']);
 const VALID_SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'scale', 'priority']);
 
-const buildStepSystemPrompt = (defaultToolChoice: ToolChoice) => `You are an Expert Workflow Architect for an AI Lead Magnet platform.
+const buildStepSystemPrompt = (
+  defaultToolChoice: ToolChoice,
+  defaultServiceTier?: string,
+) => `You are an Expert Workflow Architect for an AI Lead Magnet platform.
     
 Your goal is to translate the user's natural language request into a precise, high-performance workflow step configuration.
 
@@ -83,6 +87,9 @@ Available Tools:
    - **required**: If the step's SOLE purpose is to use a tool (e.g. "Research X").
    - **none**: If the step is pure text processing or formatting.
    - Default tool_choice: **${defaultToolChoice}** when tools are present.
+
+5. **Default Service Tier**:
+   - Use **${defaultServiceTier || "auto"}** for this step unless the user explicitly asks for a different tier.
 
 5. **Instruction Quality**:
    - Write instructions that are **specific** and **actionable**.
@@ -138,10 +145,25 @@ export class WorkflowStepAIService {
   constructor(private openaiClient: OpenAI) {}
 
   async generateStep(request: AIStepGenerationRequest): Promise<AIStepGenerationResponse> {
-    const { userPrompt, action, workflowContext, currentStep, currentStepIndex, defaultToolChoice } = request;
+    const {
+      userPrompt,
+      action,
+      workflowContext,
+      currentStep,
+      currentStepIndex,
+      defaultToolChoice,
+      defaultServiceTier,
+    } = request;
     const resolvedDefaultToolChoice = VALID_TOOL_CHOICES.has(defaultToolChoice as ToolChoice)
       ? (defaultToolChoice as ToolChoice)
       : DEFAULT_TOOL_CHOICE;
+    const resolvedDefaultServiceTier =
+      defaultServiceTier && VALID_SERVICE_TIERS.has(defaultServiceTier)
+        ? defaultServiceTier
+        : undefined;
+    const shouldOverrideServiceTier =
+      resolvedDefaultServiceTier !== undefined &&
+      resolvedDefaultServiceTier !== "auto";
 
     // Build context message for AI
     const contextParts: string[] = [
@@ -196,7 +218,10 @@ Please generate the workflow step configuration.`;
     try {
       const completion = await (this.openaiClient as any).responses.create({
         model: 'gpt-5.2',
-        instructions: buildStepSystemPrompt(resolvedDefaultToolChoice),
+        instructions: buildStepSystemPrompt(
+          resolvedDefaultToolChoice,
+          resolvedDefaultServiceTier,
+        ),
         input: userMessage,
         reasoning: { effort: 'high' },
         service_tier: 'priority',
@@ -265,6 +290,10 @@ Please generate the workflow step configuration.`;
         !VALID_SERVICE_TIERS.has((parsedResponse.step as any).service_tier)
       ) {
         delete (parsedResponse.step as any).service_tier;
+      }
+
+      if (shouldOverrideServiceTier) {
+        (parsedResponse.step as any).service_tier = resolvedDefaultServiceTier;
       }
 
       // Validate reasoning_effort
