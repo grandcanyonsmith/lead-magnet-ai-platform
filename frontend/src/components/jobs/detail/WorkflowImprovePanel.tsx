@@ -167,6 +167,11 @@ export function WorkflowImprovePanel({
     : null;
   const isPendingReview = selectedImprovement?.improvement_status === "pending";
 
+  const historyDescription =
+    improvements.length > 0
+      ? `Showing ${filteredImprovements.length} of ${improvements.length} improvements.`
+      : "Saved AI suggestions ready for review.";
+
   useEffect(() => {
     if (!filteredImprovements.length) {
       setSelectedImprovementId(null);
