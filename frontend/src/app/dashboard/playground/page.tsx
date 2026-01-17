@@ -95,7 +95,7 @@ export default function PlaygroundPage() {
           // Don't auto select, maybe? Or select first?
           // setSelectedStepIndex(0);
       }
-  }, [steps.length]);
+  }, [steps.length, selectedStepIndex]);
 
   // When a step is selected, switch to config tab
   const handleStepClick = (index: number) => {
