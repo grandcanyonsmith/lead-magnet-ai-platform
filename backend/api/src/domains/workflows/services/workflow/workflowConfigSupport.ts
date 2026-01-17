@@ -11,6 +11,7 @@ export interface ParsedWorkflowConfig {
 
 interface WorkflowDefaults {
   defaultToolChoice?: ToolChoice;
+  defaultServiceTier?: string;
 }
 
 interface RawStep {
@@ -38,11 +39,23 @@ interface RawWorkflowData {
 }
 
 const DEFAULT_TOOL_CHOICE: ToolChoice = 'required';
+const VALID_SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'scale', 'priority']);
 
 function resolveDefaultToolChoice(defaultToolChoice?: ToolChoice): ToolChoice {
   return defaultToolChoice === 'auto' || defaultToolChoice === 'required' || defaultToolChoice === 'none'
     ? defaultToolChoice
     : DEFAULT_TOOL_CHOICE;
+}
+
+function resolveDefaultServiceTier(
+  defaultServiceTier?: string,
+): WorkflowStep["service_tier"] | undefined {
+  if (!defaultServiceTier || !VALID_SERVICE_TIERS.has(defaultServiceTier)) {
+    return undefined;
+  }
+  return defaultServiceTier === "auto"
+    ? undefined
+    : (defaultServiceTier as WorkflowStep["service_tier"]);
 }
 
 export function parseWorkflowConfig(
@@ -92,6 +105,7 @@ export function parseWorkflowConfig(
 
 function getDefaultConfig(description: string, defaults?: WorkflowDefaults): ParsedWorkflowConfig {
   const resolvedDefaultToolChoice = resolveDefaultToolChoice(defaults?.defaultToolChoice);
+  const resolvedDefaultServiceTier = resolveDefaultServiceTier(defaults?.defaultServiceTier);
 
   return {
     workflow_name: 'Generated Lead Magnet',
@@ -106,6 +120,7 @@ function getDefaultConfig(description: string, defaults?: WorkflowDefaults): Par
         depends_on: [],
         tools: ['web_search'],
         tool_choice: resolvedDefaultToolChoice,
+        service_tier: resolvedDefaultServiceTier,
       },
       {
         step_name: 'HTML Rewrite',
@@ -116,6 +131,7 @@ function getDefaultConfig(description: string, defaults?: WorkflowDefaults): Par
         depends_on: [0],
         tools: [],
         tool_choice: 'none',
+        service_tier: resolvedDefaultServiceTier,
       },
     ],
   };
@@ -131,11 +147,12 @@ function normalizeStep(step: RawStep, index: number, defaults?: WorkflowDefaults
       ? (step.reasoning_effort as any)
       : undefined;
 
-  const service_tier =
-    isString(step.service_tier) &&
-    ['auto', 'default', 'flex', 'scale', 'priority'].includes(step.service_tier)
-      ? (step.service_tier as any)
+  const resolvedDefaultServiceTier = resolveDefaultServiceTier(defaults?.defaultServiceTier);
+  const normalizedServiceTier =
+    isString(step.service_tier) && VALID_SERVICE_TIERS.has(step.service_tier)
+      ? (step.service_tier as WorkflowStep["service_tier"])
       : undefined;
+  const service_tier = normalizedServiceTier ?? resolvedDefaultServiceTier;
 
   const text_verbosity =
     isString(step.text_verbosity) &&
@@ -223,6 +240,7 @@ function ensureStepDefaultsWithOptions(
   defaults?: WorkflowDefaults,
 ): WorkflowStep[] {
   const resolvedDefaultToolChoice = resolveDefaultToolChoice(defaults?.defaultToolChoice);
+  const resolvedDefaultServiceTier = resolveDefaultServiceTier(defaults?.defaultServiceTier);
 
   return steps.map((step: Partial<WorkflowStep>, index: number) => {
     const stepOrder = step.step_order !== undefined ? step.step_order : index;
@@ -282,6 +300,11 @@ function ensureStepDefaultsWithOptions(
         ? step.tool_choice
         : undefined;
 
+    const normalizedServiceTier =
+      step.service_tier && VALID_SERVICE_TIERS.has(String(step.service_tier))
+        ? (step.service_tier as WorkflowStep["service_tier"])
+        : undefined;
+
     return {
       ...step,
       step_name: step.step_name || `Step ${index + 1}`,
@@ -290,6 +313,7 @@ function ensureStepDefaultsWithOptions(
       depends_on: dependsOn,
       tools: resolvedTools,
       tool_choice: (validToolChoice || (hasTools ? resolvedDefaultToolChoice : 'none')) as ToolChoice,
+      service_tier: normalizedServiceTier ?? resolvedDefaultServiceTier,
       model,
       instructions: step.instructions || '',
     } as WorkflowStep;

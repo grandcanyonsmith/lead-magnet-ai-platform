@@ -23,10 +23,28 @@ const resolveToolChoice = (value?: string): WorkflowStep["tool_choice"] => {
     : DEFAULT_TOOL_CHOICE;
 };
 
-export function useWorkflowEdit(defaultToolChoice?: WorkflowStep["tool_choice"]) {
+const resolveServiceTier = (
+  value?: string,
+): WorkflowStep["service_tier"] | undefined => {
+  if (
+    value === "default" ||
+    value === "flex" ||
+    value === "scale" ||
+    value === "priority"
+  ) {
+    return value;
+  }
+  return undefined;
+};
+
+export function useWorkflowEdit(
+  defaultToolChoice?: WorkflowStep["tool_choice"],
+  defaultServiceTier?: WorkflowStep["service_tier"],
+) {
   const router = useRouter();
   const workflowId = useWorkflowId();
   const resolvedDefaultToolChoice = resolveToolChoice(defaultToolChoice);
+  const resolvedDefaultServiceTier = resolveServiceTier(defaultServiceTier);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -100,6 +118,7 @@ export function useWorkflowEdit(defaultToolChoice?: WorkflowStep["tool_choice"])
           step_type: step.step_type || "ai_generation",
           model: step.model || "gpt-5.2",
           instructions: step.instructions?.trim() || defaultInstructions,
+          service_tier: step.service_tier || resolvedDefaultServiceTier,
           step_order: step.step_order !== undefined ? step.step_order : index,
           tools: step.tools || ["web_search"],
           tool_choice: step.tool_choice || resolvedDefaultToolChoice,
@@ -171,6 +190,7 @@ export function useWorkflowEdit(defaultToolChoice?: WorkflowStep["tool_choice"])
         step_order: prev.length,
         tools: ["web_search"],
         tool_choice: resolvedDefaultToolChoice,
+        service_tier: resolvedDefaultServiceTier,
       },
     ]);
   };

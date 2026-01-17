@@ -33,6 +33,7 @@ export default function NewWorkflowPage() {
   const { settings } = useSettings();
   const workflowSteps = useWorkflowSteps({
     defaultToolChoice: settings?.default_tool_choice,
+    defaultServiceTier: settings?.default_service_tier,
   });
   const validation = useWorkflowValidation(
     workflowForm.formData,

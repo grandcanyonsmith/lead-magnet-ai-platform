@@ -97,6 +97,7 @@ class SettingsController {
         contact_email: "",
         default_ai_model: "gpt-5.2",
         default_tool_choice: "required",
+        default_service_tier: "auto",
         api_usage_limit: 1000000,
         api_usage_current: 0,
         billing_tier: "free",
