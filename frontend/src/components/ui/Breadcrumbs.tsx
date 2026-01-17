@@ -3,8 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRightIcon, HomeIcon } from "@heroicons/react/24/outline";
+import { cn } from "@/lib/utils";
 
-export function Breadcrumbs() {
+interface BreadcrumbsProps {
+  className?: string;
+  listClassName?: string;
+}
+
+export function Breadcrumbs({ className, listClassName }: BreadcrumbsProps = {}) {
   const pathname = usePathname();
   
   // Don't show on dashboard root or if pathname is missing
@@ -18,8 +24,11 @@ export function Breadcrumbs() {
   if (displaySegments.length === 0) return null;
 
   return (
-    <nav className="flex mb-4 sm:mb-6" aria-label="Breadcrumb">
-      <ol className="flex items-center space-x-2">
+    <nav
+      className={cn("flex min-w-0 items-center", className)}
+      aria-label="Breadcrumb"
+    >
+      <ol className={cn("flex min-w-0 items-center space-x-2", listClassName)}>
         <li>
           <div>
             <Link 
@@ -50,8 +59,8 @@ export function Breadcrumbs() {
           }
 
           return (
-            <li key={href}>
-              <div className="flex items-center">
+            <li key={href} className="min-w-0">
+              <div className="flex min-w-0 items-center">
                 <ChevronRightIcon
                   className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 text-muted-foreground/50"
                   aria-hidden="true"
@@ -65,7 +74,9 @@ export function Breadcrumbs() {
                   }`}
                   aria-current={isLast ? "page" : undefined}
                 >
-                  {label}
+                  <span className="block max-w-[10rem] truncate sm:max-w-[16rem]">
+                    {label}
+                  </span>
                 </Link>
               </div>
             </li>
