@@ -14,6 +14,9 @@ import {
   WorkflowVersionListResponse,
   WorkflowVersionRecord,
   AIModelConfig,
+  WorkflowAIEditResponse,
+  WorkflowAIImprovement,
+  WorkflowImprovementStatus,
 } from "./workflow";
 import {
   Form,
@@ -149,18 +152,23 @@ export interface ApiClient {
   getWorkflowAIEditStatus(jobId: string): Promise<{
     job_id: string;
     status: "pending" | "processing" | "completed" | "failed";
-    result: {
-      workflow_name?: string;
-      workflow_description?: string;
-      html_enabled?: boolean;
-      steps: any[];
-      changes_summary: string;
-    } | null;
+    result: WorkflowAIEditResponse | null;
     error_message?: string | null;
     workflow_id?: string | null;
+    improvement_status?: WorkflowImprovementStatus | null;
+    reviewed_at?: string | null;
     created_at?: string;
     updated_at?: string;
   }>;
+
+  getWorkflowAIImprovements(
+    workflowId: string,
+  ): Promise<{ improvements: WorkflowAIImprovement[] }>;
+
+  reviewWorkflowAIImprovement(
+    jobId: string,
+    status: WorkflowImprovementStatus,
+  ): Promise<{ improvement: WorkflowAIImprovement }>;
 
   testStep(request: { step: any; input?: any }): Promise<{
     job_id: string;

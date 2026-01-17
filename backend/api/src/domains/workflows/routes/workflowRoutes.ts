@@ -51,6 +51,18 @@ export function registerWorkflowRoutes(): void {
     return await workflowAIController.getAIEditStatus(tenantId!, params.jobId);
   });
 
+  // List workflow AI improvements
+  router.register('GET', '/admin/workflows/:id/ai-improvements', async (params, _body, _query, tenantId) => {
+    logger.info('[Router] Matched /admin/workflows/:id/ai-improvements route', { id: params.id });
+    return await workflowAIController.listAIImprovements(tenantId!, params.id);
+  });
+
+  // Review workflow AI improvement (approve/deny)
+  router.register('POST', '/admin/workflows/ai-improvements/:jobId/review', async (params, body, _query, tenantId) => {
+    logger.info('[Router] Matched /admin/workflows/ai-improvements/:jobId/review route', { jobId: params.jobId });
+    return await workflowAIController.reviewAIImprovement(tenantId!, params.jobId, body);
+  });
+
   // Manual job processing (local dev)
   router.register('POST', '/admin/workflows/process-job/:jobId', async (params, _body, _query, tenantId) => {
     logger.info('[Router] Matched /admin/workflows/process-job/:jobId route', { jobId: params.jobId });

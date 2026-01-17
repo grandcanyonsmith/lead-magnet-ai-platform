@@ -387,6 +387,7 @@ class ReportGenerator:
                 and step_order > 0
                 and not has_computer_use
                 and not has_shell
+                and self.openai_client.supports_responses()
             )
 
             if should_stream_live:
@@ -440,6 +441,32 @@ class ReportGenerator:
             "job_id": job_id,
             "step_order": step_order,
         })
+
+        if not self.openai_client.supports_responses():
+            logger.warning("[ReportGenerator] Responses API unavailable; falling back to non-streaming call", extra={
+                "job_id": job_id,
+                "step_order": step_order,
+            })
+            response = self.openai_client.make_api_call(params)
+            output_text = getattr(response, "output_text", "") or ""
+            if not output_text and hasattr(response, "choices") and response.choices:
+                output_text = response.choices[0].message.content or ""
+            if self.db_service:
+                try:
+                    self.db_service.update_job(job_id, {"live_step": {
+                        "step_order": step_order,
+                        "output_text": output_text,
+                        "updated_at": datetime.utcnow().isoformat(),
+                        "status": "final",
+                    }})
+                except Exception as persist_err:
+                    logger.debug("[ReportGenerator] Failed to persist live_step (fallback)", extra={
+                        "job_id": job_id,
+                        "step_order": step_order,
+                        "error_type": type(persist_err).__name__,
+                        "error_message": str(persist_err),
+                    })
+            return response
         # Persist a live preview of the current step output to DynamoDB for the frontend to poll.
         # This is best-effort and intentionally throttled to avoid excessive writes.
         max_chars = 100_000
@@ -512,7 +539,23 @@ class ReportGenerator:
                 _persist(status="retrying", error="Retrying OpenAI stream…", force=True)
 
             try:
-                with self.openai_client.client.responses.stream(**api_params) as stream:
+                try:
+                    responses_client = self.openai_client.client.responses
+                    stream_fn = getattr(responses_client, "stream", None)
+                    if not callable(stream_fn):
+                        raise AttributeError("Responses API stream unavailable")
+                except AttributeError as stream_err:
+                    logger.warning("[ReportGenerator] Responses API unavailable during stream; falling back", extra={
+                        "job_id": job_id,
+                        "step_order": step_order,
+                        "error_message": str(stream_err),
+                    })
+                    response = self.openai_client.make_api_call(params)
+                    output_so_far = getattr(response, "output_text", "") or output_so_far
+                    _persist(status="final", force=True)
+                    return response
+
+                with stream_fn(**api_params) as stream:
                     for ev in stream:
                         ev_type = getattr(ev, "type", "") or ""
                         if ev_type == "response.output_text.delta":

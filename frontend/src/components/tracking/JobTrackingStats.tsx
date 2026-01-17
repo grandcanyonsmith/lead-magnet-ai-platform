@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import { getJobStats, TrackingStats } from "@/lib/api/tracking.client";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { SectionCard } from "@/components/ui/SectionCard";
+import { StatPill } from "@/components/ui/StatPill";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
   FiActivity,
   FiUsers,
   FiMousePointer,
   FiClock,
   FiEye,
-  FiMapPin,
 } from "react-icons/fi";
 
 interface JobTrackingStatsProps {
@@ -51,12 +53,11 @@ export function JobTrackingStats({ jobId }: JobTrackingStatsProps) {
 
   if (!stats) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        <p>No tracking data available yet.</p>
-        <p className="text-sm mt-2">
-          Tracking data will appear once visitors access your lead magnet.
-        </p>
-      </div>
+      <EmptyState
+        title="No tracking data yet"
+        message="Tracking data will appear once visitors access your lead magnet."
+        className="rounded-xl border border-dashed border-border bg-muted/30"
+      />
     );
   }
 
@@ -82,44 +83,32 @@ export function JobTrackingStats({ jobId }: JobTrackingStatsProps) {
     {
       label: "Total Clicks",
       value: stats.total_clicks.toLocaleString(),
-      icon: FiMousePointer,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      icon: <FiMousePointer className="h-4 w-4 text-muted-foreground" />,
     },
     {
       label: "Unique Visitors",
       value: stats.unique_visitors.toLocaleString(),
-      icon: FiUsers,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      icon: <FiUsers className="h-4 w-4 text-muted-foreground" />,
     },
     {
       label: "Total Sessions",
       value: stats.total_sessions.toLocaleString(),
-      icon: FiActivity,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
+      icon: <FiActivity className="h-4 w-4 text-muted-foreground" />,
     },
     {
       label: "Avg Session Duration",
       value: formatDuration(stats.average_session_duration_seconds),
-      icon: FiClock,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
+      icon: <FiClock className="h-4 w-4 text-muted-foreground" />,
     },
     {
       label: "Total Page Views",
       value: stats.total_page_views.toLocaleString(),
-      icon: FiEye,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-50",
+      icon: <FiEye className="h-4 w-4 text-muted-foreground" />,
     },
     {
       label: "Avg Page Views/Session",
       value: stats.average_page_views_per_session.toFixed(1),
-      icon: FiEye,
-      color: "text-pink-600",
-      bgColor: "bg-pink-50",
+      icon: <FiEye className="h-4 w-4 text-muted-foreground" />,
     },
   ];
 
@@ -129,64 +118,50 @@ export function JobTrackingStats({ jobId }: JobTrackingStatsProps) {
 
   return (
     <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {statCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <div
+      <SectionCard
+        title="Engagement metrics"
+        description="Snapshot of how visitors are interacting with your lead magnet."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {statCards.map((card) => (
+            <StatPill
               key={card.label}
-              className={`${card.bgColor} rounded-lg p-4 border border-gray-200`}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    {card.label}
-                  </p>
-                  <p className={`text-2xl font-bold ${card.color} mt-1`}>
-                    {card.value}
-                  </p>
-                </div>
-                <Icon className={`${card.color} text-3xl opacity-50`} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              label={card.label}
+              value={card.value}
+              icon={card.icon}
+            />
+          ))}
+        </div>
+      </SectionCard>
 
-      {/* Location Breakdown */}
       {topLocations.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <FiMapPin className="text-gray-600" />
-            <h3 className="text-lg font-semibold text-gray-900">
-              Top Locations
-            </h3>
-          </div>
+        <SectionCard
+          title="Top locations"
+          description="Where your visitors are coming from."
+        >
           <div className="space-y-2">
             {topLocations.map(([country, count]) => (
               <div
                 key={country}
-                className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
+                className="flex items-center justify-between py-2 border-b border-border/60 last:border-0"
               >
-                <span className="text-gray-700">{country}</span>
-                <span className="font-semibold text-gray-900">
+                <span className="text-muted-foreground">{country}</span>
+                <span className="font-semibold text-foreground">
                   {count.toLocaleString()}
                 </span>
               </div>
             ))}
           </div>
-        </div>
+        </SectionCard>
       )}
 
       {stats.total_clicks === 0 && stats.total_sessions === 0 && (
-        <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
-          <FiActivity className="mx-auto text-4xl text-gray-400 mb-3" />
-          <p className="font-medium">No activity yet</p>
-          <p className="text-sm mt-1">
-            Share your lead magnet to start tracking engagement!
-          </p>
-        </div>
+        <EmptyState
+          title="No activity yet"
+          message="Share your lead magnet to start tracking engagement."
+          icon={<FiActivity className="h-6 w-6 text-gray-400" />}
+          className="rounded-xl border border-dashed border-border bg-muted/30"
+        />
       )}
     </div>
   );

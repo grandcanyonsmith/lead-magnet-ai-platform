@@ -2,8 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import {
-  FiChevronDown,
-  FiChevronUp,
   FiCopy,
   FiExternalLink,
   FiLoader,
@@ -16,6 +14,10 @@ import { Artifact } from "@/types/artifact";
 import toast from "react-hot-toast";
 import { useSettings } from "@/hooks/api/useSettings";
 import { buildPublicFormUrl } from "@/utils/url";
+import { SectionCard } from "@/components/ui/SectionCard";
+import { KeyValueList } from "@/components/ui/KeyValueList";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 interface TechnicalDetailsProps {
   job: any;
@@ -162,232 +164,158 @@ export function TechnicalDetails({
     fetchArtifacts();
   }, [job?.job_id, showTechnicalDetails]);
 
+  const formatTimestamp = (value?: string | null) => {
+    if (!value) return "—";
+    try {
+      const date = new Date(value);
+      if (isNaN(date.getTime())) {
+        return value;
+      }
+      return date.toLocaleString("en-US", {
+        month: "numeric",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return value;
+    }
+  };
+
   return (
-    <div className="mt-4 sm:mt-6 bg-white dark:bg-card rounded-2xl border border-gray-300 dark:border-gray-700 shadow p-4 sm:p-6 ring-1 ring-black/[0.04] dark:ring-white/5">
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-          className="flex items-center justify-between flex-1 text-left touch-target"
-        >
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Technical Details
-          </h2>
-          {showTechnicalDetails ? (
-            <FiChevronUp className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2" />
-          ) : (
-            <FiChevronDown className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2" />
-          )}
-        </button>
-        {showTechnicalDetails && (
-          <button
-            onClick={copyAllToClipboard}
-            disabled={copyingAll}
-            className="ml-4 flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-target flex-shrink-0"
-            title="Copy all artifacts text, image URLs, and form submission to clipboard"
+    <SectionCard
+      title="Technical details"
+      description="Reference identifiers, artifacts, and raw execution data."
+      actions={
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
           >
-            {copyingAll ? (
-              <>
-                <FiLoader className="w-4 h-4 animate-spin" />
-                <span className="hidden sm:inline">Copying...</span>
-              </>
-            ) : (
-              <>
-                <FiCopy className="w-4 h-4" />
-                <span className="hidden sm:inline">Copy All</span>
-              </>
-            )}
-          </button>
-        )}
-      </div>
-
+            {showTechnicalDetails ? "Hide" : "Show"}
+          </Button>
+          {showTechnicalDetails && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={copyAllToClipboard}
+              disabled={copyingAll}
+              title="Copy all artifacts text, image URLs, and form submission to clipboard"
+            >
+              {copyingAll ? (
+                <>
+                  <FiLoader className="w-4 h-4 animate-spin" />
+                  <span className="hidden sm:inline">Copying...</span>
+                </>
+              ) : (
+                <>
+                  <FiCopy className="w-4 h-4" />
+                  <span className="hidden sm:inline">Copy All</span>
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      }
+    >
       {showTechnicalDetails && (
-        <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Job ID
-            </label>
-            <div className="flex items-center space-x-2">
-              <p className="text-sm font-mono text-gray-900 dark:text-gray-200">
-                {job.job_id}
-              </p>
-              <button
-                onClick={() => copyToClipboard(job.job_id)}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 touch-target"
-                title="Copy Job ID"
-              >
-                <FiCopy className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {job.submission_id && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Submission ID
-              </label>
-              <div className="flex items-center space-x-2">
-                {form?.public_slug ? (
-                  <a
-                    href={buildPublicFormUrl(
-                      form.public_slug,
-                      settings?.custom_domain,
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-mono text-primary-600 dark:text-primary-400 hover:text-primary-900 dark:hover:text-primary-300 hover:underline"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {job.submission_id}
-                    <FiExternalLink className="w-3 h-3 ml-1 inline" />
-                  </a>
-                ) : (
-                  <p className="text-sm font-mono text-gray-900 dark:text-gray-200">
-                    {job.submission_id}
-                  </p>
-                )}
-                <button
-                  onClick={() => copyToClipboard(job.submission_id)}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 touch-target"
-                  title="Copy Submission ID"
-                >
-                  <FiCopy className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {job.workflow_id && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Workflow ID
-              </label>
-              <div className="flex items-center space-x-2">
-                <p className="text-sm font-mono text-gray-900 dark:text-gray-200">
-                  {job.workflow_id}
-                </p>
-                <button
-                  onClick={() => copyToClipboard(job.workflow_id)}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 touch-target"
-                  title="Copy Workflow ID"
-                >
-                  <FiCopy className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {job.tenant_id && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Tenant ID
-              </label>
-              <div className="flex items-center space-x-2">
-                <p className="text-sm font-mono text-gray-900 dark:text-gray-200">
-                  {job.tenant_id}
-                </p>
-                <button
-                  onClick={() => copyToClipboard(job.tenant_id)}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 touch-target"
-                  title="Copy Tenant ID"
-                >
-                  <FiCopy className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {job.started_at && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Started At
-              </label>
-              <div className="flex items-center space-x-2">
-                <p className="text-sm text-gray-900 dark:text-gray-200">
-                  {(() => {
-                    try {
-                      const date = new Date(job.started_at);
-                      if (isNaN(date.getTime())) {
-                        return job.started_at;
-                      }
-                      // Format: M/D/YYYY, H:MM:SS AM/PM
-                      return date.toLocaleString("en-US", {
-                        month: "numeric",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                        second: "2-digit",
-                        hour12: true,
-                      });
-                    } catch {
-                      return job.started_at;
+        <div className="space-y-6">
+          <SectionCard title="Identifiers" padding="sm">
+            <KeyValueList
+              items={[
+                {
+                  label: "Job ID",
+                  value: job.job_id,
+                  copyValue: job.job_id,
+                },
+                job.submission_id
+                  ? {
+                      label: "Submission ID",
+                      value: form?.public_slug ? (
+                        <a
+                          href={buildPublicFormUrl(
+                            form.public_slug,
+                            settings?.custom_domain,
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700"
+                        >
+                          {job.submission_id}
+                          <FiExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        job.submission_id
+                      ),
+                      copyValue: job.submission_id,
                     }
-                  })()}
-                </p>
-                <button
-                  onClick={() => copyToClipboard(job.started_at)}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 touch-target"
-                  title="Copy Started At"
-                >
-                  <FiCopy className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {job.updated_at && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Last Updated
-              </label>
-              <div className="flex items-center space-x-2">
-                <p className="text-sm text-gray-900 dark:text-gray-200">
-                  {(() => {
-                    try {
-                      const date = new Date(job.updated_at);
-                      if (isNaN(date.getTime())) {
-                        return job.updated_at;
-                      }
-                      // Format: M/D/YYYY, H:MM:SS AM/PM
-                      return date.toLocaleString("en-US", {
-                        month: "numeric",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                        second: "2-digit",
-                        hour12: true,
-                      });
-                    } catch {
-                      return job.updated_at;
+                  : null,
+                job.workflow_id
+                  ? {
+                      label: "Workflow ID",
+                      value: job.workflow_id,
+                      copyValue: job.workflow_id,
                     }
-                  })()}
-                </p>
-                <button
-                  onClick={() => copyToClipboard(job.updated_at)}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 touch-target"
-                  title="Copy Last Updated"
-                >
-                  <FiCopy className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
+                  : null,
+                job.tenant_id
+                  ? {
+                      label: "Tenant ID",
+                      value: job.tenant_id,
+                      copyValue: job.tenant_id,
+                    }
+                  : null,
+              ].filter(Boolean) as any}
+              onCopy={copyToClipboard}
+              columns={2}
+              dense
+            />
+          </SectionCard>
+
+          <SectionCard title="Timing" padding="sm">
+            <KeyValueList
+              items={[
+                {
+                  label: "Created",
+                  value: formatTimestamp(job.created_at),
+                  copyValue: job.created_at,
+                },
+                job.started_at
+                  ? {
+                      label: "Started",
+                      value: formatTimestamp(job.started_at),
+                      copyValue: job.started_at,
+                    }
+                  : null,
+                job.updated_at
+                  ? {
+                      label: "Last updated",
+                      value: formatTimestamp(job.updated_at),
+                      copyValue: job.updated_at,
+                    }
+                  : null,
+              ].filter(Boolean) as any}
+              onCopy={copyToClipboard}
+              columns={2}
+              dense
+            />
+          </SectionCard>
 
           {(job.artifacts && job.artifacts.length > 0) ||
           artifacts.length > 0 ? (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Artifacts
-              </label>
-
+            <SectionCard title="Artifacts" padding="sm">
               {loadingArtifacts ? (
-                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 py-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
                   <FiLoader className="w-4 h-4 animate-spin" />
                   <span>Loading artifacts...</span>
                 </div>
               ) : artifacts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {artifacts.map((artifact) => {
                     const artifactUrl =
                       artifact.object_url || artifact.public_url;
@@ -397,11 +325,11 @@ export function TechnicalDetails({
                       "Artifact";
 
                     return (
-                      <div
+                      <Card
                         key={artifact.artifact_id}
-                        className="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm hover:shadow-md transition-shadow"
+                        className="overflow-hidden"
                       >
-                        <div className="aspect-video bg-gray-100 dark:bg-gray-800">
+                        <div className="aspect-video bg-muted/40">
                           {artifactUrl ? (
                             <PreviewRenderer
                               contentType={artifact.content_type}
@@ -411,16 +339,16 @@ export function TechnicalDetails({
                               artifactId={artifact.artifact_id}
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500">
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                               <FiFile className="w-8 h-8" />
                             </div>
                           )}
                         </div>
-                        <div className="p-3 bg-gray-50 dark:bg-gray-900/40 border-t border-gray-200 dark:border-gray-700">
+                        <div className="p-3 bg-muted/20 border-t border-border">
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <p
-                                className="text-xs font-medium text-gray-900 dark:text-gray-200 truncate"
+                                className="text-xs font-medium text-foreground truncate"
                                 title={fileName}
                               >
                                 {fileName}
@@ -433,7 +361,7 @@ export function TechnicalDetails({
                                     artifactUrl || artifact.artifact_id,
                                   )
                                 }
-                                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1.5 touch-target"
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                                 title={
                                   artifactUrl ? "Copy Link" : "Copy Artifact ID"
                                 }
@@ -445,7 +373,7 @@ export function TechnicalDetails({
                                   href={artifactUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1.5 touch-target"
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                                   title="Open in new tab"
                                   onClick={(e) => e.stopPropagation()}
                                 >
@@ -455,36 +383,32 @@ export function TechnicalDetails({
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </Card>
                     );
                   })}
                 </div>
               ) : (
-                // Fallback: avoid showing raw artifact IDs
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
                     onClick={() => router.push("/dashboard/artifacts")}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-500"
                   >
                     <FiExternalLink className="w-4 h-4" />
                     View artifacts
                     {job.artifacts?.length ? ` (${job.artifacts.length})` : ""}
-                  </button>
+                  </Button>
                 </div>
               )}
-            </div>
+            </SectionCard>
           ) : null}
 
           {job.error_message && job.status === "failed" && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Raw Error Details
-              </label>
-              <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-4 font-mono text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
+            <SectionCard title="Errors" padding="sm">
+              <div className="bg-muted/30 rounded-lg p-4 font-mono text-xs text-foreground whitespace-pre-wrap break-words">
                 {job.error_message}
               </div>
-            </div>
+            </SectionCard>
           )}
 
           {copied && (
@@ -494,6 +418,6 @@ export function TechnicalDetails({
           )}
         </div>
       )}
-    </div>
+    </SectionCard>
   );
 }
