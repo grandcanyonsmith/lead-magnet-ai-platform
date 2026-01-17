@@ -101,9 +101,14 @@ export function registerWorkflowRoutes(): void {
   });
 
   // AI edit workflow
-  router.register('POST', '/admin/workflows/:id/ai-edit', async (params, body, _query, tenantId) => {
+  router.register('POST', '/admin/workflows/:id/ai-edit', async (params, body, _query, tenantId, context) => {
     logger.info('[Router] Matched /admin/workflows/:id/ai-edit route', { id: params.id });
-    return await workflowAIController.aiEditWorkflow(tenantId!, params.id, body);
+    return await workflowAIController.aiEditWorkflow(
+      tenantId!,
+      params.id,
+      body,
+      context,
+    );
   });
 
   // Test workflow step

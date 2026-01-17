@@ -382,6 +382,13 @@ export const updateSettingsSchema = z.object({
   default_service_tier: z
     .enum(["auto", "default", "flex", "scale", "priority"])
     .optional(),
+  default_workflow_improvement_user_id: z.string().optional(),
+  default_workflow_improvement_service_tier: z
+    .enum(["auto", "default", "flex", "scale", "priority"])
+    .optional(),
+  default_workflow_improvement_reasoning_effort: z
+    .enum(["none", "low", "medium", "high", "xhigh"])
+    .optional(),
   custom_domain: z.preprocess((val) => {
     if (val === "" || val === null || val === undefined) return undefined;
     const strVal = String(val).trim();

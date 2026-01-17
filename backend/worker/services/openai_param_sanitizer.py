@@ -36,6 +36,17 @@ def sanitize_api_params(params: Dict[str, Any]) -> Dict[str, Any]:
     # This handles Decimal values that might be present in input, instructions, tools, etc.
     api_params = convert_decimals_to_float(api_params)
 
+    # Normalize legacy token limit params to Responses API shape.
+    # If upstream sends max_tokens or max_completion_tokens, map to max_output_tokens.
+    if "max_output_tokens" not in api_params:
+        if api_params.get("max_completion_tokens") is not None:
+            api_params["max_output_tokens"] = api_params.pop("max_completion_tokens")
+        elif api_params.get("max_tokens") is not None:
+            api_params["max_output_tokens"] = api_params.pop("max_tokens")
+    else:
+        api_params.pop("max_completion_tokens", None)
+        api_params.pop("max_tokens", None)
+
     # OpenAI requires certain fields to be integers. DynamoDB often stores numbers as Decimal,
     # and our Decimal -> float conversion can turn whole numbers into floats (e.g., 2048.0),
     # which the OpenAI API will reject for integer-typed params like `max_output_tokens`.

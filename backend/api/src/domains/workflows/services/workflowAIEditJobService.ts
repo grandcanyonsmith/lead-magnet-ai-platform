@@ -16,6 +16,7 @@ type StartWorkflowAIEditInput = {
   workflowId: string;
   userPrompt: string;
   contextJobId?: string;
+  requestedByUserId?: string;
 };
 
 type ImprovementStatus = "pending" | "approved" | "denied";
@@ -26,6 +27,7 @@ class WorkflowAIEditJobService {
     workflowId,
     userPrompt,
     contextJobId,
+    requestedByUserId,
   }: StartWorkflowAIEditInput): Promise<{ jobId: string }> {
     const jobId = `wfaiedit_${ulid()}`;
     const now = new Date().toISOString();
@@ -39,6 +41,7 @@ class WorkflowAIEditJobService {
       model: "gpt-5.2",
       user_prompt: userPrompt,
       context_job_id: contextJobId || null,
+      requested_by_user_id: requestedByUserId || null,
       result: null,
       error_message: null,
       created_at: now,
@@ -51,6 +54,7 @@ class WorkflowAIEditJobService {
       tenantId,
       workflowId,
       hasContextJobId: !!contextJobId,
+        hasRequestedByUserId: !!requestedByUserId,
     });
 
     await JobProcessingUtils.triggerAsyncProcessing(
@@ -137,6 +141,7 @@ class WorkflowAIEditJobService {
     const SUBMISSIONS_TABLE = env.submissionsTable;
     const ARTIFACTS_TABLE = env.artifactsTable;
     const ARTIFACTS_BUCKET = env.artifactsBucket;
+    const USERS_TABLE = env.usersTable;
 
     logger.info("[Workflow AI Edit] Processing job", {
       jobId,
@@ -351,6 +356,55 @@ class WorkflowAIEditJobService {
         )
           ? settings.default_service_tier
           : undefined;
+      const reviewServiceTier =
+        settings?.default_workflow_improvement_service_tier &&
+        ["auto", "default", "flex", "scale", "priority"].includes(
+          settings.default_workflow_improvement_service_tier,
+        )
+          ? settings.default_workflow_improvement_service_tier
+          : "priority";
+      const reviewReasoningEffort =
+        settings?.default_workflow_improvement_reasoning_effort &&
+        ["none", "low", "medium", "high", "xhigh"].includes(
+          settings.default_workflow_improvement_reasoning_effort,
+        )
+          ? settings.default_workflow_improvement_reasoning_effort
+          : "high";
+      const reviewUserIdValue =
+        typeof settings?.default_workflow_improvement_user_id === "string"
+          ? settings.default_workflow_improvement_user_id.trim()
+          : "";
+      const reviewUserId =
+        reviewUserIdValue && reviewUserIdValue !== "auto"
+          ? reviewUserIdValue
+          : typeof job?.requested_by_user_id === "string"
+            ? job.requested_by_user_id
+            : undefined;
+
+      let reviewerUser: {
+        user_id: string;
+        name?: string;
+        email?: string;
+        role?: string;
+      } | null = null;
+      if (reviewUserId && USERS_TABLE) {
+        try {
+          const reviewer = await db.get(USERS_TABLE, { user_id: reviewUserId });
+          if (reviewer && reviewer.customer_id === tenantId) {
+            reviewerUser = {
+              user_id: reviewer.user_id,
+              name: reviewer.name,
+              email: reviewer.email,
+              role: reviewer.role,
+            };
+          }
+        } catch (err: any) {
+          logger.warn("[Workflow AI Edit] Failed to load reviewer user", {
+            reviewUserId,
+            error: err?.message || String(err),
+          });
+        }
+      }
 
       const openai = await getOpenAIClient();
       const aiService = new WorkflowAIService(openai);
@@ -359,6 +413,9 @@ class WorkflowAIEditJobService {
         userPrompt: userPrompt,
         defaultToolChoice,
         defaultServiceTier,
+        reviewServiceTier,
+        reviewReasoningEffort,
+        reviewerUser: reviewerUser || undefined,
         workflowContext: {
           workflow_id: workflowId,
           workflow_name: workflow.workflow_name || "Untitled Workflow",
