@@ -38,7 +38,18 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 2: Forms
+    // Table 2: Workflow Versions
+    const workflowVersionsTable = createTable(
+      this,
+      'WorkflowVersionsTable',
+      {
+        tableName: TABLE_NAMES.WORKFLOW_VERSIONS,
+        partitionKey: { name: 'workflow_id', type: dynamodb.AttributeType.STRING },
+        sortKey: { name: 'version', type: dynamodb.AttributeType.NUMBER },
+      }
+    );
+
+    // Table 3: Forms
     const formsTable = createTableWithGSI(
       this,
       'FormsTable',
@@ -62,7 +73,7 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 3: Form Submissions
+    // Table 4: Form Submissions
     const submissionsTable = createTableWithGSI(
       this,
       'SubmissionsTable',
@@ -85,7 +96,7 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 4: Jobs
+    // Table 5: Jobs
     const jobsTable = createTableWithGSI(
       this,
       'JobsTable',
@@ -107,7 +118,7 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 5: Artifacts
+    // Table 6: Artifacts
     const artifactsTable = createTableWithGSI(
       this,
       'ArtifactsTable',
@@ -128,7 +139,7 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 6: Templates
+    // Table 7: Templates
     const templatesTable = createTableWithGSI(
       this,
       'TemplatesTable',
@@ -145,7 +156,7 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 7: User Settings
+    // Table 8: User Settings
     const userSettingsTable = createTable(
       this,
       'UserSettingsTable',
@@ -155,7 +166,7 @@ export class DatabaseStack extends cdk.Stack {
       }
     );
 
-    // Table 8: Usage Records (for billing/usage tracking)
+    // Table 9: Usage Records (for billing/usage tracking)
     // Note: Table already exists, referencing it instead of creating
     const usageRecordsTable = dynamodb.Table.fromTableName(
       this,
@@ -163,7 +174,7 @@ export class DatabaseStack extends cdk.Stack {
       TABLE_NAMES.USAGE_RECORDS
     );
 
-    // Table 9: Notifications
+    // Table 10: Notifications
     const notificationsTable = createTableWithGSI(
       this,
       'NotificationsTable',
@@ -186,7 +197,7 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 10: Users
+    // Table 11: Users
     const usersTable = createTableWithGSI(
       this,
       'UsersTable',
@@ -202,7 +213,7 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 11: Customers
+    // Table 12: Customers
     const customersTable = createTableWithGSI(
       this,
       'CustomersTable',
@@ -218,7 +229,7 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 12: Files
+    // Table 13: Files
     const filesTable = createTableWithGSI(
       this,
       'FilesTable',
@@ -235,7 +246,7 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 13: Impersonation Logs
+    // Table 14: Impersonation Logs
     const impersonationLogsTable = createTable(
       this,
       'ImpersonationLogsTable',
@@ -245,7 +256,7 @@ export class DatabaseStack extends cdk.Stack {
       }
     );
 
-    // Table 14: Sessions (for impersonation state)
+    // Table 15: Sessions (for impersonation state)
     const sessionsTable = createTable(
       this,
       'SessionsTable',
@@ -256,7 +267,7 @@ export class DatabaseStack extends cdk.Stack {
       }
     );
 
-    // Table 15: Webhook Logs
+    // Table 16: Webhook Logs
     // Note: Table already exists in DynamoDB, referencing it instead of creating
     const webhookLogsTable = dynamodb.Table.fromTableName(
       this,
@@ -264,7 +275,7 @@ export class DatabaseStack extends cdk.Stack {
       TABLE_NAMES.WEBHOOK_LOGS
     );
 
-    // Table 16: Tracking Events
+    // Table 17: Tracking Events
     const trackingEventsTable = createTableWithGSI(
       this,
       'TrackingEventsTable',
@@ -287,7 +298,7 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 17: Rate Limits (public endpoint hardening, TTL-based counters)
+    // Table 18: Rate Limits (public endpoint hardening, TTL-based counters)
     const rateLimitsTable = createTable(
       this,
       'RateLimitsTable',
@@ -298,7 +309,7 @@ export class DatabaseStack extends cdk.Stack {
       }
     );
 
-    // Table 18: HTML Patch Requests (async HTML patching, TTL for cleanup)
+    // Table 19: HTML Patch Requests (async HTML patching, TTL for cleanup)
     const htmlPatchRequestsTable = createTableWithGSI(
       this,
       'HtmlPatchRequestsTable',
@@ -316,7 +327,7 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 18: Folders (legacy table - keep resource definition to maintain CloudFormation exports)
+    // Table 20: Folders (legacy table - keep resource definition to maintain CloudFormation exports)
     // This table exists in DynamoDB and CloudFormation - keep the resource definition unchanged
     // CloudFormation will reference existing table without modifications
     // Note: Not included in tablesMap as it's legacy and not used by application code
@@ -352,6 +363,7 @@ export class DatabaseStack extends cdk.Stack {
     // Export table names and references using TableKey enum for type safety
     this.tablesMap = {
       [TableKey.WORKFLOWS]: workflowsTable,
+      [TableKey.WORKFLOW_VERSIONS]: workflowVersionsTable,
       [TableKey.FORMS]: formsTable,
       [TableKey.SUBMISSIONS]: submissionsTable,
       [TableKey.JOBS]: jobsTable,

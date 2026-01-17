@@ -43,14 +43,14 @@ export const getStatusBadge = (status: string): ReactNode => {
 };
 
 export const getStatusDot = (status: string): ReactNode => {
-  const normalized = typeof status === "string" ? status.toLowerCase() : "";
+  const normalized = typeof status === "string" ? status.toLowerCase().trim() : "";
   const colors: Record<string, string> = {
-    completed: "bg-emerald-500",
+    completed: "bg-green-500",
     failed: "bg-red-500",
     processing: "bg-amber-400",
     pending: "bg-amber-400",
   };
-  const label = getStatusLabel(normalized || status);
+  const label = getStatusLabel(status);
 
   return (
     <span

@@ -9,6 +9,7 @@ export interface Workflow {
   workflow_name: string;
   workflow_description?: string;
   steps?: WorkflowStep[];
+  version?: number;
   trigger?: {
     type: "form" | "webhook";
   };

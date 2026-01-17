@@ -157,6 +157,7 @@ NODE_ENV=development
 ```bash
 JOBS_TABLE=leadmagnet-jobs
 WORKFLOWS_TABLE=leadmagnet-workflows
+WORKFLOW_VERSIONS_TABLE=leadmagnet-workflow-versions
 SUBMISSIONS_TABLE=leadmagnet-submissions
 ARTIFACTS_BUCKET=leadmagnet-artifacts
 AWS_REGION=us-east-1

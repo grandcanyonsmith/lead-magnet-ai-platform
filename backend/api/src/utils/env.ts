@@ -8,6 +8,7 @@ import { logger } from "./logger";
 export class EnvConfig {
   // DynamoDB Tables
   readonly workflowsTable: string;
+  readonly workflowVersionsTable: string;
   readonly formsTable: string;
   readonly templatesTable: string;
   readonly jobsTable: string;
@@ -91,6 +92,7 @@ export class EnvConfig {
   constructor() {
     // DynamoDB Tables - required
     this.workflowsTable = this.getRequired("WORKFLOWS_TABLE");
+    this.workflowVersionsTable = this.getRequired("WORKFLOW_VERSIONS_TABLE");
     this.formsTable = this.getRequired("FORMS_TABLE");
     this.templatesTable = this.getRequired("TEMPLATES_TABLE");
     this.jobsTable = this.getWithDefault("JOBS_TABLE", "leadmagnet-jobs");

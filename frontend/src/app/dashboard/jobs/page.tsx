@@ -15,8 +15,6 @@ import { LeadMagnetsTabs } from "@/components/leadMagnets/LeadMagnetsTabs";
 import {
   ClockIcon,
   ArrowPathIcon,
-  ExclamationTriangleIcon,
-  ArrowTrendingUpIcon,
   MagnifyingGlassIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -26,11 +24,6 @@ import {
 } from "@heroicons/react/24/outline";
 import { useJobFilters, useJobSorting } from "@/hooks/useJobFilters";
 import { JobFiltersProvider } from "@/contexts/JobFiltersContext";
-import { formatRelativeTime } from "@/utils/date";
-import {
-  SummarySection,
-  SummaryCard,
-} from "@/components/jobs/list/SummarySection";
 import { JobsMobileList } from "@/components/jobs/list/MobileList";
 import { JobsDesktopTable } from "@/components/jobs/list/DesktopTable";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -51,7 +44,6 @@ function JobsContent() {
   const [pageSize] = useState(20);
   const [totalJobs, setTotalJobs] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
   const inFlightRequestsRef = useRef<Set<string>>(new Set());
   const loadJobsRef = useRef<typeof loadJobs | null>(null);
   const prevFiltersRef = useRef({ statusFilter: "all", workflowFilter: "all" });
@@ -92,67 +84,6 @@ function JobsContent() {
     );
   }, [jobs]);
 
-  const summaryStats = useMemo(() => {
-    const now = Date.now();
-    const oneDayMs = 24 * 60 * 60 * 1000;
-    let completedLastDay = 0;
-    let totalDuration = 0;
-    let durationSamples = 0;
-    let latestJobCreatedAt: string | null = null;
-
-    jobs.forEach((job) => {
-      const createdAt = job.created_at
-        ? new Date(job.created_at).getTime()
-        : null;
-      if (
-        createdAt &&
-        (!latestJobCreatedAt ||
-          createdAt > new Date(latestJobCreatedAt).getTime())
-      ) {
-        latestJobCreatedAt = job.created_at;
-      }
-
-      if (
-        job.status === "completed" &&
-        createdAt &&
-        now - createdAt <= oneDayMs
-      ) {
-        completedLastDay += 1;
-      }
-
-      if (job.completed_at && job.created_at) {
-        const durationSeconds = Math.max(
-          0,
-          Math.round(
-            (new Date(job.completed_at).getTime() -
-              new Date(job.created_at).getTime()) /
-              1000,
-          ),
-        );
-        totalDuration += durationSeconds;
-        durationSamples += 1;
-      }
-    });
-
-    const avgDurationSeconds = durationSamples
-      ? Math.round(totalDuration / durationSamples)
-      : 0;
-
-    return {
-      activeJobs: statusCounts.processing + statusCounts.pending,
-      completedLastDay,
-      avgDurationSeconds,
-      failedCount: statusCounts.failed,
-      latestJobCreatedAt,
-    };
-  }, [jobs, statusCounts]);
-
-  const lastRefreshedLabel = useMemo(
-    () =>
-      lastLoadedAt ? formatRelativeTime(lastLoadedAt.toISOString()) : null,
-    [lastLoadedAt],
-  );
-
   const statusFilterOptions = useMemo(
     () => [
       { label: "All statuses", value: "all" },
@@ -162,37 +93,6 @@ function JobsContent() {
       { label: "Issues", value: "failed" },
     ],
     [],
-  );
-
-  const summaryCards = useMemo<SummaryCard[]>(
-    () => [
-      {
-        label: "Active Processes",
-        value: summaryStats.activeJobs.toString(),
-        subtext: `${statusCounts.processing} running · ${statusCounts.pending} queued`,
-        icon: <ArrowPathIcon className="h-5 w-5 text-primary-600" />,
-        accentClass: "border-primary-100 bg-primary-50/70",
-      },
-      {
-        label: "New Leads (24h)",
-        value: summaryStats.completedLastDay.toString(),
-        subtext: summaryStats.latestJobCreatedAt
-          ? `Last lead ${formatRelativeTime(summaryStats.latestJobCreatedAt)}`
-          : "No leads yet",
-        icon: <ArrowTrendingUpIcon className="h-5 w-5 text-emerald-600" />,
-        accentClass: "border-emerald-100 bg-emerald-50/80",
-      },
-      {
-        label: "Issues",
-        value: summaryStats.failedCount.toString(),
-        subtext: jobs.length
-          ? `${Math.round((summaryStats.failedCount / jobs.length) * 100)}% failure rate`
-          : "No issues",
-        icon: <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />,
-        accentClass: "border-red-100 bg-red-50/80",
-      },
-    ],
-    [summaryStats, statusCounts, jobs.length],
   );
 
   const handleClearFilters = useCallback(() => {
@@ -268,7 +168,6 @@ function JobsContent() {
         setJobs(data.jobs || []);
         setTotalJobs(data.total || 0);
         setHasMore(data.has_more || false);
-        setLastLoadedAt(new Date());
       } catch (error) {
         if (process.env.NODE_ENV === "development") {
           console.error("Failed to load jobs:", error);
@@ -381,14 +280,6 @@ function JobsContent() {
           bottomContent={<LeadMagnetsTabs />}
         />
 
-        <SummarySection
-          jobCount={totalJobs}
-          lastRefreshedLabel={lastRefreshedLabel}
-          hasProcessingJobs={hasProcessingJobs}
-          refreshing={refreshing}
-          onRefresh={() => loadJobs(true)}
-          summaryCards={summaryCards}
-        />
 
         <div className="mb-6 flex flex-col md:flex-row gap-4 items-center">
           <div className="relative flex-1 w-full max-w-lg">

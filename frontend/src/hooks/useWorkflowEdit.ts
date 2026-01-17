@@ -31,6 +31,7 @@ export function useWorkflowEdit(defaultToolChoice?: WorkflowStep["tool_choice"])
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [workflowVersion, setWorkflowVersion] = useState<number>(1);
 
   const [formData, setFormData] = useState<WorkflowFormData>({
     workflow_name: "",
@@ -54,6 +55,7 @@ export function useWorkflowEdit(defaultToolChoice?: WorkflowStep["tool_choice"])
   }, [workflowId]);
 
   const loadWorkflow = async () => {
+    setLoading(true);
     try {
       const workflow = await api.getWorkflow(workflowId);
       setFormData({
@@ -63,6 +65,11 @@ export function useWorkflowEdit(defaultToolChoice?: WorkflowStep["tool_choice"])
         template_version: workflow.template_version || 0,
         trigger: workflow.trigger || { type: "form" },
       });
+      setWorkflowVersion(
+        typeof workflow.version === "number" && Number.isFinite(workflow.version)
+          ? workflow.version
+          : 1,
+      );
 
       // Load steps - all workflows must have steps
       if (!workflow.steps || workflow.steps.length === 0) {
@@ -206,6 +213,7 @@ export function useWorkflowEdit(defaultToolChoice?: WorkflowStep["tool_choice"])
     setSubmitting,
     error,
     setError,
+    workflowVersion,
     formData,
     setFormData,
     steps,
@@ -213,6 +221,7 @@ export function useWorkflowEdit(defaultToolChoice?: WorkflowStep["tool_choice"])
     formId,
     workflowForm,
     workflowStatus,
+    reloadWorkflow: loadWorkflow,
     handleChange,
     handleStepChange,
     handleAddStep,

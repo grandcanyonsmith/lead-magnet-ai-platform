@@ -17,6 +17,7 @@ jest.mock("@aws-sdk/client-ecs");
 process.env.NODE_ENV = "test";
 process.env.AWS_REGION = "us-east-1";
 process.env.WORKFLOWS_TABLE = "test-workflows";
+process.env.WORKFLOW_VERSIONS_TABLE = "test-workflow-versions";
 process.env.FORMS_TABLE = "test-forms";
 process.env.TEMPLATES_TABLE = "test-templates";
 process.env.JOBS_TABLE = "test-jobs";

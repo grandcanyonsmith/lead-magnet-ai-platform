@@ -1,6 +1,7 @@
 export * from './controllers/workflows.controller';
 export * from './controllers/workflowAIController';
 export * from './controllers/workflowValidationController';
+export * from './controllers/workflowVersionsController';
 
 export * from './services/draftWorkflowService';
 export * from './services/workflowAIService';
@@ -15,6 +16,7 @@ export type { UsageInfo as WorkflowGenerationUsageInfo } from './services/workfl
 export * from './services/workflowInstructionsService';
 export * from './services/workflowStepAIService';
 export * from './services/workflowCrudService';
+export * from './services/workflowVersionService';
 export * from './services/workflow/workflowConfigSupport';
 export * from './services/workflow/workflowContextService';
 export * from './services/workflow/workflowJobProcessingService';
