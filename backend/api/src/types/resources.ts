@@ -200,6 +200,7 @@ export interface UserSettings {
   lead_phone_field?: string;
   default_tool_choice?: "auto" | "required" | "none";
   default_service_tier?: "auto" | "default" | "flex" | "scale" | "priority";
+  default_text_verbosity?: "low" | "medium" | "high";
   default_workflow_improvement_user_id?: string;
   default_workflow_improvement_service_tier?:
     | "auto"

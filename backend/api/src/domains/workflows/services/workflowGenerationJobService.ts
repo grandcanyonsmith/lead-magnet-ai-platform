@@ -162,6 +162,12 @@ class WorkflowGenerationJobService {
           : undefined;
       const shouldOverrideServiceTier =
         defaultServiceTier !== undefined && defaultServiceTier !== "auto";
+      const defaultTextVerbosity =
+        settings?.default_text_verbosity &&
+        ["low", "medium", "high"].includes(settings.default_text_verbosity)
+          ? settings.default_text_verbosity
+          : undefined;
+      const shouldOverrideTextVerbosity = defaultTextVerbosity !== undefined;
 
       let icpContext: string | null = null;
       if (settings?.icp_document_url) {
@@ -182,7 +188,8 @@ class WorkflowGenerationJobService {
         brandContext || undefined,
         icpContext || undefined,
         defaultToolChoice,
-        defaultServiceTier
+        defaultServiceTier,
+        defaultTextVerbosity,
       );
 
       if (
@@ -194,6 +201,18 @@ class WorkflowGenerationJobService {
           (step: any) => ({
             ...step,
             service_tier: defaultServiceTier,
+          }),
+        );
+      }
+      if (
+        shouldOverrideTextVerbosity &&
+        workflowResult?.workflowData?.steps &&
+        Array.isArray(workflowResult.workflowData.steps)
+      ) {
+        workflowResult.workflowData.steps = workflowResult.workflowData.steps.map(
+          (step: any) => ({
+            ...step,
+            text_verbosity: defaultTextVerbosity,
           }),
         );
       }

@@ -7,6 +7,7 @@ export interface WorkflowPromptContext {
   icpContext?: string;
   defaultToolChoice?: ToolChoice;
   defaultServiceTier?: string;
+  defaultTextVerbosity?: string;
 }
 
 export function buildWorkflowPrompt(context: WorkflowPromptContext): string {
@@ -16,6 +17,7 @@ export function buildWorkflowPrompt(context: WorkflowPromptContext): string {
     icpContext,
     defaultToolChoice,
     defaultServiceTier,
+    defaultTextVerbosity,
   } = context;
   const resolvedDefaultToolChoice =
     defaultToolChoice === "auto" || defaultToolChoice === "required" || defaultToolChoice === "none"
@@ -29,6 +31,12 @@ export function buildWorkflowPrompt(context: WorkflowPromptContext): string {
     defaultServiceTier === "priority"
       ? defaultServiceTier
       : "auto";
+  const resolvedDefaultTextVerbosity =
+    defaultTextVerbosity === "low" ||
+    defaultTextVerbosity === "medium" ||
+    defaultTextVerbosity === "high"
+      ? defaultTextVerbosity
+      : undefined;
 
   let contextSection = '';
   if (brandContext) {
@@ -87,6 +95,7 @@ Create a sophisticated workflow that delivers *tangible value* to the user. The 
 - **"scale"**: Best for high-volume throughput.
 - **"priority"**: Fastest responses.
 ${resolvedDefaultServiceTier ? `\n## Default Service Tier\n- Use **"${resolvedDefaultServiceTier}"** for each step unless the user explicitly asks for a different tier.` : ""}
+${resolvedDefaultTextVerbosity ? `\n## Default Output Verbosity\n- Use **"${resolvedDefaultTextVerbosity}"** verbosity for each step unless the user explicitly asks for a different level.` : ""}
 
 ## Available Models
 ${formatAllModelDescriptionsMarkdown()}

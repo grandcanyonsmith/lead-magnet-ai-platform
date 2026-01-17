@@ -135,7 +135,16 @@ class JobProcessor:
             # Validate dependencies first
             is_valid, errors = validate_dependencies(steps)
             if not is_valid:
-                logger.warning(f"Dependency validation errors: {errors}")
+                error_preview = errors[:10]
+                logger.error(
+                    "[JobProcessor] Dependency validation failed",
+                    extra={
+                        "errors_count": len(errors),
+                        "errors_preview": error_preview,
+                        "errors_truncated": len(errors) > len(error_preview),
+                        "total_steps": len(steps),
+                    },
+                )
                 # Continue anyway for backward compatibility
             
             # Resolve execution groups

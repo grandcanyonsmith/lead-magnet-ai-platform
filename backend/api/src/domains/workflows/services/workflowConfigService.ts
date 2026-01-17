@@ -41,7 +41,8 @@ export class WorkflowConfigService {
     brandContext?: string,
     icpContext?: string,
     defaultToolChoice?: "auto" | "required" | "none",
-    defaultServiceTier?: string
+    defaultServiceTier?: string,
+    defaultTextVerbosity?: string
   ): Promise<{ workflowData: any; usageInfo: UsageInfo }> {
     const workflowPrompt = buildWorkflowPrompt({
       description,
@@ -49,6 +50,7 @@ export class WorkflowConfigService {
       icpContext,
       defaultToolChoice,
       defaultServiceTier,
+      defaultTextVerbosity,
     });
 
     console.log('[Workflow Config Service] Calling OpenAI for workflow generation...');
@@ -120,6 +122,7 @@ export class WorkflowConfigService {
     const workflowData = parseWorkflowConfig(workflowContent, description, {
       defaultToolChoice,
       defaultServiceTier,
+      defaultTextVerbosity,
     });
 
     return { workflowData, usageInfo };

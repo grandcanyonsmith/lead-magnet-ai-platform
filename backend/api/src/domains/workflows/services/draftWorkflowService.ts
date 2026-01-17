@@ -35,7 +35,8 @@ export async function saveDraftWorkflow(
   templateName?: string,
   templateDescription?: string,
   defaultToolChoice?: "auto" | "required" | "none",
-  defaultServiceTier?: string
+  defaultServiceTier?: string,
+  defaultTextVerbosity?: string
 ): Promise<{ workflow_id: string; form_id: string | null }> {
   if (!WORKFLOWS_TABLE) {
     throw new Error('WORKFLOWS_TABLE environment variable is not configured');
@@ -53,6 +54,7 @@ export async function saveDraftWorkflow(
     steps: ensureStepDefaults(draftData.steps || [], {
       defaultToolChoice,
       defaultServiceTier,
+      defaultTextVerbosity,
     }) as WorkflowStep[],
   };
 

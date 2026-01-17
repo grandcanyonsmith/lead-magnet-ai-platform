@@ -4,8 +4,9 @@ Handles building dependency graphs, detecting parallel opportunities, and resolv
 """
 
 import logging
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, List, Set, Tuple, Optional, Any
 from enum import Enum
+from utils.step_utils import coerce_dependency_value, normalize_dependency_list, normalize_step_order
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +32,13 @@ def _build_order_to_index(steps: List[Dict]) -> Dict[int, int]:
     """
     order_to_index: Dict[int, int] = {}
     for index, step in enumerate(steps):
-        step_order = step.get('step_order', index)
+        step_order = normalize_step_order(step)
         order_to_index[step_order] = index
     return order_to_index
 
 
 def _normalize_dependency_index(
-    dep_value: int,
+    dep_value: Any,
     order_to_index: Dict[int, int],
     steps_length: int,
     current_index: int
@@ -54,16 +55,17 @@ def _normalize_dependency_index(
     Returns:
         Normalized array index, or None if invalid
     """
-    if not isinstance(dep_value, int):
+    dep_index_value, _ = coerce_dependency_value(dep_value)
+    if dep_index_value is None:
         return None
     
     # Try to normalize: if dep_value matches a step_order, convert to array index
-    dep_index = dep_value
-    if dep_value in order_to_index:
-        dep_index = order_to_index[dep_value]
-    elif dep_value >= 0 and dep_value < steps_length:
+    dep_index = dep_index_value
+    if dep_index_value in order_to_index:
+        dep_index = order_to_index[dep_index_value]
+    elif dep_index_value >= 0 and dep_index_value < steps_length:
         # Already an array index, use as-is
-        dep_index = dep_value
+        dep_index = dep_index_value
     else:
         # Invalid - doesn't match any step_order or array index
         return None
@@ -91,12 +93,12 @@ def _get_step_dependencies(step: Dict, step_index: int, steps: List[Dict]) -> Li
     
     if step.get('depends_on') and isinstance(step.get('depends_on'), list):
         # Explicit dependencies provided
-        deps = step['depends_on']
+        deps = normalize_dependency_list(step['depends_on'])
     else:
         # Auto-detect from step_order
-        step_order = step.get('step_order', step_index)
+        step_order = normalize_step_order(step)
         for i, s in enumerate(steps):
-            other_order = s.get('step_order', i)
+            other_order = normalize_step_order(s)
             if other_order < step_order:
                 deps.append(i)
     
@@ -121,7 +123,7 @@ def build_dependency_graph(steps: List[Dict]) -> Dict[int, List[int]]:
         
         if step.get('depends_on') and isinstance(step.get('depends_on'), list):
             # Explicit dependencies provided - normalize step_order values to array indices
-            for dep_value in step['depends_on']:
+            for dep_value in normalize_dependency_list(step['depends_on']):
                 dep_index = _normalize_dependency_index(
                     dep_value, order_to_index, len(steps), index
                 )
@@ -129,9 +131,9 @@ def build_dependency_graph(steps: List[Dict]) -> Dict[int, List[int]]:
                     deps.append(dep_index)
         else:
             # Auto-detect from step_order
-            step_order = step.get('step_order', index)
+            step_order = normalize_step_order(step)
             for i, s in enumerate(steps):
-                other_order = s.get('step_order', i)
+                other_order = normalize_step_order(s)
                 if other_order < step_order:
                     deps.append(i)
         
@@ -254,21 +256,31 @@ def validate_dependencies(steps: List[Dict]) -> Tuple[bool, List[str]]:
     order_to_index = _build_order_to_index(steps)
     
     # Check for invalid dependency indices
+    coerced_values: List[Dict[str, Any]] = []
     for index, step in enumerate(steps):
         if step.get('depends_on') and isinstance(step.get('depends_on'), list):
-            step_order = step.get('step_order', index + 1)
+            step_order = normalize_step_order(step)
             step_name = step.get('step_name', 'Unknown')
             
             for dep_value in step['depends_on']:
-                if not isinstance(dep_value, int):
+                dep_index_value, was_coerced = coerce_dependency_value(dep_value)
+                if dep_index_value is None:
                     errors.append(
                         f"Step {step_order} ({step_name}): "
-                        f"depends_on contains non-integer value {dep_value}"
+                        f"depends_on contains invalid value {dep_value} "
+                        f"(type={type(dep_value).__name__})"
                     )
                     continue
+                if was_coerced:
+                    coerced_values.append({
+                        "step_order": step_order,
+                        "step_name": step_name,
+                        "raw_value": dep_value,
+                        "normalized": dep_index_value,
+                    })
                 
                 dep_index = _normalize_dependency_index(
-                    dep_value, order_to_index, len(steps), index
+                    dep_index_value, order_to_index, len(steps), index
                 )
                 
                 if dep_index is None:
@@ -276,7 +288,7 @@ def validate_dependencies(steps: List[Dict]) -> Tuple[bool, List[str]]:
                     # Check if dep_value matches a step_order
                     matching_order = None
                     for order, idx in order_to_index.items():
-                        if order == dep_value:
+                        if order == dep_index_value:
                             matching_order = order
                             break
                     
@@ -284,21 +296,21 @@ def validate_dependencies(steps: List[Dict]) -> Tuple[bool, List[str]]:
                         # It matched a step_order but normalization failed (self-dependency or invalid)
                         errors.append(
                             f"Step {step_order} ({step_name}): "
-                            f"depends_on step_order {dep_value} is invalid "
+                            f"depends_on step_order {dep_index_value} is invalid "
                             f"(could be self-dependency or step doesn't exist)"
                         )
-                    elif dep_value >= 0 and dep_value < len(steps):
+                    elif dep_index_value >= 0 and dep_index_value < len(steps):
                         # It's a valid array index but normalization failed
                         errors.append(
                             f"Step {step_order} ({step_name}): "
-                            f"depends_on array index {dep_value} is invalid "
+                            f"depends_on array index {dep_index_value} is invalid "
                             f"(could be self-dependency)"
                         )
                     else:
                         # Completely out of range
                         errors.append(
                             f"Step {step_order} ({step_name}): "
-                            f"depends_on value {dep_value} is out of range "
+                            f"depends_on value {dep_index_value} is out of range "
                             f"(valid step_orders: {sorted(order_to_index.keys())}, "
                             f"valid array indices: 0-{len(steps)-1})"
                         )
@@ -345,6 +357,16 @@ def validate_dependencies(steps: List[Dict]) -> Tuple[bool, List[str]]:
         if i not in visited and has_cycle(i):
             errors.append(f"Circular dependency detected involving step {i} ({steps[i].get('step_name', 'Unknown')})")
             break
+
+    if coerced_values:
+        logger.info(
+            "[DependencyResolver] Coerced depends_on values to integers",
+            extra={
+                "coerced_count": len(coerced_values),
+                "coerced_samples": coerced_values[:5],
+                "total_steps": len(steps),
+            },
+        )
     
     return len(errors) == 0, errors
 
