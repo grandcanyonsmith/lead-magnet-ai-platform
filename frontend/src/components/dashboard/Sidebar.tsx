@@ -1,6 +1,5 @@
 "use client";
 
-import { Fragment } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -11,47 +10,21 @@ import {
   Users,
   Search,
   ChevronRight,
-  Menu,
   X,
-  LogOut,
-  Settings,
   Monitor,
-  User,
-  Shield,
-  Eye,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuGroup,
-} from "@/components/ui/DropdownMenu";
-import { Avatar } from "@/components/ui/Avatar";
-import { useAuth } from "@/lib/auth";
-import { NotificationBell } from "@/components/NotificationBell";
-import { ViewSwitcher } from "@/components/ViewSwitcher";
-import { UserImpersonation } from "@/components/UserImpersonation";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface SidebarProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   onSearchClick: () => void;
-  user: any;
-  role: string | null;
-  signOut: () => void;
 }
 
 export function Sidebar({
   isOpen,
   setIsOpen,
   onSearchClick,
-  user,
-  role,
-  signOut,
 }: SidebarProps) {
   const pathname = usePathname();
 
