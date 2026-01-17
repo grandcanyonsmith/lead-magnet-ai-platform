@@ -7,7 +7,10 @@ import logging
 from datetime import datetime
 from decimal import Decimal
 from typing import Dict, Any
-from ulid import new as ulid
+try:
+    from ulid import new as ulid
+except ImportError:
+    from ulid import ULID as ulid
 
 from db_service import DynamoDBService
 

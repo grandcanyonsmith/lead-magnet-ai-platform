@@ -1,11 +1,10 @@
 import { useState } from "react";
 import {
-  getStatusIcon,
   getStatusBadge,
-  getStepDisplayMeta,
   getJobSubmissionPreview,
 } from "@/utils/jobs/listHelpers";
 import { formatRelativeTime, formatDuration } from "@/utils/date";
+import { truncate } from "@/utils/formatting";
 import {
   ArrowTopRightOnSquareIcon,
   ArrowPathIcon,
@@ -20,14 +19,14 @@ import clsx from "clsx";
 interface JobsMobileListProps {
   jobs: Job[];
   workflowMap: Record<string, string>;
-  workflowStepCounts: Record<string, number>;
   onNavigate: (jobId: string) => void;
 }
+
+const WORKFLOW_NAME_MAX_LENGTH = 32;
 
 export function JobsMobileList({
   jobs,
   workflowMap,
-  workflowStepCounts,
   onNavigate,
 }: JobsMobileListProps) {
   const [openingJobId, setOpeningJobId] = useState<string | null>(null);
@@ -60,8 +59,13 @@ export function JobsMobileList({
               )
             : null;
         const hasError = job.status === "failed" && job.error_message;
-        const stepMeta = getStepDisplayMeta(job, workflowStepCounts);
         const submissionPreview = getJobSubmissionPreview(job);
+        const workflowName =
+          workflowMap[job.workflow_id] || job.workflow_id || "-";
+        const displayWorkflowName = truncate(
+          workflowName,
+          WORKFLOW_NAME_MAX_LENGTH,
+        );
 
         return (
           <div
@@ -75,8 +79,11 @@ export function JobsMobileList({
             <div className="p-4">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-foreground truncate">
-                    {workflowMap[job.workflow_id] || job.workflow_id || "-"}
+                  <h3
+                    className="text-sm font-bold text-gray-900 dark:text-foreground truncate"
+                    title={workflowName}
+                  >
+                    {displayWorkflowName}
                   </h3>
                   {submissionPreview && (
                     <p className="text-xs text-gray-500 dark:text-muted-foreground mt-1 font-medium truncate">
@@ -91,12 +98,6 @@ export function JobsMobileList({
                   <div className="scale-90 origin-right">
                     {getStatusBadge(job.status)}
                   </div>
-                  {stepMeta.isActive && stepMeta.label && (
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-primary-600 dark:text-primary">
-                      <ArrowPathIcon className="h-3 w-3 animate-spin" />
-                      <span>{stepMeta.label}</span>
-                    </div>
-                  )}
                 </div>
               </div>
 

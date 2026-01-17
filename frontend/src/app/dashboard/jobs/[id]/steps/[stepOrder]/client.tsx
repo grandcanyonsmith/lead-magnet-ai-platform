@@ -114,6 +114,12 @@ function toPreviewText(formatted: FormattedContent, maxLength = 280): string {
   return `${raw.slice(0, maxLength - 3)}...`;
 }
 
+function abbreviateUrl(url: string, startLength = 28, endLength = 12): string {
+  if (!url) return "";
+  if (url.length <= startLength + endLength + 3) return url;
+  return `${url.slice(0, startLength)}...${url.slice(-endLength)}`;
+}
+
 interface SectionCardProps {
   title: string;
   description?: string;
@@ -630,11 +636,11 @@ export default function StepDetailClient() {
                 Loading images...
               </p>
             ) : (
-              <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+              <div className="flex flex-nowrap gap-3 overflow-x-auto pb-2 scrollbar-hide-until-hover">
                 {stepImageUrls.map((url, index) => (
                   <div
                     key={`url-${index}`}
-                    className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800"
+                    className="shrink-0 w-56 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800"
                   >
                     <div className="aspect-square">
                       <PreviewRenderer
@@ -649,9 +655,10 @@ export default function StepDetailClient() {
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[11px] text-primary-600 dark:text-primary-400 hover:text-primary-700 break-all line-clamp-2"
+                        className="text-[11px] text-primary-600 dark:text-primary-400 hover:text-primary-700 truncate block"
+                        title={url}
                       >
-                        {url}
+                        {abbreviateUrl(url)}
                       </a>
                     </div>
                   </div>
@@ -660,10 +667,14 @@ export default function StepDetailClient() {
                   const artifactUrl =
                     artifact.object_url || artifact.public_url;
                   if (!artifactUrl) return null;
+                  const artifactLabel =
+                    artifact.file_name ||
+                    artifact.artifact_name ||
+                    abbreviateUrl(artifactUrl);
                   return (
                     <div
                       key={`artifact-${artifact.artifact_id || index}`}
-                      className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800"
+                      className="shrink-0 w-56 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800"
                     >
                       <div className="aspect-square">
                         <PreviewRenderer
@@ -683,11 +694,14 @@ export default function StepDetailClient() {
                           href={artifactUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[11px] text-primary-600 dark:text-primary-400 hover:text-primary-700 break-all line-clamp-2"
-                        >
-                          {artifact.file_name ||
+                          className="text-[11px] text-primary-600 dark:text-primary-400 hover:text-primary-700 truncate block"
+                          title={
+                            artifact.file_name ||
                             artifact.artifact_name ||
-                            artifactUrl}
+                            artifactUrl
+                          }
+                        >
+                          {artifactLabel}
                         </a>
                       </div>
                     </div>

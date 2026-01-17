@@ -319,6 +319,7 @@ class OpenAIClient:
 
         if "reasoning" in params and (
             "reasoning" in error_message
+            or (isinstance(error_param, str) and error_param.startswith("reasoning"))
             or (isinstance(error_info, dict) and error_info.get("param") == "reasoning")
             or ("Unknown parameter" in error_message and "reasoning" in error_message)
         ):

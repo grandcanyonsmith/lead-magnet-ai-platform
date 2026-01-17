@@ -23,6 +23,8 @@ export function InlineImage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const isCompact = size === "compact";
+  const displayUrl =
+    url.length > 48 ? `${url.slice(0, 28)}...${url.slice(-12)}` : url;
 
   const handleLoad = () => {
     setLoading(false);
@@ -55,9 +57,10 @@ export function InlineImage({
           rel="noopener noreferrer"
           className={`${
             isCompact ? "mt-2 text-xs" : "mt-3 text-sm"
-          } block text-blue-600 hover:text-blue-800 hover:underline break-all`}
+          } block text-blue-600 hover:text-blue-800 hover:underline truncate`}
+          title={url}
         >
-          {url}
+          {displayUrl}
         </a>
       </div>
     );
@@ -119,9 +122,10 @@ export function InlineImage({
             rel="noopener noreferrer"
             className={`${
               isCompact ? "text-xs" : "text-sm"
-            } text-blue-600 hover:text-blue-800 hover:underline break-all block`}
+            } text-blue-600 hover:text-blue-800 hover:underline truncate block`}
+            title={url}
           >
-            {url}
+            {displayUrl}
           </a>
         </div>
       )}

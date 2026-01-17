@@ -10,7 +10,10 @@ import logging
 from datetime import datetime
 from typing import Dict, Any
 import boto3
-from ulid import new as ulid
+try:
+    from ulid import new as ulid
+except ImportError:
+    from ulid import ULID as ulid
 
 # Add the worker directory to Python path so imports work
 from pathlib import Path

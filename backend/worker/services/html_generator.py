@@ -3,6 +3,8 @@ import logging
 import json
 from typing import Dict, Optional, Tuple
 
+from utils.decimal_utils import convert_decimals_to_float
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,7 +38,8 @@ class HTMLGenerator:
         """
         Generate final deliverable HTML from submission data using the template as a style reference.
         """
-        content = json.dumps(submission_data or {}, ensure_ascii=False, indent=2)
+        serializable_submission = convert_decimals_to_float(submission_data or {})
+        content = json.dumps(serializable_submission, ensure_ascii=False, indent=2)
         return self._generate_styled_html(
             content_label="SUBMISSION_DATA_JSON",
             content=content,
@@ -86,7 +89,8 @@ class HTMLGenerator:
         if not template_html or not isinstance(template_html, str) or template_html.strip() == "":
             raise ValueError("template_html is required to generate styled HTML")
 
-        submission_json = json.dumps(submission_data or {}, ensure_ascii=False, indent=2)
+        serializable_submission = convert_decimals_to_float(submission_data or {})
+        submission_json = json.dumps(serializable_submission, ensure_ascii=False, indent=2)
         style_hint = template_style.strip() if isinstance(template_style, str) else ""
 
         instructions = (
