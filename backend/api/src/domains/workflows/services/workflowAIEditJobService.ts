@@ -7,6 +7,7 @@ import { JobProcessingUtils } from "./workflow/workflowJobProcessingService";
 import { getOpenAIClient } from "@services/openaiService";
 import { WorkflowAIService, WorkflowAIEditRequest } from "./workflowAIService";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getPromptOverridesFromSettings } from "@services/promptOverrides";
 
 const JOBS_TABLE = env.jobsTable;
 const WORKFLOWS_TABLE = env.workflowsTable;
@@ -385,6 +386,7 @@ class WorkflowAIEditJobService {
           : typeof job?.requested_by_user_id === "string"
             ? job.requested_by_user_id
             : undefined;
+      const promptOverrides = getPromptOverridesFromSettings(settings || undefined);
 
       let reviewerUser: {
         user_id: string;
@@ -421,6 +423,8 @@ class WorkflowAIEditJobService {
         defaultTextVerbosity,
         reviewServiceTier,
         reviewReasoningEffort,
+        tenantId,
+        promptOverrides,
         reviewerUser: reviewerUser || undefined,
         workflowContext: {
           workflow_id: workflowId,

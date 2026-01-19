@@ -44,7 +44,7 @@ class JobCompletionService:
         self.s3 = s3_service
         self.delivery_service = delivery_service
         self.usage_service = usage_service
-        self.ai_service = AIService()
+        self.ai_service = AIService(self.db, self.s3)
     
     def finalize_job(
         self,
@@ -340,7 +340,8 @@ class JobCompletionService:
             template_html=template['html_content'],
             template_style=template.get('style_description', ''),
             submission_data=submission_data,
-            model=model
+            model=model,
+            tenant_id=tenant_id,
         )
         
         html_duration = (datetime.utcnow() - html_start_time).total_seconds() * 1000
@@ -461,15 +462,15 @@ class JobCompletionService:
                 model = sorted_steps[-1].get('model', 'gpt-5.2')
         
         # Generate HTML
-        from ai_service import AIService
-        ai_service = AIService()
-        
+        ai_service = self.ai_service
+
         final_content, html_usage_info, html_request_details, html_response_details = ai_service.generate_styled_html(
             research_content=accumulated_context,
             template_html=template['html_content'],
             template_style=template.get('style_description', ''),
             submission_data=submission_data,
-            model=model
+            model=model,
+            tenant_id=job.get('tenant_id'),
         )
         
         html_duration = (datetime.utcnow() - html_start_time).total_seconds() * 1000

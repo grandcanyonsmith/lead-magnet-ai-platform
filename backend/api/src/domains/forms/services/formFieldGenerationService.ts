@@ -1,6 +1,11 @@
 import OpenAI from 'openai';
 import { calculateOpenAICost } from '@services/costService';
 import { callResponsesWithTimeout } from '@utils/openaiHelpers';
+import {
+  getPromptOverridesForTenant,
+  resolvePromptOverride,
+  type PromptOverrides,
+} from '@services/promptOverrides';
 
 export interface UsageInfo {
   service_type: string;
@@ -38,7 +43,8 @@ export class FormFieldGenerationService {
     tenantId: string,
     jobId?: string,
     brandContext?: string,
-    icpContext?: string
+    icpContext?: string,
+    promptOverrides?: PromptOverrides,
   ): Promise<{ formData: any; usageInfo: UsageInfo }> {
     let contextSection = '';
     if (brandContext) {
@@ -80,14 +86,32 @@ export class FormFieldGenerationService {
 }
 
 The public_slug should be URL-friendly (lowercase, hyphens only). Return ONLY valid JSON.`;
+    const overrides =
+      promptOverrides ?? (await getPromptOverridesForTenant(tenantId));
+    const resolved = resolvePromptOverride({
+      key: "form_field_generation",
+      defaults: {
+        instructions:
+          "You are an expert at creating lead capture forms. Return only valid JSON without markdown formatting.",
+        prompt: formPrompt,
+      },
+      overrides,
+      variables: {
+        description,
+        workflow_name: workflowName,
+        brand_context: brandContext,
+        icp_context: icpContext,
+        context_section: contextSection,
+      },
+    });
 
     console.log('[Form Field Generation Service] Calling OpenAI for form generation...');
     const formStartTime = Date.now();
     
     const formCompletionParams: any = {
       model: "gpt-5.2",
-      instructions: 'You are an expert at creating lead capture forms. Return only valid JSON without markdown formatting.',
-      input: formPrompt,
+      instructions: resolved.instructions,
+      input: resolved.prompt,
       reasoning: { effort: "high" },
       service_tier: "priority",
     };

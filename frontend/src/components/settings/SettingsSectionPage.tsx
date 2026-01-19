@@ -25,6 +25,8 @@ export function SettingsSectionPage({ section }: { section: SettingsSection }) {
     refetch,
     errors,
     setField,
+    promptOverridesJson,
+    setPromptOverridesJson,
     saving,
     save,
     hasUnsavedChanges,
@@ -68,6 +70,8 @@ export function SettingsSectionPage({ section }: { section: SettingsSection }) {
         <GeneralSettings
           settings={currentSettings}
           onChange={setField}
+          promptOverridesJson={promptOverridesJson}
+          onPromptOverridesChange={setPromptOverridesJson}
           errors={errors}
         />
       )}

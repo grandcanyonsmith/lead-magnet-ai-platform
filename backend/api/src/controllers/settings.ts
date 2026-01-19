@@ -102,6 +102,7 @@ class SettingsController {
         default_workflow_improvement_user_id: "",
         default_workflow_improvement_service_tier: "priority",
         default_workflow_improvement_reasoning_effort: "high",
+        prompt_overrides: {} as Record<string, any>,
         api_usage_limit: 1000000,
         api_usage_current: 0,
         billing_tier: "free",
@@ -136,6 +137,12 @@ class SettingsController {
             settings.onboarding_survey_responses &&
             typeof settings.onboarding_survey_responses === "object"
               ? settings.onboarding_survey_responses
+              : {},
+          prompt_overrides:
+            settings.prompt_overrides &&
+            typeof settings.prompt_overrides === "object" &&
+            !Array.isArray(settings.prompt_overrides)
+              ? settings.prompt_overrides
               : {},
           onboarding_checklist: {
             ...defaultSettings.onboarding_checklist,
@@ -178,6 +185,14 @@ class SettingsController {
         ) {
           updates.onboarding_survey_responses =
             merged.onboarding_survey_responses;
+        }
+
+        if (
+          !settings.prompt_overrides ||
+          typeof settings.prompt_overrides !== "object" ||
+          Array.isArray(settings.prompt_overrides)
+        ) {
+          updates.prompt_overrides = merged.prompt_overrides;
         }
 
         if (!Array.isArray(settings.folders)) {

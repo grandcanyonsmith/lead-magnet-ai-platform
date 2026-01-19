@@ -2,6 +2,11 @@ import OpenAI from 'openai';
 import { WorkflowStep } from './workflow/workflowConfigSupport';
 import { ToolChoice } from '@utils/types';
 import { stripMarkdownCodeFences } from '@utils/openaiHelpers';
+import {
+  getPromptOverridesForTenant,
+  resolvePromptOverride,
+  type PromptOverrides,
+} from '@services/promptOverrides';
 
 export interface AIStepGenerationRequest {
   userPrompt: string;
@@ -9,6 +14,8 @@ export interface AIStepGenerationRequest {
   defaultToolChoice?: ToolChoice;
   defaultServiceTier?: string;
   defaultTextVerbosity?: string;
+  tenantId?: string;
+  promptOverrides?: PromptOverrides;
   workflowContext: {
     workflow_id: string;
     workflow_name: string;
@@ -160,6 +167,8 @@ export class WorkflowStepAIService {
       defaultToolChoice,
       defaultServiceTier,
       defaultTextVerbosity,
+      tenantId,
+      promptOverrides,
     } = request;
     const resolvedDefaultToolChoice = VALID_TOOL_CHOICES.has(defaultToolChoice as ToolChoice)
       ? (defaultToolChoice as ToolChoice)
@@ -220,6 +229,34 @@ Suggested Action: ${suggestedAction}
 
 Please generate the workflow step configuration.`;
 
+    const overrides =
+      promptOverrides ?? (tenantId ? await getPromptOverridesForTenant(tenantId) : undefined);
+    const resolved = resolvePromptOverride({
+      key: "workflow_step_generation",
+      defaults: {
+        instructions: buildStepSystemPrompt(
+          resolvedDefaultToolChoice,
+          resolvedDefaultServiceTier,
+          resolvedDefaultTextVerbosity,
+        ),
+        prompt: userMessage,
+      },
+      overrides,
+      variables: {
+        workflow_name: workflowContext.workflow_name,
+        workflow_description: workflowContext.workflow_description,
+        context_message: contextMessage,
+        user_prompt: userPrompt,
+        suggested_action: suggestedAction,
+        current_step_json: currentStep ? JSON.stringify(currentStep, null, 2) : "",
+        current_step_index:
+          currentStepIndex !== undefined ? String(currentStepIndex) : undefined,
+        default_tool_choice: resolvedDefaultToolChoice,
+        default_service_tier: resolvedDefaultServiceTier,
+        default_text_verbosity: resolvedDefaultTextVerbosity,
+      },
+    });
+
     console.log('[WorkflowStepAI] Generating step', {
       workflow: workflowContext.workflow_name,
       userPrompt: userPrompt.substring(0, 100),
@@ -229,12 +266,8 @@ Please generate the workflow step configuration.`;
     try {
       const completion = await (this.openaiClient as any).responses.create({
         model: 'gpt-5.2',
-        instructions: buildStepSystemPrompt(
-          resolvedDefaultToolChoice,
-          resolvedDefaultServiceTier,
-          resolvedDefaultTextVerbosity,
-        ),
-        input: userMessage,
+        instructions: resolved.instructions,
+        input: resolved.prompt,
         reasoning: { effort: 'high' },
         service_tier: 'priority',
       });

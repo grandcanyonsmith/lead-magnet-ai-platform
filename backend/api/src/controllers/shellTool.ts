@@ -57,6 +57,7 @@ class ShellToolController {
           maxSteps: parsed.data.max_steps,
           workspaceId: parsed.data.workspace_id,
           resetWorkspace: parsed.data.reset_workspace,
+          tenantId: _tenantId,
         });
       } finally {
         await slot.release();

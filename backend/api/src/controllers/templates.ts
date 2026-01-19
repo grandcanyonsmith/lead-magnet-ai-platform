@@ -9,6 +9,7 @@ import { ApiError } from "../utils/errors";
 import { RouteResponse } from "../routes";
 import { templateAIService } from "../services/templateAIService";
 import { env } from "../utils/env";
+import { getPromptOverridesForTenant } from "../services/promptOverrides";
 
 const TEMPLATES_TABLE = env.templatesTable;
 
@@ -213,12 +214,14 @@ class TemplatesController {
   }
 
   async refineWithAI(tenantId: string, body: any): Promise<RouteResponse> {
+    const promptOverrides = await getPromptOverridesForTenant(tenantId);
     const result = await templateAIService.refineWithAI({
       current_html: body.current_html,
       edit_prompt: body.edit_prompt,
       model: body.model,
       selectors: body.selectors,
       tenantId,
+      promptOverrides,
     });
 
     return {
@@ -228,10 +231,12 @@ class TemplatesController {
   }
 
   async generateWithAI(tenantId: string, body: any): Promise<RouteResponse> {
+    const promptOverrides = await getPromptOverridesForTenant(tenantId);
     const result = await templateAIService.generateWithAI({
       description: body.description,
       model: body.model,
       tenantId,
+      promptOverrides,
     });
 
     return {

@@ -8,6 +8,11 @@ import {
 import { getOpenAIClient } from "./openaiService";
 import { env } from "../utils/env";
 import { stripMarkdownCodeFences } from "../utils/openaiHelpers";
+import {
+  getPromptOverridesForTenant,
+  resolvePromptOverride,
+  type PromptOverrides,
+} from "./promptOverrides";
 
 const ARTIFACTS_BUCKET = env.artifactsBucket;
 const CLOUDFRONT_DOMAIN = env.cloudfrontDomain;
@@ -277,6 +282,8 @@ export class ExecutionStepsService {
     stepOrder: number,
     userPrompt: string,
     save: boolean,
+    tenantId?: string,
+    promptOverrides?: PromptOverrides,
   ): Promise<{
     original_output: any;
     edited_output: any;
@@ -399,11 +406,28 @@ User Request: ${userPrompt}
 
 Please generate the edited output based on the user's request. Return only the edited output, maintaining the same format as the original.`;
 
+      const overrides =
+        promptOverrides ?? (tenantId ? await getPromptOverridesForTenant(tenantId) : undefined);
+      const resolved = resolvePromptOverride({
+        key: "execution_step_edit",
+        defaults: {
+          instructions: systemPrompt,
+          prompt: userMessage,
+        },
+        overrides,
+        variables: {
+          step_name: step.step_name || "Unknown",
+          step_order: String(stepOrder),
+          user_prompt: userPrompt,
+          original_output: originalOutput,
+        },
+      });
+
       // Call OpenAI (Responses API)
       const completion = await (openai as any).responses.create({
         model: "gpt-5.2",
-        instructions: systemPrompt,
-        input: userMessage,
+        instructions: resolved.instructions,
+        input: resolved.prompt,
         reasoning: { effort: "high" },
         service_tier: "priority",
       });

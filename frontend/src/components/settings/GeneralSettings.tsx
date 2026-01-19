@@ -17,6 +17,8 @@ import { AvatarUpload } from "./AvatarUpload";
 interface GeneralSettingsProps {
   settings: Settings;
   onChange: (field: keyof Settings, value: string) => void;
+  promptOverridesJson: string;
+  onPromptOverridesChange: (value: string) => void;
   errors?: Record<string, string>;
 }
 
@@ -63,6 +65,8 @@ interface TenantUserOption {
 export function GeneralSettings({
   settings,
   onChange,
+  promptOverridesJson,
+  onPromptOverridesChange,
   errors,
 }: GeneralSettingsProps) {
   const { user } = useAuth();
@@ -282,6 +286,27 @@ export function GeneralSettings({
               helpText="Reasoning depth for improvement suggestions"
             />
           </div>
+        </div>
+
+        <div className="space-y-3 border-t border-gray-100 dark:border-border pt-6">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground">
+              Prompt Overrides
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              Optional JSON overrides for system instructions and prompt templates.
+            </p>
+          </div>
+          <FormField
+            label="Prompt Overrides (JSON)"
+            name="prompt_overrides"
+            type="textarea"
+            value={promptOverridesJson}
+            onChange={onPromptOverridesChange}
+            error={errors?.prompt_overrides}
+            helpText="Use keys from docs/prompt-overrides.md. Supports {{variables}} placeholders."
+            placeholder='{"workflow_generation": {"instructions": "...", "prompt": "..."}}'
+          />
         </div>
       </CardContent>
     </Card>

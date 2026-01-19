@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { WorkflowConfigService } from './workflowConfigService';
 import { TemplateAIService, type StoreUsageRecordFn } from '@services/templateAIService';
 import { FormFieldGenerationService } from '@domains/forms/services/formFieldGenerationService';
+import type { PromptOverrides } from '@services/promptOverrides';
 
 export interface GenerationResult {
   workflow: {
@@ -91,7 +92,8 @@ export class WorkflowGenerationService {
     icpContext?: string,
     defaultToolChoice?: "auto" | "required" | "none",
     defaultServiceTier?: string,
-    defaultTextVerbosity?: string
+    defaultTextVerbosity?: string,
+    promptOverrides?: PromptOverrides,
   ): Promise<{ workflowData: any; usageInfo: UsageInfo }> {
     return this.workflowConfigService.generateWorkflowConfig(
       description,
@@ -103,6 +105,7 @@ export class WorkflowGenerationService {
       defaultToolChoice,
       defaultServiceTier,
       defaultTextVerbosity,
+      promptOverrides,
     );
   }
 
@@ -116,9 +119,18 @@ export class WorkflowGenerationService {
     tenantId: string,
     jobId?: string,
     brandContext?: string,
-    icpContext?: string
+    icpContext?: string,
+    promptOverrides?: PromptOverrides,
   ): Promise<{ htmlContent: string; usageInfo: UsageInfo }> {
-    return this.templateService.generateTemplateHTML({ description, model, tenantId, jobId, brandContext, icpContext });
+    return this.templateService.generateTemplateHTML({
+      description,
+      model,
+      tenantId,
+      jobId,
+      brandContext,
+      icpContext,
+      promptOverrides,
+    });
   }
 
   /**
@@ -131,9 +143,18 @@ export class WorkflowGenerationService {
     tenantId: string,
     jobId?: string,
     brandContext?: string,
-    icpContext?: string
+    icpContext?: string,
+    promptOverrides?: PromptOverrides,
   ): Promise<{ templateName: string; templateDescription: string; usageInfo: UsageInfo }> {
-    return this.templateService.generateTemplateMetadata({ description, model, tenantId, jobId, brandContext, icpContext });
+    return this.templateService.generateTemplateMetadata({
+      description,
+      model,
+      tenantId,
+      jobId,
+      brandContext,
+      icpContext,
+      promptOverrides,
+    });
   }
 
   /**
@@ -147,9 +168,19 @@ export class WorkflowGenerationService {
     tenantId: string,
     jobId?: string,
     brandContext?: string,
-    icpContext?: string
+    icpContext?: string,
+    promptOverrides?: PromptOverrides,
   ): Promise<{ formData: any; usageInfo: UsageInfo }> {
-    return this.formFieldGenerationService.generateFormFields(description, workflowName, model, tenantId, jobId, brandContext, icpContext);
+    return this.formFieldGenerationService.generateFormFields(
+      description,
+      workflowName,
+      model,
+      tenantId,
+      jobId,
+      brandContext,
+      icpContext,
+      promptOverrides,
+    );
   }
 
   /**

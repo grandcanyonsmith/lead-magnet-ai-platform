@@ -108,6 +108,7 @@ export class ExecutionStepsController {
         step_order,
         user_prompt,
         save === true,
+        tenantId,
       );
 
       // If save is true, update job updated_at timestamp

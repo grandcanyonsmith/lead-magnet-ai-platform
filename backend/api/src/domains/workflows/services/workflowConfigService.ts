@@ -3,6 +3,12 @@ import { calculateOpenAICost } from '@services/costService';
 import { callResponsesWithTimeout } from '@utils/openaiHelpers';
 import { buildWorkflowPrompt } from '@domains/workflows/services/workflow/workflowPromptService';
 import { parseWorkflowConfig } from '@domains/workflows/services/workflow/workflowConfigSupport';
+import {
+  getPromptOverridesForTenant,
+  resolvePromptOverride,
+  type PromptOverrides,
+} from '@services/promptOverrides';
+import { formatAllModelDescriptionsMarkdown } from '@domains/workflows/services/workflow/modelDescriptions';
 
 export interface UsageInfo {
   service_type: string;
@@ -42,7 +48,8 @@ export class WorkflowConfigService {
     icpContext?: string,
     defaultToolChoice?: "auto" | "required" | "none",
     defaultServiceTier?: string,
-    defaultTextVerbosity?: string
+    defaultTextVerbosity?: string,
+    promptOverrides?: PromptOverrides,
   ): Promise<{ workflowData: any; usageInfo: UsageInfo }> {
     const workflowPrompt = buildWorkflowPrompt({
       description,
@@ -52,6 +59,33 @@ export class WorkflowConfigService {
       defaultServiceTier,
       defaultTextVerbosity,
     });
+    const contextSection = [
+      brandContext ? `\n\n## Brand Context\n${brandContext}` : "",
+      icpContext ? `\n\n## Ideal Customer Profile (ICP) Document\n${icpContext}` : "",
+    ]
+      .filter(Boolean)
+      .join("");
+
+    const overrides = promptOverrides ?? (await getPromptOverridesForTenant(tenantId));
+    const resolved = resolvePromptOverride({
+      key: "workflow_generation",
+      defaults: {
+        instructions:
+          "You are an expert AI Lead Magnet Architect. Return only valid JSON without markdown formatting.",
+        prompt: workflowPrompt,
+      },
+      overrides,
+      variables: {
+        description,
+        brand_context: brandContext,
+        icp_context: icpContext,
+        context_section: contextSection,
+        default_tool_choice: defaultToolChoice,
+        default_service_tier: defaultServiceTier,
+        default_text_verbosity: defaultTextVerbosity,
+        model_descriptions_markdown: formatAllModelDescriptionsMarkdown(),
+      },
+    });
 
     console.log('[Workflow Config Service] Calling OpenAI for workflow generation...');
     const workflowStartTime = Date.now();
@@ -59,9 +93,8 @@ export class WorkflowConfigService {
     // Force gpt-5.2 with max reasoning + priority tier for best quality and faster throughput.
     const workflowCompletionParams: any = {
       model: "gpt-5.2",
-      instructions:
-        'You are an expert AI Lead Magnet Architect. Return only valid JSON without markdown formatting.',
-      input: workflowPrompt,
+      instructions: resolved.instructions,
+      input: resolved.prompt,
       reasoning: { effort: "high" },
       service_tier: "priority",
     };

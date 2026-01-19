@@ -4,6 +4,7 @@ from typing import Dict, Any, List, Optional, Tuple
 
 from services.openai_client import OpenAIClient
 from services.image_handler import ImageHandler
+from services.prompt_overrides import resolve_prompt_override
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ class ImageGenerator:
         image_tool: Dict[str, Any],
         step_name: Optional[str],
         step_instructions: str,
+        prompt_overrides: Optional[Dict[str, Any]] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Image-generation path using the Images API.
@@ -82,6 +84,24 @@ class ImageGenerator:
             f"Step Instructions:\n{step_instructions}\n\n"
             f"Context:\n{full_context}\n"
         )
+        resolved = resolve_prompt_override(
+            key="image_prompt_planner",
+            defaults={
+                "instructions": planner_instructions,
+                "prompt": planner_input,
+            },
+            overrides=prompt_overrides,
+            variables={
+                "step_name": step_name,
+                "step_instructions": step_instructions,
+                "full_context": full_context,
+                "context": context,
+                "previous_context": previous_context,
+                "planner_input": planner_input,
+            },
+        )
+        planner_instructions = resolved.get("instructions") or planner_instructions
+        planner_input = resolved.get("prompt") or planner_input
 
         # Build planner params (Responses API) WITHOUT the image_generation tool.
         # has_computer_use=False since we filtered out computer_use tools to prevent browser automation.

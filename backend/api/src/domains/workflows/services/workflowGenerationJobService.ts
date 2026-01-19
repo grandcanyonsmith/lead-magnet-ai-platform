@@ -9,6 +9,7 @@ import { usageTrackingService } from '@services/usageTrackingService';
 import { fetchICPContent, buildBrandContext } from './workflow/workflowContextService';
 import { sendWorkflowGenerationWebhook } from '@services/webhookService';
 import { saveDraftWorkflow } from './draftWorkflowService';
+import { getPromptOverridesFromSettings } from '@services/promptOverrides';
 
 const JOBS_TABLE = env.jobsTable;
 const USER_SETTINGS_TABLE = env.userSettingsTable;
@@ -168,6 +169,7 @@ class WorkflowGenerationJobService {
           ? settings.default_text_verbosity
           : undefined;
       const shouldOverrideTextVerbosity = defaultTextVerbosity !== undefined;
+      const promptOverrides = getPromptOverridesFromSettings(settings || undefined);
 
       let icpContext: string | null = null;
       if (settings?.icp_document_url) {
@@ -190,6 +192,7 @@ class WorkflowGenerationJobService {
         defaultToolChoice,
         defaultServiceTier,
         defaultTextVerbosity,
+        promptOverrides,
       );
 
       if (
@@ -224,7 +227,8 @@ class WorkflowGenerationJobService {
           tenantId,
           jobId,
           brandContext || undefined,
-          icpContext || undefined
+          icpContext || undefined,
+          promptOverrides,
         ),
         generationService.generateTemplateMetadata(
           jobDescription,
@@ -232,7 +236,8 @@ class WorkflowGenerationJobService {
           tenantId,
           jobId,
           brandContext || undefined,
-          icpContext || undefined
+          icpContext || undefined,
+          promptOverrides,
         ),
         generationService.generateFormFields(
           jobDescription,
@@ -241,7 +246,8 @@ class WorkflowGenerationJobService {
           tenantId,
           jobId,
           brandContext || undefined,
-          icpContext || undefined
+          icpContext || undefined,
+          promptOverrides,
         ),
       ]);
 

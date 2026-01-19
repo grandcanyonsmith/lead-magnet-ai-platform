@@ -12,7 +12,10 @@ import React, {
 import { usePathname } from "next/navigation";
 import { useSettings, useUpdateSettings } from "@/hooks/api/useSettings";
 import type { Settings } from "@/types";
-import type { SettingsUpdateRequest } from "@/types/settings";
+import type {
+  PromptOverrides,
+  SettingsUpdateRequest,
+} from "@/types/settings";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 
 type SettingsSection = "general" | "branding" | "delivery" | "billing";
@@ -29,6 +32,8 @@ type SettingsEditorContextValue = {
 
   errors: Record<string, string>;
   setField: (field: keyof Settings, value: string) => void;
+  promptOverridesJson: string;
+  setPromptOverridesJson: (value: string) => void;
 
   saving: boolean;
   save: () => Promise<boolean>;
@@ -87,6 +92,33 @@ function normalizeReviewUserId(value?: string): string {
   const trimmed = value.trim();
   if (!trimmed || trimmed === "auto") return "";
   return trimmed;
+}
+
+function formatPromptOverrides(overrides?: PromptOverrides | null): string {
+  const safeOverrides =
+    overrides && typeof overrides === "object" && !Array.isArray(overrides)
+      ? overrides
+      : {};
+  return JSON.stringify(safeOverrides, null, 2);
+}
+
+function parsePromptOverridesJson(value: string): {
+  data?: PromptOverrides;
+  error?: string;
+} {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { data: undefined };
+  }
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { error: "Prompt overrides must be a JSON object." };
+    }
+    return { data: parsed as PromptOverrides };
+  } catch {
+    return { error: "Prompt overrides must be valid JSON." };
+  }
 }
 
 function validateForm(formData: Partial<Settings>): Record<string, string> {
@@ -150,8 +182,10 @@ export function SettingsEditorProvider({
   const [section, setSection] = useState<SettingsSection>(initialSection);
   const [formData, setFormData] = useState<Partial<Settings>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [promptOverridesJson, setPromptOverridesJsonState] = useState("");
   const initializedRef = useRef(false);
   const lastSavedRef = useRef<Partial<Settings>>({});
+  const promptOverridesRef = useRef("");
 
   const { settings, loading, error, refetch } = useSettings();
   const { updateSettings, loading: saving } = useUpdateSettings();
@@ -193,6 +227,9 @@ export function SettingsEditorProvider({
 
       setFormData(initialFormData);
       lastSavedRef.current = initialFormData;
+      const overridesJson = formatPromptOverrides(settings.prompt_overrides);
+      setPromptOverridesJsonState(overridesJson);
+      promptOverridesRef.current = overridesJson;
       initializedRef.current = true;
     } else if (
       settings &&
@@ -228,6 +265,11 @@ export function SettingsEditorProvider({
         icp_document_url: settings.icp_document_url || "",
         webhook_url: settings.webhook_url || "",
       };
+      if (!promptOverridesRef.current) {
+        const overridesJson = formatPromptOverrides(settings.prompt_overrides);
+        setPromptOverridesJsonState(overridesJson);
+        promptOverridesRef.current = overridesJson;
+      }
     }
   }, [settings]);
 
@@ -273,9 +315,10 @@ export function SettingsEditorProvider({
       formData.company_size !== (compareTo.company_size || "") ||
       formData.brand_messaging_guidelines !==
         (compareTo.brand_messaging_guidelines || "") ||
-      formData.icp_document_url !== (compareTo.icp_document_url || "")
+      formData.icp_document_url !== (compareTo.icp_document_url || "") ||
+      promptOverridesJson !== promptOverridesRef.current
     );
-  }, [settings, formData]);
+  }, [settings, formData, promptOverridesJson]);
 
   const isBilling = useMemo(() => {
     if (section === "billing") return true;
@@ -296,6 +339,20 @@ export function SettingsEditorProvider({
         setErrors((prev) => {
           const next = { ...prev };
           delete next[field];
+          return next;
+        });
+      }
+    },
+    [errors],
+  );
+
+  const setPromptOverridesJson = useCallback(
+    (value: string) => {
+      setPromptOverridesJsonState(value);
+      if (errors.prompt_overrides) {
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next.prompt_overrides;
           return next;
         });
       }
@@ -339,6 +396,7 @@ export function SettingsEditorProvider({
           };
     setFormData((prev) => ({ ...prev, ...reset }));
     setErrors({});
+    setPromptOverridesJsonState(promptOverridesRef.current);
   }, [settings]);
 
   const applyServerSettingsUpdate = useCallback(
@@ -346,6 +404,11 @@ export function SettingsEditorProvider({
       // Keep the UI responsive for fields that can be mutated outside of the main save form.
       if (typeof updatedSettings.webhook_url === "string") {
         setFormData((prev) => ({ ...prev, webhook_url: updatedSettings.webhook_url }));
+      }
+      if (updatedSettings.prompt_overrides) {
+        const overridesJson = formatPromptOverrides(updatedSettings.prompt_overrides);
+        setPromptOverridesJsonState(overridesJson);
+        promptOverridesRef.current = overridesJson;
       }
       refetch();
     },
@@ -361,6 +424,15 @@ export function SettingsEditorProvider({
       formData.default_workflow_improvement_user_id === undefined
         ? undefined
         : normalizeReviewUserId(formData.default_workflow_improvement_user_id);
+
+    const promptOverridesResult = parsePromptOverridesJson(promptOverridesJson);
+    if (promptOverridesResult.error) {
+      setErrors((prev) => ({
+        ...prev,
+        prompt_overrides: promptOverridesResult.error as string,
+      }));
+      return false;
+    }
 
     const payload: SettingsUpdateRequest = {
       organization_name: formData.organization_name?.trim() || undefined,
@@ -388,6 +460,7 @@ export function SettingsEditorProvider({
       brand_messaging_guidelines:
         formData.brand_messaging_guidelines?.trim() || undefined,
       icp_document_url: sanitizeUrl(formData.icp_document_url),
+      prompt_overrides: promptOverridesResult.data,
     };
 
     const updated = await updateSettings(payload);
@@ -423,10 +496,13 @@ export function SettingsEditorProvider({
 
     setFormData((prev) => ({ ...prev, ...savedFormData }));
     lastSavedRef.current = { ...lastSavedRef.current, ...savedFormData };
+    const normalizedOverridesJson = formatPromptOverrides(payload.prompt_overrides);
+    setPromptOverridesJsonState(normalizedOverridesJson);
+    promptOverridesRef.current = normalizedOverridesJson;
     refetch();
 
     return true;
-  }, [formData, updateSettings, refetch]);
+  }, [formData, updateSettings, refetch, promptOverridesJson]);
 
   const currentSettings = useMemo<Settings | null>(() => {
     if (!settings) return null;
@@ -444,6 +520,8 @@ export function SettingsEditorProvider({
       refetch,
       errors,
       setField,
+      promptOverridesJson,
+      setPromptOverridesJson,
       saving,
       save,
       hasUnsavedChanges,
@@ -459,6 +537,8 @@ export function SettingsEditorProvider({
       refetch,
       errors,
       setField,
+      promptOverridesJson,
+      setPromptOverridesJson,
       saving,
       save,
       hasUnsavedChanges,

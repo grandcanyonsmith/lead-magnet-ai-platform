@@ -48,8 +48,17 @@ export interface Settings extends BaseEntity {
   company_size?: string;
   brand_messaging_guidelines?: string;
   icp_document_url?: string;
+  prompt_overrides?: PromptOverrides;
   [key: string]: unknown;
 }
+
+export interface PromptOverride {
+  enabled?: boolean;
+  instructions?: string;
+  prompt?: string;
+}
+
+export type PromptOverrides = Record<string, PromptOverride>;
 
 export interface SettingsUpdateRequest {
   onboarding_survey_completed?: boolean;
@@ -78,6 +87,7 @@ export interface SettingsUpdateRequest {
   company_size?: string;
   brand_messaging_guidelines?: string;
   icp_document_url?: string;
+  prompt_overrides?: PromptOverrides;
   [key: string]: unknown;
 }
 

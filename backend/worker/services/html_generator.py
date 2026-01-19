@@ -4,6 +4,7 @@ import json
 from typing import Dict, Optional, Tuple
 
 from utils.decimal_utils import convert_decimals_to_float
+from services.prompt_overrides import resolve_prompt_override
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,8 @@ class HTMLGenerator:
         submission_data: dict,
         template_html: str,
         template_style: str = '',
-        model: str = 'gpt-5.2'
+        model: str = 'gpt-5.2',
+        prompt_overrides: Optional[Dict] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate final deliverable HTML from submission data using the template as a style reference.
@@ -47,6 +49,7 @@ class HTMLGenerator:
             template_style=template_style,
             submission_data=submission_data,
             model=model,
+            prompt_overrides=prompt_overrides,
         )
     
     def generate_styled_html(
@@ -55,7 +58,8 @@ class HTMLGenerator:
         template_html: str,
         template_style: str = '',
         submission_data: Dict = None,
-        model: str = 'gpt-5.2'
+        model: str = 'gpt-5.2',
+        prompt_overrides: Optional[Dict] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate styled HTML deliverable from accumulated workflow content using a template as a style reference.
@@ -67,6 +71,7 @@ class HTMLGenerator:
             template_style=template_style,
             submission_data=submission_data,
             model=model,
+            prompt_overrides=prompt_overrides,
         )
     
     def rewrite_html(self, html_content: str, model: str = 'gpt-5.2') -> str:
@@ -81,6 +86,7 @@ class HTMLGenerator:
         template_style: str = '',
         submission_data: Optional[Dict] = None,
         model: str = 'gpt-5.2',
+        prompt_overrides: Optional[Dict] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Internal helper that calls OpenAI Responses API to create a complete HTML deliverable
@@ -112,6 +118,24 @@ class HTMLGenerator:
             f"{content_label}:\n<<<\n{content}\n>>>\n\n"
             f"SUBMISSION_DATA_JSON (optional personalization context):\n<<<\n{submission_json}\n>>>\n"
         )
+        resolved = resolve_prompt_override(
+            key="styled_html_generation",
+            defaults={
+                "instructions": instructions,
+                "prompt": input_text,
+            },
+            overrides=prompt_overrides,
+            variables={
+                "content_label": content_label,
+                "content": content,
+                "template_html": template_html,
+                "template_style": style_hint,
+                "submission_data_json": submission_json,
+                "input_text": input_text,
+            },
+        )
+        instructions = resolved.get("instructions") or instructions
+        input_text = resolved.get("prompt") or input_text
 
         # Build params for Responses API. No tools are needed for this.
         params = self.openai_client.build_api_params(

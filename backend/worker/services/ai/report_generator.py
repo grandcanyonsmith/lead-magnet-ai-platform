@@ -15,6 +15,7 @@ from services.cua_loop_service import CUALoopService
 from services.tools.execution import ShellLoopService
 from services.ai.image_generator import ImageGenerator
 from services.image_handler import ImageHandler
+from services.prompt_overrides import get_prompt_overrides
 from utils.decimal_utils import convert_decimals_to_float
 from cost_service import calculate_openai_cost
 
@@ -150,6 +151,7 @@ class ReportGenerator:
             )
             image_model = (image_tool or {}).get("model") or "gpt-image-1.5"
             if isinstance(image_model, str) and image_model.startswith("gpt-image"):
+                prompt_overrides = get_prompt_overrides(self.db_service, tenant_id)
                 return self.image_generator.generate_images_via_api(
                     model=model,
                     image_model=image_model,
@@ -167,6 +169,7 @@ class ReportGenerator:
                     image_tool=image_tool or {},
                     step_name=self._current_step_name,
                     step_instructions=self._current_step_instructions or instructions,
+                    prompt_overrides=prompt_overrides,
                 )
         
         # Check if we need to use CUA loop (computer-use-preview model with computer_use_preview tool)

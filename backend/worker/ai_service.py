@@ -15,6 +15,7 @@ from services.shell_executor_service import ShellExecutorService
 from services.tools.execution import ShellLoopService
 from services.ai.image_generator import ImageGenerator
 from services.ai.report_generator import ReportGenerator
+from services.prompt_overrides import get_prompt_overrides
 
 logger = get_logger(__name__)
 
@@ -95,13 +96,16 @@ class AIService:
         template_html: str,
         template_style: str = '',
         model: str = 'gpt-5.2',
+        tenant_id: Optional[str] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """Delegate to HTMLGenerator."""
+        prompt_overrides = get_prompt_overrides(self.db_service, tenant_id)
         return self.html_generator.generate_html_from_submission(
             submission_data=submission_data,
             template_html=template_html,
             template_style=template_style,
-            model=model
+            model=model,
+            prompt_overrides=prompt_overrides,
         )
 
     def generate_styled_html(
@@ -111,14 +115,17 @@ class AIService:
         template_style: str = '',
         submission_data: dict = None,
         model: str = 'gpt-5.2',
+        tenant_id: Optional[str] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """Delegate to HTMLGenerator."""
+        prompt_overrides = get_prompt_overrides(self.db_service, tenant_id)
         return self.html_generator.generate_styled_html(
             research_content=research_content,
             template_html=template_html,
             template_style=template_style,
             submission_data=submission_data,
-            model=model
+            model=model,
+            prompt_overrides=prompt_overrides,
         )
 
     def rewrite_html(

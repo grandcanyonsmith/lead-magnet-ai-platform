@@ -6,6 +6,10 @@
 import { getOpenAIClient } from "./openaiService";
 import { logger } from "../utils/logger";
 import { ApiError } from "../utils/errors";
+import {
+  getPromptOverridesForTenant,
+  resolvePromptOverride,
+} from "./promptOverrides";
 
 /**
  * Upload a file to OpenAI for indexing
@@ -77,13 +81,25 @@ export async function searchFiles(
     }
 
     const openai = await getOpenAIClient();
+    const overrides = await getPromptOverridesForTenant(customerId);
+    const resolved = resolvePromptOverride({
+      key: "file_search_assistant",
+      defaults: {
+        instructions:
+          "You are an Expert Data Analyst. Search through the provided files to find exact, relevant information. Cite your sources.",
+        prompt: query,
+      },
+      overrides,
+      variables: {
+        query,
+      },
+    });
 
     // Create a temporary assistant for file search
     // Note: In production, you might want to maintain a persistent assistant per customer
     const assistant = await openai.beta.assistants.create({
       name: `File Search Assistant - ${customerId}`,
-      instructions:
-        "You are an Expert Data Analyst. Search through the provided files to find exact, relevant information. Cite your sources.",
+      instructions: resolved.instructions,
       model: "gpt-5.2",
       tools: [{ type: "file_search" }],
     });
@@ -106,7 +122,7 @@ export async function searchFiles(
       // Add message to thread
       await openai.beta.threads.messages.create(thread.id, {
         role: "user",
-        content: query,
+        content: resolved.prompt || query,
       });
 
       // Run the assistant
@@ -251,13 +267,27 @@ export async function searchFilesSimple(
     const context = fileContents
       .map((fc) => `[File ${fc.fileId}]:\n${fc.content}`)
       .join("\n\n---\n\n");
+    const overrides = await getPromptOverridesForTenant(customerId);
+    const resolved = resolvePromptOverride({
+      key: "file_search_simple",
+      defaults: {
+        instructions:
+          "You are an Expert Data Analyst. Answer the user's query using ONLY the provided file context. If the answer is not in the files, state that clearly.",
+        prompt: `Query:\n${query}\n\nFiles:\n${context}`,
+      },
+      overrides,
+      variables: {
+        query,
+        context,
+        file_count: String(fileContents.length),
+      },
+    });
 
     // Use Responses API (gpt-5.2) to answer query
     const completion = await (openai as any).responses.create({
       model: "gpt-5.2",
-      instructions:
-        "You are an Expert Data Analyst. Answer the user's query using ONLY the provided file context. If the answer is not in the files, state that clearly.",
-      input: `Query:\n${query}\n\nFiles:\n${context}`,
+      instructions: resolved.instructions,
+      input: resolved.prompt,
       reasoning: { effort: "high" },
       service_tier: "priority",
     });

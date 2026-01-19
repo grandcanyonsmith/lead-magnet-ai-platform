@@ -5,6 +5,11 @@ import { htmlPatcher, PatchOperation } from "./html/patcher";
 import { getOpenAIClient } from "./openaiService";
 import { stripMarkdownCodeFences } from "../utils/openaiHelpers";
 import { ApiError } from "../utils/errors";
+import {
+  getPromptOverridesForTenant,
+  resolvePromptOverride,
+  type PromptOverrides,
+} from "./promptOverrides";
 
 const ARTIFACTS_BUCKET = env.artifactsBucket;
 const s3Client = new S3Client({ region: env.awsRegion });
@@ -69,6 +74,8 @@ export interface PatchHtmlWithOpenAIParams {
   pageUrl?: string | null;
   model?: string | null;
   reasoningEffort?: string | null;
+  tenantId?: string;
+  promptOverrides?: PromptOverrides;
 }
 
 export interface PatchHtmlWithOpenAIResult {
@@ -91,6 +98,8 @@ export async function patchHtmlWithOpenAI(
     pageUrl,
     model = "gpt-5.2",
     reasoningEffort = "high",
+    tenantId,
+    promptOverrides,
   } = params;
 
   if (!html || !html.trim()) {
@@ -137,10 +146,29 @@ export async function patchHtmlWithOpenAI(
       inputPrompt += `\n\nFocus on elements matching: ${selector}`;
     }
 
+    const overrides =
+      promptOverrides ?? (tenantId ? await getPromptOverridesForTenant(tenantId) : undefined);
+    const resolved = resolvePromptOverride({
+      key: "html_patch",
+      defaults: {
+        instructions: instruction,
+        prompt: inputPrompt,
+      },
+      overrides,
+      variables: {
+        html,
+        user_prompt: prompt,
+        selector: selector || undefined,
+        selected_outer_html: selectedOuterHtml || undefined,
+        page_url: pageUrl || undefined,
+        input_prompt: inputPrompt,
+      },
+    });
+
     const completionParams: any = {
       model,
-      instructions: instruction,
-      input: inputPrompt,
+      instructions: resolved.instructions,
+      input: resolved.prompt,
       service_tier: "priority",
       reasoning: { effort: reasoningEffort },
     };

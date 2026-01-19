@@ -96,6 +96,7 @@ export async function handleHtmlPatchRequest(event: any): Promise<APIGatewayProx
       pageUrl: patchRequest.page_url || null,
       model: patchRequest.model || null,
       reasoningEffort: patchRequest.reasoning_effort || null,
+      tenantId,
     });
 
     // Store result in S3

@@ -9,6 +9,11 @@ import {
 } from "./usageTrackingService";
 import { logger } from "../utils/logger";
 import { ApiError } from "../utils/errors";
+import {
+  getPromptOverridesForTenant,
+  resolvePromptOverride,
+  type PromptOverrides,
+} from "./promptOverrides";
 
 export interface UsageInfo {
   service_type: string;
@@ -25,6 +30,7 @@ export interface TemplateGenerationRequest {
   jobId?: string;
   brandContext?: string;
   icpContext?: string;
+  promptOverrides?: PromptOverrides;
 }
 
 export interface TemplateRefinementRequest {
@@ -34,6 +40,7 @@ export interface TemplateRefinementRequest {
   tenantId: string;
   jobId?: string;
   selectors?: string[];
+  promptOverrides?: PromptOverrides;
 }
 
 export type StoreUsageRecordFn = (params: UsageTrackingParams) => Promise<void>;
@@ -62,7 +69,14 @@ export class TemplateAIService {
   async generateTemplateHTML(
     request: TemplateGenerationRequest,
   ): Promise<{ htmlContent: string; usageInfo: UsageInfo }> {
-    const { description, tenantId, jobId, brandContext, icpContext } = request;
+    const {
+      description,
+      tenantId,
+      jobId,
+      brandContext,
+      icpContext,
+      promptOverrides,
+    } = request;
     const model = "gpt-5.2";
 
     if (!description || !description.trim()) {
@@ -94,13 +108,31 @@ Task: Create a stunning, high-converting HTML template for a lead magnet describ
 ## Output
 Return ONLY the raw HTML code. No Markdown code blocks.`;
 
+    const overrides =
+      promptOverrides ?? (await getPromptOverridesForTenant(tenantId));
+    const resolved = resolvePromptOverride({
+      key: "template_html_generation",
+      defaults: {
+        instructions:
+          "You are an expert HTML template designer. Return only valid HTML code without markdown formatting.",
+        prompt,
+      },
+      overrides,
+      variables: {
+        description,
+        brand_context: brandContext,
+        icp_context: icpContext,
+        context_section: contextSection,
+      },
+    });
+
     logger.info(
       "[Template Generation] Calling OpenAI for template HTML generation...",
       {
         tenantId,
         model,
         jobId,
-        promptLength: prompt.length,
+        promptLength: resolved.prompt?.length || 0,
       },
     );
 
@@ -109,9 +141,8 @@ Return ONLY the raw HTML code. No Markdown code blocks.`;
 
     const completionParams: any = {
       model,
-      instructions:
-        "You are an expert HTML template designer. Return only valid HTML code without markdown formatting.",
-      input: prompt,
+      instructions: resolved.instructions,
+      input: resolved.prompt,
       service_tier: "priority",
       reasoning: { effort: "high" },
     };
@@ -164,7 +195,14 @@ Return ONLY the raw HTML code. No Markdown code blocks.`;
     templateDescription: string;
     usageInfo: UsageInfo;
   }> {
-    const { description, tenantId, jobId, brandContext, icpContext } = request;
+    const {
+      description,
+      tenantId,
+      jobId,
+      brandContext,
+      icpContext,
+      promptOverrides,
+    } = request;
     const model = "gpt-5.2";
 
     if (!description || !description.trim()) {
@@ -182,13 +220,27 @@ Return ONLY the raw HTML code. No Markdown code blocks.`;
 
 Return JSON format: {"name": "...", "description": "..."}`;
 
+    const overrides =
+      promptOverrides ?? (await getPromptOverridesForTenant(tenantId));
+    const resolved = resolvePromptOverride({
+      key: "template_metadata_generation",
+      defaults: { prompt },
+      overrides,
+      variables: {
+        description,
+        brand_context: brandContext,
+        icp_context: icpContext,
+        context_section: contextSection,
+      },
+    });
+
     logger.info(
       "[Template Generation] Calling OpenAI for template name/description generation...",
       {
         tenantId,
         model,
         jobId,
-        promptLength: prompt.length,
+        promptLength: resolved.prompt?.length || 0,
       },
     );
 
@@ -197,10 +249,13 @@ Return JSON format: {"name": "...", "description": "..."}`;
 
     const completionParams: any = {
       model,
-      input: prompt,
+      input: resolved.prompt,
       service_tier: "priority",
       reasoning: { effort: "high" },
     };
+    if (resolved.instructions) {
+      completionParams.instructions = resolved.instructions;
+    }
     // if (!model.startsWith('gpt-5')) {
     //   completionParams.temperature = 0.5;
     // }
@@ -307,6 +362,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
       tenantId,
       jobId,
       selectors,
+      promptOverrides,
     } = request;
 
     if (!current_html || !current_html.trim()) {
@@ -351,6 +407,8 @@ Return JSON format: {"name": "...", "description": "..."}`;
         html: current_html,
         prompt: augmentedPrompt,
         selector,
+        tenantId,
+        promptOverrides,
       });
 
       const cleanedHtml = result.patchedHtml;

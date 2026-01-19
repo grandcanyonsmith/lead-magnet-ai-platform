@@ -4,6 +4,10 @@ import { calculateOpenAICost } from '@services/costService';
 import { usageTrackingService } from '@services/usageTrackingService';
 import { logger } from '@utils/logger';
 import { ApiError } from '@utils/errors';
+import {
+  getPromptOverridesForTenant,
+  resolvePromptOverride,
+} from '@services/promptOverrides';
 
 export interface WorkflowInstructionsRefinementRequest {
   current_instructions: string;
@@ -44,18 +48,31 @@ export class WorkflowInstructionsService {
       logger.info('[Workflow Instructions Refinement] OpenAI client initialized');
 
       const prompt = this.buildRefinementPrompt(current_instructions, edit_prompt);
+      const overrides = await getPromptOverridesForTenant(tenantId);
+      const resolved = resolvePromptOverride({
+        key: "workflow_instructions_refine",
+        defaults: {
+          instructions:
+            "You are an expert AI prompt engineer. Return only the modified instructions without markdown formatting.",
+          prompt,
+        },
+        overrides,
+        variables: {
+          current_instructions,
+          edit_prompt,
+        },
+      });
 
       logger.info('[Workflow Instructions Refinement] Calling OpenAI for refinement...', {
         model,
-        promptLength: prompt.length,
+        promptLength: resolved.prompt?.length || 0,
       });
 
       const refineStartTime = Date.now();
       const completionParams: any = {
         model,
-        instructions:
-          "You are an expert AI prompt engineer. Return only the modified instructions without markdown formatting.",
-        input: prompt,
+        instructions: resolved.instructions,
+        input: resolved.prompt,
         reasoning: { effort: "high" },
         service_tier: "priority",
       };

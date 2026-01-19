@@ -8,6 +8,7 @@ import { getOpenAIClient } from '@services/openaiService';
 import { workflowGenerationJobService } from '@domains/workflows/services/workflowGenerationJobService';
 import { workflowAIEditJobService } from '@domains/workflows/services/workflowAIEditJobService';
 import { ulid } from 'ulid';
+import { getPromptOverridesFromSettings } from '@services/promptOverrides';
 
 /**
  * Controller for AI-powered workflow operations.
@@ -620,6 +621,7 @@ export class WorkflowAIController {
         ["low", "medium", "high"].includes(settings.default_text_verbosity)
           ? settings.default_text_verbosity
           : undefined;
+      const promptOverrides = getPromptOverridesFromSettings(settings || undefined);
 
       // Get OpenAI client
       const openai = await getOpenAIClient();
@@ -632,6 +634,8 @@ export class WorkflowAIController {
         defaultToolChoice,
         defaultServiceTier,
         defaultTextVerbosity,
+        tenantId,
+        promptOverrides,
         workflowContext: {
           workflow_id: workflowId,
           workflow_name: workflow.workflow_name || 'Untitled Workflow',

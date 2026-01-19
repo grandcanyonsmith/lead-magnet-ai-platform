@@ -1,6 +1,25 @@
 import { z } from "zod";
 import { ValidationError } from "./errors";
 
+const optionalTrimmedString = z.preprocess(
+  (val) => {
+    if (val === "" || val === null || val === undefined) return undefined;
+    if (typeof val === "string" && val.trim() === "") return undefined;
+    return val;
+  },
+  z.string(),
+);
+
+const promptOverrideSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    instructions: optionalTrimmedString.optional(),
+    prompt: optionalTrimmedString.optional(),
+  })
+  .passthrough();
+
+const promptOverridesSchema = z.record(promptOverrideSchema).optional();
+
 // Workflow step schema
 export const workflowStepSchema = z
   .object({
@@ -432,6 +451,7 @@ export const updateSettingsSchema = z.object({
       .transform((val) => new URL(val).href)
       .optional(),
   ),
+  prompt_overrides: promptOverridesSchema,
   // Onboarding fields
   onboarding_survey_completed: z.boolean().optional(),
   onboarding_survey_responses: z.record(z.any()).optional(),

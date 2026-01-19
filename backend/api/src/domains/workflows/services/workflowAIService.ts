@@ -5,6 +5,11 @@ import { validateDependencies } from '@utils/dependencyResolver';
 import { logger } from '@utils/logger';
 import { stripMarkdownCodeFences, callResponsesWithTimeout } from '@utils/openaiHelpers';
 import { retryWithBackoff } from '@utils/errorHandling';
+import {
+  getPromptOverridesForTenant,
+  resolvePromptOverride,
+  type PromptOverrides,
+} from '@services/promptOverrides';
 
 export interface WorkflowAIEditRequest {
   userPrompt: string;
@@ -13,6 +18,8 @@ export interface WorkflowAIEditRequest {
   defaultTextVerbosity?: string;
   reviewServiceTier?: string;
   reviewReasoningEffort?: string;
+  tenantId?: string;
+  promptOverrides?: PromptOverrides;
   reviewerUser?: {
     user_id: string;
     name?: string;
@@ -157,6 +164,8 @@ export class WorkflowAIService {
       reviewServiceTier,
       reviewReasoningEffort,
       reviewerUser,
+      tenantId,
+      promptOverrides,
     } = request;
     const resolvedDefaultToolChoice = VALID_TOOL_CHOICES.has(defaultToolChoice as ToolChoice)
       ? (defaultToolChoice as ToolChoice)
@@ -281,6 +290,32 @@ User Request: ${userPrompt}
 
 Please generate the updated workflow configuration with all necessary changes.`;
 
+    const overrides =
+      promptOverrides ?? (tenantId ? await getPromptOverridesForTenant(tenantId) : undefined);
+    const resolved = resolvePromptOverride({
+      key: "workflow_edit",
+      defaults: {
+        instructions: buildWorkflowAiSystemPrompt(
+          resolvedDefaultToolChoice,
+          resolvedDefaultServiceTier,
+          resolvedDefaultTextVerbosity,
+        ),
+        prompt: userMessage,
+      },
+      overrides,
+      variables: {
+        workflow_name: workflowContext.workflow_name,
+        workflow_description: workflowContext.workflow_description,
+        context_message: contextMessage,
+        user_prompt: userPrompt,
+        review_service_tier: resolvedReviewServiceTier,
+        review_reasoning_effort: resolvedReviewReasoningEffort,
+        default_tool_choice: resolvedDefaultToolChoice,
+        default_service_tier: resolvedDefaultServiceTier,
+        default_text_verbosity: resolvedDefaultTextVerbosity,
+      },
+    });
+
     logger.info('[WorkflowAI] Editing workflow', {
       workflow: workflowContext.workflow_name,
       userPrompt: userPrompt.substring(0, 100),
@@ -318,12 +353,8 @@ Please generate the updated workflow configuration with all necessary changes.`;
             () =>
               (this.openaiClient as any).responses.create({
                 model: 'gpt-5.2',
-                instructions: buildWorkflowAiSystemPrompt(
-                  resolvedDefaultToolChoice,
-                  resolvedDefaultServiceTier,
-                  resolvedDefaultTextVerbosity,
-                ),
-                input: userMessage,
+                instructions: resolved.instructions,
+                input: resolved.prompt,
                 reasoning: { effort: resolvedReviewReasoningEffort },
                 ...(resolvedReviewServiceTier !== "auto"
                   ? { service_tier: resolvedReviewServiceTier }

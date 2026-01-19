@@ -6,6 +6,11 @@ import { ApiError } from "../utils/errors";
 import { env } from "../utils/env";
 import { runShellExecutorJob } from "./shellExecutorService";
 import { ulid } from "ulid";
+import {
+  getPromptOverridesForTenant,
+  resolvePromptOverride,
+  type PromptOverrides,
+} from "./promptOverrides";
 
 type ShellCall = {
   call_id: string;
@@ -63,6 +68,8 @@ export type RunShellToolLoopArgs = {
   maxSteps?: number;
   workspaceId?: string;
   resetWorkspace?: boolean;
+  tenantId?: string;
+  promptOverrides?: PromptOverrides;
 };
 
 export type RunShellToolLoopResult = {
@@ -103,9 +110,25 @@ export async function runShellToolLoop(
   const maxSteps = Number.isFinite(args.maxSteps)
     ? Math.max(1, Math.min(25, Math.floor(args.maxSteps!)))
     : 10;
-  const instructions =
+  const defaultInstructions =
     args.instructions ||
     "You may run shell commands to inspect the environment and gather information. Keep commands concise.";
+  const overrides =
+    args.promptOverrides ??
+    (args.tenantId ? await getPromptOverridesForTenant(args.tenantId) : undefined);
+  const resolved = resolvePromptOverride({
+    key: "shell_tool_loop_default",
+    defaults: {
+      instructions: defaultInstructions,
+      prompt: args.input,
+    },
+    overrides,
+    variables: {
+      input: args.input,
+    },
+  });
+  const instructions = resolved.instructions || defaultInstructions;
+  const input = resolved.prompt || args.input;
 
   const openai: OpenAI = await getOpenAIClient();
 
@@ -114,7 +137,7 @@ export async function runShellToolLoop(
       openai.responses.create({
         model: model, // Explicitly pass the model variable
         instructions,
-        input: args.input,
+        input,
         tools: [{ type: "shell" }],
         reasoning: { effort: "high" },
         service_tier: "priority",

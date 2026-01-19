@@ -7,6 +7,11 @@ import { calculateOpenAICost } from "./costService";
 import { usageTrackingService } from "./usageTrackingService";
 import { logger } from "../utils/logger";
 import { ApiError } from "../utils/errors";
+import {
+  getPromptOverridesForTenant,
+  resolvePromptOverride,
+  type PromptOverrides,
+} from "./promptOverrides";
 
 export interface CSSGenerationRequest {
   form_fields_schema: {
@@ -19,6 +24,7 @@ export interface CSSGenerationRequest {
   css_prompt: string;
   model?: string;
   tenantId: string;
+  promptOverrides?: PromptOverrides;
 }
 
 export interface CSSRefinementRequest {
@@ -26,6 +32,7 @@ export interface CSSRefinementRequest {
   css_prompt: string;
   model?: string;
   tenantId: string;
+  promptOverrides?: PromptOverrides;
 }
 
 /**
@@ -40,6 +47,7 @@ export class CSSGenerationService {
       form_fields_schema,
       css_prompt,
       tenantId,
+      promptOverrides,
     } = request;
     const model = "gpt-5.2";
 
@@ -88,6 +96,21 @@ ${fieldsDescription}
 5. **Scope**: Style the container, fields, labels, inputs, and the submit button.
 
 Return ONLY the CSS code. No Markdown code blocks.`;
+      const overrides =
+        promptOverrides ?? (await getPromptOverridesForTenant(tenantId));
+      const resolved = resolvePromptOverride({
+        key: "form_css_generation",
+        defaults: {
+          instructions:
+            "You are a Senior UI/UX Designer. Return only valid CSS code without markdown formatting.",
+          prompt,
+        },
+        overrides,
+        variables: {
+          css_prompt,
+          fields_description: fieldsDescription,
+        },
+      });
 
       logger.info("[Form CSS Generation] Calling OpenAI for CSS generation", {
         model,
@@ -97,9 +120,8 @@ Return ONLY the CSS code. No Markdown code blocks.`;
       const cssStartTime = Date.now();
       const completionParams: any = {
         model,
-        instructions:
-          "You are a Senior UI/UX Designer. Return only valid CSS code without markdown formatting.",
-        input: prompt,
+        instructions: resolved.instructions,
+        input: resolved.prompt,
         reasoning: { effort: "high" },
         service_tier: "priority",
       };
@@ -181,7 +203,7 @@ Return ONLY the CSS code. No Markdown code blocks.`;
    * Refine existing CSS based on a prompt.
    */
   async refineCSS(request: CSSRefinementRequest): Promise<string> {
-    const { current_css, css_prompt, tenantId } = request;
+    const { current_css, css_prompt, tenantId, promptOverrides } = request;
     const model = "gpt-5.2";
 
     if (!current_css || !current_css.trim()) {
@@ -214,6 +236,21 @@ ${current_css}
 2. **Consistency**: Keep the overall design language unless asked to change it.
 3. **Quality**: Ensure the resulting CSS is clean and readable.
 4. **Output**: Return ONLY the modified CSS code. No Markdown code blocks.`;
+      const overrides =
+        promptOverrides ?? (await getPromptOverridesForTenant(tenantId));
+      const resolved = resolvePromptOverride({
+        key: "form_css_refine",
+        defaults: {
+          instructions:
+            "You are a Senior UI/UX Designer. Return only valid CSS code without markdown formatting.",
+          prompt,
+        },
+        overrides,
+        variables: {
+          css_prompt,
+          current_css,
+        },
+      });
 
       logger.info("[Form CSS Refinement] Calling OpenAI for refinement", {
         model,
@@ -223,9 +260,8 @@ ${current_css}
       const refineStartTime = Date.now();
       const completionParams: any = {
         model,
-        instructions:
-          "You are a Senior UI/UX Designer. Return only valid CSS code without markdown formatting.",
-        input: prompt,
+        instructions: resolved.instructions,
+        input: resolved.prompt,
         reasoning: { effort: "high" },
         service_tier: "priority",
       };
