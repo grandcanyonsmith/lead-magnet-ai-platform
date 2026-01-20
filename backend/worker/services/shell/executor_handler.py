@@ -33,6 +33,7 @@ UPLOAD_MANIFEST_NAME = (os.environ.get("SHELL_EXECUTOR_MANIFEST_NAME") or "shell
 UPLOAD_MANIFEST_PATH = (os.environ.get("SHELL_EXECUTOR_MANIFEST_PATH") or "").strip()
 UPLOAD_DIST_SUBDIR = (os.environ.get("SHELL_EXECUTOR_UPLOAD_DIST_SUBDIR") or "work/dist").strip()
 UPLOAD_BUILD_SUBDIR = (os.environ.get("SHELL_EXECUTOR_UPLOAD_BUILD_SUBDIR") or "work/build").strip()
+UPLOAD_ACL = (os.environ.get("SHELL_EXECUTOR_UPLOAD_ACL") or "").strip()
 
 def truncate(text: Optional[str], max_len: int) -> str:
     """Truncate text to max_len characters."""
@@ -277,7 +278,10 @@ def _upload_files(
                 continue
             key = f"{prefix}{rel_path}".replace("//", "/")
             content_type = mimetypes.guess_type(abs_path)[0] or "application/octet-stream"
-            s3.upload_file(abs_path, bucket, key, ExtraArgs={"ContentType": content_type})
+            extra_args = {"ContentType": content_type}
+            if UPLOAD_ACL:
+                extra_args["ACL"] = UPLOAD_ACL
+            s3.upload_file(abs_path, bucket, key, ExtraArgs=extra_args)
             uploads.append({
                 "path": abs_path,
                 "key": key,

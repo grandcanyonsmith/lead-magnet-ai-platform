@@ -5,6 +5,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cr from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 
 export interface ShellExecutorStackProps extends cdk.StackProps {
@@ -123,9 +124,13 @@ export class ShellExecutorStack extends cdk.Stack {
       environment: {
         EFS_MOUNT_POINT: '/mnt/shell-executor',
         HOME: '/mnt/shell-executor', // Useful for some tools
-        SHELL_EXECUTOR_UPLOAD_MODE: process.env.SHELL_EXECUTOR_UPLOAD_MODE || 'manifest',
-        SHELL_EXECUTOR_UPLOAD_BUCKET: process.env.SHELL_EXECUTOR_UPLOAD_BUCKET || 'cc360-pages',
+        SHELL_EXECUTOR_UPLOAD_MODE: process.env.SHELL_EXECUTOR_UPLOAD_MODE || 'dist',
+        SHELL_EXECUTOR_UPLOAD_BUCKET: process.env.SHELL_EXECUTOR_UPLOAD_BUCKET || 'coursecreator360-rich-snippet-booster',
         SHELL_EXECUTOR_MANIFEST_NAME: process.env.SHELL_EXECUTOR_MANIFEST_NAME || 'shell_executor_manifest.json',
+        SHELL_EXECUTOR_UPLOAD_PREFIX: process.env.SHELL_EXECUTOR_UPLOAD_PREFIX || '',
+        SHELL_EXECUTOR_UPLOAD_PREFIX_TEMPLATE: process.env.SHELL_EXECUTOR_UPLOAD_PREFIX_TEMPLATE || 'jobs/{tenant_id}/{job_id}/',
+        SHELL_EXECUTOR_UPLOAD_DIST_SUBDIR: process.env.SHELL_EXECUTOR_UPLOAD_DIST_SUBDIR || 'dist',
+        SHELL_EXECUTOR_UPLOAD_ACL: process.env.SHELL_EXECUTOR_UPLOAD_ACL || '',
         SHELL_EXECUTOR_REWRITE_WORK_PATHS: process.env.SHELL_EXECUTOR_REWRITE_WORK_PATHS || 'true',
         SHELL_EXECUTOR_WORK_ROOT: process.env.SHELL_EXECUTOR_WORK_ROOT || '/work',
       },
@@ -151,6 +156,64 @@ export class ShellExecutorStack extends cdk.Stack {
         ],
       })
     );
+
+    const uploadBucketName = (process.env.SHELL_EXECUTOR_UPLOAD_BUCKET || 'coursecreator360-rich-snippet-booster').trim();
+    if (uploadBucketName) {
+      const publicAccessBlock = new cr.AwsCustomResource(this, 'ShellExecutorUploadBucketPublicAccess', {
+        onCreate: {
+          service: 'S3',
+          action: 'putPublicAccessBlock',
+          parameters: {
+            Bucket: uploadBucketName,
+            PublicAccessBlockConfiguration: {
+              BlockPublicAcls: false,
+              IgnorePublicAcls: false,
+              BlockPublicPolicy: false,
+              RestrictPublicBuckets: false,
+            },
+          },
+          physicalResourceId: cr.PhysicalResourceId.of(`${uploadBucketName}-public-access`),
+        },
+        onUpdate: {
+          service: 'S3',
+          action: 'putPublicAccessBlock',
+          parameters: {
+            Bucket: uploadBucketName,
+            PublicAccessBlockConfiguration: {
+              BlockPublicAcls: false,
+              IgnorePublicAcls: false,
+              BlockPublicPolicy: false,
+              RestrictPublicBuckets: false,
+            },
+          },
+          physicalResourceId: cr.PhysicalResourceId.of(`${uploadBucketName}-public-access`),
+        },
+        policy: cr.AwsCustomResourcePolicy.fromStatements([
+          new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ['s3:PutBucketPublicAccessBlock'],
+            resources: [`arn:aws:s3:::${uploadBucketName}`],
+          }),
+        ]),
+      });
+
+      const publicReadPolicy = new s3.CfnBucketPolicy(this, 'ShellExecutorUploadBucketPolicy', {
+        bucket: uploadBucketName,
+        policyDocument: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              sid: 'PublicReadShellExecutorUploads',
+              effect: iam.Effect.ALLOW,
+              principals: [new iam.AnyPrincipal()],
+              actions: ['s3:GetObject'],
+              resources: [`arn:aws:s3:::${uploadBucketName}/*`],
+            }),
+          ],
+        }).toJSON(),
+      });
+
+      publicReadPolicy.node.addDependency(publicAccessBlock);
+    }
 
     // Grant permissions for CloudWatch Logs (for logging)
     this.executorFunction.addToRolePolicy(

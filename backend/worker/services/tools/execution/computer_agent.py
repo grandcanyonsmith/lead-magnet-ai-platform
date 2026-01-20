@@ -1333,7 +1333,11 @@ class CUAgent:
                                 timeout_ms=timeout_ms or 120000,
                                 max_output_length=max_output_length or 4096,
                                 workspace_id=workspace_id,
-                                reset_workspace=False # Persist workspace between calls in same loop
+                                reset_workspace=False, # Persist workspace between calls in same loop
+                                env={
+                                    "LM_JOB_ID": job_id or "",
+                                    "LM_TENANT_ID": tenant_id or "",
+                                }
                             )
                             
                             # Log output (truncated)

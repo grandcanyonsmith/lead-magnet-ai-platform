@@ -73,13 +73,16 @@ class S3ContextService:
         return {"bucket": bucket, "region": region}
 
     def _get_allowed_s3_upload_buckets(self) -> List[str]:
-        raw = (os.environ.get("SHELL_S3_UPLOAD_ALLOWED_BUCKETS") or "cc360-pages").strip()
+        raw = (os.environ.get("SHELL_S3_UPLOAD_ALLOWED_BUCKETS") or "coursecreator360-rich-snippet-booster").strip()
         return [b.strip() for b in raw.split(",") if b and b.strip()]
 
     def _shell_manifest_enabled(self) -> bool:
         mode = (os.environ.get("SHELL_EXECUTOR_UPLOAD_MODE") or "").strip().lower()
         bucket = (os.environ.get("SHELL_EXECUTOR_UPLOAD_BUCKET") or "").strip()
         return mode == "manifest" and bool(bucket)
+
+    def _shell_upload_mode(self) -> str:
+        return (os.environ.get("SHELL_EXECUTOR_UPLOAD_MODE") or "").strip().lower()
 
     def _shell_manifest_path(self) -> str:
         manifest_path = (os.environ.get("SHELL_EXECUTOR_MANIFEST_PATH") or "").strip()
@@ -98,7 +101,9 @@ class S3ContextService:
         If shell uploads are enabled in manifest mode, inject instructions for creating
         a manifest file listing generated assets to upload.
         """
-        if not self._shell_manifest_enabled():
+        mode = self._shell_upload_mode()
+        bucket = (os.environ.get("SHELL_EXECUTOR_UPLOAD_BUCKET") or "coursecreator360-rich-snippet-booster").strip()
+        if not mode or not bucket:
             return current_step_context
 
         has_shell = any(
@@ -107,36 +112,51 @@ class S3ContextService:
         if not has_shell:
             return current_step_context
 
-        bucket = (os.environ.get("SHELL_EXECUTOR_UPLOAD_BUCKET") or "cc360-pages").strip()
-        manifest_path = self._shell_manifest_path()
-
-        block = "\n".join([
-            "=== Shell Upload Manifest (Required for Asset Persistence) ===",
-            "When you create files that must persist, write a JSON manifest file at:",
-            f"{manifest_path}",
-            "",
-            "Manifest format:",
-            "{",
-            f"  \"bucket\": \"{bucket}\",",
-            "  \"prefix\": \"{project_slug}/{runtime_date_yyyymmdd}/\",",
-            "  \"files\": [",
-            "    \"/work/dist/index.html\",",
-            "    \"/work/dist/thank-you.html\",",
-            "    \"/work/dist/privacy.html\",",
-            "    \"/work/dist/terms.html\",",
-            "    \"/work/dist/reset-kit.css\",",
-            "    \"/work/dist/reset-kit.js\",",
-            "    \"/work/dist/assets/pdf/<pdf>.pdf\",",
-            "    \"/work/dist/assets/img/previews/<preview>.png\"",
-            "  ]",
-            "}",
-            "",
-            "Rules:",
-            "- Use absolute /work/... paths in the files list (the executor maps them safely).",
-            "- Prefix must use the canonical project_slug + runtime_date_yyyymmdd.",
-            "- Include every file you created that should be uploaded.",
-            "===============================================",
-        ])
+        block = ""
+        if mode == "manifest":
+            manifest_path = self._shell_manifest_path()
+            block = "\n".join([
+                "=== Shell Upload Manifest (Required for Asset Persistence) ===",
+                "When you create files that must persist, write a JSON manifest file at:",
+                f"{manifest_path}",
+                "",
+                "Manifest format:",
+                "{",
+                f"  \"bucket\": \"{bucket}\",",
+                "  \"prefix\": \"{project_slug}/{runtime_date_yyyymmdd}/\",",
+                "  \"files\": [",
+                "    \"/work/dist/index.html\",",
+                "    \"/work/dist/thank-you.html\",",
+                "    \"/work/dist/privacy.html\",",
+                "    \"/work/dist/terms.html\",",
+                "    \"/work/dist/reset-kit.css\",",
+                "    \"/work/dist/reset-kit.js\",",
+                "    \"/work/dist/assets/pdf/<pdf>.pdf\",",
+                "    \"/work/dist/assets/img/previews/<preview>.png\"",
+                "  ]",
+                "}",
+                "",
+                "Rules:",
+                "- Use absolute /work/... paths in the files list (the executor maps them safely).",
+                "- Prefix must use the canonical project_slug + runtime_date_yyyymmdd.",
+                "- Include every file you created that should be uploaded.",
+                "===============================================",
+            ])
+        elif mode in ("dist", "all", "build"):
+            base_dir = "/work/dist" if mode == "dist" else ("/work/build" if mode == "build" else "/work")
+            block = "\n".join([
+                "=== Shell Upload Mode (Auto) ===",
+                f"Upload mode is set to '{mode}'.",
+                f"All files under {base_dir} will be uploaded automatically to:",
+                f"s3://{bucket}/<job-prefix>/",
+                "",
+                "Rules:",
+                f"- Write deliverables under {base_dir} so they are picked up automatically.",
+                "- No manifest file is required in this mode.",
+                "===============================================",
+            ])
+        else:
+            return current_step_context
 
         if current_step_context and isinstance(current_step_context, str) and current_step_context.strip():
             return f"{current_step_context}\n\n{block}"

@@ -82,18 +82,28 @@ export default function FlowchartSidePanel({
         } overflow-y-auto`}
       >
         <div className="sticky top-0 z-10 border-b border-slate-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 px-6 py-5 shadow-sm backdrop-blur-md">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between gap-4">
             <div
+              className="min-w-0 flex-1"
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
             >
               <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-gray-400 select-none">
                 Editing Step {index + 1} of {totalSteps}
               </div>
-              <h2 className="mt-1 text-2xl font-semibold text-slate-900 dark:text-white">
+              <h2
+                className="mt-1 text-2xl font-semibold text-slate-900 dark:text-white break-words line-clamp-2"
+                title={step.step_name || `Step ${index + 1}`}
+              >
                 {step.step_name || `Step ${index + 1}`}
               </h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-gray-400">
+              <p
+                className="mt-1 text-sm text-slate-500 dark:text-gray-400 line-clamp-2"
+                title={
+                  step.step_description ||
+                  "Update the step details, instructions, and tools below."
+                }
+              >
                 {step.step_description ||
                   "Update the step details, instructions, and tools below."}
               </p>
