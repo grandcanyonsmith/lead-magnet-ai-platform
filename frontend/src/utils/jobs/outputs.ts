@@ -74,9 +74,14 @@ const isImageOutput = (item: ArtifactGalleryItem) => {
   );
 };
 
+const normalizeLogToken = (value: string) =>
+  value.toLowerCase().replace(/\s+/g, "_");
+
 const isLogOutput = (item: ArtifactGalleryItem) => {
-  const artifactType = String(item.artifact?.artifact_type || "").toLowerCase();
-  const fileName = getArtifactFileName(item).toLowerCase();
+  const artifactType = normalizeLogToken(
+    String(item.artifact?.artifact_type || ""),
+  );
+  const fileName = normalizeLogToken(getArtifactFileName(item));
   return (
     artifactType.includes("shell_executor_logs") ||
     artifactType.includes("code_executor_logs") ||

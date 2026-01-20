@@ -17,6 +17,7 @@ import { JsonViewer } from "@/components/ui/JsonViewer";
 import {
   ShellExecutorLogsPreview,
   isShellExecutorLogsPayload,
+  type ShellExecutorLogsPayload,
 } from "@/components/artifacts/ShellExecutorLogsPreview";
 
 interface PreviewRendererProps {
@@ -128,6 +129,42 @@ function stripInjectedLeadMagnetScripts(html: string): string {
       "",
     )
     .trim();
+}
+
+function extractJsonFromCodeBlock(value: string): string {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  return trimmed;
+}
+
+function tryParseShellExecutorLogsPayload(
+  value: unknown,
+): ShellExecutorLogsPayload | null {
+  if (!value) return null;
+  if (isShellExecutorLogsPayload(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(extractJsonFromCodeBlock(value));
+      return isShellExecutorLogsPayload(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function isExecutorLogsFileName(fileName?: string): boolean {
+  const normalized = String(fileName || "")
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  return (
+    normalized.includes("shell_executor_logs") ||
+    normalized.includes("code_executor_logs") ||
+    normalized.includes("executor_logs")
+  );
 }
 
 export function PreviewRenderer({
@@ -717,9 +754,9 @@ export function PreviewRenderer({
     }
 
     if (effectiveContentType === "application/json") {
-      const shellExecutorLogsPayload = isShellExecutorLogsPayload(jsonContent)
-        ? jsonContent
-        : null;
+      const shellExecutorLogsPayload =
+        tryParseShellExecutorLogsPayload(jsonContent) ||
+        tryParseShellExecutorLogsPayload(jsonRaw);
 
       if (shellExecutorLogsPayload) {
         if (isCompactPreview) {
@@ -734,6 +771,14 @@ export function PreviewRenderer({
         }
 
         return <ShellExecutorLogsPreview payload={shellExecutorLogsPayload} />;
+      }
+
+      if (isExecutorLogsFileName(fileName) && typeof jsonRaw === "string") {
+        return (
+          <div className="h-full w-full overflow-y-auto rounded-md bg-[#0d1117] p-3 font-mono text-[11px] text-slate-100">
+            <pre className="whitespace-pre-wrap break-words">{jsonRaw}</pre>
+          </div>
+        );
       }
 
       if (isCompactPreview) {
@@ -825,23 +870,35 @@ export function PreviewRenderer({
     }
 
     if (isMarkdownLike) {
-      // If we successfully parsed the markdown as JSON, render using JsonViewer
-      if (parsedMarkdownJson) {
-        if (isShellExecutorLogsPayload(parsedMarkdownJson)) {
-          if (isCompactPreview) {
-            return (
-              <CompactPreviewFrame>
-                <ShellExecutorLogsPreview
-                  payload={parsedMarkdownJson}
-                  variant="compact"
-                />
-              </CompactPreviewFrame>
-            );
-          }
+      const shellExecutorLogsPayload =
+        tryParseShellExecutorLogsPayload(parsedMarkdownJson) ||
+        tryParseShellExecutorLogsPayload(markdownContent);
 
-          return <ShellExecutorLogsPreview payload={parsedMarkdownJson} />;
+      if (shellExecutorLogsPayload) {
+        if (isCompactPreview) {
+          return (
+            <CompactPreviewFrame>
+              <ShellExecutorLogsPreview
+                payload={shellExecutorLogsPayload}
+                variant="compact"
+              />
+            </CompactPreviewFrame>
+          );
         }
 
+        return <ShellExecutorLogsPreview payload={shellExecutorLogsPayload} />;
+      }
+
+      if (isExecutorLogsFileName(fileName) && markdownContent) {
+        return (
+          <div className="h-full w-full overflow-y-auto rounded-md bg-[#0d1117] p-3 font-mono text-[11px] text-slate-100">
+            <pre className="whitespace-pre-wrap break-words">{markdownContent}</pre>
+          </div>
+        );
+      }
+
+      // If we successfully parsed the markdown as JSON, render using JsonViewer
+      if (parsedMarkdownJson) {
         const rawJson =
           typeof markdownContent === "string" ? markdownContent : "";
         // Extract raw JSON from code block if needed for the "Raw" view in JsonViewer

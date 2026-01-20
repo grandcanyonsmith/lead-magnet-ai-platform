@@ -123,8 +123,6 @@ export class ShellExecutorStack extends cdk.Stack {
       environment: {
         EFS_MOUNT_POINT: '/mnt/shell-executor',
         HOME: '/mnt/shell-executor', // Useful for some tools
-        AWS_REGION: this.region, // Set AWS region for boto3 clients
-        AWS_DEFAULT_REGION: this.region, // Also set default region
         SHELL_EXECUTOR_UPLOAD_MODE: process.env.SHELL_EXECUTOR_UPLOAD_MODE || 'manifest',
         SHELL_EXECUTOR_UPLOAD_BUCKET: process.env.SHELL_EXECUTOR_UPLOAD_BUCKET || 'cc360-pages',
         SHELL_EXECUTOR_MANIFEST_NAME: process.env.SHELL_EXECUTOR_MANIFEST_NAME || 'shell_executor_manifest.json',

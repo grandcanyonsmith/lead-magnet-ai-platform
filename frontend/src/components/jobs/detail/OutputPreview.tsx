@@ -9,8 +9,11 @@ interface OutputPreviewProps {
 }
 
 export function OutputPreview({ groupKey, preview, className }: OutputPreviewProps) {
-  const previewVariant =
-    groupKey === "step_output" || groupKey === "logs" ? "compact" : undefined;
+  const previewVariant = groupKey === "step_output" ? "compact" : undefined;
+  const previewClassName =
+    groupKey === "logs"
+      ? `${className ?? ""} overflow-y-auto scrollbar-hide-until-hover`.trim()
+      : className;
   const contentType = groupKey === "html" ? "text/html" : preview.contentType;
   const hasPreview = Boolean(preview.objectUrl || preview.artifactId);
 
@@ -29,7 +32,7 @@ export function OutputPreview({ groupKey, preview, className }: OutputPreviewPro
       fileName={preview.fileName}
       artifactId={preview.artifactId}
       previewVariant={previewVariant}
-      className={className}
+      className={previewClassName}
     />
   );
 }
