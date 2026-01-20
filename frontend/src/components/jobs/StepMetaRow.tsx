@@ -31,6 +31,26 @@ type DetailRow = {
   value: string;
   muted?: boolean;
 };
+type ImageSettingRow = DetailRow & {
+  highlighted?: boolean;
+};
+type ToolDetail = {
+  id: string;
+  name: string;
+  config: Record<string, unknown> | null;
+};
+type DependencyItem = {
+  index: number;
+  label: string;
+};
+type DependencyPreview = {
+  dependency: DependencyItem;
+  step: MergedStep;
+};
+type ModelRestriction = {
+  allowedModels: Set<AIModel> | null;
+  reason: string | null;
+};
 
 const DEFAULT_IMAGE_SETTINGS = {
   model: "gpt-image-1.5",
@@ -332,6 +352,607 @@ const renderDependencyOutputPreview = (value: unknown) => {
   return <pre className="whitespace-pre-wrap break-words">{preview}</pre>;
 };
 
+type StepMetaBadgesProps = {
+  modelValue: string;
+  showModelDetails: boolean;
+  modelDetailsId: string;
+  modelBadgeClass: string;
+  onToggleModel: () => void;
+  speedCount?: number;
+  speedLabel?: string;
+  speedBadgeClass: string;
+  showSpeedDetails: boolean;
+  speedDetailsId: string;
+  onToggleSpeed: () => void;
+  reasoningCount?: number;
+  reasoningLabel?: string;
+  reasoningBadgeClass: string;
+  showReasoningDetails: boolean;
+  reasoningDetailsId: string;
+  onToggleReasoning: () => void;
+  hasTools: boolean;
+  toolList: unknown[];
+  hasImageGenerationTool: boolean;
+  showImageSettings: boolean;
+  imageSettingsId: string;
+  onToggleImage: () => void;
+  showTools: boolean;
+  toolsId: string;
+  onToggleTools: () => void;
+  hasContext: boolean;
+  showContext: boolean;
+  contextId: string;
+  contextButtonClass: string;
+  dependencyCount: number;
+  onToggleContext: () => void;
+  isInProgress: boolean;
+  status: StepStatus;
+};
+
+function StepMetaBadges({
+  modelValue,
+  showModelDetails,
+  modelDetailsId,
+  modelBadgeClass,
+  onToggleModel,
+  speedCount,
+  speedLabel,
+  speedBadgeClass,
+  showSpeedDetails,
+  speedDetailsId,
+  onToggleSpeed,
+  reasoningCount,
+  reasoningLabel,
+  reasoningBadgeClass,
+  showReasoningDetails,
+  reasoningDetailsId,
+  onToggleReasoning,
+  hasTools,
+  toolList,
+  hasImageGenerationTool,
+  showImageSettings,
+  imageSettingsId,
+  onToggleImage,
+  showTools,
+  toolsId,
+  onToggleTools,
+  hasContext,
+  showContext,
+  contextId,
+  contextButtonClass,
+  dependencyCount,
+  onToggleContext,
+  isInProgress,
+  status,
+}: StepMetaBadgesProps) {
+  const ContextToggleIcon = showContext ? ChevronUp : ChevronDown;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400">
+      {modelValue !== "Unknown" && (
+        <button
+          type="button"
+          onClick={onToggleModel}
+          aria-expanded={showModelDetails}
+          aria-controls={modelDetailsId}
+          aria-pressed={showModelDetails}
+          className={modelBadgeClass}
+        >
+          <span>{modelValue}</span>
+          <ChevronDown
+            className={`h-3 w-3 text-purple-400 dark:text-purple-300/80 ${HOVER_CHEVRON_CLASS}`}
+            aria-hidden="true"
+          />
+        </button>
+      )}
+      {speedCount &&
+        speedLabel &&
+        renderIconBadge({
+          count: speedCount,
+          Icon: Zap,
+          label: `Speed: ${speedLabel}`,
+          className: `${speedBadgeClass} shadow-sm`,
+          iconClassName: "h-3 w-3 text-amber-500",
+          showChevron: true,
+          chevronClassName: `h-3 w-3 text-amber-400/90 ${HOVER_CHEVRON_CLASS}`,
+          onClick: onToggleSpeed,
+          isExpanded: showSpeedDetails,
+          controlsId: speedDetailsId,
+        })}
+      {reasoningCount &&
+        reasoningLabel &&
+        renderIconBadge({
+          count: reasoningCount,
+          Icon: Brain,
+          label: `Reasoning: ${reasoningLabel}`,
+          className: `${reasoningBadgeClass} shadow-sm`,
+          iconClassName: "h-3 w-3 text-indigo-500",
+          showChevron: true,
+          chevronClassName: `h-3 w-3 text-indigo-400/90 ${HOVER_CHEVRON_CLASS}`,
+          onClick: onToggleReasoning,
+          isExpanded: showReasoningDetails,
+          controlsId: reasoningDetailsId,
+        })}
+      {hasTools && (
+        <div className="flex items-center gap-1.5">
+          {renderToolBadges({
+            tools: toolList,
+            onImageToggle: hasImageGenerationTool ? onToggleImage : undefined,
+            imageExpanded: showImageSettings,
+            imageControlsId: imageSettingsId,
+            onToolsToggle: onToggleTools,
+            toolsExpanded: showTools,
+            toolsControlsId: toolsId,
+          })}
+        </div>
+      )}
+      {hasContext && (
+        <button
+          type="button"
+          aria-expanded={showContext}
+          aria-controls={contextId}
+          aria-pressed={showContext}
+          onClick={onToggleContext}
+          className={contextButtonClass}
+        >
+          <span>Context</span>
+          {dependencyCount > 0 && (
+            <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[9px] font-semibold text-teal-700 dark:bg-teal-900/60 dark:text-teal-200">
+              {dependencyCount}
+            </span>
+          )}
+          <ContextToggleIcon
+            className={`h-3 w-3 ${HOVER_CHEVRON_CLASS}`}
+            aria-hidden="true"
+          />
+        </button>
+      )}
+      {isInProgress && (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-200 animate-pulse">
+          Processing...
+        </span>
+      )}
+      {status === "failed" && (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 border border-red-200">
+          Failed
+        </span>
+      )}
+    </div>
+  );
+}
+
+type ModelDetailsPanelProps = {
+  id: string;
+  editPanel: EditablePanel | null;
+  draftModel: AIModel;
+  onDraftModelChange: (model: AIModel) => void;
+  modelRestriction: ModelRestriction;
+  renderEditButton: (panel: EditablePanel) => JSX.Element | null;
+  onCancel: () => void;
+  onSave: () => void;
+  isUpdating: boolean;
+  isModelDirty: boolean;
+  isModelAllowed: boolean;
+  modelDetailsRows: DetailRow[];
+};
+
+function ModelDetailsPanel({
+  id,
+  editPanel,
+  draftModel,
+  onDraftModelChange,
+  modelRestriction,
+  renderEditButton,
+  onCancel,
+  onSave,
+  isUpdating,
+  isModelDirty,
+  isModelAllowed,
+  modelDetailsRows,
+}: ModelDetailsPanelProps) {
+  return (
+    <div
+      id={id}
+      className="rounded-lg border border-purple-200/70 bg-purple-50/40 px-3 py-2 text-xs text-foreground/90 shadow-sm ring-1 ring-purple-100/60 dark:border-purple-800/50 dark:bg-purple-950/30 dark:ring-purple-900/40 space-y-3"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-purple-700 dark:text-purple-200">
+          Model details
+        </div>
+        {renderEditButton("model")}
+      </div>
+      {editPanel === "model" ? (
+        <div className="space-y-2">
+          <Select
+            value={draftModel}
+            onChange={(event) =>
+              onDraftModelChange(event.target.value as AIModel)
+            }
+            className="h-9"
+            aria-label="Select model"
+          >
+            {AI_MODELS.map((model) => {
+              const isAllowed =
+                !modelRestriction.allowedModels ||
+                modelRestriction.allowedModels.has(model.value);
+              return (
+                <option
+                  key={model.value}
+                  value={model.value}
+                  disabled={!isAllowed}
+                >
+                  {model.label}
+                </option>
+              );
+            })}
+          </Select>
+          {modelRestriction.reason && (
+            <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
+              {modelRestriction.reason}
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onCancel}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={onSave}
+              disabled={!isModelDirty || !isModelAllowed || isUpdating}
+              isLoading={isUpdating}
+            >
+              Update
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <DetailRows rows={modelDetailsRows} />
+      )}
+    </div>
+  );
+}
+
+type SpeedDetailsPanelProps = {
+  id: string;
+  editPanel: EditablePanel | null;
+  draftServiceTier: ServiceTier;
+  onDraftServiceTierChange: (value: ServiceTier) => void;
+  renderEditButton: (panel: EditablePanel) => JSX.Element | null;
+  onCancel: () => void;
+  onSave: () => void;
+  isUpdating: boolean;
+  isServiceTierDirty: boolean;
+  speedDetailsRows: DetailRow[];
+};
+
+function SpeedDetailsPanel({
+  id,
+  editPanel,
+  draftServiceTier,
+  onDraftServiceTierChange,
+  renderEditButton,
+  onCancel,
+  onSave,
+  isUpdating,
+  isServiceTierDirty,
+  speedDetailsRows,
+}: SpeedDetailsPanelProps) {
+  return (
+    <div
+      id={id}
+      className="rounded-lg border border-amber-200/70 bg-amber-50/40 px-3 py-2 text-xs text-foreground/90 shadow-sm ring-1 ring-amber-100/60 dark:border-amber-800/50 dark:bg-amber-950/25 dark:ring-amber-900/40 space-y-3"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
+          Service tier details
+        </div>
+        {renderEditButton("speed")}
+      </div>
+      {editPanel === "speed" ? (
+        <div className="space-y-2">
+          <Select
+            value={draftServiceTier}
+            onChange={(event) =>
+              onDraftServiceTierChange(event.target.value as ServiceTier)
+            }
+            className="h-9"
+            aria-label="Select service tier"
+          >
+            <option value="auto">Auto</option>
+            {Object.entries(SERVICE_TIER_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onCancel}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={onSave}
+              disabled={!isServiceTierDirty || isUpdating}
+              isLoading={isUpdating}
+            >
+              Update
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <DetailRows rows={speedDetailsRows} />
+      )}
+    </div>
+  );
+}
+
+type ReasoningDetailsPanelProps = {
+  id: string;
+  editPanel: EditablePanel | null;
+  draftReasoningEffort: ReasoningEffortOption;
+  onDraftReasoningEffortChange: (value: ReasoningEffortOption) => void;
+  renderEditButton: (panel: EditablePanel) => JSX.Element | null;
+  onCancel: () => void;
+  onSave: () => void;
+  isUpdating: boolean;
+  isReasoningDirty: boolean;
+  reasoningDetailsRows: DetailRow[];
+};
+
+function ReasoningDetailsPanel({
+  id,
+  editPanel,
+  draftReasoningEffort,
+  onDraftReasoningEffortChange,
+  renderEditButton,
+  onCancel,
+  onSave,
+  isUpdating,
+  isReasoningDirty,
+  reasoningDetailsRows,
+}: ReasoningDetailsPanelProps) {
+  return (
+    <div
+      id={id}
+      className="rounded-lg border border-indigo-200/70 bg-indigo-50/40 px-3 py-2 text-xs text-foreground/90 shadow-sm ring-1 ring-indigo-100/60 dark:border-indigo-800/50 dark:bg-indigo-950/30 dark:ring-indigo-900/40 space-y-3"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-200">
+          Reasoning details
+        </div>
+        {renderEditButton("reasoning")}
+      </div>
+      {editPanel === "reasoning" ? (
+        <div className="space-y-2">
+          <Select
+            value={draftReasoningEffort}
+            onChange={(event) =>
+              onDraftReasoningEffortChange(
+                event.target.value as ReasoningEffortOption,
+              )
+            }
+            className="h-9"
+            aria-label="Select reasoning effort"
+          >
+            <option value="auto">Auto</option>
+            {Object.entries(REASONING_EFFORT_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onCancel}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={onSave}
+              disabled={!isReasoningDirty || isUpdating}
+              isLoading={isUpdating}
+            >
+              Update
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <DetailRows rows={reasoningDetailsRows} />
+      )}
+    </div>
+  );
+}
+
+type ToolsPanelProps = {
+  id: string;
+  toolDetails: ToolDetail[];
+};
+
+function ToolsPanel({ id, toolDetails }: ToolsPanelProps) {
+  return (
+    <div
+      id={id}
+      className="rounded-lg border border-slate-200/70 bg-slate-50/40 px-3 py-2 text-xs text-foreground/90 shadow-sm ring-1 ring-slate-100/60 dark:border-slate-800/50 dark:bg-slate-950/25 dark:ring-slate-900/40 space-y-3"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
+          Tools
+        </div>
+      </div>
+      <div className="space-y-3">
+        {toolDetails.map((tool) => (
+          <div
+            key={tool.id}
+            className="rounded-lg border border-border/60 bg-background/70 px-3 py-2 space-y-2"
+          >
+            <div className="text-xs font-semibold text-foreground">
+              {tool.name}
+            </div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Configuration
+            </div>
+            <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] font-mono whitespace-pre-wrap break-words">
+              {tool.config ? (
+                JSON.stringify(tool.config, null, 2)
+              ) : (
+                <span className="text-muted-foreground">No configuration</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type ImageSettingsPanelProps = {
+  id: string;
+  imageSettingsSource: string;
+  toolChoice: string | null;
+  imageSettingsRows: ImageSettingRow[];
+};
+
+function ImageSettingsPanel({
+  id,
+  imageSettingsSource,
+  toolChoice,
+  imageSettingsRows,
+}: ImageSettingsPanelProps) {
+  return (
+    <div
+      id={id}
+      className="rounded-lg border border-indigo-200/70 bg-indigo-50/40 px-3 py-2 text-xs text-foreground/90 shadow-sm ring-1 ring-indigo-100/60 dark:border-indigo-800/50 dark:bg-indigo-950/30 dark:ring-indigo-900/40 space-y-3"
+    >
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-200">
+            Image generation settings
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+          <span className="rounded-full border border-indigo-200/70 bg-indigo-100/70 px-2 py-0.5 font-medium text-indigo-700 dark:border-indigo-800/60 dark:bg-indigo-900/40 dark:text-indigo-200">
+            Source: {imageSettingsSource}
+          </span>
+          {toolChoice && toolChoice !== "auto" && (
+            <span className="rounded-full border border-indigo-200/70 bg-indigo-100/70 px-2 py-0.5 font-medium text-indigo-700 dark:border-indigo-800/60 dark:bg-indigo-900/40 dark:text-indigo-200">
+              Tool choice: {toolChoice}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {imageSettingsRows.map((row) => (
+          <div
+            key={row.label}
+            className={`flex items-center justify-between rounded-md border px-2 py-1 ${
+              row.highlighted && !row.muted
+                ? "border-indigo-200/70 bg-indigo-100/60 dark:border-indigo-800/60 dark:bg-indigo-900/40"
+                : "border-border/60 bg-background/70"
+            }`}
+          >
+            <span className="text-[11px] font-medium text-muted-foreground">
+              {row.label}
+            </span>
+            <span
+              className={`text-[11px] font-semibold ${
+                row.muted
+                  ? "text-muted-foreground"
+                  : row.highlighted
+                    ? "text-indigo-700 dark:text-indigo-200"
+                    : "text-foreground"
+              }`}
+            >
+              {row.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+type ContextPanelProps = {
+  id: string;
+  dependencyPreviews: DependencyPreview[];
+  instructions?: string;
+};
+
+function ContextPanel({ id, dependencyPreviews, instructions }: ContextPanelProps) {
+  const hasDependencies = dependencyPreviews.length > 0;
+
+  return (
+    <div
+      id={id}
+      className="w-full max-w-full overflow-hidden rounded-lg border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-xs text-foreground/90 shadow-sm ring-1 ring-teal-100/60 dark:border-teal-800/50 dark:bg-teal-950/25 dark:ring-teal-900/40 space-y-3"
+    >
+      {hasDependencies && (
+        <div className="space-y-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Input
+          </div>
+          <div className="space-y-2">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Steps
+            </div>
+            <div className="grid grid-flow-col auto-cols-[12rem] sm:auto-cols-[16rem] grid-rows-1 gap-2 sm:gap-3 overflow-x-auto pb-2 px-2 sm:-mx-1 sm:px-1 snap-x snap-mandatory scrollbar-hide">
+              {dependencyPreviews.map(({ dependency, step: dependencyStep }) => (
+                <div
+                  key={`dependency-context-${dependencyStep.step_order ?? dependency.index}`}
+                  title={dependency.label}
+                  className="group flex w-56 sm:w-64 flex-shrink-0 snap-start flex-col text-left"
+                >
+                  <div className="flex w-full flex-col overflow-hidden rounded-xl border border-border bg-muted/40 shadow-sm transition group-hover:shadow-md">
+                    <div className="aspect-[3/4] w-full overflow-hidden">
+                      <div className="h-full w-full overflow-y-auto scrollbar-hide-until-hover p-4 text-[11px] text-foreground/90">
+                        {renderDependencyOutputPreview(dependencyStep.output)}
+                      </div>
+                    </div>
+                    <div className="border-t border-border/60 bg-background/80 px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-foreground line-clamp-1">
+                          {dependency.label}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="space-y-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Instructions
+        </div>
+        <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] whitespace-pre-wrap text-foreground/90">
+          {instructions || "No instructions available"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function StepMetaRow({
   step,
   status,
@@ -402,12 +1023,12 @@ export function StepMetaRow({
   if (usageModel && usageModel !== modelValue) {
     modelDetailsRows.push({ label: "Usage model", value: usageModel });
   }
-  const dependencyItems =
+  const dependencyItems: DependencyItem[] =
     step.depends_on?.map((dep, idx) => ({
       index: dep,
       label: step.dependency_labels?.[idx] || `Step ${dep + 1}`,
     })) || [];
-  const dependencyPreviews = dependencyItems
+  const dependencyPreviews: DependencyPreview[] = dependencyItems
     .map((dependency) => ({
       dependency,
       step: allSteps?.find(
@@ -423,7 +1044,7 @@ export function StepMetaRow({
   const hasDependencies = dependencyPreviews.length > 0;
   const hasContext = Boolean(instructions) || hasDependencies;
   const hasTools = toolList.length > 0;
-  const toolDetails = useMemo(
+  const toolDetails = useMemo<ToolDetail[]>(
     () =>
       toolList.map((tool, index) => {
         if (typeof tool === "string") {
@@ -462,7 +1083,7 @@ export function StepMetaRow({
   );
   const hasComputerUseTool = toolTypes.has("computer_use_preview");
   const hasShellTool = toolTypes.has("shell");
-  const modelRestriction = useMemo(() => {
+  const modelRestriction = useMemo<ModelRestriction>(() => {
     if (hasComputerUseTool) {
       return {
         allowedModels: new Set<AIModel>([COMPUTER_USE_MODEL]),
@@ -602,7 +1223,7 @@ export function StepMetaRow({
     ? hasImageOverrides(imageToolConfig)
     : false;
   const imageSettingsSource = imageHasOverrides ? "Custom" : "Defaults";
-  const imageSettingsRows = [
+  const imageSettingsRows: ImageSettingRow[] = [
     {
       label: "Model",
       value: imageSettings.model,
@@ -663,13 +1284,97 @@ export function StepMetaRow({
   const reasoningDetailsRows: DetailRow[] = [
     { label: "Effort", value: reasoningLabelValue, muted: reasoningValue === "auto" },
   ];
-  const ContextToggleIcon = showContext ? ChevronUp : ChevronDown;
   const contextButtonClass = [
     "inline-flex items-center gap-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded-md border whitespace-nowrap transition-colors group",
     showContext
       ? "bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-900/60 dark:text-teal-100 dark:border-teal-700/60"
       : "bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-200 dark:border-teal-800/60 dark:hover:bg-teal-900/50",
   ].join(" ");
+  const badgeProps: StepMetaBadgesProps = {
+    modelValue,
+    showModelDetails,
+    modelDetailsId,
+    modelBadgeClass,
+    onToggleModel: () => togglePanel("model"),
+    speedCount,
+    speedLabel,
+    speedBadgeClass,
+    showSpeedDetails,
+    speedDetailsId,
+    onToggleSpeed: () => togglePanel("speed"),
+    reasoningCount,
+    reasoningLabel,
+    reasoningBadgeClass,
+    showReasoningDetails,
+    reasoningDetailsId,
+    onToggleReasoning: () => togglePanel("reasoning"),
+    hasTools,
+    toolList,
+    hasImageGenerationTool,
+    showImageSettings,
+    imageSettingsId,
+    onToggleImage: () => togglePanel("image"),
+    showTools,
+    toolsId,
+    onToggleTools: () => togglePanel("tools"),
+    hasContext,
+    showContext,
+    contextId,
+    contextButtonClass,
+    dependencyCount: dependencyItems.length,
+    onToggleContext: () => togglePanel("context"),
+    isInProgress,
+    status,
+  };
+  const modelPanelProps = {
+    id: modelDetailsId,
+    editPanel,
+    draftModel,
+    onDraftModelChange: setDraftModel,
+    modelRestriction,
+    renderEditButton,
+    onCancel: handleCancelEdit,
+    onSave: handleSaveEdit,
+    isUpdating,
+    isModelDirty,
+    isModelAllowed,
+    modelDetailsRows,
+  };
+  const speedPanelProps = {
+    id: speedDetailsId,
+    editPanel,
+    draftServiceTier,
+    onDraftServiceTierChange: setDraftServiceTier,
+    renderEditButton,
+    onCancel: handleCancelEdit,
+    onSave: handleSaveEdit,
+    isUpdating,
+    isServiceTierDirty,
+    speedDetailsRows,
+  };
+  const reasoningPanelProps = {
+    id: reasoningDetailsId,
+    editPanel,
+    draftReasoningEffort,
+    onDraftReasoningEffortChange: setDraftReasoningEffort,
+    renderEditButton,
+    onCancel: handleCancelEdit,
+    onSave: handleSaveEdit,
+    isUpdating,
+    isReasoningDirty,
+    reasoningDetailsRows,
+  };
+  const imagePanelProps = {
+    id: imageSettingsId,
+    imageSettingsSource,
+    toolChoice,
+    imageSettingsRows,
+  };
+  const contextPanelProps = {
+    id: contextId,
+    dependencyPreviews,
+    instructions,
+  };
 
   useEffect(() => {
     if (!openPanel) {
@@ -694,413 +1399,19 @@ export function StepMetaRow({
 
   return (
     <div className="space-y-2 w-full min-w-0 max-w-full" ref={containerRef}>
-      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400">
-        {modelValue !== "Unknown" && (
-          <button
-            type="button"
-            onClick={() => togglePanel("model")}
-            aria-expanded={showModelDetails}
-            aria-controls={modelDetailsId}
-            aria-pressed={showModelDetails}
-            className={modelBadgeClass}
-          >
-            <span>{modelValue}</span>
-            <ChevronDown
-              className={`h-3 w-3 text-purple-400 dark:text-purple-300/80 ${HOVER_CHEVRON_CLASS}`}
-              aria-hidden="true"
-            />
-          </button>
-        )}
-        {speedCount &&
-          speedLabel &&
-          renderIconBadge({
-            count: speedCount,
-            Icon: Zap,
-            label: `Speed: ${speedLabel}`,
-            className: `${speedBadgeClass} shadow-sm`,
-            iconClassName: "h-3 w-3 text-amber-500",
-            showChevron: true,
-            chevronClassName: `h-3 w-3 text-amber-400/90 ${HOVER_CHEVRON_CLASS}`,
-            onClick: () => togglePanel("speed"),
-            isExpanded: showSpeedDetails,
-            controlsId: speedDetailsId,
-          })}
-        {reasoningCount &&
-          reasoningLabel &&
-          renderIconBadge({
-            count: reasoningCount,
-            Icon: Brain,
-            label: `Reasoning: ${reasoningLabel}`,
-            className: `${reasoningBadgeClass} shadow-sm`,
-            iconClassName: "h-3 w-3 text-indigo-500",
-            showChevron: true,
-            chevronClassName: `h-3 w-3 text-indigo-400/90 ${HOVER_CHEVRON_CLASS}`,
-            onClick: () => togglePanel("reasoning"),
-            isExpanded: showReasoningDetails,
-            controlsId: reasoningDetailsId,
-          })}
-        {hasTools && (
-          <div className="flex items-center gap-1.5">
-            {renderToolBadges({
-              tools: toolList,
-              onImageToggle: hasImageGenerationTool
-                ? () => togglePanel("image")
-                : undefined,
-              imageExpanded: showImageSettings,
-              imageControlsId: imageSettingsId,
-              onToolsToggle: () => togglePanel("tools"),
-              toolsExpanded: showTools,
-              toolsControlsId: toolsId,
-            })}
-          </div>
-        )}
-        {hasContext && (
-          <button
-            type="button"
-            aria-expanded={showContext}
-            aria-controls={contextId}
-            aria-pressed={showContext}
-            onClick={() => togglePanel("context")}
-            className={contextButtonClass}
-          >
-            <span>Context</span>
-            {dependencyItems.length > 0 && (
-              <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[9px] font-semibold text-teal-700 dark:bg-teal-900/60 dark:text-teal-200">
-                {dependencyItems.length}
-              </span>
-            )}
-            <ContextToggleIcon
-              className={`h-3 w-3 ${HOVER_CHEVRON_CLASS}`}
-              aria-hidden="true"
-            />
-          </button>
-        )}
-        {isInProgress && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-200 animate-pulse">
-            Processing...
-          </span>
-        )}
-        {status === "failed" && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 border border-red-200">
-            Failed
-          </span>
-        )}
-      </div>
-      {showModelDetails && (
-        <div
-          id={modelDetailsId}
-          className="rounded-lg border border-purple-200/70 bg-purple-50/40 px-3 py-2 text-xs text-foreground/90 shadow-sm ring-1 ring-purple-100/60 dark:border-purple-800/50 dark:bg-purple-950/30 dark:ring-purple-900/40 space-y-3"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-purple-700 dark:text-purple-200">
-              Model details
-            </div>
-            {renderEditButton("model")}
-          </div>
-          {editPanel === "model" ? (
-            <div className="space-y-2">
-              <Select
-                value={draftModel}
-                onChange={(event) =>
-                  setDraftModel(event.target.value as AIModel)
-                }
-                className="h-9"
-                aria-label="Select model"
-              >
-                {AI_MODELS.map((model) => {
-                  const isAllowed =
-                    !modelRestriction.allowedModels ||
-                    modelRestriction.allowedModels.has(model.value);
-                  return (
-                    <option
-                      key={model.value}
-                      value={model.value}
-                      disabled={!isAllowed}
-                    >
-                      {model.label}
-                    </option>
-                  );
-                })}
-              </Select>
-              {modelRestriction.reason && (
-                <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
-                  {modelRestriction.reason}
-                </div>
-              )}
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCancelEdit}
-                  disabled={isUpdating}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleSaveEdit}
-                  disabled={!isModelDirty || !isModelAllowed || isUpdating}
-                  isLoading={isUpdating}
-                >
-                  Update
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <DetailRows rows={modelDetailsRows} />
-          )}
-        </div>
-      )}
-      {showSpeedDetails && (
-        <div
-          id={speedDetailsId}
-          className="rounded-lg border border-amber-200/70 bg-amber-50/40 px-3 py-2 text-xs text-foreground/90 shadow-sm ring-1 ring-amber-100/60 dark:border-amber-800/50 dark:bg-amber-950/25 dark:ring-amber-900/40 space-y-3"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
-              Service tier details
-            </div>
-            {renderEditButton("speed")}
-          </div>
-          {editPanel === "speed" ? (
-            <div className="space-y-2">
-              <Select
-                value={draftServiceTier}
-                onChange={(event) =>
-                  setDraftServiceTier(event.target.value as ServiceTier)
-                }
-                className="h-9"
-                aria-label="Select service tier"
-              >
-                <option value="auto">Auto</option>
-                {Object.entries(SERVICE_TIER_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCancelEdit}
-                  disabled={isUpdating}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleSaveEdit}
-                  disabled={!isServiceTierDirty || isUpdating}
-                  isLoading={isUpdating}
-                >
-                  Update
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <DetailRows rows={speedDetailsRows} />
-          )}
-        </div>
-      )}
+      <StepMetaBadges {...badgeProps} />
+      {showModelDetails && <ModelDetailsPanel {...modelPanelProps} />}
+      {showSpeedDetails && <SpeedDetailsPanel {...speedPanelProps} />}
       {showReasoningDetails && (
-        <div
-          id={reasoningDetailsId}
-          className="rounded-lg border border-indigo-200/70 bg-indigo-50/40 px-3 py-2 text-xs text-foreground/90 shadow-sm ring-1 ring-indigo-100/60 dark:border-indigo-800/50 dark:bg-indigo-950/30 dark:ring-indigo-900/40 space-y-3"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-200">
-              Reasoning details
-            </div>
-            {renderEditButton("reasoning")}
-          </div>
-          {editPanel === "reasoning" ? (
-            <div className="space-y-2">
-              <Select
-                value={draftReasoningEffort}
-                onChange={(event) =>
-                  setDraftReasoningEffort(
-                    event.target.value as ReasoningEffortOption,
-                  )
-                }
-                className="h-9"
-                aria-label="Select reasoning effort"
-              >
-                <option value="auto">Auto</option>
-                {Object.entries(REASONING_EFFORT_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCancelEdit}
-                  disabled={isUpdating}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleSaveEdit}
-                  disabled={!isReasoningDirty || isUpdating}
-                  isLoading={isUpdating}
-                >
-                  Update
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <DetailRows rows={reasoningDetailsRows} />
-          )}
-        </div>
+        <ReasoningDetailsPanel {...reasoningPanelProps} />
       )}
       {hasTools && showTools && (
-        <div
-          id={toolsId}
-          className="rounded-lg border border-slate-200/70 bg-slate-50/40 px-3 py-2 text-xs text-foreground/90 shadow-sm ring-1 ring-slate-100/60 dark:border-slate-800/50 dark:bg-slate-950/25 dark:ring-slate-900/40 space-y-3"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
-              Tools
-            </div>
-          </div>
-          <div className="space-y-3">
-            {toolDetails.map((tool) => (
-              <div
-                key={tool.id}
-                className="rounded-lg border border-border/60 bg-background/70 px-3 py-2 space-y-2"
-              >
-                <div className="text-xs font-semibold text-foreground">
-                  {tool.name}
-                </div>
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Configuration
-                </div>
-                <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] font-mono whitespace-pre-wrap break-words">
-                  {tool.config ? (
-                    JSON.stringify(tool.config, null, 2)
-                  ) : (
-                    <span className="text-muted-foreground">
-                      No configuration
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ToolsPanel id={toolsId} toolDetails={toolDetails} />
       )}
       {hasImageGenerationTool && showImageSettings && (
-        <div
-          id={imageSettingsId}
-          className="rounded-lg border border-indigo-200/70 bg-indigo-50/40 px-3 py-2 text-xs text-foreground/90 shadow-sm ring-1 ring-indigo-100/60 dark:border-indigo-800/50 dark:bg-indigo-950/30 dark:ring-indigo-900/40 space-y-3"
-        >
-          <div className="space-y-1">
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-200">
-              Image generation settings
-            </div>
-          </div>
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-              <span className="rounded-full border border-indigo-200/70 bg-indigo-100/70 px-2 py-0.5 font-medium text-indigo-700 dark:border-indigo-800/60 dark:bg-indigo-900/40 dark:text-indigo-200">
-                Source: {imageSettingsSource}
-              </span>
-              {toolChoice && toolChoice !== "auto" && (
-                <span className="rounded-full border border-indigo-200/70 bg-indigo-100/70 px-2 py-0.5 font-medium text-indigo-700 dark:border-indigo-800/60 dark:bg-indigo-900/40 dark:text-indigo-200">
-                  Tool choice: {toolChoice}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {imageSettingsRows.map((row) => (
-              <div
-                key={row.label}
-                className={`flex items-center justify-between rounded-md border px-2 py-1 ${
-                  row.highlighted && !row.muted
-                    ? "border-indigo-200/70 bg-indigo-100/60 dark:border-indigo-800/60 dark:bg-indigo-900/40"
-                    : "border-border/60 bg-background/70"
-                }`}
-              >
-                <span className="text-[11px] font-medium text-muted-foreground">
-                  {row.label}
-                </span>
-                <span
-                  className={`text-[11px] font-semibold ${
-                    row.muted
-                      ? "text-muted-foreground"
-                      : row.highlighted
-                        ? "text-indigo-700 dark:text-indigo-200"
-                        : "text-foreground"
-                  }`}
-                >
-                  {row.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ImageSettingsPanel {...imagePanelProps} />
       )}
-      {hasContext && showContext && (
-        <div
-          id={contextId}
-          className="w-full max-w-full overflow-hidden rounded-lg border border-teal-200/70 bg-teal-50/40 px-3 py-2 text-xs text-foreground/90 shadow-sm ring-1 ring-teal-100/60 dark:border-teal-800/50 dark:bg-teal-950/25 dark:ring-teal-900/40 space-y-3"
-        >
-          {hasDependencies && (
-            <div className="space-y-2">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Input
-              </div>
-              <div className="space-y-2">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Steps
-                </div>
-                <div className="grid grid-flow-col auto-cols-[12rem] sm:auto-cols-[16rem] grid-rows-1 gap-2 sm:gap-3 overflow-x-auto pb-2 px-2 sm:-mx-1 sm:px-1 snap-x snap-mandatory scrollbar-hide">
-                  {dependencyPreviews.map(({ dependency, step: dependencyStep }) => (
-                    <div
-                      key={`dependency-context-${dependencyStep.step_order ?? dependency.index}`}
-                      title={dependency.label}
-                      className="group flex w-56 sm:w-64 flex-shrink-0 snap-start flex-col text-left"
-                    >
-                      <div className="flex w-full flex-col overflow-hidden rounded-xl border border-border bg-muted/40 shadow-sm transition group-hover:shadow-md">
-                        <div className="aspect-[3/4] w-full overflow-hidden">
-                          <div className="h-full w-full overflow-y-auto scrollbar-hide-until-hover p-4 text-[11px] text-foreground/90">
-                            {renderDependencyOutputPreview(dependencyStep.output)}
-                          </div>
-                        </div>
-                        <div className="border-t border-border/60 bg-background/80 px-3 py-2">
-                          <div className="min-w-0">
-                            <p className="text-xs font-medium text-foreground line-clamp-1">
-                              {dependency.label}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-          <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Instructions
-            </div>
-            <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] whitespace-pre-wrap text-foreground/90">
-              {instructions || "No instructions available"}
-            </div>
-          </div>
-        </div>
-      )}
+      {hasContext && showContext && <ContextPanel {...contextPanelProps} />}
     </div>
   );
 }
