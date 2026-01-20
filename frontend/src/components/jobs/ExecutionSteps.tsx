@@ -5,7 +5,12 @@ import Link from "next/link";
 import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 import type { JobLiveStep, MergedStep } from "@/types/job";
 import type { FormSubmission } from "@/types/form";
-import type { AIModel, ReasoningEffort, ServiceTier } from "@/types/workflow";
+import type {
+  AIModel,
+  ImageGenerationSettings,
+  ReasoningEffort,
+  ServiceTier,
+} from "@/types/workflow";
 import { StepHeader } from "./StepHeader";
 import { StepInputOutput } from "./StepInputOutput";
 import { StepProgressBar } from "./StepProgressBar";
@@ -22,6 +27,7 @@ type StepQuickUpdate = {
   model?: AIModel | null;
   service_tier?: ServiceTier | null;
   reasoning_effort?: ReasoningEffort | null;
+  image_generation?: ImageGenerationSettings;
 };
 
 type StepImageFile =

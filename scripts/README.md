@@ -62,6 +62,11 @@ python3 scripts/jobs/get-job-logs.py <job_id>
 
 # Resubmit failed job
 python3 scripts/jobs/resubmit-job.py <job_id> <tenant_id>
+
+# Download shell executor uploads by bucket/prefix
+python3 scripts/jobs/download-shell-executor-outputs.py \
+  --bucket cc360-pages \
+  --prefix coursecreator360-rich-snippet-booster/20260120/
 ```
 
 ### Admin

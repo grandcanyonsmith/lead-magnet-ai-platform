@@ -23,6 +23,7 @@ interface StepHeaderProps {
     model?: import("@/types/workflow").AIModel | null;
     service_tier?: import("@/types/workflow").ServiceTier | null;
     reasoning_effort?: import("@/types/workflow").ReasoningEffort | null;
+    image_generation?: import("@/types/workflow").ImageGenerationSettings;
   }) => Promise<void>;
   updatingStepIndex?: number | null;
   detailsHref?: string;
@@ -49,8 +50,8 @@ export function StepHeader({
 
   return (
     <div className="flex flex-col gap-3 p-3 sm:p-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex items-start gap-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between">
+        <div className="order-1 flex items-start gap-4">
           <div className="min-w-0 space-y-1">
             {showMeta && <StepTimingRow step={step} status={status} />}
             <h3
@@ -67,22 +68,25 @@ export function StepHeader({
                 step.step_name || `Step ${step.step_order ?? 0}`
               )}
             </h3>
-            {showMeta && (
-              <StepMetaRow
-                step={step}
-                status={status}
-                allSteps={allSteps}
-                canEdit={canEdit}
-                onEditStep={onEditStep}
-                onQuickUpdateStep={onQuickUpdateStep}
-                updatingStepIndex={updatingStepIndex}
-                jobStatus={jobStatus}
-              />
-            )}
           </div>
         </div>
 
-        <div className="flex w-full items-center justify-end gap-3 self-end lg:w-auto lg:self-auto">
+        {showMeta && (
+          <div className="order-2 w-full lg:order-3 lg:basis-full">
+            <StepMetaRow
+              step={step}
+              status={status}
+              allSteps={allSteps}
+              canEdit={canEdit}
+              onEditStep={onEditStep}
+              onQuickUpdateStep={onQuickUpdateStep}
+              updatingStepIndex={updatingStepIndex}
+              jobStatus={jobStatus}
+            />
+          </div>
+        )}
+
+        <div className="order-3 flex w-full items-center justify-end gap-3 self-end lg:order-2 lg:w-auto lg:self-auto">
           <StepActionsMenu
             step={step}
             status={status}

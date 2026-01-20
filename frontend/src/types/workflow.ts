@@ -76,6 +76,8 @@ export interface ImageGenerationToolConfig {
 
 export type Tool = ToolType | ComputerUseToolConfig | ImageGenerationToolConfig;
 
+export type ImageGenerationSettings = Omit<ImageGenerationToolConfig, "type">;
+
 export interface WorkflowStep {
   step_name: string;
   step_description?: string;

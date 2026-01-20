@@ -31,11 +31,16 @@ import {
 import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
 import type { ArtifactGalleryItem, Job, JobDurationInfo, JobStepSummary } from "@/types/job";
 import type { WorkflowStep } from "@/types";
+import type {
+  ImageGenerationSettings,
+  ImageGenerationToolConfig,
+} from "@/types/workflow";
 
 type QuickUpdateStepInput = {
   model?: WorkflowStep["model"] | null;
   service_tier?: WorkflowStep["service_tier"] | null;
   reasoning_effort?: WorkflowStep["reasoning_effort"] | null;
+  image_generation?: ImageGenerationSettings;
 };
 
 // ---------------------------------------------------------------------------
@@ -318,6 +323,60 @@ export default function JobDetailClient() {
       } else if (update.reasoning_effort !== undefined) {
         updatedStep.reasoning_effort = update.reasoning_effort;
       }
+    }
+
+    if (update.image_generation) {
+      const imageConfig = update.image_generation;
+      const normalizedConfig: ImageGenerationToolConfig = {
+        type: "image_generation",
+        model: imageConfig.model || "gpt-image-1.5",
+        size: imageConfig.size || "auto",
+        quality: imageConfig.quality || "auto",
+        background: imageConfig.background || "auto",
+      };
+      if (imageConfig.format) {
+        normalizedConfig.format = imageConfig.format;
+      }
+      const supportsCompression =
+        imageConfig.format === "jpeg" || imageConfig.format === "webp";
+      if (
+        supportsCompression &&
+        typeof imageConfig.compression === "number" &&
+        Number.isFinite(imageConfig.compression)
+      ) {
+        normalizedConfig.compression = Math.min(
+          100,
+          Math.max(0, imageConfig.compression),
+        );
+      }
+      if (imageConfig.input_fidelity) {
+        normalizedConfig.input_fidelity = imageConfig.input_fidelity;
+      }
+
+      const existingTools = Array.isArray(updatedStep.tools)
+        ? updatedStep.tools
+        : [];
+      let replaced = false;
+      const nextTools = existingTools.map((tool) => {
+        if (tool === "image_generation") {
+          replaced = true;
+          return normalizedConfig;
+        }
+        if (
+          tool &&
+          typeof tool === "object" &&
+          "type" in tool &&
+          (tool as { type?: string }).type === "image_generation"
+        ) {
+          replaced = true;
+          return normalizedConfig;
+        }
+        return tool;
+      });
+      if (!replaced) {
+        nextTools.push(normalizedConfig);
+      }
+      updatedStep.tools = nextTools;
     }
 
     const updatedSteps = [...workflow.steps];

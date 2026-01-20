@@ -184,6 +184,7 @@ interface JobTabsProps {
     model?: import("@/types/workflow").AIModel | null;
     service_tier?: import("@/types/workflow").ServiceTier | null;
     reasoning_effort?: import("@/types/workflow").ReasoningEffort | null;
+    image_generation?: import("@/types/workflow").ImageGenerationSettings;
   }) => Promise<void>;
   updatingStepIndex?: number | null;
   onRerunStepClick: (stepIndex: number) => void;

@@ -1,7 +1,7 @@
 import type { MergedStep } from "@/types/job";
 import type { AIModel, ReasoningEffort } from "@/types/workflow";
 
-export type EditablePanel = "model" | "speed" | "reasoning";
+export type EditablePanel = "model" | "speed" | "reasoning" | "image";
 export type ReasoningEffortOption = ReasoningEffort | "auto";
 export type DetailRow = {
   label: string;

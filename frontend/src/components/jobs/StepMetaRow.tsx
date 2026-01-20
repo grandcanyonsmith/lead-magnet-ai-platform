@@ -2,7 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Pencil } from "lucide-react";
 import { DEFAULT_AI_MODEL } from "@/constants/models";
 import { MergedStep, StepStatus } from "@/types/job";
-import type { AIModel, ReasoningEffort, ServiceTier } from "@/types/workflow";
+import type {
+  AIModel,
+  ImageGenerationSettings,
+  ReasoningEffort,
+  ServiceTier,
+} from "@/types/workflow";
 import { StepMetaBadges } from "@/components/jobs/StepMetaBadges";
 import {
   ContextPanel,
@@ -37,6 +42,7 @@ type StepMetaUpdate = {
   model?: AIModel | null;
   service_tier?: ServiceTier | null;
   reasoning_effort?: ReasoningEffort | null;
+  image_generation?: ImageGenerationSettings;
 };
 
 const DEFAULT_IMAGE_SETTINGS = {
@@ -133,6 +139,13 @@ export function StepMetaRow({
   const [draftServiceTier, setDraftServiceTier] = useState<ServiceTier>("auto");
   const [draftReasoningEffort, setDraftReasoningEffort] =
     useState<ReasoningEffortOption>("auto");
+  const [draftImageSettings, setDraftImageSettings] =
+    useState<ImageGenerationSettings>({
+      model: DEFAULT_IMAGE_SETTINGS.model,
+      size: DEFAULT_IMAGE_SETTINGS.size,
+      quality: DEFAULT_IMAGE_SETTINGS.quality,
+      background: DEFAULT_IMAGE_SETTINGS.background,
+    });
   const showContext = openPanel === "context";
   const showImageSettings = openPanel === "image";
   const showModelDetails = openPanel === "model";
@@ -324,6 +337,9 @@ export function StepMetaRow({
     if (panel === "reasoning") {
       setDraftReasoningEffort(resolvedReasoningEffort);
     }
+    if (panel === "image") {
+      setDraftImageSettings(imageSettings);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -344,8 +360,47 @@ export function StepMetaRow({
       update.reasoning_effort =
         draftReasoningEffort === "auto" ? null : draftReasoningEffort;
     }
+    if (editPanel === "image") {
+      update.image_generation = {
+        model: draftImageSettings.model || DEFAULT_IMAGE_SETTINGS.model,
+        size: draftImageSettings.size || DEFAULT_IMAGE_SETTINGS.size,
+        quality: draftImageSettings.quality || DEFAULT_IMAGE_SETTINGS.quality,
+        background:
+          draftImageSettings.background || DEFAULT_IMAGE_SETTINGS.background,
+        format: draftImageSettings.format || undefined,
+        compression:
+          typeof draftImageSettings.compression === "number"
+            ? draftImageSettings.compression
+            : undefined,
+        input_fidelity: draftImageSettings.input_fidelity || undefined,
+      };
+    }
     await onQuickUpdateStep(stepIndex, update);
     setEditPanel(null);
+  };
+
+  const handleDraftImageSettingsChange = (
+    field: keyof ImageGenerationSettings,
+    value: ImageGenerationSettings[keyof ImageGenerationSettings],
+  ) => {
+    setDraftImageSettings((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "format") {
+        const format = value as ImageGenerationSettings["format"] | undefined;
+        if (format !== "jpeg" && format !== "webp") {
+          next.compression = undefined;
+        }
+      }
+      if (field === "compression") {
+        if (typeof value === "number" && Number.isFinite(value)) {
+          next.compression = Math.min(100, Math.max(0, value));
+        }
+        if (value === undefined || value === null || Number.isNaN(value)) {
+          next.compression = undefined;
+        }
+      }
+      return next;
+    });
   };
 
   const renderEditButton = (panel: EditablePanel) => {
@@ -371,16 +426,30 @@ export function StepMetaRow({
     );
   };
   const imageSettings = {
-    model: getStringValue(imageToolConfig?.model) || DEFAULT_IMAGE_SETTINGS.model,
-    size: getStringValue(imageToolConfig?.size) || DEFAULT_IMAGE_SETTINGS.size,
+    model:
+      (getStringValue(imageToolConfig?.model) as ImageGenerationSettings["model"]) ||
+      DEFAULT_IMAGE_SETTINGS.model,
+    size:
+      (getStringValue(imageToolConfig?.size) as ImageGenerationSettings["size"]) ||
+      DEFAULT_IMAGE_SETTINGS.size,
     quality:
-      getStringValue(imageToolConfig?.quality) || DEFAULT_IMAGE_SETTINGS.quality,
+      (getStringValue(
+        imageToolConfig?.quality,
+      ) as ImageGenerationSettings["quality"]) || DEFAULT_IMAGE_SETTINGS.quality,
     background:
-      getStringValue(imageToolConfig?.background) ||
+      (getStringValue(
+        imageToolConfig?.background,
+      ) as ImageGenerationSettings["background"]) ||
       DEFAULT_IMAGE_SETTINGS.background,
-    format: getStringValue(imageToolConfig?.format),
-    compression: getNumberValue(imageToolConfig?.compression),
-    inputFidelity: getStringValue(imageToolConfig?.input_fidelity),
+    format:
+      (getStringValue(
+        imageToolConfig?.format,
+      ) as ImageGenerationSettings["format"]) || undefined,
+    compression: getNumberValue(imageToolConfig?.compression) ?? undefined,
+    input_fidelity:
+      (getStringValue(
+        imageToolConfig?.input_fidelity,
+      ) as ImageGenerationSettings["input_fidelity"]) || undefined,
   };
   const imageHasOverrides = imageToolConfig
     ? hasImageOverrides(imageToolConfig)
@@ -416,19 +485,34 @@ export function StepMetaRow({
     {
       label: "Compression",
       value:
-        imageSettings.compression !== null
+        typeof imageSettings.compression === "number"
           ? String(imageSettings.compression)
           : "Not set",
-      muted: imageSettings.compression === null,
-      highlighted: imageSettings.compression !== null,
+      muted: typeof imageSettings.compression !== "number",
+      highlighted: typeof imageSettings.compression === "number",
     },
     {
       label: "Input fidelity",
-      value: imageSettings.inputFidelity || "Not set",
-      muted: !imageSettings.inputFidelity,
-      highlighted: Boolean(imageSettings.inputFidelity),
+      value: imageSettings.input_fidelity || "Not set",
+      muted: !imageSettings.input_fidelity,
+      highlighted: Boolean(imageSettings.input_fidelity),
     },
   ];
+  const normalizeImageSettings = (settings: ImageGenerationSettings) => ({
+    model: settings.model || DEFAULT_IMAGE_SETTINGS.model,
+    size: settings.size || DEFAULT_IMAGE_SETTINGS.size,
+    quality: settings.quality || DEFAULT_IMAGE_SETTINGS.quality,
+    background: settings.background || DEFAULT_IMAGE_SETTINGS.background,
+    format: settings.format || null,
+    compression:
+      typeof settings.compression === "number"
+        ? settings.compression
+        : null,
+    input_fidelity: settings.input_fidelity || null,
+  });
+  const isImageSettingsDirty =
+    JSON.stringify(normalizeImageSettings(draftImageSettings)) !==
+    JSON.stringify(normalizeImageSettings(imageSettings));
   const modelBadgeClass = [
     "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium border shadow-sm transition-colors group",
     showModelDetails
@@ -532,6 +616,14 @@ export function StepMetaRow({
     imageSettingsSource,
     toolChoice,
     imageSettingsRows,
+    editPanel,
+    draftImageSettings,
+    onDraftImageSettingsChange: handleDraftImageSettingsChange,
+    renderEditButton,
+    onCancel: handleCancelEdit,
+    onSave: handleSaveEdit,
+    isUpdating,
+    isImageSettingsDirty,
   };
   const contextPanelProps = {
     id: contextId,
