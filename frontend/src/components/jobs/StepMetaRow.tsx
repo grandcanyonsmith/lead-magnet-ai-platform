@@ -39,6 +39,14 @@ const DEFAULT_IMAGE_SETTINGS = {
   background: "auto",
 } as const;
 
+const SHELL_COMPATIBLE_MODELS: AIModel[] = [
+  "gpt-5.2",
+  "gpt-5.1",
+  "gpt-5.1-codex",
+  "gpt-5",
+];
+const COMPUTER_USE_MODEL: AIModel = "computer-use-preview";
+
 const HOVER_CHEVRON_CLASS =
   "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100";
 
@@ -445,6 +453,30 @@ export function StepMetaRow({
       }),
     [toolList],
   );
+  const toolTypes = useMemo(
+    () =>
+      new Set(
+        toolList.map((tool) => getToolName(tool as Tool)).filter(Boolean),
+      ),
+    [toolList],
+  );
+  const hasComputerUseTool = toolTypes.has("computer_use_preview");
+  const hasShellTool = toolTypes.has("shell");
+  const modelRestriction = useMemo(() => {
+    if (hasComputerUseTool) {
+      return {
+        allowedModels: new Set<AIModel>([COMPUTER_USE_MODEL]),
+        reason: "Computer use steps require the computer-use-preview model.",
+      };
+    }
+    if (hasShellTool) {
+      return {
+        allowedModels: new Set<AIModel>(SHELL_COMPATIBLE_MODELS),
+        reason: "Shell tool steps only support GPT-5 models.",
+      };
+    }
+    return { allowedModels: null, reason: null };
+  }, [hasComputerUseTool, hasShellTool]);
   const serviceTier = extractServiceTier(step);
   const normalizedServiceTier = serviceTier?.toLowerCase();
   const speedCount =
@@ -485,6 +517,9 @@ export function StepMetaRow({
   const resolvedReasoningEffort = (reasoningValue ||
     "auto") as ReasoningEffortOption;
   const isModelDirty = draftModel !== resolvedModel;
+  const isModelAllowed =
+    !modelRestriction.allowedModels ||
+    modelRestriction.allowedModels.has(draftModel);
   const isServiceTierDirty = draftServiceTier !== resolvedServiceTier;
   const isReasoningDirty = draftReasoningEffort !== resolvedReasoningEffort;
 
@@ -772,12 +807,26 @@ export function StepMetaRow({
                 className="h-9"
                 aria-label="Select model"
               >
-                {AI_MODELS.map((model) => (
-                  <option key={model.value} value={model.value}>
-                    {model.label}
-                  </option>
-                ))}
+                {AI_MODELS.map((model) => {
+                  const isAllowed =
+                    !modelRestriction.allowedModels ||
+                    modelRestriction.allowedModels.has(model.value);
+                  return (
+                    <option
+                      key={model.value}
+                      value={model.value}
+                      disabled={!isAllowed}
+                    >
+                      {model.label}
+                    </option>
+                  );
+                })}
               </Select>
+              {modelRestriction.reason && (
+                <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
+                  {modelRestriction.reason}
+                </div>
+              )}
               <div className="flex items-center justify-end gap-2">
                 <Button
                   type="button"
@@ -792,7 +841,7 @@ export function StepMetaRow({
                   type="button"
                   size="sm"
                   onClick={handleSaveEdit}
-                  disabled={!isModelDirty || isUpdating}
+                  disabled={!isModelDirty || !isModelAllowed || isUpdating}
                   isLoading={isUpdating}
                 >
                   Update
