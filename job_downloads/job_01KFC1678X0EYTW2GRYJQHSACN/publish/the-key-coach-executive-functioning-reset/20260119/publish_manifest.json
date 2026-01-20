@@ -1,0 +1,40 @@
+{
+  "job_id": "job_01KFC1678X0EYTW2GRYJQHSACN",
+  "project_slug": "the-key-coach-executive-functioning-reset",
+  "runtime_date": "20260119",
+  "bucket": "cc360-pages",
+  "region": "us-west-2",
+  "output_dir": "job_downloads/job_01KFC1678X0EYTW2GRYJQHSACN/publish/the-key-coach-executive-functioning-reset/20260119",
+  "uploaded": [
+    {
+      "file": "index.html",
+      "key": "the-key-coach-executive-functioning-reset/20260119/index.html"
+    },
+    {
+      "file": "thank-you.html",
+      "key": "the-key-coach-executive-functioning-reset/20260119/thank-you.html"
+    },
+    {
+      "file": "reset-kit.css",
+      "key": "the-key-coach-executive-functioning-reset/20260119/reset-kit.css"
+    },
+    {
+      "file": "reset-kit.js",
+      "key": "the-key-coach-executive-functioning-reset/20260119/reset-kit.js"
+    },
+    {
+      "file": "emails.json",
+      "key": "the-key-coach-executive-functioning-reset/20260119/emails.json"
+    },
+    {
+      "file": "routing.json",
+      "key": "the-key-coach-executive-functioning-reset/20260119/routing.json"
+    }
+  ],
+  "errors": [],
+  "missing_blocks": [
+    "/work/build/funnel/privacy.html",
+    "/work/build/funnel/terms.html"
+  ],
+  "timestamp": "2026-01-20T01:18:09.086279Z"
+}
