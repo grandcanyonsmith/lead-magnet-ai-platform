@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Dict, Any, List, Tuple
 from datetime import datetime
 from services.steps.base import AbstractStepHandler
@@ -46,6 +47,42 @@ class AIStepHandler(AbstractStepHandler):
             default_tools = ['web_search']
         
         step_tools_raw = step.get('tools', default_tools)
+
+        # Heuristic: force shell tool for file-producing steps (PDFs, previews, dist bundles).
+        force_shell = (os.environ.get("SHELL_EXECUTOR_FORCE_SHELL_FOR_FILES") or "true").strip().lower() in ("1", "true", "yes")
+        step_name_lower = str(step.get("step_name", "")).lower()
+        instructions_lower = str(step.get("instructions", "")).lower()
+        shell_keyword_hit = any(
+            key in step_name_lower
+            for key in [
+                "pdf builder",
+                "preview exports",
+                "mobile-accurate",
+                "parallax background",
+                "device mockups",
+                "dist packager",
+                "dist bundle",
+                "render png",
+                "render pdf",
+                "export png",
+                "export pdf",
+                "mockup",
+            ]
+        ) or any(
+            key in instructions_lower
+            for key in [
+                "/work/",
+                "assets/",
+                "pdf",
+                "png",
+                "zip",
+                "render",
+                "export",
+                "mockup",
+                "dist/",
+                "bundle",
+            ]
+        )
         
         # Convert string tools to objects
         step_tools = []
@@ -57,6 +94,11 @@ class AIStepHandler(AbstractStepHandler):
                     step_tools.append({"type": tool})
             else:
                 step_tools.append(tool)
+
+        if force_shell and shell_keyword_hit:
+            has_shell = any(isinstance(t, dict) and t.get("type") == "shell" for t in step_tools)
+            if not has_shell:
+                step_tools.append({"type": "shell"})
         
         # For deep research models, ensure at least one required tool is present
         if is_deep_research_model:
@@ -79,6 +121,8 @@ class AIStepHandler(AbstractStepHandler):
         step_tool_choice = step.get('tool_choice')
         if step_tool_choice not in ('auto', 'required', 'none'):
             step_tool_choice = 'required' if len(step_tools) > 0 else 'none'
+        if force_shell and shell_keyword_hit:
+            step_tool_choice = 'required'
         
         # Filter code_interpreter if S3 upload requested in instructions
         instructions = step.get("instructions", "")
@@ -135,6 +179,10 @@ class AIStepHandler(AbstractStepHandler):
             )
             current_step_context = self.s3_context_service.maybe_inject_s3_publish_output_only_context(
                 step=step,
+                current_step_context=current_step_context,
+            )
+            current_step_context = self.s3_context_service.maybe_inject_shell_manifest_context(
+                step_tools=step_tools,
                 current_step_context=current_step_context,
             )
             
@@ -218,7 +266,7 @@ class AIStepHandler(AbstractStepHandler):
                 step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
                 error_message = f"Step {step_index + 1} ({step_name}) failed: {step_error}"
                 
-                logger.error(f"[AIStepHandler] AI step failed", extra={
+                logger.error("[AIStepHandler] AI step failed", extra={
                     'error': str(step_error),
                     'job_id': job_id
                 }, exc_info=True)

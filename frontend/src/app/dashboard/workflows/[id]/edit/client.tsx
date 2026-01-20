@@ -322,10 +322,10 @@ export default function EditWorkflowPage() {
   }
 
   return (
-    <div className="space-y-6 container max-w-7xl mx-auto pb-20">
+    <div className="space-y-6 container max-w-7xl mx-auto pb-20 px-4 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sticky top-0 z-30 bg-background/95 backdrop-blur py-4 border-b">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sticky top-0 z-30 bg-background/95 backdrop-blur py-3 sm:py-4 border-b">
+        <div className="flex items-start gap-3">
           <Button
             variant="ghost"
             size="icon"
@@ -335,8 +335,8 @@ export default function EditWorkflowPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl">
                 Edit Lead Magnet
               </h1>
               <Badge variant="secondary">v{workflowVersion}</Badge>
@@ -346,11 +346,12 @@ export default function EditWorkflowPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
           <Button
             variant="outline"
             onClick={() => router.back()}
             disabled={submitting}
+            className="w-full sm:w-auto"
           >
             Cancel
           </Button>
@@ -362,10 +363,16 @@ export default function EditWorkflowPage() {
                 : null
             }
             disabled={submitting || !workflowId}
+            className="w-full sm:w-auto"
           >
             Version History
           </Button>
-          <Button onClick={() => handleSubmit()} disabled={submitting} isLoading={submitting}>
+          <Button
+            onClick={() => handleSubmit()}
+            disabled={submitting}
+            isLoading={submitting}
+            className="w-full sm:w-auto"
+          >
             <Save className="mr-2 h-4 w-4" />
             Save Changes
           </Button>

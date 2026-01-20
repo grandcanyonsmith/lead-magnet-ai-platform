@@ -128,7 +128,7 @@ export function TemplateTab({
       {!templateLoading && (
         <>
           {/* Template Metadata */}
-          <div className="bg-white dark:bg-card rounded-lg shadow p-6 space-y-4 border border-gray-200 dark:border-border">
+          <div className="bg-white dark:bg-card rounded-lg shadow p-4 sm:p-6 space-y-4 border border-gray-200 dark:border-border">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-foreground mb-2">
                 Template Name <span className="text-red-500 dark:text-red-400">*</span>
@@ -165,14 +165,14 @@ export function TemplateTab({
 
           {/* View Mode Toggle */}
           {templateData.html_content.trim() && (
-            <div className="bg-white dark:bg-card rounded-lg shadow p-4 flex items-center justify-between border border-gray-200 dark:border-border">
-              <div className="flex items-center space-x-3">
+            <div className="bg-white dark:bg-card rounded-lg shadow p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border border-gray-200 dark:border-border">
+              <div className="flex items-center gap-3">
                 <Eye className="w-5 h-5 text-gray-500 dark:text-muted-foreground" />
                 <span className="text-sm font-medium text-gray-700 dark:text-foreground">
                   View Mode
                 </span>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => onViewModeChange("split")}
@@ -218,14 +218,14 @@ export function TemplateTab({
             {(templateViewMode === "split" ||
               templateViewMode === "editor") && (
               <div className="bg-white dark:bg-card rounded-lg shadow border border-gray-200 dark:border-border">
-                <div className="border-b border-gray-200 dark:border-border px-4 py-3 flex items-center justify-between bg-gray-50 dark:bg-secondary/50">
-                  <div className="flex items-center space-x-3">
+                <div className="border-b border-gray-200 dark:border-border px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-gray-50 dark:bg-secondary/50">
+                  <div className="flex items-center gap-3">
                     <Code className="w-5 h-5 text-gray-500 dark:text-muted-foreground" />
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-foreground">
                       HTML Editor
                     </h3>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={onFormatHtml}
@@ -306,14 +306,14 @@ export function TemplateTab({
             {(templateViewMode === "split" || templateViewMode === "preview") &&
               templateData.html_content.trim() && (
                 <div className="bg-white dark:bg-card rounded-lg shadow border border-gray-200 dark:border-border">
-                  <div className="border-b border-gray-200 dark:border-border px-4 py-3 flex items-center justify-between bg-gray-50 dark:bg-secondary/50">
-                    <div className="flex items-center space-x-3">
+                  <div className="border-b border-gray-200 dark:border-border px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-gray-50 dark:bg-secondary/50">
+                    <div className="flex items-center gap-3">
                       <Eye className="w-5 h-5 text-gray-500 dark:text-muted-foreground" />
                       <h3 className="text-sm font-semibold text-gray-900 dark:text-foreground">
                         Preview
                       </h3>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setIsSelectMode(!isSelectMode)}
@@ -329,47 +329,49 @@ export function TemplateTab({
                           {isSelectMode ? "Selecting..." : "Select"}
                         </span>
                       </button>
-                      <div className="w-px h-6 bg-gray-300 dark:bg-border mx-1"></div>
-                      <button
-                        type="button"
-                        onClick={() => onDeviceSizeChange("mobile")}
-                        className={`p-2 rounded transition-colors touch-target ${
-                          devicePreviewSize === "mobile"
-                            ? "bg-primary-600 dark:bg-primary text-white"
-                            : "bg-gray-100 dark:bg-secondary text-gray-600 dark:text-foreground hover:bg-gray-200 dark:hover:bg-secondary/80"
-                        }`}
-                        title="Mobile (375px)"
-                      >
-                        <Smartphone className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDeviceSizeChange("tablet")}
-                        className={`p-2 rounded transition-colors touch-target ${
-                          devicePreviewSize === "tablet"
-                            ? "bg-primary-600 dark:bg-primary text-white"
-                            : "bg-gray-100 dark:bg-secondary text-gray-600 dark:text-foreground hover:bg-gray-200 dark:hover:bg-secondary/80"
-                        }`}
-                        title="Tablet (768px)"
-                      >
-                        <Tablet className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDeviceSizeChange("desktop")}
-                        className={`p-2 rounded transition-colors touch-target ${
-                          devicePreviewSize === "desktop"
-                            ? "bg-primary-600 dark:bg-primary text-white"
-                            : "bg-gray-100 dark:bg-secondary text-gray-600 dark:text-foreground hover:bg-gray-200 dark:hover:bg-secondary/80"
-                        }`}
-                        title="Desktop (Full Width)"
-                      >
-                        <Monitor className="w-4 h-4" />
-                      </button>
+                      <div className="hidden sm:block w-px h-6 bg-gray-300 dark:bg-border mx-1"></div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onDeviceSizeChange("mobile")}
+                          className={`p-2 rounded transition-colors touch-target ${
+                            devicePreviewSize === "mobile"
+                              ? "bg-primary-600 dark:bg-primary text-white"
+                              : "bg-gray-100 dark:bg-secondary text-gray-600 dark:text-foreground hover:bg-gray-200 dark:hover:bg-secondary/80"
+                          }`}
+                          title="Mobile (375px)"
+                        >
+                          <Smartphone className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDeviceSizeChange("tablet")}
+                          className={`p-2 rounded transition-colors touch-target ${
+                            devicePreviewSize === "tablet"
+                              ? "bg-primary-600 dark:bg-primary text-white"
+                              : "bg-gray-100 dark:bg-secondary text-gray-600 dark:text-foreground hover:bg-gray-200 dark:hover:bg-secondary/80"
+                          }`}
+                          title="Tablet (768px)"
+                        >
+                          <Tablet className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDeviceSizeChange("desktop")}
+                          className={`p-2 rounded transition-colors touch-target ${
+                            devicePreviewSize === "desktop"
+                              ? "bg-primary-600 dark:bg-primary text-white"
+                              : "bg-gray-100 dark:bg-secondary text-gray-600 dark:text-foreground hover:bg-gray-200 dark:hover:bg-secondary/80"
+                          }`}
+                          title="Desktop (Full Width)"
+                        >
+                          <Monitor className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <div
-                    className="bg-gray-100 dark:bg-secondary/30 p-4 flex justify-center"
+                    className="bg-gray-100 dark:bg-secondary/30 p-3 sm:p-4 flex justify-center"
                     style={{ minHeight: "500px" }}
                   >
                     <div

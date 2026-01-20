@@ -195,7 +195,7 @@ export default function WorkflowDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto space-y-8 animate-pulse">
+      <div className="max-w-7xl mx-auto space-y-8 animate-pulse px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-end">
           <div className="space-y-3">
             <div className="h-8 bg-gray-200 dark:bg-secondary rounded w-64"></div>
@@ -216,7 +216,7 @@ export default function WorkflowDetailPage() {
 
   if (error && !workflow) {
     return (
-      <div className="max-w-3xl mx-auto mt-12">
+      <div className="max-w-3xl mx-auto mt-12 px-4 sm:px-6">
         <button
           onClick={() => router.back()}
           className="group flex items-center text-sm font-medium text-gray-500 dark:text-muted-foreground hover:text-gray-900 dark:hover:text-foreground mb-6 transition-colors"
@@ -238,7 +238,7 @@ export default function WorkflowDetailPage() {
   if (!workflow) return null;
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
       {/* Header */}
       <div className="mb-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -257,19 +257,19 @@ export default function WorkflowDetailPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3 shrink-0">
             <button
               onClick={() =>
                 router.push(`/dashboard/workflows/${workflowId}/edit`)
               }
-              className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-border text-gray-700 dark:text-foreground font-bold rounded-lg hover:bg-gray-50 dark:hover:bg-secondary transition-all shadow-sm text-sm"
+              className="inline-flex w-full items-center justify-center px-4 py-2 border border-gray-300 dark:border-border text-gray-700 dark:text-foreground font-bold rounded-lg hover:bg-gray-50 dark:hover:bg-secondary transition-all shadow-sm text-sm sm:w-auto"
             >
               <PencilIcon className="w-4 h-4 mr-2" />
               Edit
             </button>
             <button
               onClick={handleDelete}
-              className="inline-flex items-center justify-center px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800 font-bold rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all text-sm"
+              className="inline-flex w-full items-center justify-center px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800 font-bold rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all text-sm sm:w-auto"
             >
               <TrashIcon className="w-4 h-4 mr-2" />
               Delete
@@ -300,12 +300,12 @@ export default function WorkflowDetailPage() {
             <div className="p-6">
               {workflow.form ? (
                 <div className="space-y-6">
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <h3 className="text-lg font-bold text-gray-900 dark:text-foreground">
                         {workflow.form.form_name}
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-muted-foreground mt-1 truncate">
+                      <p className="text-sm text-gray-500 dark:text-muted-foreground mt-1 break-all sm:break-normal sm:truncate">
                         {workflow.form.public_slug &&
                           buildPublicFormUrl(
                             workflow.form.public_slug,
@@ -427,7 +427,7 @@ export default function WorkflowDetailPage() {
                       <p className="text-[10px] text-gray-400 dark:text-muted-foreground/70 mb-0.5">
                         Template ID
                       </p>
-                      <p className="text-xs font-mono text-gray-700 dark:text-foreground bg-gray-50 dark:bg-secondary px-2 py-1 rounded inline-block">
+                      <p className="text-xs font-mono text-gray-700 dark:text-foreground bg-gray-50 dark:bg-secondary px-2 py-1 rounded block max-w-full break-all">
                         {workflow.template_id || "None"}
                       </p>
                     </div>
@@ -516,7 +516,7 @@ export default function WorkflowDetailPage() {
 
         {/* Sidebar: Recent Runs */}
         <div className="space-y-6">
-          <section className="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-border shadow-sm overflow-hidden sticky top-8">
+          <section className="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-border shadow-sm overflow-hidden lg:sticky lg:top-8">
             <div className="px-6 py-5 border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ClockIcon className="h-5 w-5 text-gray-400 dark:text-muted-foreground" />

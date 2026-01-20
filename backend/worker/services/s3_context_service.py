@@ -76,6 +76,72 @@ class S3ContextService:
         raw = (os.environ.get("SHELL_S3_UPLOAD_ALLOWED_BUCKETS") or "cc360-pages").strip()
         return [b.strip() for b in raw.split(",") if b and b.strip()]
 
+    def _shell_manifest_enabled(self) -> bool:
+        mode = (os.environ.get("SHELL_EXECUTOR_UPLOAD_MODE") or "").strip().lower()
+        bucket = (os.environ.get("SHELL_EXECUTOR_UPLOAD_BUCKET") or "").strip()
+        return mode == "manifest" and bool(bucket)
+
+    def _shell_manifest_path(self) -> str:
+        manifest_path = (os.environ.get("SHELL_EXECUTOR_MANIFEST_PATH") or "").strip()
+        if manifest_path:
+            return manifest_path
+        manifest_name = (os.environ.get("SHELL_EXECUTOR_MANIFEST_NAME") or "shell_executor_manifest.json").strip()
+        return f"/work/{manifest_name}"
+
+    def maybe_inject_shell_manifest_context(
+        self,
+        *,
+        step_tools: List[Dict[str, Any]],
+        current_step_context: str,
+    ) -> str:
+        """
+        If shell uploads are enabled in manifest mode, inject instructions for creating
+        a manifest file listing generated assets to upload.
+        """
+        if not self._shell_manifest_enabled():
+            return current_step_context
+
+        has_shell = any(
+            isinstance(t, dict) and t.get("type") == "shell" for t in (step_tools or [])
+        )
+        if not has_shell:
+            return current_step_context
+
+        bucket = (os.environ.get("SHELL_EXECUTOR_UPLOAD_BUCKET") or "cc360-pages").strip()
+        manifest_path = self._shell_manifest_path()
+
+        block = "\n".join([
+            "=== Shell Upload Manifest (Required for Asset Persistence) ===",
+            "When you create files that must persist, write a JSON manifest file at:",
+            f"{manifest_path}",
+            "",
+            "Manifest format:",
+            "{",
+            f"  \"bucket\": \"{bucket}\",",
+            "  \"prefix\": \"{project_slug}/{runtime_date_yyyymmdd}/\",",
+            "  \"files\": [",
+            "    \"/work/dist/index.html\",",
+            "    \"/work/dist/thank-you.html\",",
+            "    \"/work/dist/privacy.html\",",
+            "    \"/work/dist/terms.html\",",
+            "    \"/work/dist/reset-kit.css\",",
+            "    \"/work/dist/reset-kit.js\",",
+            "    \"/work/dist/assets/pdf/<pdf>.pdf\",",
+            "    \"/work/dist/assets/img/previews/<preview>.png\"",
+            "  ]",
+            "}",
+            "",
+            "Rules:",
+            "- Use absolute /work/... paths in the files list (the executor maps them safely).",
+            "- Prefix must use the canonical project_slug + runtime_date_yyyymmdd.",
+            "- Include every file you created that should be uploaded.",
+            "===============================================",
+        ])
+
+        if current_step_context and isinstance(current_step_context, str) and current_step_context.strip():
+            return f"{current_step_context}\n\n{block}"
+        return block
+
     def _auto_webhook_from_instructions_enabled(self) -> bool:
         return (os.environ.get("AUTO_WEBHOOK_FROM_INSTRUCTIONS") or "").strip().lower() == "true"
 

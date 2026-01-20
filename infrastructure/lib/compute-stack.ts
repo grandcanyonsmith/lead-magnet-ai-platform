@@ -60,6 +60,10 @@ export class ComputeStack extends cdk.Stack {
           [ENV_VAR_NAMES.PLAYWRIGHT_BROWSERS_PATH]: PLAYWRIGHT_BROWSERS_PATH,
           // Shell tool configuration (defaults can be overridden at deploy time)
           [ENV_VAR_NAMES.SHELL_TOOL_ENABLED]: process.env.SHELL_TOOL_ENABLED || (props.shellExecutor ? 'true' : 'false'),
+          [ENV_VAR_NAMES.SHELL_EXECUTOR_UPLOAD_MODE]: process.env.SHELL_EXECUTOR_UPLOAD_MODE || 'manifest',
+          [ENV_VAR_NAMES.SHELL_EXECUTOR_UPLOAD_BUCKET]: process.env.SHELL_EXECUTOR_UPLOAD_BUCKET || 'cc360-pages',
+          [ENV_VAR_NAMES.SHELL_EXECUTOR_MANIFEST_NAME]: process.env.SHELL_EXECUTOR_MANIFEST_NAME || 'shell_executor_manifest.json',
+          [ENV_VAR_NAMES.SHELL_EXECUTOR_FORCE_SHELL_FOR_FILES]: process.env.SHELL_EXECUTOR_FORCE_SHELL_FOR_FILES || 'true',
           ...(props.shellExecutor ? {
             [ENV_VAR_NAMES.SHELL_EXECUTOR_FUNCTION_NAME]: props.shellExecutor.functionName,
           } : {}),

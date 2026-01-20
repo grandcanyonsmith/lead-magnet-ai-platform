@@ -34,7 +34,7 @@ function FormPreview({ formFormData }: { formFormData: FormFormData }) {
   const allFields = formFormData.form_fields_schema.fields;
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 sm:p-6">
       <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-foreground">
         {formFormData.form_name || "Form Preview"}
       </h3>
@@ -464,7 +464,7 @@ export function FormTab({
       </div>
 
       <div className="order-1 lg:order-2">
-        <div className="sticky top-6">
+        <div className="lg:sticky lg:top-6">
           <SectionCard
             title="Live preview"
             description="See exactly what visitors will experience."

@@ -197,12 +197,19 @@ class ShellLoopService:
                     continue
 
                 # Execute on ECS shell executor
+                exec_env = {
+                    "LM_JOB_ID": job_id or "",
+                    "LM_TENANT_ID": tenant_id or "",
+                    "LM_STEP_INDEX": str(step_index) if step_index is not None else "",
+                    "SHELL_EXECUTOR_WORKSPACE_ID": workspace_id,
+                }
                 exec_result = self.shell_executor_service.run_shell_job(
                     commands=[str(c) for c in commands],
                     timeout_ms=int(timeout_ms) if timeout_ms is not None else None,
                     max_output_length=int(max_output_length) if max_output_length is not None else None,
                     workspace_id=workspace_id,
                     reset_workspace=reset_workspace_next,
+                    env=exec_env,
                 )
                 reset_workspace_next = False
 
@@ -374,6 +381,12 @@ class ShellLoopService:
 
                     # Execute (potentially blocking, so run in executor if it takes time, but `run_shell_job` might handle sub-process waiting)
                     # `subprocess.run` blocks.
+                    exec_env = {
+                        "LM_JOB_ID": job_id or "",
+                        "LM_TENANT_ID": tenant_id or "",
+                        "LM_STEP_INDEX": str(step_index) if step_index is not None else "",
+                        "SHELL_EXECUTOR_WORKSPACE_ID": workspace_id,
+                    }
                     exec_result = await loop.run_in_executor(
                         None, 
                         lambda: self.shell_executor_service.run_shell_job(
@@ -382,6 +395,7 @@ class ShellLoopService:
                             max_output_length=int(max_output_length) if max_output_length is not None else None,
                             workspace_id=workspace_id,
                             reset_workspace=reset_workspace_next,
+                            env=exec_env,
                         )
                     )
                     reset_workspace_next = False

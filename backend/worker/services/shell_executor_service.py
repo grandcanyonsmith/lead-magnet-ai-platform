@@ -85,6 +85,7 @@ class ShellExecutorService:
         max_output_length: Optional[int] = None,
         workspace_id: Optional[str] = None,
         reset_workspace: Optional[bool] = None,
+        env: Optional[Dict[str, str]] = None,
         max_wait_seconds: int = 600, # Unused in sync lambda mode
     ) -> Dict[str, Any]:
         """
@@ -104,6 +105,7 @@ class ShellExecutorService:
                 max_output_length=max_output_length,
                 workspace_id=workspace_id,
                 reset_workspace=reset_workspace,
+                env=env,
             )
 
         job_id = uuid.uuid4().hex
@@ -139,14 +141,19 @@ class ShellExecutorService:
                     pass
             return result
         
+        payload_env = {"JOB_ID": job_id}
+        if env:
+            for key, value in env.items():
+                if value is None:
+                    continue
+                payload_env[str(key)] = str(value)
+
         payload = {
             "commands": commands,
             "workspace_id": workspace_id,
             "timeout_ms": timeout_ms,
             "max_output_length": max_output_length,
-            "env": {
-                "JOB_ID": job_id
-            }
+            "env": payload_env
         }
         
         logger.info("[ShellExecutorService] Invoking Lambda executor", extra={
@@ -227,6 +234,7 @@ class ShellExecutorService:
         max_output_length: Optional[int],
         workspace_id: Optional[str],
         reset_workspace: Optional[bool],
+        env: Optional[Dict[str, str]],
     ) -> Dict[str, Any]:
         """
         Local fallback for running shell commands without ECS/Lambda.
@@ -276,6 +284,15 @@ class ShellExecutorService:
             "cwd": str(session_dir),
         })
 
+        cmd_env = os.environ.copy()
+        if env:
+            for key, value in env.items():
+                if value is None:
+                    continue
+                cmd_env[str(key)] = str(value)
+        cmd_env["HOME"] = str(session_dir)
+        cmd_env["PWD"] = str(session_dir)
+
         output_items: List[Dict[str, Any]] = []
         for cmd in commands:
             cmd_str = str(cmd)
@@ -286,6 +303,7 @@ class ShellExecutorService:
                 completed = subprocess.run(
                     ["bash", "-lc", cmd_to_run],
                     cwd=str(session_dir),
+                    env=cmd_env,
                     capture_output=True,
                     text=False, # Capture bytes to handle decoding safely
                     timeout=per_cmd_timeout_s,

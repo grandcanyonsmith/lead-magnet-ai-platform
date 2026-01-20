@@ -64,6 +64,7 @@ class DummyShellExecutor:
         max_output_length=None,
         workspace_id=None,
         reset_workspace=None,
+        env=None,
         max_wait_seconds=600,
     ):
         self.calls.append({
@@ -72,6 +73,7 @@ class DummyShellExecutor:
             "max_output_length": max_output_length,
             "workspace_id": workspace_id,
             "reset_workspace": reset_workspace,
+            "env": env,
         })
         return {
             "max_output_length": max_output_length or 4096,

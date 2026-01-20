@@ -122,6 +122,11 @@ export class ShellExecutorStack extends cdk.Stack {
       environment: {
         EFS_MOUNT_POINT: '/mnt/shell-executor',
         HOME: '/mnt/shell-executor', // Useful for some tools
+        SHELL_EXECUTOR_UPLOAD_MODE: process.env.SHELL_EXECUTOR_UPLOAD_MODE || 'manifest',
+        SHELL_EXECUTOR_UPLOAD_BUCKET: process.env.SHELL_EXECUTOR_UPLOAD_BUCKET || 'cc360-pages',
+        SHELL_EXECUTOR_MANIFEST_NAME: process.env.SHELL_EXECUTOR_MANIFEST_NAME || 'shell_executor_manifest.json',
+        SHELL_EXECUTOR_REWRITE_WORK_PATHS: process.env.SHELL_EXECUTOR_REWRITE_WORK_PATHS || 'true',
+        SHELL_EXECUTOR_WORK_ROOT: process.env.SHELL_EXECUTOR_WORK_ROOT || '/work',
       },
       logGroup,
     });

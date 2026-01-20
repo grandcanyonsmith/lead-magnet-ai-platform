@@ -32,7 +32,7 @@ class StreamingShellHandler:
         tool_choice = event.get('tool_choice', 'auto')
         params = event.get('params', {})
         max_iterations = event.get('max_iterations', 50)
-        max_duration = event.get('max_duration_seconds', 300)
+        max_duration = event.get('max_duration_seconds', 900)
 
         # Initialize OpenAI Client (handles auth via env vars)
         openai_client = OpenAIClient()

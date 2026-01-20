@@ -29,12 +29,82 @@
     {
       "file": "routing.json",
       "key": "the-key-coach-executive-functioning-reset/20260119/routing.json"
+    },
+    {
+      "file": "privacy.html",
+      "key": "the-key-coach-executive-functioning-reset/20260119/privacy.html"
+    },
+    {
+      "file": "terms.html",
+      "key": "the-key-coach-executive-functioning-reset/20260119/terms.html"
+    },
+    {
+      "key": "the-key-coach-executive-functioning-reset/20260119/assets/pdf/the-key-coach-executive-functioning-reset_v1.pdf",
+      "local_path": "job_downloads/job_01KFC1678X0EYTW2GRYJQHSACN/publish/the-key-coach-executive-functioning-reset/20260119/assets/pdf/the-key-coach-executive-functioning-reset_v1.pdf",
+      "sha256": "1b6920a164930c8ada2ca03f882f1c5810b3649cbe05617688c0c61ef308d3b4"
+    },
+    {
+      "key": "the-key-coach-executive-functioning-reset/20260119/assets/pdf/the-key-coach-executive-functioning-reset_v1_print.pdf",
+      "local_path": "job_downloads/job_01KFC1678X0EYTW2GRYJQHSACN/publish/the-key-coach-executive-functioning-reset/20260119/assets/pdf/the-key-coach-executive-functioning-reset_v1_print.pdf",
+      "sha256": "220e117d3bd968daf8b58ed0fab2d9513b8799618640eb57ef9e9703f02ad8f4"
+    },
+    {
+      "key": "the-key-coach-executive-functioning-reset/20260119/assets/img/bg/parallax-hero_2400x1600.jpg",
+      "local_path": "job_downloads/job_01KFC1678X0EYTW2GRYJQHSACN/publish/the-key-coach-executive-functioning-reset/20260119/assets/img/bg/parallax-hero_2400x1600.jpg",
+      "sha256": "d00c8e92f0679baef4cd1522af4d32196d79dd775a51ef83aea9daf7059a06da"
+    },
+    {
+      "key": "the-key-coach-executive-functioning-reset/20260119/assets/img/bg/parallax-section_2400x1600.jpg",
+      "local_path": "job_downloads/job_01KFC1678X0EYTW2GRYJQHSACN/publish/the-key-coach-executive-functioning-reset/20260119/assets/img/bg/parallax-section_2400x1600.jpg",
+      "sha256": "1c689ec332a94b3e79f12d29848c3f585529be5e40e6043d7a40c018b2330d73"
+    },
+    {
+      "key": "the-key-coach-executive-functioning-reset/20260119/assets/img/og-image_1200x630.jpg",
+      "local_path": "job_downloads/job_01KFC1678X0EYTW2GRYJQHSACN/publish/the-key-coach-executive-functioning-reset/20260119/assets/img/og-image_1200x630.jpg",
+      "sha256": "1f104a0b1df1616f799fc4a46e9ab692d68c0f9738938ee079f7920825a440f3"
+    },
+    {
+      "key": "the-key-coach-executive-functioning-reset/20260119/assets/img/mockups/weekly-reset_mockup-duo_1920x1080.png",
+      "local_path": "job_downloads/job_01KFC1678X0EYTW2GRYJQHSACN/publish/the-key-coach-executive-functioning-reset/20260119/assets/img/mockups/weekly-reset_mockup-duo_1920x1080.png",
+      "sha256": "c467ce547e75136d8d9872c5b9abbafbda60123d15668f6366c8e9ad9bfaa7fb"
+    },
+    {
+      "key": "the-key-coach-executive-functioning-reset/20260119/assets/img/previews/the-key-coach-executive-functioning-reset_p01_800w.png",
+      "local_path": "job_downloads/job_01KFC1678X0EYTW2GRYJQHSACN/publish/the-key-coach-executive-functioning-reset/20260119/assets/img/previews/the-key-coach-executive-functioning-reset_p01_800w.png",
+      "sha256": "78b92c0c8b1e6ca2cc7ffeef269e88dc034a70c25a25abf69ed35c2161c06492"
+    },
+    {
+      "key": "the-key-coach-executive-functioning-reset/20260119/assets/img/previews/the-key-coach-executive-functioning-reset_p01_1600w.png",
+      "local_path": "job_downloads/job_01KFC1678X0EYTW2GRYJQHSACN/publish/the-key-coach-executive-functioning-reset/20260119/assets/img/previews/the-key-coach-executive-functioning-reset_p01_1600w.png",
+      "sha256": "bcdd3c76067b5b297564e30131ee048f78581c2273705cf396f5ed8cd10f42f7"
+    },
+    {
+      "key": "the-key-coach-executive-functioning-reset/20260119/assets/img/previews/the-key-coach-executive-functioning-reset_p03_800w.png",
+      "local_path": "job_downloads/job_01KFC1678X0EYTW2GRYJQHSACN/publish/the-key-coach-executive-functioning-reset/20260119/assets/img/previews/the-key-coach-executive-functioning-reset_p03_800w.png",
+      "sha256": "30d3cdab32e0d2beb2f12627440379863267e5846202ad0db2777a382f68166f"
+    },
+    {
+      "key": "the-key-coach-executive-functioning-reset/20260119/assets/img/previews/the-key-coach-executive-functioning-reset_p03_1600w.png",
+      "local_path": "job_downloads/job_01KFC1678X0EYTW2GRYJQHSACN/publish/the-key-coach-executive-functioning-reset/20260119/assets/img/previews/the-key-coach-executive-functioning-reset_p03_1600w.png",
+      "sha256": "da9354ad59ccc5201c4ff75bd4c8a4ccfcb2a1bde34d0d7b6124d0a54491cb3e"
+    },
+    {
+      "key": "the-key-coach-executive-functioning-reset/20260119/assets/img/previews/the-key-coach-executive-functioning-reset_p06_800w.png",
+      "local_path": "job_downloads/job_01KFC1678X0EYTW2GRYJQHSACN/publish/the-key-coach-executive-functioning-reset/20260119/assets/img/previews/the-key-coach-executive-functioning-reset_p06_800w.png",
+      "sha256": "aa310dc009788e53b6564a5516634558bacb3f6fc465b4d0b5cfef2624fdabee"
+    },
+    {
+      "key": "the-key-coach-executive-functioning-reset/20260119/assets/img/previews/the-key-coach-executive-functioning-reset_p06_1600w.png",
+      "local_path": "job_downloads/job_01KFC1678X0EYTW2GRYJQHSACN/publish/the-key-coach-executive-functioning-reset/20260119/assets/img/previews/the-key-coach-executive-functioning-reset_p06_1600w.png",
+      "sha256": "296f864a55496039272addb0848492124e3f172c31c0b3de3aec978a5a235319"
     }
   ],
   "errors": [],
   "missing_blocks": [
     "/work/build/funnel/privacy.html",
-    "/work/build/funnel/terms.html"
+    "/work/build/funnel/terms.html",
+    "/work/build/legal/privacy.html",
+    "/work/build/legal/terms.html"
   ],
-  "timestamp": "2026-01-20T01:18:09.086279Z"
+  "timestamp": "2026-01-20T01:25:47.158485Z"
 }
