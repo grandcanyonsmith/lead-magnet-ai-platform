@@ -82,7 +82,9 @@ const getEmptyFieldLabel = (isDisabled: boolean, label: string) => {
 
 const orderOverrides = (overrides: PromptOverrides): PromptOverrides => {
   const ordered: PromptOverrides = {};
-  const knownKeys = new Set(PROMPT_OVERRIDE_DEFINITIONS.map((item) => item.key));
+  const knownKeys = new Set<string>(
+    PROMPT_OVERRIDE_DEFINITIONS.map((item) => item.key),
+  );
   PROMPT_OVERRIDE_DEFINITIONS.forEach((item) => {
     if (overrides[item.key]) {
       ordered[item.key] = overrides[item.key];

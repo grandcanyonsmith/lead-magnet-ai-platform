@@ -153,14 +153,33 @@ function StepTimingRow({ step, status }: StepTimingRowProps) {
 
 export function StepMetaRow({ step, status }: StepMetaRowProps) {
   const isInProgress = status === "in_progress";
-  const [showInstructions, setShowInstructions] = useState(false);
+  const [showContext, setShowContext] = useState(false);
   const instructions = step.instructions?.trim();
-  const instructionsId = `step-instructions-${step.step_order ?? "unknown"}`;
+  const contextId = `step-context-${step.step_order ?? "unknown"}`;
   const dependencyItems =
     step.depends_on?.map((dep, idx) => ({
       index: dep,
       label: step.dependency_labels?.[idx] || `Step ${dep + 1}`,
     })) || [];
+  const hasContext =
+    Boolean(instructions) ||
+    Boolean(step.input) ||
+    dependencyItems.length > 0;
+  const inputValue = (() => {
+    if (!step.input) return null;
+    if (typeof step.input === "string") return step.input;
+    if (typeof step.input === "object") {
+      const inputObj = step.input as Record<string, unknown>;
+      if ("input" in inputObj && inputObj.input !== undefined) {
+        return inputObj.input;
+      }
+      if ("payload" in inputObj && inputObj.payload !== undefined) {
+        return inputObj.payload;
+      }
+      return inputObj;
+    }
+    return String(step.input);
+  })();
 
   return (
     <div className="space-y-2">
@@ -189,15 +208,15 @@ export function StepMetaRow({ step, status }: StepMetaRowProps) {
             ))}
           </div>
         )}
-        {instructions && (
+        {hasContext && (
           <button
             type="button"
-            aria-expanded={showInstructions}
-            aria-controls={instructionsId}
-            onClick={() => setShowInstructions((prev) => !prev)}
+            aria-expanded={showContext}
+            aria-controls={contextId}
+            onClick={() => setShowContext((prev) => !prev)}
             className="px-1.5 py-0.5 text-[10px] font-semibold rounded-md border whitespace-nowrap bg-teal-50 text-teal-700 border-teal-200 transition-colors hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-200 dark:border-teal-800/50 dark:hover:bg-teal-900/50"
           >
-            Instructions
+            Context
           </button>
         )}
         {isInProgress && (
@@ -211,12 +230,49 @@ export function StepMetaRow({ step, status }: StepMetaRowProps) {
           </span>
         )}
       </div>
-      {instructions && showInstructions && (
+      {hasContext && showContext && (
         <div
-          id={instructionsId}
-          className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-foreground/90 whitespace-pre-wrap"
+          id={contextId}
+          className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-foreground/90 space-y-3"
         >
-          {instructions}
+          <div className="space-y-2">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Input
+            </div>
+            {dependencyItems.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Steps
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {dependencyItems.map((dependency) => (
+                    <span
+                      key={`dependency-context-${dependency.index}`}
+                      title={dependency.label}
+                      className="px-1.5 py-0.5 text-[10px] font-semibold rounded-md border whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800/50"
+                    >
+                      Step {dependency.index + 1}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] whitespace-pre-wrap font-mono text-foreground/90">
+              {inputValue !== null && inputValue !== undefined
+                ? typeof inputValue === "string"
+                  ? inputValue
+                  : JSON.stringify(inputValue, null, 2)
+                : "No input available"}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Instructions
+            </div>
+            <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] whitespace-pre-wrap text-foreground/90">
+              {instructions || "No instructions available"}
+            </div>
+          </div>
         </div>
       )}
     </div>
