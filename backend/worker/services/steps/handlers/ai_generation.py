@@ -47,6 +47,17 @@ class AIStepHandler(AbstractStepHandler):
             default_tools = ['web_search']
         
         step_tools_raw = step.get('tools', default_tools)
+        if isinstance(step_tools_raw, dict):
+            step_tools_raw = [step_tools_raw]
+        elif isinstance(step_tools_raw, str):
+            step_tools_raw = [step_tools_raw]
+        elif not isinstance(step_tools_raw, list):
+            step_tools_raw = default_tools
+
+        has_image_generation_tool = any(
+            (isinstance(t, dict) and t.get("type") == "image_generation") or t == "image_generation"
+            for t in (step_tools_raw or [])
+        )
 
         # Heuristic: force shell tool for file-producing steps (PDFs, previews, dist bundles).
         force_shell = (os.environ.get("SHELL_EXECUTOR_FORCE_SHELL_FOR_FILES") or "true").strip().lower() in ("1", "true", "yes")
@@ -84,8 +95,9 @@ class AIStepHandler(AbstractStepHandler):
             ]
         )
         
-        if force_shell and shell_keyword_hit:
+        if force_shell and shell_keyword_hit and not has_image_generation_tool:
             # For file-producing steps, restrict tools to shell only to guarantee execution.
+            # Do not override explicit image_generation steps (e.g., PDF cover art).
             step_tools_raw = ["shell"]
 
         # Convert string tools to objects
@@ -99,7 +111,7 @@ class AIStepHandler(AbstractStepHandler):
             else:
                 step_tools.append(tool)
 
-        if force_shell and shell_keyword_hit:
+        if force_shell and shell_keyword_hit and not has_image_generation_tool:
             has_shell = any(isinstance(t, dict) and t.get("type") == "shell" for t in step_tools)
             if not has_shell:
                 step_tools.append({"type": "shell"})
@@ -125,7 +137,7 @@ class AIStepHandler(AbstractStepHandler):
         step_tool_choice = step.get('tool_choice')
         if step_tool_choice not in ('auto', 'required', 'none'):
             step_tool_choice = 'required' if len(step_tools) > 0 else 'none'
-        if force_shell and shell_keyword_hit:
+        if force_shell and shell_keyword_hit and not has_image_generation_tool:
             step_tool_choice = 'required'
         
         # Filter code_interpreter if S3 upload requested in instructions
