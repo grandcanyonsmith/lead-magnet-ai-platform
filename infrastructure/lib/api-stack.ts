@@ -93,6 +93,21 @@ export class ApiStack extends cdk.Stack {
       })
     );
 
+    // Grant CloudWatch Logs permissions for streaming job logs
+    lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'logs:FilterLogEvents',
+          'logs:DescribeLogGroups',
+          'logs:DescribeLogStreams',
+        ],
+        resources: [
+          `arn:aws:logs:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:log-group:/aws/lambda/*`,
+        ],
+      })
+    );
+
     // Create environment variables from tables
     const tableEnvVars = createTableEnvironmentVars(props.tablesMap);
 
