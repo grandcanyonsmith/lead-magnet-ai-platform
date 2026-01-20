@@ -19,6 +19,12 @@ interface StepHeaderProps {
   onEditStep?: (stepIndex: number) => void;
   onRerunStep?: (stepIndex: number) => Promise<void>;
   onRerunStepClick?: (stepIndex: number) => void;
+  onQuickUpdateStep?: (stepIndex: number, update: {
+    model?: import("@/types/workflow").AIModel | null;
+    service_tier?: import("@/types/workflow").ServiceTier | null;
+    reasoning_effort?: import("@/types/workflow").ReasoningEffort | null;
+  }) => Promise<void>;
+  updatingStepIndex?: number | null;
   detailsHref?: string;
   detailsLabel?: string;
   showMeta?: boolean;
@@ -33,6 +39,8 @@ export function StepHeader({
   onEditStep,
   onRerunStep,
   onRerunStepClick,
+  onQuickUpdateStep,
+  updatingStepIndex,
   detailsHref,
   detailsLabel = "View step details",
   showMeta = true,
@@ -66,6 +74,8 @@ export function StepHeader({
                 allSteps={allSteps}
                 canEdit={canEdit}
                 onEditStep={onEditStep}
+                onQuickUpdateStep={onQuickUpdateStep}
+                updatingStepIndex={updatingStepIndex}
                 jobStatus={jobStatus}
               />
             )}

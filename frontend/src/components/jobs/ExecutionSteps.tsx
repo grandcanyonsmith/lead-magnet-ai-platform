@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 import type { JobLiveStep, MergedStep } from "@/types/job";
 import type { FormSubmission } from "@/types/form";
+import type { AIModel, ReasoningEffort, ServiceTier } from "@/types/workflow";
 import { StepHeader } from "./StepHeader";
 import { StepInputOutput } from "./StepInputOutput";
 import { StepProgressBar } from "./StepProgressBar";
@@ -16,8 +17,106 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatLiveOutputText } from "@/utils/jobFormatting";
 import { Button } from "@/components/ui/Button";
-import { SearchInput } from "@/components/ui/SearchInput";
-import { Select } from "@/components/ui/Select";
+
+type StepQuickUpdate = {
+  model?: AIModel | null;
+  service_tier?: ServiceTier | null;
+  reasoning_effort?: ReasoningEffort | null;
+};
+
+type StepImageFile =
+  | { type: "imageArtifact"; data: Artifact; key: string }
+  | { type: "imageUrl"; data: string; key: string };
+
+const getFilenameFromUrl = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    const filename = pathname.split("/").pop() || "";
+    return filename;
+  } catch {
+    const parts = url.split("/");
+    return parts[parts.length - 1] || url;
+  }
+};
+
+const normalizeFilename = (filename: string): string =>
+  filename.split("?")[0].toLowerCase();
+
+const getArtifactFileName = (artifact: Artifact): string =>
+  artifact.file_name || artifact.artifact_name || "";
+
+const artifactMatchesImageUrl = (artifact: Artifact, imageUrl: string): boolean => {
+  const artifactUrl = artifact.object_url || artifact.public_url;
+  if (artifactUrl === imageUrl) return true;
+  const artifactName = normalizeFilename(getArtifactFileName(artifact));
+  const imageName = normalizeFilename(getFilenameFromUrl(imageUrl));
+  return artifactName === imageName;
+};
+
+const getStepImageFiles = (
+  step: MergedStep,
+  stepImageArtifacts: Artifact[],
+): StepImageFile[] => {
+  const stepImageUrls =
+    step.image_urls && Array.isArray(step.image_urls) && step.image_urls.length > 0
+      ? step.image_urls
+      : [];
+  const mainArtifactId = step.artifact_id;
+
+  const displayedFiles = new Set<string>();
+  const filesToShow: StepImageFile[] = [];
+
+  if (mainArtifactId) {
+    displayedFiles.add(`artifact:${mainArtifactId}`);
+  }
+
+  stepImageArtifacts.forEach((artifact) => {
+    const artifactId = artifact.artifact_id;
+    const normalizedName = normalizeFilename(getArtifactFileName(artifact));
+
+    if (artifactId === mainArtifactId) {
+      return;
+    }
+
+    if (normalizedName && displayedFiles.has(`filename:${normalizedName}`)) {
+      return;
+    }
+
+    displayedFiles.add(`filename:${normalizedName}`);
+    displayedFiles.add(`artifact:${artifactId}`);
+    filesToShow.push({
+      type: "imageArtifact",
+      data: artifact,
+      key: `image-artifact-${artifactId}`,
+    });
+  });
+
+  stepImageUrls.forEach((imageUrl, idx) => {
+    const normalizedName = normalizeFilename(getFilenameFromUrl(imageUrl));
+
+    if (normalizedName && displayedFiles.has(`filename:${normalizedName}`)) {
+      return;
+    }
+
+    const matchesExistingArtifact = stepImageArtifacts.some((artifact) =>
+      artifactMatchesImageUrl(artifact, imageUrl),
+    );
+
+    if (matchesExistingArtifact) {
+      return;
+    }
+
+    displayedFiles.add(`filename:${normalizedName}`);
+    filesToShow.push({
+      type: "imageUrl",
+      data: imageUrl,
+      key: `image-url-${idx}`,
+    });
+  });
+
+  return filesToShow;
+};
 
 interface ExecutionStepsProps {
   jobId?: string;
@@ -35,6 +134,8 @@ interface ExecutionStepsProps {
   rerunningStep?: number | null;
   onEditStep?: (stepIndex: number) => void;
   canEdit?: boolean;
+  onQuickUpdateStep?: (stepIndex: number, update: StepQuickUpdate) => Promise<void>;
+  updatingStepIndex?: number | null;
   imageArtifactsByStep?: Map<number, Artifact[]>;
   loadingImageArtifacts?: boolean;
   onRerunStepClick?: (stepIndex: number) => void;
@@ -59,6 +160,8 @@ export function ExecutionSteps({
   rerunningStep,
   onEditStep,
   canEdit = false,
+  onQuickUpdateStep,
+  updatingStepIndex,
   imageArtifactsByStep = new Map(),
   loadingImageArtifacts = false,
   onRerunStepClick,
@@ -364,6 +467,19 @@ export function ExecutionSteps({
                 jobId && step.step_order !== undefined
                   ? `/dashboard/jobs/${jobId}/steps/${step.step_order}`
                   : undefined;
+              const stepTools = step.input?.tools || step.tools;
+              const stepToolChoice = step.input?.tool_choice || step.tool_choice;
+              const stepImageArtifacts = imageArtifactsByStep.get(stepOrder) || [];
+              const stepImageFiles =
+                variant === "expanded" && isExpanded
+                  ? getStepImageFiles(step, stepImageArtifacts)
+                  : [];
+              const imagePreviewProps = {
+                imageIndex: 0,
+                model: step.model,
+                tools: stepTools,
+                toolChoice: stepToolChoice,
+              };
 
               return (
                 <div
@@ -394,6 +510,8 @@ export function ExecutionSteps({
                       onEditStep={onEditStep}
                       onRerunStep={onRerunStep}
                       onRerunStepClick={onRerunStepClick}
+                      onQuickUpdateStep={onQuickUpdateStep}
+                      updatingStepIndex={updatingStepIndex}
                       detailsHref={detailsHref}
                     />
                     {variant === "compact" ? (
@@ -448,148 +566,25 @@ export function ExecutionSteps({
                               variant={variant}
                             />
 
-                            {(() => {
-                              const stepImageUrls =
-                                step.image_urls &&
-                                Array.isArray(step.image_urls) &&
-                                step.image_urls.length > 0
-                                  ? step.image_urls
-                                  : [];
-                              const stepImageArtifacts =
-                                imageArtifactsByStep.get(stepOrder) || [];
-                              const mainArtifactId = step.artifact_id;
-
-                              const getFilenameFromUrl = (url: string): string => {
-                                try {
-                                  const urlObj = new URL(url);
-                                  const pathname = urlObj.pathname;
-                                  const filename = pathname.split("/").pop() || "";
-                                  return filename;
-                                } catch {
-                                  const parts = url.split("/");
-                                  return parts[parts.length - 1] || url;
-                                }
-                              };
-
-                              const normalizeFilename = (filename: string): string => {
-                                return filename.split("?")[0].toLowerCase();
-                              };
-
-                              const displayedFiles = new Set<string>();
-                              const filesToShow: Array<{
-                                type: "artifact" | "imageArtifact" | "imageUrl";
-                                data: any;
-                                key: string;
-                              }> = [];
-
-                              if (mainArtifactId) {
-                                displayedFiles.add(`artifact:${mainArtifactId}`);
-                              }
-
-                              stepImageArtifacts.forEach((artifact: Artifact) => {
-                                const artifactId = artifact.artifact_id;
-                                const fileName =
-                                  artifact.file_name || artifact.artifact_name || "";
-                                const normalizedName = normalizeFilename(fileName);
-
-                                if (artifactId === mainArtifactId) {
-                                  return;
-                                }
-
-                                if (
-                                  normalizedName &&
-                                  displayedFiles.has(`filename:${normalizedName}`)
-                                ) {
-                                  return;
-                                }
-
-                                displayedFiles.add(`filename:${normalizedName}`);
-                                displayedFiles.add(`artifact:${artifactId}`);
-                                filesToShow.push({
-                                  type: "imageArtifact",
-                                  data: artifact,
-                                  key: `image-artifact-${artifactId}`,
-                                });
-                              });
-
-                              stepImageUrls.forEach((imageUrl: string, idx: number) => {
-                                const filename = getFilenameFromUrl(imageUrl);
-                                const normalizedName = normalizeFilename(filename);
-
-                                if (
-                                  normalizedName &&
-                                  displayedFiles.has(`filename:${normalizedName}`)
-                                ) {
-                                  return;
-                                }
-
-                                const matchesExistingArtifact =
-                                  stepImageArtifacts.some((artifact: Artifact) => {
-                                    const artifactUrl =
-                                      artifact.object_url || artifact.public_url;
-                                    return (
-                                      artifactUrl === imageUrl ||
-                                      normalizeFilename(
-                                        artifact.file_name ||
-                                          artifact.artifact_name ||
-                                          "",
-                                      ) === normalizedName
-                                    );
-                                  });
-
-                                if (matchesExistingArtifact) {
-                                  return;
-                                }
-
-                                displayedFiles.add(`filename:${normalizedName}`);
-                                filesToShow.push({
-                                  type: "imageUrl",
-                                  data: imageUrl,
-                                  key: `image-url-${idx}`,
-                                });
-                              });
-
-                              if (filesToShow.length > 0) {
-                                return (
-                                  <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-muted/20">
-                                    {filesToShow.map((file) => {
-                                      if (file.type === "imageArtifact") {
-                                        return (
-                                          <ImagePreview
-                                            key={file.key}
-                                            artifact={file.data}
-                                            imageIndex={0}
-                                            model={step.model}
-                                            tools={step.input?.tools || step.tools}
-                                            toolChoice={
-                                              step.input?.tool_choice ||
-                                              step.tool_choice
-                                            }
-                                          />
-                                        );
-                                      } else if (file.type === "imageUrl") {
-                                        return (
-                                          <ImagePreview
-                                            key={file.key}
-                                            imageUrl={file.data}
-                                            imageIndex={0}
-                                            model={step.model}
-                                            tools={step.input?.tools || step.tools}
-                                            toolChoice={
-                                              step.input?.tool_choice ||
-                                              step.tool_choice
-                                            }
-                                          />
-                                        );
-                                      }
-                                      return null;
-                                    })}
-                                  </div>
-                                );
-                              }
-
-                              return null;
-                            })()}
+                            {stepImageFiles.length > 0 && (
+                              <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-muted/20">
+                                {stepImageFiles.map((file) =>
+                                  file.type === "imageArtifact" ? (
+                                    <ImagePreview
+                                      key={file.key}
+                                      artifact={file.data}
+                                      {...imagePreviewProps}
+                                    />
+                                  ) : (
+                                    <ImagePreview
+                                      key={file.key}
+                                      imageUrl={file.data}
+                                      {...imagePreviewProps}
+                                    />
+                                  ),
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
                       </>

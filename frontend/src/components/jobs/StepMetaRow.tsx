@@ -26,6 +26,11 @@ type StepMetaUpdate = {
   service_tier?: ServiceTier | null;
   reasoning_effort?: ReasoningEffort | null;
 };
+type DetailRow = {
+  label: string;
+  value: string;
+  muted?: boolean;
+};
 
 const DEFAULT_IMAGE_SETTINGS = {
   model: "gpt-image-1.5",
@@ -248,11 +253,37 @@ function renderIconBadge({
   );
 }
 
+function DetailRows({ rows }: { rows: DetailRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      {rows.map((row) => (
+        <div
+          key={row.label}
+          className="flex items-center justify-between rounded-md border border-border/60 bg-background/70 px-2 py-1"
+        >
+          <span className="text-[11px] font-medium text-muted-foreground">
+            {row.label}
+          </span>
+          <span
+            className={`text-[11px] font-semibold ${
+              row.muted ? "text-muted-foreground" : "text-foreground"
+            }`}
+          >
+            {row.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 interface StepMetaRowProps {
   step: MergedStep;
   status: StepStatus;
   allSteps?: MergedStep[];
   canEdit?: boolean;
+  onEditStep?: (stepIndex: number) => void;
   onQuickUpdateStep?: (stepIndex: number, update: StepMetaUpdate) => Promise<void>;
   updatingStepIndex?: number | null;
   jobStatus?: string;
@@ -298,12 +329,18 @@ export function StepMetaRow({
   status,
   allSteps,
   canEdit = false,
+  onEditStep,
   onQuickUpdateStep,
   updatingStepIndex,
   jobStatus,
 }: StepMetaRowProps) {
   const isInProgress = status === "in_progress";
   const [openPanel, setOpenPanel] = useState<MetaPanel | null>(null);
+  const [editPanel, setEditPanel] = useState<EditablePanel | null>(null);
+  const [draftModel, setDraftModel] = useState<AIModel>(DEFAULT_AI_MODEL);
+  const [draftServiceTier, setDraftServiceTier] = useState<ServiceTier>("auto");
+  const [draftReasoningEffort, setDraftReasoningEffort] =
+    useState<ReasoningEffortOption>("auto");
   const showContext = openPanel === "context";
   const showImageSettings = openPanel === "image";
   const showModelDetails = openPanel === "model";
@@ -314,12 +351,13 @@ export function StepMetaRow({
     setOpenPanel((prev) => (prev === panel ? null : panel));
   const containerRef = useRef<HTMLDivElement>(null);
   const instructions = step.instructions?.trim();
-  const contextId = `step-context-${step.step_order ?? "unknown"}`;
-  const toolsId = `step-tools-${step.step_order ?? "unknown"}`;
-  const imageSettingsId = `step-image-settings-${step.step_order ?? "unknown"}`;
-  const modelDetailsId = `step-model-details-${step.step_order ?? "unknown"}`;
-  const speedDetailsId = `step-speed-details-${step.step_order ?? "unknown"}`;
-  const reasoningDetailsId = `step-reasoning-details-${step.step_order ?? "unknown"}`;
+  const stepOrderId = step.step_order ?? "unknown";
+  const contextId = `step-context-${stepOrderId}`;
+  const toolsId = `step-tools-${stepOrderId}`;
+  const imageSettingsId = `step-image-settings-${stepOrderId}`;
+  const modelDetailsId = `step-model-details-${stepOrderId}`;
+  const speedDetailsId = `step-speed-details-${stepOrderId}`;
+  const reasoningDetailsId = `step-reasoning-details-${stepOrderId}`;
   const inputRecord = isRecord(step.input) ? step.input : null;
   const tools = Array.isArray(step.input?.tools)
     ? step.input?.tools
@@ -332,41 +370,17 @@ export function StepMetaRow({
   const hasImageGenerationTool = Boolean(imageTool);
   const isSystemStep =
     step.step_type === "form_submission" || step.step_type === "final_output";
+  const editHandlerAvailable = Boolean(onQuickUpdateStep || onEditStep);
   const canEditStep =
-    Boolean(canEdit && onEditStep) &&
+    Boolean(canEdit && editHandlerAvailable) &&
     !isSystemStep &&
     step.step_order !== undefined &&
     step.step_order > 0;
-  const showEditIcon = Boolean(canEdit && onEditStep);
+  const showEditIcon = Boolean(canEdit && editHandlerAvailable);
   const editDisabled = jobStatus === "processing" || !canEditStep;
-  const handleEditClick = () => {
-    if (editDisabled || step.step_order === undefined) return;
-    const workflowStepIndex = step.step_order - 1;
-    if (workflowStepIndex < 0) return;
-    onEditStep?.(workflowStepIndex);
-  };
-  const renderEditButton = () => {
-    if (!showEditIcon) return null;
-    return (
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          handleEditClick();
-        }}
-        disabled={editDisabled}
-        className={`inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-background/70 text-muted-foreground transition-colors ${
-          editDisabled
-            ? "opacity-50 cursor-not-allowed"
-            : "hover:text-foreground hover:bg-muted/40"
-        }`}
-        aria-label={editDisabled ? "Editing locked" : "Edit step"}
-        title={editDisabled ? "Editing locked" : "Edit step"}
-      >
-        <Pencil className="h-3.5 w-3.5" />
-      </button>
-    );
-  };
+  const stepIndex =
+    step.step_order !== undefined ? step.step_order - 1 : null;
+  const isUpdating = stepIndex !== null && updatingStepIndex === stepIndex;
   const toolChoice =
     getStringValue(step.input?.tool_choice) || getStringValue(step.tool_choice);
   const modelFromStep = getStringValue(step.model);
@@ -374,10 +388,9 @@ export function StepMetaRow({
   const usageModel = getStringValue(step.usage_info?.model);
   const modelValue =
     modelFromStep || modelFromInput || usageModel || "Unknown";
-  const modelDetailsRows: Array<{ label: string; value: string; muted?: boolean }> =
-    [
-      { label: "Model", value: modelValue, muted: modelValue === "Unknown" },
-    ];
+  const modelDetailsRows: DetailRow[] = [
+    { label: "Model", value: modelValue, muted: modelValue === "Unknown" },
+  ];
   if (usageModel && usageModel !== modelValue) {
     modelDetailsRows.push({ label: "Usage model", value: usageModel });
   }
@@ -464,6 +477,80 @@ export function StepMetaRow({
     : null;
   const reasoningValue = normalizedReasoningEffort || "auto";
   const reasoningLabelValue = reasoningLabel || "Auto";
+  const resolvedModel = (modelFromStep ||
+    modelFromInput ||
+    usageModel ||
+    DEFAULT_AI_MODEL) as AIModel;
+  const resolvedServiceTier = (serviceTierValue || "auto") as ServiceTier;
+  const resolvedReasoningEffort = (reasoningValue ||
+    "auto") as ReasoningEffortOption;
+  const isModelDirty = draftModel !== resolvedModel;
+  const isServiceTierDirty = draftServiceTier !== resolvedServiceTier;
+  const isReasoningDirty = draftReasoningEffort !== resolvedReasoningEffort;
+
+  const startEditing = (panel: EditablePanel) => {
+    if (editDisabled) return;
+    if (!onQuickUpdateStep && onEditStep && stepIndex !== null) {
+      onEditStep(stepIndex);
+      return;
+    }
+    setOpenPanel(panel);
+    setEditPanel(panel);
+    if (panel === "model") {
+      setDraftModel(resolvedModel);
+    }
+    if (panel === "speed") {
+      setDraftServiceTier(resolvedServiceTier);
+    }
+    if (panel === "reasoning") {
+      setDraftReasoningEffort(resolvedReasoningEffort);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditPanel(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!onQuickUpdateStep || stepIndex === null || !editPanel) return;
+    const update: StepMetaUpdate = {};
+    if (editPanel === "model") {
+      update.model = draftModel;
+    }
+    if (editPanel === "speed") {
+      update.service_tier =
+        draftServiceTier === "auto" ? null : draftServiceTier;
+    }
+    if (editPanel === "reasoning") {
+      update.reasoning_effort =
+        draftReasoningEffort === "auto" ? null : draftReasoningEffort;
+    }
+    await onQuickUpdateStep(stepIndex, update);
+    setEditPanel(null);
+  };
+
+  const renderEditButton = (panel: EditablePanel) => {
+    if (!showEditIcon) return null;
+    return (
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          startEditing(panel);
+        }}
+        disabled={editDisabled}
+        className={`inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-background/70 text-muted-foreground transition-colors ${
+          editDisabled
+            ? "opacity-50 cursor-not-allowed"
+            : "hover:text-foreground hover:bg-muted/40"
+        }`}
+        aria-label={editDisabled ? "Editing locked" : "Edit step"}
+        title={editDisabled ? "Editing locked" : "Edit step"}
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </button>
+    );
+  };
   const imageSettings = {
     model: getStringValue(imageToolConfig?.model) || DEFAULT_IMAGE_SETTINGS.model,
     size: getStringValue(imageToolConfig?.size) || DEFAULT_IMAGE_SETTINGS.size,
@@ -535,15 +622,10 @@ export function StepMetaRow({
   const reasoningBadgeClass = showReasoningDetails
     ? "bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-900/60 dark:text-indigo-100 dark:border-indigo-700/70 group"
     : "bg-indigo-50/80 text-indigo-700 border-indigo-200 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-200 dark:border-indigo-800/50 dark:hover:bg-indigo-900/50 group";
-  const speedDetailsRows: Array<{ label: string; value: string; muted?: boolean }> =
-    [
-      { label: "Tier", value: serviceTierLabel, muted: serviceTierValue === "auto" },
-    ];
-  const reasoningDetailsRows: Array<{
-    label: string;
-    value: string;
-    muted?: boolean;
-  }> = [
+  const speedDetailsRows: DetailRow[] = [
+    { label: "Tier", value: serviceTierLabel, muted: serviceTierValue === "auto" },
+  ];
+  const reasoningDetailsRows: DetailRow[] = [
     { label: "Effort", value: reasoningLabelValue, muted: reasoningValue === "auto" },
   ];
   const ContextToggleIcon = showContext ? ChevronUp : ChevronDown;
@@ -555,7 +637,10 @@ export function StepMetaRow({
   ].join(" ");
 
   useEffect(() => {
-    if (!openPanel) return;
+    if (!openPanel) {
+      setEditPanel(null);
+      return;
+    }
 
     const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
       const target = event.target as Node | null;
@@ -675,27 +760,48 @@ export function StepMetaRow({
             <div className="text-[11px] font-semibold uppercase tracking-wide text-purple-700 dark:text-purple-200">
               Model details
             </div>
-            {renderEditButton()}
+            {renderEditButton("model")}
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {modelDetailsRows.map((row) => (
-              <div
-                key={row.label}
-                className="flex items-center justify-between rounded-md border border-border/60 bg-background/70 px-2 py-1"
+          {editPanel === "model" ? (
+            <div className="space-y-2">
+              <Select
+                value={draftModel}
+                onChange={(event) =>
+                  setDraftModel(event.target.value as AIModel)
+                }
+                className="h-9"
+                aria-label="Select model"
               >
-                <span className="text-[11px] font-medium text-muted-foreground">
-                  {row.label}
-                </span>
-                <span
-                  className={`text-[11px] font-semibold ${
-                    row.muted ? "text-muted-foreground" : "text-foreground"
-                  }`}
+                {AI_MODELS.map((model) => (
+                  <option key={model.value} value={model.value}>
+                    {model.label}
+                  </option>
+                ))}
+              </Select>
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelEdit}
+                  disabled={isUpdating}
                 >
-                  {row.value}
-                </span>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSaveEdit}
+                  disabled={!isModelDirty || isUpdating}
+                  isLoading={isUpdating}
+                >
+                  Update
+                </Button>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <DetailRows rows={modelDetailsRows} />
+          )}
         </div>
       )}
       {showSpeedDetails && (
@@ -707,27 +813,49 @@ export function StepMetaRow({
             <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">
               Service tier details
             </div>
-            {renderEditButton()}
+            {renderEditButton("speed")}
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {speedDetailsRows.map((row) => (
-              <div
-                key={row.label}
-                className="flex items-center justify-between rounded-md border border-border/60 bg-background/70 px-2 py-1"
+          {editPanel === "speed" ? (
+            <div className="space-y-2">
+              <Select
+                value={draftServiceTier}
+                onChange={(event) =>
+                  setDraftServiceTier(event.target.value as ServiceTier)
+                }
+                className="h-9"
+                aria-label="Select service tier"
               >
-                <span className="text-[11px] font-medium text-muted-foreground">
-                  {row.label}
-                </span>
-                <span
-                  className={`text-[11px] font-semibold ${
-                    row.muted ? "text-muted-foreground" : "text-foreground"
-                  }`}
+                <option value="auto">Auto</option>
+                {Object.entries(SERVICE_TIER_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelEdit}
+                  disabled={isUpdating}
                 >
-                  {row.value}
-                </span>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSaveEdit}
+                  disabled={!isServiceTierDirty || isUpdating}
+                  isLoading={isUpdating}
+                >
+                  Update
+                </Button>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <DetailRows rows={speedDetailsRows} />
+          )}
         </div>
       )}
       {showReasoningDetails && (
@@ -739,27 +867,51 @@ export function StepMetaRow({
             <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-200">
               Reasoning details
             </div>
-            {renderEditButton()}
+            {renderEditButton("reasoning")}
           </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {reasoningDetailsRows.map((row) => (
-              <div
-                key={row.label}
-                className="flex items-center justify-between rounded-md border border-border/60 bg-background/70 px-2 py-1"
+          {editPanel === "reasoning" ? (
+            <div className="space-y-2">
+              <Select
+                value={draftReasoningEffort}
+                onChange={(event) =>
+                  setDraftReasoningEffort(
+                    event.target.value as ReasoningEffortOption,
+                  )
+                }
+                className="h-9"
+                aria-label="Select reasoning effort"
               >
-                <span className="text-[11px] font-medium text-muted-foreground">
-                  {row.label}
-                </span>
-                <span
-                  className={`text-[11px] font-semibold ${
-                    row.muted ? "text-muted-foreground" : "text-foreground"
-                  }`}
+                <option value="auto">Auto</option>
+                {Object.entries(REASONING_EFFORT_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelEdit}
+                  disabled={isUpdating}
                 >
-                  {row.value}
-                </span>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSaveEdit}
+                  disabled={!isReasoningDirty || isUpdating}
+                  isLoading={isUpdating}
+                >
+                  Update
+                </Button>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <DetailRows rows={reasoningDetailsRows} />
+          )}
         </div>
       )}
       {hasTools && showTools && (
@@ -771,7 +923,6 @@ export function StepMetaRow({
             <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
               Tools
             </div>
-            {renderEditButton()}
           </div>
           <div className="space-y-3">
             {toolDetails.map((tool) => (
@@ -809,7 +960,6 @@ export function StepMetaRow({
             <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-200">
               Image generation settings
             </div>
-            {renderEditButton()}
           </div>
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
               <span className="rounded-full border border-indigo-200/70 bg-indigo-100/70 px-2 py-0.5 font-medium text-indigo-700 dark:border-indigo-800/60 dark:bg-indigo-900/40 dark:text-indigo-200">

@@ -14,6 +14,12 @@ interface JobExecutionTabProps {
   onToggleStep: (stepOrder: number) => void;
   onExpandAllSteps: (stepOrders: number[]) => void;
   onCollapseAllSteps: () => void;
+  onQuickUpdateStep?: (stepIndex: number, update: {
+    model?: import("@/types/workflow").AIModel | null;
+    service_tier?: import("@/types/workflow").ServiceTier | null;
+    reasoning_effort?: import("@/types/workflow").ReasoningEffort | null;
+  }) => Promise<void>;
+  updatingStepIndex?: number | null;
   executionStepsError: string | null;
   onRefresh?: () => void;
   refreshing?: boolean;
@@ -37,6 +43,8 @@ export function JobExecutionTab({
   onToggleStep,
   onExpandAllSteps,
   onCollapseAllSteps,
+  onQuickUpdateStep,
+  updatingStepIndex,
   executionStepsError,
   onRefresh,
   refreshing,
@@ -97,6 +105,8 @@ export function JobExecutionTab({
         jobStatus={job.status}
         liveStep={job.live_step}
         onEditStep={onEditStep}
+        onQuickUpdateStep={onQuickUpdateStep}
+        updatingStepIndex={updatingStepIndex}
         canEdit={true}
         imageArtifactsByStep={imageArtifactsByStep}
         loadingImageArtifacts={loadingArtifacts}

@@ -180,6 +180,12 @@ interface JobTabsProps {
   refreshing?: boolean;
   onCopy: (text: string) => void;
   onEditStep: (stepIndex: number) => void;
+  onQuickUpdateStep?: (stepIndex: number, update: {
+    model?: import("@/types/workflow").AIModel | null;
+    service_tier?: import("@/types/workflow").ServiceTier | null;
+    reasoning_effort?: import("@/types/workflow").ReasoningEffort | null;
+  }) => Promise<void>;
+  updatingStepIndex?: number | null;
   onRerunStepClick: (stepIndex: number) => void;
   rerunningStep: number | null;
   openPreview: (item: ArtifactGalleryItem) => void;
@@ -214,6 +220,8 @@ export function JobTabs({
   refreshing,
   onCopy,
   onEditStep,
+  onQuickUpdateStep,
+  updatingStepIndex,
   onRerunStepClick,
   rerunningStep,
   openPreview,
@@ -285,6 +293,8 @@ export function JobTabs({
             onResubmit={onResubmit}
             resubmitting={resubmitting}
             onEditStep={onEditStep}
+            onQuickUpdateStep={onQuickUpdateStep}
+            updatingStepIndex={updatingStepIndex}
             onRerunStepClick={onRerunStepClick}
             rerunningStep={rerunningStep}
             artifactGalleryItems={artifactGalleryItems}

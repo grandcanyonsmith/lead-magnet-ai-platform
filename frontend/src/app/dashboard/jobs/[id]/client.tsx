@@ -32,6 +32,12 @@ import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSi
 import type { ArtifactGalleryItem, Job, JobDurationInfo, JobStepSummary } from "@/types/job";
 import type { WorkflowStep } from "@/types";
 
+type QuickUpdateStepInput = {
+  model?: WorkflowStep["model"] | null;
+  service_tier?: WorkflowStep["service_tier"] | null;
+  reasoning_effort?: WorkflowStep["reasoning_effort"] | null;
+};
+
 // ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
@@ -50,6 +56,7 @@ export default function JobDetailClient() {
   const [stepIndexForRerun, setStepIndexForRerun] = useState<number | null>(
     null,
   );
+  const [updatingStepIndex, setUpdatingStepIndex] = useState<number | null>(null);
 
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -276,6 +283,65 @@ export default function JobDetailClient() {
     }
   };
 
+  const handleQuickUpdateStep = async (
+    stepIndex: number,
+    update: QuickUpdateStepInput,
+  ) => {
+    if (!workflow || !workflow.steps) {
+      toast.error("Unable to update: Workflow data not available");
+      return;
+    }
+
+    const originalStep = workflow.steps[stepIndex];
+    if (!originalStep) {
+      toast.error("Unable to update: Step not found");
+      return;
+    }
+
+    const updatedStep: WorkflowStep = { ...originalStep };
+
+    if (update.model) {
+      updatedStep.model = update.model;
+    }
+
+    if ("service_tier" in update) {
+      if (update.service_tier === null) {
+        delete updatedStep.service_tier;
+      } else if (update.service_tier !== undefined) {
+        updatedStep.service_tier = update.service_tier;
+      }
+    }
+
+    if ("reasoning_effort" in update) {
+      if (update.reasoning_effort === null) {
+        delete updatedStep.reasoning_effort;
+      } else if (update.reasoning_effort !== undefined) {
+        updatedStep.reasoning_effort = update.reasoning_effort;
+      }
+    }
+
+    const updatedSteps = [...workflow.steps];
+    updatedSteps[stepIndex] = updatedStep;
+
+    setUpdatingStepIndex(stepIndex);
+    try {
+      await api.updateWorkflow(workflow.workflow_id, {
+        steps: updatedSteps,
+      });
+      toast.success("Step updated successfully");
+      setStepIndexForRerun(stepIndex);
+      setShowRerunDialog(true);
+      refreshJob().catch((refreshError) => {
+        console.error("Failed to refresh job after step update:", refreshError);
+      });
+    } catch (error) {
+      console.error("Failed to update step:", error);
+      toast.error("Failed to update step. Please try again.");
+    } finally {
+      setUpdatingStepIndex(null);
+    }
+  };
+
   const handleCancelEdit = async () => {
     if (latestStepUpdateRef.current && editingStepIndex !== null) {
       const currentStep = workflow?.steps?.[editingStepIndex];
@@ -453,6 +519,8 @@ export default function JobDetailClient() {
             refreshing={refreshing}
             onCopy={copyToClipboard}
             onEditStep={handleEditStep}
+            onQuickUpdateStep={handleQuickUpdateStep}
+            updatingStepIndex={updatingStepIndex}
             onRerunStepClick={handleRerunStepClick}
             rerunningStep={rerunningStep}
             openPreview={openPreview}
