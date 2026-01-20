@@ -397,7 +397,7 @@ export function ExecutionSteps({
         <SectionCard
           title="Execution timeline"
           description="Track step-by-step progress for this run."
-          className="mt-3 sm:mt-5"
+          className="mt-2 sm:mt-3"
         >
           <EmptyState
             title="No execution steps available"
@@ -415,7 +415,7 @@ export function ExecutionSteps({
       <SectionCard
         title="Execution timeline"
         description="Track step-by-step progress and outputs."
-        className="mt-3 sm:mt-5"
+        className="mt-2 sm:mt-3"
         actions={headerActions}
       >
         <div className="space-y-4">
@@ -485,7 +485,7 @@ export function ExecutionSteps({
                 <div
                   key={stepOrder}
                   id={`execution-step-${stepOrder}`}
-                  className="relative pb-8 last:pb-0 scroll-mt-24"
+                  className="relative pb-6 last:pb-0 scroll-mt-24"
                 >
                   <div
                     className={`absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-background ${
@@ -515,7 +515,7 @@ export function ExecutionSteps({
                       detailsHref={detailsHref}
                     />
                     {variant === "compact" ? (
-                      <div className="border-t border-border/60 px-4 pb-4 pt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <div className="border-t border-border/60 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                         {step.step_type !== "workflow_step" && (
                           <span className="inline-flex items-center gap-2">
                             {step.step_type.replace(/_/g, " ")}

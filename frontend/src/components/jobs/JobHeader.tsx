@@ -99,7 +99,7 @@ export function JobHeader({
       : "");
 
   return (
-    <div className="mb-8 space-y-4">
+    <div className="mb-6 sm:mb-7 space-y-3 sm:space-y-4">
       {error && (
         <div className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-red-700 dark:text-red-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>

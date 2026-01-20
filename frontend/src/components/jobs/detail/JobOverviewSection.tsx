@@ -43,7 +43,7 @@ export function JobOverviewSection({
     ? "group flex w-full flex-col text-left"
     : "group flex w-64 flex-shrink-0 snap-start flex-col text-left";
   const previewSizeClass = isHtmlGroup
-    ? "min-h-[60vh] sm:min-h-[65vh] lg:min-h-[70vh]"
+    ? "min-h-[50vh] sm:min-h-[55vh] lg:min-h-[60vh]"
     : "aspect-[3/4]";
   const outputsAriaLabel = isLogsGroup
     ? "Logs"
@@ -53,9 +53,9 @@ export function JobOverviewSection({
     : `${activeGroup.label.toLowerCase()} outputs`;
 
   return (
-    <section className="mb-4 sm:mb-6 space-y-6">
+    <section className="mb-4 sm:mb-6 space-y-5">
       {showOutputsRow && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {loadingArtifacts && !hasOutputs ? (
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
               {Array.from({ length: 4 }).map((_, index) => (
@@ -70,7 +70,7 @@ export function JobOverviewSection({
               ))}
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <OutputGroupTabs
                   groups={outputGroups}

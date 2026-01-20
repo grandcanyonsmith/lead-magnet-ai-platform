@@ -257,7 +257,7 @@ export function JobTabs({
   }));
 
   return (
-    <section className="mt-6 flex flex-1 min-h-0 flex-col">
+    <section className="mt-4 sm:mt-5 flex flex-1 min-h-0 flex-col">
       <SubHeaderTabs
         tabs={tabs}
         activeId={activeTab}
@@ -267,7 +267,7 @@ export function JobTabs({
         compactMaxVisible={2}
         compactBreakpointPx={420}
       />
-      <div className="min-w-0 pt-2 sm:pt-4 flex flex-1 min-h-0 flex-col overflow-hidden">
+      <div className="min-w-0 pt-2 sm:pt-3 flex flex-1 min-h-0 flex-col overflow-hidden">
         {activeTab === "overview" && (
           <JobSummaryTab
             artifactGalleryItems={artifactGalleryItems}

@@ -243,7 +243,7 @@ export function StepMetaBadges({
   const ContextToggleIcon = showContext ? ChevronUp : ChevronDown;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400">
+    <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400">
       {modelValue !== "Unknown" && (
         <button
           type="button"

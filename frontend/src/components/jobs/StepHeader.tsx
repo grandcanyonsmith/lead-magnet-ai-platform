@@ -48,7 +48,7 @@ export function StepHeader({
   const isPending = status === "pending";
 
   return (
-    <div className="flex flex-col gap-4 p-4 sm:p-5">
+    <div className="flex flex-col gap-3 p-3 sm:p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-4">
           <div className="min-w-0 space-y-1">

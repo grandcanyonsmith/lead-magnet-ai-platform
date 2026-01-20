@@ -15,7 +15,7 @@ export function JobHeaderStats({
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className={`min-w-[160px] px-4 py-3 ${
+            className={`min-w-[150px] px-3 py-2 ${
               stat.highlight ? `border-b-2 ${highlightBorderClassName}` : ""
             }`}
           >
