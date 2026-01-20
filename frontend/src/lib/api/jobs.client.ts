@@ -9,6 +9,7 @@ import {
   JobListParams,
   JobResubmitResponse,
   JobStatusResponse,
+  JobAutoUploadsResponse,
 } from "@/types";
 
 export class JobsClient extends BaseApiClient {
@@ -34,6 +35,10 @@ export class JobsClient extends BaseApiClient {
 
   async getJobStatus(id: string): Promise<JobStatusResponse> {
     return this.get<JobStatusResponse>(`/admin/jobs/${id}/status`);
+  }
+
+  async getJobAutoUploads(jobId: string): Promise<JobAutoUploadsResponse> {
+    return this.get(`/admin/jobs/${jobId}/auto-uploads`);
   }
 
   async resubmitJob(jobId: string): Promise<JobResubmitResponse> {

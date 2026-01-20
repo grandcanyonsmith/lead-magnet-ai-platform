@@ -136,7 +136,7 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
   const fileName =
     item.artifact?.file_name ||
     item.artifact?.artifact_name ||
-    item.url ||
+    (item.kind === "autoUpload" ? item.label : item.url) ||
     item.label ||
     "Artifact";
   const [openingJobOutput, setOpeningJobOutput] = useState(false);
@@ -193,7 +193,8 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
   const isImage =
     item.kind === "imageUrl" ||
     item.kind === "imageArtifact" ||
-    item.artifact?.content_type?.startsWith("image/");
+    item.artifact?.content_type?.startsWith("image/") ||
+    /\.(png|jpe?g|gif|webp|svg)$/i.test(fileName);
 
   const isCode =
     item.artifact?.content_type === "text/html" ||

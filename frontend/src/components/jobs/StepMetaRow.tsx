@@ -514,7 +514,7 @@ export function StepMetaRow({
     JSON.stringify(normalizeImageSettings(draftImageSettings)) !==
     JSON.stringify(normalizeImageSettings(imageSettings));
   const modelBadgeClass = [
-    "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium border shadow-sm transition-colors group",
+    "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium border shadow-sm transition-colors cursor-pointer group",
     showModelDetails
       ? "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/70 dark:text-purple-100 dark:border-purple-700/70"
       : "bg-purple-50/60 text-purple-700 border-purple-200/70 hover:bg-purple-100 dark:bg-purple-900/40 dark:text-purple-200 dark:border-purple-800/60 dark:hover:bg-purple-900/60",
@@ -532,7 +532,7 @@ export function StepMetaRow({
     { label: "Effort", value: reasoningLabelValue, muted: reasoningValue === "auto" },
   ];
   const contextButtonClass = [
-    "inline-flex items-center gap-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded-md border whitespace-nowrap transition-colors group",
+    "inline-flex items-center gap-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded-md border whitespace-nowrap transition-colors cursor-pointer group",
     showContext
       ? "bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-900/60 dark:text-teal-100 dark:border-teal-700/60"
       : "bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-200 dark:border-teal-800/60 dark:hover:bg-teal-900/50",

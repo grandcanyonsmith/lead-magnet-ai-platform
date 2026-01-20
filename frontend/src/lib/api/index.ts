@@ -185,6 +185,10 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.jobs.getJobStatus(id);
   }
 
+  async getJobAutoUploads(jobId: string) {
+    return this.jobs.getJobAutoUploads(jobId);
+  }
+
   async resubmitJob(jobId: string) {
     return this.jobs.resubmitJob(jobId);
   }

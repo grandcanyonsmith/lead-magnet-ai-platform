@@ -47,6 +47,21 @@ export class ApiStack extends cdk.Stack {
     // Grant S3 permissions
     grantS3Permissions(lambdaRole, props.artifactsBucket);
 
+    const shellExecutorUploadBucketName =
+      (process.env.SHELL_EXECUTOR_UPLOAD_BUCKET || "coursecreator360-rich-snippet-booster").trim();
+    if (shellExecutorUploadBucketName) {
+      lambdaRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+        actions: ["s3:GetBucketLocation", "s3:ListBucket", "s3:GetObject"],
+          resources: [
+            `arn:aws:s3:::${shellExecutorUploadBucketName}`,
+            `arn:aws:s3:::${shellExecutorUploadBucketName}/*`,
+          ],
+        }),
+      );
+    }
+
     // Shell executor permissions: allow API Lambda to invoke the executor Lambda directly
     if (props.shellExecutor) {
       const shellFunction = lambda.Function.fromFunctionAttributes(this, 'ShellExecutorFunc', {
@@ -154,6 +169,14 @@ export class ApiStack extends cdk.Stack {
         [ENV_VAR_NAMES.SHELL_TOOL_IP_LIMIT_PER_HOUR]: process.env.SHELL_TOOL_IP_LIMIT_PER_HOUR || '10',
         [ENV_VAR_NAMES.SHELL_TOOL_MAX_IN_FLIGHT]: process.env.SHELL_TOOL_MAX_IN_FLIGHT || '5',
         [ENV_VAR_NAMES.SHELL_TOOL_QUEUE_WAIT_MS]: process.env.SHELL_TOOL_QUEUE_WAIT_MS || '0',
+        [ENV_VAR_NAMES.SHELL_EXECUTOR_UPLOAD_MODE]: process.env.SHELL_EXECUTOR_UPLOAD_MODE || "dist",
+        [ENV_VAR_NAMES.SHELL_EXECUTOR_UPLOAD_BUCKET]:
+          process.env.SHELL_EXECUTOR_UPLOAD_BUCKET || "coursecreator360-rich-snippet-booster",
+        [ENV_VAR_NAMES.SHELL_EXECUTOR_UPLOAD_PREFIX]: process.env.SHELL_EXECUTOR_UPLOAD_PREFIX || "",
+        [ENV_VAR_NAMES.SHELL_EXECUTOR_UPLOAD_PREFIX_TEMPLATE]:
+          process.env.SHELL_EXECUTOR_UPLOAD_PREFIX_TEMPLATE || "jobs/{tenant_id}/{job_id}/",
+        [ENV_VAR_NAMES.SHELL_EXECUTOR_UPLOAD_DIST_SUBDIR]:
+          process.env.SHELL_EXECUTOR_UPLOAD_DIST_SUBDIR || "dist",
         ...(props.shellExecutor ? {
           [ENV_VAR_NAMES.SHELL_EXECUTOR_FUNCTION_NAME]: props.shellExecutor.functionName,
         } : {}),

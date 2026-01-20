@@ -1,6 +1,11 @@
 import type { ArtifactGalleryItem } from "@/types/job";
 
-export type OutputGroupKey = "step_output" | "image" | "html" | "logs";
+export type OutputGroupKey =
+  | "step_output"
+  | "image"
+  | "html"
+  | "auto_uploads"
+  | "logs";
 
 export interface OutputGroupMeta {
   key: OutputGroupKey;
@@ -22,6 +27,7 @@ export interface OutputPreviewMeta {
 
 const OUTPUT_GROUP_ORDER: OutputGroupKey[] = [
   "html",
+  "auto_uploads",
   "image",
   "step_output",
   "logs",
@@ -32,6 +38,11 @@ const OUTPUT_GROUP_META: Record<OutputGroupKey, Omit<OutputGroupMeta, "key">> = 
     label: "HTML",
     badgeClassName:
       "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200",
+  },
+  auto_uploads: {
+    label: "Auto Uploads",
+    badgeClassName:
+      "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-200",
   },
   image: {
     label: "Images",
@@ -54,6 +65,7 @@ const TYPE_DESCRIPTIONS_BY_GROUP: Record<OutputGroupKey, string[]> = {
   step_output: ["step output", "step outputs", "output", "outputs"],
   image: ["image", "images"],
   html: ["html", "html output", "html outputs", "html final", "final html"],
+  auto_uploads: ["auto upload", "auto uploads", "auto"],
   logs: ["log", "logs"],
 };
 
@@ -116,6 +128,7 @@ const isHtmlOutput = (item: ArtifactGalleryItem) => {
 };
 
 export const getOutputGroupKey = (item: ArtifactGalleryItem): OutputGroupKey => {
+  if (item.kind === "autoUpload") return "auto_uploads";
   if (isLogOutput(item)) return "logs";
   if (isImageOutput(item)) return "image";
   if (isHtmlOutput(item)) return "html";
@@ -134,6 +147,7 @@ export const buildOutputGroups = (
     step_output: [],
     image: [],
     html: [],
+    auto_uploads: [],
     logs: [],
   };
 

@@ -45,6 +45,7 @@ import {
   JobListParams,
   JobResubmitResponse,
   JobStatusResponse,
+  JobAutoUploadsResponse,
 } from "./job";
 import { Artifact, ArtifactListResponse, ArtifactListParams } from "./artifact";
 import { Notification, NotificationListResponse } from "./notification";
@@ -98,6 +99,7 @@ export interface ApiClient {
   getJob(id: string): Promise<Job>;
   getJobStatus(id: string): Promise<JobStatusResponse>;
   resubmitJob(jobId: string): Promise<JobResubmitResponse>;
+  getJobAutoUploads(jobId: string): Promise<JobAutoUploadsResponse>;
 
   // Artifacts
   getArtifacts(params?: ArtifactListParams): Promise<ArtifactListResponse>;

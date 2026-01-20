@@ -21,6 +21,7 @@ import type {
   JobListParams,
   JobResubmitResponse,
   ExecutionStep,
+  JobAutoUploadsResponse,
   Template,
   TemplateListResponse,
   TemplateCreateRequest,
@@ -333,6 +334,13 @@ export const jobContracts = {
     description: "Fetch rendered job document (HTML/Markdown).",
     docs: "docs/contracts/README.md#jobs--execution",
     __types: defineTypes<void, void, JobsDocumentResponse>(),
+  },
+  autoUploads: {
+    method: "GET",
+    path: "/admin/jobs/:id/auto-uploads",
+    description: "List shell executor auto-uploaded files for a job.",
+    docs: "docs/contracts/README.md#jobs--execution",
+    __types: defineTypes<void, void, JobAutoUploadsResponse>(),
   },
 } satisfies Record<string, ApiEndpointContract<any, any, any>>;
 

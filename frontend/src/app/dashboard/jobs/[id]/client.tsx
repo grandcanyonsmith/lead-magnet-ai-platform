@@ -8,6 +8,7 @@ import { useJobDetail } from "@/hooks/useJobDetail";
 import { useJobExecutionSteps } from "@/hooks/useJobExecutionSteps";
 import { useMergedSteps } from "@/hooks/useMergedSteps";
 import { useImageArtifacts } from "@/hooks/useImageArtifacts";
+import { useJobAutoUploads } from "@/hooks/useJobAutoUploads";
 import { usePreviewModal } from "@/hooks/usePreviewModal";
 
 import { api } from "@/lib/api";
@@ -108,6 +109,15 @@ export default function JobDetailClient() {
     enabled: shouldLoadExecutionSteps,
   });
 
+  const {
+    items: autoUploads,
+    loading: loadingAutoUploads,
+  } = useJobAutoUploads({
+    jobId: job?.job_id,
+    enabled: shouldLoadExecutionSteps,
+    jobStatus: job?.status,
+  });
+
   const buildTabHref = (tabId: JobTabId) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tabId);
@@ -141,8 +151,15 @@ export default function JobDetailClient() {
       job: jobOutputContext,
       artifacts: jobArtifacts,
       steps: mergedSteps,
+      autoUploads,
     });
-  }, [jobArtifacts, mergedSteps, shouldLoadExecutionSteps, jobOutputContext]);
+  }, [
+    autoUploads,
+    jobArtifacts,
+    mergedSteps,
+    shouldLoadExecutionSteps,
+    jobOutputContext,
+  ]);
 
   const stepsSummary = useMemo<JobStepSummary>(
     () => summarizeStepProgress(mergedSteps),
@@ -195,6 +212,7 @@ export default function JobDetailClient() {
     return sum;
   }, [job?.execution_steps, shouldLoadExecutionSteps]);
 
+  const loadingOutputs = loadingArtifacts || loadingAutoUploads;
   const jobDuration = useMemo(() => getJobDuration(job), [job]);
 
   const previewObjectUrl =
@@ -497,7 +515,7 @@ export default function JobDetailClient() {
           stepsSummary={stepsSummary}
           jobDuration={jobDuration}
           totalCost={totalCost}
-          loadingArtifacts={loadingArtifacts}
+          loadingArtifacts={loadingOutputs}
           onRefresh={refreshJob}
           refreshing={refreshing}
         />
@@ -570,7 +588,7 @@ export default function JobDetailClient() {
             collapseAllSteps={collapseAll}
             executionStepsError={executionStepsError}
             imageArtifactsByStep={imageArtifactsByStep}
-            loadingArtifacts={loadingArtifacts}
+            loadingArtifacts={loadingOutputs}
             submission={submission}
             onResubmit={handleResubmitClick}
             resubmitting={resubmitting}

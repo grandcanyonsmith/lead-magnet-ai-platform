@@ -77,6 +77,11 @@ export class EnvConfig {
   readonly shellToolQueueWaitMs: number;
 
   readonly shellExecutorFunctionName: string | undefined;
+  readonly shellExecutorUploadMode: string | undefined;
+  readonly shellExecutorUploadBucket: string | undefined;
+  readonly shellExecutorUploadPrefix: string | undefined;
+  readonly shellExecutorUploadPrefixTemplate: string | undefined;
+  readonly shellExecutorUploadDistSubdir: string | undefined;
 
   // Shell Executor (ECS Fargate) Configuration
   readonly shellExecutorResultsBucket: string | undefined;
@@ -296,6 +301,15 @@ export class EnvConfig {
       : 0;
 
     this.shellExecutorFunctionName = (this.getOptional("SHELL_EXECUTOR_FUNCTION_NAME") || "").trim() || undefined;
+    this.shellExecutorUploadMode = (this.getOptional("SHELL_EXECUTOR_UPLOAD_MODE") || "").trim() || undefined;
+    this.shellExecutorUploadBucket = (this.getOptional("SHELL_EXECUTOR_UPLOAD_BUCKET") || "").trim() || undefined;
+    this.shellExecutorUploadPrefix = (this.getOptional("SHELL_EXECUTOR_UPLOAD_PREFIX") || "").trim() || undefined;
+    this.shellExecutorUploadPrefixTemplate = (
+      this.getOptional("SHELL_EXECUTOR_UPLOAD_PREFIX_TEMPLATE") ||
+      "jobs/{tenant_id}/{job_id}/"
+    ).trim() || undefined;
+    const uploadDistSubdirRaw = (this.getOptional("SHELL_EXECUTOR_UPLOAD_DIST_SUBDIR") || "").trim();
+    this.shellExecutorUploadDistSubdir = uploadDistSubdirRaw || "dist";
 
     // Shell Executor (ECS Fargate) Configuration
     this.shellExecutorResultsBucket = (this.getOptional("SHELL_EXECUTOR_RESULTS_BUCKET") || "").trim() || undefined;
@@ -371,6 +385,11 @@ export class EnvConfig {
         warnings.push(
           "SHELL_EXECUTOR_FUNCTION_NAME is not set (shell tool enabled)",
         );
+    }
+    if (this.shellExecutorUploadMode && !this.shellExecutorUploadBucket) {
+      warnings.push(
+        "SHELL_EXECUTOR_UPLOAD_BUCKET is not set (shell executor uploads enabled)",
+      );
     }
 
     // Log warnings but don't fail

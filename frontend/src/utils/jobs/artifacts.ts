@@ -1,5 +1,10 @@
 import type { Artifact } from "@/types/artifact";
-import type { ArtifactGalleryItem, Job, MergedStep } from "@/types/job";
+import type {
+  ArtifactGalleryItem,
+  Job,
+  JobAutoUploadItem,
+  MergedStep,
+} from "@/types/job";
 import { formatStepLabel } from "./steps";
 
 function normalizeUrlKey(url: string | null | undefined): string | null {
@@ -19,12 +24,14 @@ interface BuildArtifactGalleryItemsArgs {
   job?: Pick<Job, "job_id" | "output_url" | "completed_at" | "failed_at"> | null;
   artifacts?: Artifact[] | null;
   steps?: MergedStep[] | null;
+  autoUploads?: JobAutoUploadItem[] | null;
 }
 
 export function buildArtifactGalleryItems({
   job,
   artifacts,
   steps,
+  autoUploads,
 }: BuildArtifactGalleryItemsArgs): ArtifactGalleryItem[] {
   const items: ArtifactGalleryItem[] = [];
   const seen = new Set<string>();
@@ -127,6 +134,35 @@ export function buildArtifactGalleryItems({
         description: "Generated image URL",
         sortOrder,
       });
+    });
+  });
+
+  autoUploads?.forEach((upload, index) => {
+    const normalizedObjectUrl = normalizeUrlKey(upload.object_url);
+    if (normalizedObjectUrl && seen.has(normalizedObjectUrl)) {
+      return;
+    }
+
+    if (normalizedObjectUrl) {
+      seen.add(normalizedObjectUrl);
+    }
+
+    const fileName =
+      upload.file_name ||
+      upload.key.split("/").pop() ||
+      "Auto upload";
+    const createdTimestamp = upload.last_modified
+      ? new Date(upload.last_modified).getTime()
+      : undefined;
+    const fallbackOrder = Number.MAX_SAFE_INTEGER - 1000 + index;
+
+    items.push({
+      id: `auto-upload-${upload.key}`,
+      kind: "autoUpload",
+      url: upload.object_url,
+      label: fileName,
+      description: "Auto upload",
+      sortOrder: createdTimestamp ?? fallbackOrder,
     });
   });
 

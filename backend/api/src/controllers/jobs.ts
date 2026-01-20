@@ -8,6 +8,7 @@ import { env } from "../utils/env";
 import { jobExecutionService } from "../services/jobExecutionService";
 import { jobService } from "../services/jobs/jobService";
 import { submissionPreviewService } from "../services/jobs/submissionPreviewService";
+import { shellExecutorUploadsService } from "../services/shellExecutorUploadsService";
 
 const JOBS_TABLE = env.jobsTable;
 const SUBMISSIONS_TABLE = env.submissionsTable;
@@ -68,6 +69,41 @@ class JobsController {
         failed_at: job.failed_at || null,
         live_step: job.live_step ?? null,
       },
+    };
+  }
+
+  async getAutoUploads(
+    tenantId: string,
+    jobId: string,
+    query: Record<string, any>,
+  ): Promise<RouteResponse> {
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+
+    if (!job) {
+      throw new ApiError("Job not found", 404);
+    }
+
+    if (job.tenant_id !== tenantId) {
+      throw new ApiError(
+        "You don't have permission to access this lead magnet",
+        403,
+      );
+    }
+
+    const subdir =
+      typeof query?.subdir === "string" && query.subdir.trim()
+        ? query.subdir.trim()
+        : undefined;
+
+    const result = await shellExecutorUploadsService.listJobUploads({
+      tenantId: job.tenant_id,
+      jobId: job.job_id,
+      subdir,
+    });
+
+    return {
+      statusCode: 200,
+      body: result,
     };
   }
 

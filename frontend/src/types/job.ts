@@ -145,11 +145,27 @@ export interface JobDurationInfo {
   isLive: boolean;
 }
 
+export interface JobAutoUploadItem {
+  key: string;
+  file_name: string;
+  size_bytes: number;
+  last_modified?: string;
+  object_url: string;
+}
+
+export interface JobAutoUploadsResponse {
+  bucket: string | null;
+  prefix: string | null;
+  items: JobAutoUploadItem[];
+  count: number;
+}
+
 export type ArtifactGalleryItemKind =
   | "jobOutput"
   | "artifact"
   | "imageArtifact"
-  | "imageUrl";
+  | "imageUrl"
+  | "autoUpload";
 
 export interface ArtifactGalleryItem {
   id: string;
