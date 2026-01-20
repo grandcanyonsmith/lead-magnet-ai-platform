@@ -1,6 +1,7 @@
 import { jobsController } from "../controllers/jobs";
 import { executionStepsController } from "../controllers/executionStepsController";
 import { jobRerunController } from "../controllers/jobRerunController";
+import { jobLogsController } from "../controllers/jobLogsController";
 import { router } from "./router";
 import { ApiError } from "../utils/errors";
 import { logger } from "../utils/logger";
@@ -127,6 +128,33 @@ export function registerJobRoutes(): void {
     "/admin/jobs/:id/status",
     async (params, _body, _query, tenantId) => {
       return await jobsController.getStatus(tenantId!, params.id);
+    },
+  );
+
+  // Get job logs (for streaming)
+  router.register(
+    "GET",
+    "/admin/jobs/:id/logs",
+    async (params, _body, query, tenantId) => {
+      logger.info("[Router] Matched /admin/jobs/:id/logs route", {
+        id: params.id,
+      });
+      const since = query.since ? parseInt(query.since) : undefined;
+      const limit = query.limit ? parseInt(query.limit) : 100;
+      return await jobLogsController.getLogs(tenantId!, params.id, since, limit);
+    },
+  );
+
+  // Stream job logs (SSE format)
+  router.register(
+    "GET",
+    "/admin/jobs/:id/logs/stream",
+    async (params, _body, query, tenantId) => {
+      logger.info("[Router] Matched /admin/jobs/:id/logs/stream route", {
+        id: params.id,
+      });
+      const since = query.since ? parseInt(query.since) : undefined;
+      return await jobLogsController.streamLogs(tenantId!, params.id, since);
     },
   );
 }

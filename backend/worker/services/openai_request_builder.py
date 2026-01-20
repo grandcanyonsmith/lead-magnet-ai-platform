@@ -226,6 +226,26 @@ class OpenAIRequestBuilder:
                     else:
                         logger.debug(f"Filtering out incompatible tool '{tool_type}' when computer_use_preview is present")
                 tools = filtered_tools
+        
+        # Ensure code interpreter outputs are included when streaming.
+        # This allows stdout/stderr/logs to be surfaced in streamed events.
+        include_fields: List[str] = []
+        if "include" in params and isinstance(params.get("include"), list):
+            include_fields = list(params.get("include") or [])
+        has_code_interpreter = any(
+            (isinstance(tool, dict) and tool.get("type") == "code_interpreter")
+            or (isinstance(tool, str) and tool == "code_interpreter")
+            for tool in (tools or [])
+        )
+        if has_code_interpreter:
+            include_fields.append("code_interpreter_call.outputs")
+        if include_fields:
+            # Deduplicate while preserving order
+            deduped: List[str] = []
+            for item in include_fields:
+                if isinstance(item, str) and item not in deduped:
+                    deduped.append(item)
+            params["include"] = deduped
             
         # Clean tools before sending to OpenAI API
         cleaned_tools = ToolBuilder.clean_tools(tools)

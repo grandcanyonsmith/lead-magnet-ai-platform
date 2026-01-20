@@ -157,10 +157,10 @@ class AIStepProcessor:
         # Store usage record
         self.usage_service.store_usage_record(tenant_id, job_id, usage_info)
         
+        safe_step_name = step_name.lower().replace(" ", "_")
         shell_executor_logs = response_details.get("shell_executor_logs")
         if shell_executor_logs:
             try:
-                safe_step_name = step_name.lower().replace(" ", "_")
                 log_payload = {
                     "job_id": job_id,
                     "tenant_id": tenant_id,
@@ -182,6 +182,38 @@ class AIStepProcessor:
             except Exception as log_error:
                 logger.warning(
                     "[AIStepProcessor] Failed to store shell executor logs artifact",
+                    extra={
+                        "job_id": job_id,
+                        "step_index": step_index,
+                        "error": str(log_error),
+                    },
+                    exc_info=True,
+                )
+        
+        code_executor_logs = response_details.get("code_executor_logs")
+        if code_executor_logs:
+            try:
+                log_payload = {
+                    "job_id": job_id,
+                    "tenant_id": tenant_id,
+                    "step_index": step_index,
+                    "step_order": step_index + 1,
+                    "step_name": step_name,
+                    "model": step_model,
+                    "logs": code_executor_logs,
+                }
+                log_content = json.dumps(log_payload, indent=2)
+                log_artifact_id = self.artifact_service.store_artifact(
+                    tenant_id=tenant_id,
+                    job_id=job_id,
+                    artifact_type="code_executor_logs",
+                    content=log_content,
+                    filename=f"step_{step_index + 1}_{safe_step_name}_code_executor_logs.json",
+                )
+                response_details["code_executor_logs_artifact_id"] = log_artifact_id
+            except Exception as log_error:
+                logger.warning(
+                    "[AIStepProcessor] Failed to store code executor logs artifact",
                     extra={
                         "job_id": job_id,
                         "step_index": step_index,

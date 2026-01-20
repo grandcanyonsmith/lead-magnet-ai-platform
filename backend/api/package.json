@@ -18,6 +18,7 @@
     "dev:watch": "npm run watch & npm run dev"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch-logs": "^3.470.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.470.0",
     "@aws-sdk/client-dynamodb": "^3.470.0",
     "@aws-sdk/client-ecs": "^3.470.0",

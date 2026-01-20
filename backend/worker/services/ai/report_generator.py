@@ -286,6 +286,33 @@ class ReportGenerator:
             })
 
             try:
+                step_order = (step_index + 1) if isinstance(step_index, int) else None
+                live_step_enabled = (
+                    self.db_service is not None
+                    and isinstance(job_id, str)
+                    and job_id.strip() != ""
+                    and isinstance(step_order, int)
+                    and step_order > 0
+                )
+
+                def live_step_callback(payload: Dict[str, Any]) -> None:
+                    if not live_step_enabled:
+                        return
+                    try:
+                        live_step: Dict[str, Any] = {
+                            "step_order": step_order,
+                            "output_text": payload.get("output_text", "") or "",
+                            "updated_at": datetime.utcnow().isoformat(),
+                            "status": payload.get("status", "streaming"),
+                        }
+                        if payload.get("truncated"):
+                            live_step["truncated"] = True
+                        if payload.get("error"):
+                            live_step["error"] = payload.get("error")
+                        self.db_service.update_job(job_id, {"live_step": live_step})
+                    except Exception:
+                        logger.debug("[ReportGenerator] Failed to persist shell live_step", exc_info=True)
+
                 # Build initial API params (first request)
                 params = self.openai_client.build_api_params(
                     model=model,
@@ -325,6 +352,7 @@ class ReportGenerator:
                     job_id=job_id,
                     step_index=step_index,
                     shell_log_collector=shell_executor_logs,
+                    live_step_callback=live_step_callback if live_step_enabled else None,
                 )
 
                 # Process final response
@@ -479,26 +507,45 @@ class ReportGenerator:
         # This is best-effort and intentionally throttled to avoid excessive writes.
         max_chars = 100_000
         output_so_far = ""
+        tool_log_so_far = ""
         last_persist_ts = 0.0
         last_persist_len = 0
+        has_code_interpreter = False
+        code_log_started = False
+        code_delta_buffer = ""
+        code_delta_flush_at = 0.0
+        code_delta_flush_interval = 0.2
 
         def _truncate(text: str) -> Tuple[str, bool]:
             if len(text) <= max_chars:
                 return text, False
             return text[-max_chars:], True
 
+        def _compose_preview() -> str:
+            if tool_log_so_far:
+                if output_so_far:
+                    return f"{output_so_far}\n\n[Tool output]\n{tool_log_so_far}"
+                return tool_log_so_far
+            return output_so_far
+
+        def _get_attr(obj: Any, key: str) -> Any:
+            if isinstance(obj, dict):
+                return obj.get(key)
+            return getattr(obj, key, None)
+
         def _persist(status: str = "streaming", error: Optional[str] = None, force: bool = False) -> None:
             nonlocal last_persist_ts, last_persist_len
             if not self.db_service:
                 return
+            preview_text = _compose_preview()
             now = time.time()
             if not force:
-                if (now - last_persist_ts) < 0.5 and (len(output_so_far) - last_persist_len) < 1024:
+                if (now - last_persist_ts) < 0.5 and (len(preview_text) - last_persist_len) < 1024:
                     return
             last_persist_ts = now
-            last_persist_len = len(output_so_far)
+            last_persist_len = len(preview_text)
 
-            truncated_text, truncated = _truncate(output_so_far)
+            truncated_text, truncated = _truncate(preview_text)
             live_step: Dict[str, Any] = {
                 "step_order": step_order,
                 "output_text": truncated_text,
@@ -539,11 +586,22 @@ class ReportGenerator:
             else dict(params)
         )
 
+        tools_param = api_params.get("tools")
+        if isinstance(tools_param, list):
+            for tool in tools_param:
+                if isinstance(tool, dict) and tool.get("type") == "code_interpreter":
+                    has_code_interpreter = True
+                    break
+
         max_stream_attempts = 2
         for attempt in range(1, max_stream_attempts + 1):
             if attempt > 1:
                 # Restart accumulation on retry to avoid duplicated output in the live preview.
                 output_so_far = ""
+                tool_log_so_far = ""
+                code_log_started = False
+                code_delta_buffer = ""
+                code_delta_flush_at = 0.0
                 _persist(status="retrying", error="Retrying OpenAI stream…", force=True)
 
             try:
@@ -572,6 +630,91 @@ class ReportGenerator:
                                 continue
                             output_so_far += delta
                             _persist(status="streaming", force=False)
+                            continue
+
+                        if not has_code_interpreter:
+                            continue
+
+                        if ev_type == "response.code_interpreter_call_code.delta":
+                            delta = getattr(ev, "delta", "") or ""
+                            if not delta:
+                                continue
+                            if not code_log_started:
+                                code_log_started = True
+                                tool_log_so_far += "[Code interpreter]\n"
+                            code_delta_buffer += delta
+                            now = time.time()
+                            should_flush = (
+                                "\n" in code_delta_buffer
+                                or len(code_delta_buffer) >= 160
+                                or (now - code_delta_flush_at) >= code_delta_flush_interval
+                            )
+                            if should_flush:
+                                tool_log_so_far += code_delta_buffer
+                                code_delta_buffer = ""
+                                code_delta_flush_at = now
+                                _persist(status="streaming", force=False)
+                            continue
+
+                        if ev_type == "response.code_interpreter_call_code.done":
+                            if code_delta_buffer:
+                                tool_log_so_far += code_delta_buffer
+                                code_delta_buffer = ""
+                            tool_log_so_far += "\n"
+                            _persist(status="streaming", force=False)
+                            continue
+
+                        if ev_type == "response.code_interpreter_call.in_progress":
+                            tool_log_so_far += "\n[Code interpreter] preparing...\n"
+                            _persist(status="streaming", force=False)
+                            continue
+
+                        if ev_type == "response.code_interpreter_call.interpreting":
+                            tool_log_so_far += "\n[Code interpreter] running...\n"
+                            _persist(status="streaming", force=False)
+                            continue
+
+                        if ev_type == "response.code_interpreter_call.completed":
+                            tool_log_so_far += "\n[Code interpreter] completed.\n"
+                            _persist(status="streaming", force=False)
+                            continue
+
+                        if ev_type == "response.output_item.added":
+                            item = _get_attr(ev, "item")
+                            item_type = _get_attr(item, "type")
+                            if item_type == "code_interpreter_call":
+                                tool_log_so_far += "\n[Code interpreter] call started.\n"
+                                _persist(status="streaming", force=False)
+                            continue
+
+                        if ev_type == "response.output_item.done":
+                            item = _get_attr(ev, "item")
+                            item_type = _get_attr(item, "type")
+                            if item_type != "code_interpreter_call":
+                                continue
+                            outputs = _get_attr(item, "outputs") or []
+                            if isinstance(outputs, list):
+                                for output in outputs:
+                                    output_type = _get_attr(output, "type")
+                                    if output_type == "logs":
+                                        logs = _get_attr(output, "logs") or ""
+                                        if logs:
+                                            tool_log_so_far += "\n[Code interpreter logs]\n"
+                                            tool_log_so_far += str(logs)
+                                            if not str(logs).endswith("\n"):
+                                                tool_log_so_far += "\n"
+                                    elif output_type == "error":
+                                        error_message = _get_attr(output, "error") or ""
+                                        if error_message:
+                                            tool_log_so_far += "\n[Code interpreter error]\n"
+                                            tool_log_so_far += str(error_message)
+                                            if not str(error_message).endswith("\n"):
+                                                tool_log_so_far += "\n"
+                            _persist(status="streaming", force=False)
+                            continue
+                    if code_delta_buffer:
+                        tool_log_so_far += code_delta_buffer
+                        code_delta_buffer = ""
                     response = stream.get_final_response()
 
                 _persist(status="final", force=True)

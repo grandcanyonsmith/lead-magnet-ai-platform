@@ -114,6 +114,8 @@ class OpenAIResponseService:
             step_instructions=step_instructions or instructions
         )
         
+        code_executor_logs = OpenAIResponseService._extract_code_executor_logs(response)
+        
         # Serialize full raw API response object
         raw_api_response = OpenAIResponseService._serialize_response(response)
         
@@ -129,6 +131,9 @@ class OpenAIResponseService:
             # Store full raw API response (exact what was received from OpenAI)
             "raw_api_response": raw_api_response
         }
+        
+        if code_executor_logs:
+            response_details["code_executor_logs"] = code_executor_logs
         
         return content, usage_info, request_details, response_details
 
@@ -225,6 +230,117 @@ class OpenAIResponseService:
             logger.error(f"[OpenAI Response Service] Error processing base64 images: {e}", exc_info=True)
             # Return original content on error
             return content, []
+    
+    @staticmethod
+    def _extract_code_executor_logs(response: Any) -> List[Dict[str, Any]]:
+        """
+        Extract code interpreter logs from Responses API output items.
+        """
+        output_items = getattr(response, "output", None)
+        if output_items is None and isinstance(response, dict):
+            output_items = response.get("output")
+        if not isinstance(output_items, list):
+            return []
+        
+        def _get_attr(obj: Any, key: str) -> Any:
+            if isinstance(obj, dict):
+                return obj.get(key)
+            return getattr(obj, key, None)
+        
+        def _normalize_type(value: Any) -> Optional[str]:
+            if value is None:
+                return None
+            if isinstance(value, str):
+                return value
+            if hasattr(value, "value"):
+                try:
+                    return str(value.value)
+                except Exception:
+                    return str(value)
+            return str(value)
+        
+        def _stringify(value: Any) -> Optional[str]:
+            if value is None:
+                return None
+            if isinstance(value, str):
+                return value
+            try:
+                return json.dumps(value)
+            except Exception:
+                return str(value)
+        
+        logs: List[Dict[str, Any]] = []
+        
+        for item in output_items:
+            item_type = _normalize_type(_get_attr(item, "type"))
+            tool_name = None
+            if item_type in ("tool_call", "tool_calls", "function_call"):
+                tool_name = _normalize_type(
+                    _get_attr(item, "tool_name")
+                    or _get_attr(item, "name")
+                    or _get_attr(_get_attr(item, "function"), "name")
+                )
+                if tool_name != "code_interpreter":
+                    continue
+            elif item_type != "code_interpreter_call":
+                continue
+            
+            call_id = _get_attr(item, "call_id") or _get_attr(item, "id")
+            status = _get_attr(item, "status")
+            code = (
+                _get_attr(item, "code")
+                or _get_attr(item, "input")
+                or _get_attr(item, "script")
+            )
+            
+            outputs_raw = _get_attr(item, "outputs") or _get_attr(item, "output") or []
+            if isinstance(outputs_raw, dict):
+                outputs_raw = [outputs_raw]
+            elif not isinstance(outputs_raw, list):
+                outputs_raw = [outputs_raw] if outputs_raw else []
+            
+            outputs: List[Dict[str, Any]] = []
+            for output in outputs_raw:
+                output_type = _normalize_type(_get_attr(output, "type"))
+                entry: Dict[str, Any] = {}
+                if output_type:
+                    entry["type"] = output_type
+                
+                if output_type == "logs":
+                    logs_text = (
+                        _get_attr(output, "logs")
+                        or _get_attr(output, "text")
+                        or _get_attr(output, "stdout")
+                    )
+                    if logs_text is not None:
+                        entry["logs"] = _stringify(logs_text)
+                elif output_type == "error":
+                    error_text = (
+                        _get_attr(output, "error")
+                        or _get_attr(output, "message")
+                        or _get_attr(output, "stderr")
+                    )
+                    if error_text is not None:
+                        entry["error"] = _stringify(error_text)
+                else:
+                    image_url = _get_attr(output, "image_url") or _get_attr(output, "url")
+                    if image_url:
+                        entry["image_url"] = _stringify(image_url)
+                    if not entry:
+                        entry["data"] = _stringify(output)
+                
+                if entry:
+                    outputs.append(entry)
+            
+            logs.append({
+                "call_id": _stringify(call_id) if call_id is not None else None,
+                "status": _stringify(status) if status is not None else None,
+                "code": _stringify(code) if code is not None else None,
+                "tool_name": tool_name,
+                "outputs": outputs,
+            })
+        
+        return logs
 
     @staticmethod
     def _serialize_response(response: Any) -> Dict[str, Any]:
