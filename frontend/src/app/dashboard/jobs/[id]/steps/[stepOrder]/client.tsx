@@ -7,6 +7,7 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   ChevronDownIcon,
+  ChevronRightIcon,
   ChevronUpIcon,
   ClipboardDocumentIcon,
   PencilSquareIcon,
@@ -42,7 +43,7 @@ import {
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
 
-import type { MergedStep } from "@/types/job";
+import type { MergedStep, StepStatus } from "@/types/job";
 import type { Artifact } from "@/types/artifact";
 import type { WorkflowStep } from "@/types";
 
@@ -122,6 +123,12 @@ function abbreviateUrl(url: string, startLength = 28, endLength = 12): string {
   return `${url.slice(0, startLength)}...${url.slice(-endLength)}`;
 }
 
+type Tool = string | { type: string; [key: string]: unknown };
+
+function getToolLabel(tool: Tool): string {
+  return typeof tool === "string" ? tool : tool.type || "unknown";
+}
+
 interface SectionCardProps {
   title: string;
   description?: string;
@@ -180,6 +187,72 @@ function SectionCard({
       )}
     </Disclosure>
   );
+}
+
+interface StepNavCardProps {
+  label: string;
+  direction: "previous" | "next";
+  href?: string | null;
+  step: MergedStep | null;
+  status?: StepStatus | null;
+}
+
+function StepNavCard({
+  label,
+  direction,
+  href,
+  step,
+  status,
+}: StepNavCardProps) {
+  const emptyLabel =
+    direction === "previous" ? "Start of workflow" : "End of workflow";
+  const title = step?.step_name || (step ? `Step ${step.step_order ?? 0}` : "");
+  const subtitle = step?.step_type
+    ? step.step_type.replace(/_/g, " ")
+    : emptyLabel;
+
+  const content = (
+    <div
+      className={`rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card p-3 shadow-sm transition-all ${
+        href
+          ? "hover:border-primary-200 dark:hover:border-primary-800/60 hover:shadow-md"
+          : "opacity-70"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+        <span className="inline-flex items-center gap-1 font-semibold uppercase tracking-wide">
+          {direction === "previous" ? (
+            <ArrowLeftIcon className="h-3.5 w-3.5" />
+          ) : (
+            <ArrowRightIcon className="h-3.5 w-3.5" />
+          )}
+          {label}
+        </span>
+        {status && (
+          <StatusBadge status={status} className="px-2 py-0.5 text-[10px]" />
+        )}
+      </div>
+      <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+        {title || "No step available"}
+      </div>
+      <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 capitalize">
+        {subtitle}
+      </div>
+    </div>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return <div>{content}</div>;
 }
 
 export default function StepDetailClient() {
@@ -413,9 +486,10 @@ export default function StepDetailClient() {
   }
 
   const stepTitle = step.step_name || `Step ${step.step_order ?? stepOrder}`;
-  const heading = `Step ${step.step_order ?? stepOrder}`;
+  const stepLabel = `Step ${step.step_order ?? stepOrder}`;
+  const heading = stepTitle;
   const description = job?.job_id
-    ? `Job ${job.job_id} · ${job.status}`
+    ? `Job ${job.job_id} · ${job.status.replace(/_/g, " ")}`
     : "Execution step details";
 
   const costValue = step.usage_info?.cost_usd;
@@ -428,20 +502,84 @@ export default function StepDetailClient() {
           ? null
           : `$${Number(costValue).toFixed(4)}`;
 
-  const usageRows = [
+  const durationLabel =
+    step.duration_ms !== undefined ? formatDurationMs(step.duration_ms) : null;
+  const startedAtLabel = step.started_at
+    ? formatRelativeTime(step.started_at)
+    : null;
+  const completedAtLabel = step.completed_at
+    ? formatRelativeTime(step.completed_at)
+    : null;
+
+  const promptTokens =
+    step.usage_info?.prompt_tokens ?? step.usage_info?.input_tokens;
+  const completionTokens =
+    step.usage_info?.completion_tokens ?? step.usage_info?.output_tokens;
+  const promptLabel =
     step.usage_info?.prompt_tokens !== undefined
-      ? { label: "Prompt tokens", value: String(step.usage_info.prompt_tokens) }
-      : null,
+      ? "Prompt tokens"
+      : "Input tokens";
+  const completionLabel =
     step.usage_info?.completion_tokens !== undefined
-      ? {
-          label: "Completion tokens",
-          value: String(step.usage_info.completion_tokens),
-        }
+      ? "Completion tokens"
+      : "Output tokens";
+
+  const usageRows = [
+    promptTokens !== undefined
+      ? { label: promptLabel, value: String(promptTokens) }
+      : null,
+    completionTokens !== undefined
+      ? { label: completionLabel, value: String(completionTokens) }
       : null,
     step.usage_info?.total_tokens !== undefined
       ? { label: "Total tokens", value: String(step.usage_info.total_tokens) }
       : null,
   ].filter(Boolean) as { label: string; value: string }[];
+
+  const toolChoice = step.input?.tool_choice ?? step.tool_choice;
+  const rawTools = Array.isArray(step.input?.tools)
+    ? step.input.tools
+    : Array.isArray(step.tools)
+      ? step.tools
+      : [];
+  const toolLabels = Array.from(
+    new Set(
+      rawTools
+        .map((tool) => getToolLabel(tool as Tool))
+        .filter((tool) => tool),
+    ),
+  );
+  const stepTypeLabel = step.step_type
+    ? step.step_type.replace(/_/g, " ")
+    : "workflow step";
+  const totalSteps = sortedSteps.length;
+  const stepPosition = stepIndex >= 0 ? stepIndex + 1 : null;
+  const progressPercent =
+    stepPosition && totalSteps > 0
+      ? Math.round((stepPosition / totalSteps) * 100)
+      : 0;
+  const statsPreview = [
+    durationLabel ? `Duration ${durationLabel}` : null,
+    formattedCost ? `Cost ${formattedCost}` : null,
+    toolLabels.length > 0
+      ? `${toolLabels.length} tool${toolLabels.length === 1 ? "" : "s"}`
+      : null,
+    usageRows.length > 0
+      ? `${usageRows.length} usage metric${
+          usageRows.length === 1 ? "" : "s"
+        }`
+      : "No usage data",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const prevStepStatus = prevStep
+    ? getStepStatus(prevStep, sortedSteps, job?.status)
+    : null;
+  const nextStepStatus = nextStep
+    ? getStepStatus(nextStep, sortedSteps, job?.status)
+    : null;
+  const timelineHref = `${jobHref}#execution-steps-list`;
 
   const isSystemStep =
     step.step_type === "form_submission" || step.step_type === "final_output";
@@ -510,25 +648,67 @@ export default function StepDetailClient() {
 
   return (
     <div className="space-y-6">
+      <nav
+        aria-label="Breadcrumb"
+        className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
+      >
+        <Link
+          href="/dashboard/jobs"
+          className="hover:text-gray-900 dark:hover:text-white"
+        >
+          Jobs
+        </Link>
+        <ChevronRightIcon className="h-3.5 w-3.5" />
+        <Link
+          href={jobHref}
+          className="font-mono text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+        >
+          {job.job_id}
+        </Link>
+        <ChevronRightIcon className="h-3.5 w-3.5" />
+        <span className="font-semibold text-gray-700 dark:text-gray-200">
+          {stepLabel}
+        </span>
+      </nav>
       <PageHeader
         heading={heading}
         description={description}
         bottomContent={
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-1 text-xs font-semibold text-gray-700 dark:text-gray-200">
+                {stepLabel}
+              </span>
               <StatusBadge
                 status={stepStatus}
                 className="px-3 py-1 text-xs"
               />
+              {isLiveStep && (
+                <span className="inline-flex items-center rounded-full border border-blue-200 dark:border-blue-800/50 bg-blue-50/70 dark:bg-blue-900/20 px-3 py-1 text-xs font-semibold text-blue-700 dark:text-blue-200">
+                  Live
+                </span>
+              )}
+              <span className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-3 py-1 text-xs text-gray-600 dark:text-gray-300 capitalize">
+                {stepTypeLabel}
+              </span>
               {step.model && (
                 <span className="inline-flex items-center rounded-full border border-purple-200 dark:border-purple-800/40 bg-purple-50/60 dark:bg-purple-900/20 px-3 py-1 text-xs text-purple-700 dark:text-purple-300">
                   {step.model}
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {stepTitle}
-            </p>
+            {toolLabels.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {toolLabels.map((tool) => (
+                  <span
+                    key={tool}
+                    className="rounded-md border border-primary-100 dark:border-primary-800/40 bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 text-[11px] font-semibold text-primary-700 dark:text-primary-300"
+                  >
+                    {tool}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         }
       >
@@ -569,6 +749,66 @@ export default function StepDetailClient() {
           </Link>
         )}
       </PageHeader>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <StepNavCard
+          label="Previous step"
+          direction="previous"
+          href={prevHref}
+          step={prevStep}
+          status={prevStepStatus}
+        />
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card p-3 shadow-sm">
+          <div className="flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <span className="font-semibold uppercase tracking-wide">Progress</span>
+            {stepPosition !== null && totalSteps > 0 && (
+              <span>
+                {stepPosition} of {totalSteps}
+              </span>
+            )}
+          </div>
+          <div className="mt-2 h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+            <div
+              className="h-2 rounded-full bg-primary-600 transition-all"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+            <span>
+              {startedAtLabel ? `Started ${startedAtLabel}` : "Not started"}
+            </span>
+            <span className="text-right">
+              {durationLabel ? `Duration ${durationLabel}` : "Duration —"}
+            </span>
+            <span>
+              {completedAtLabel
+                ? `Completed ${completedAtLabel}`
+                : job?.status === "processing"
+                  ? "In progress"
+                  : "Not completed"}
+            </span>
+            <span className="text-right">
+              {formattedCost ? `Cost ${formattedCost}` : "Cost —"}
+            </span>
+          </div>
+          <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+            <span>{progressPercent}% complete</span>
+            <Link
+              href={timelineHref}
+              className="font-semibold text-primary-600 hover:text-primary-700"
+            >
+              View full timeline
+            </Link>
+          </div>
+        </div>
+        <StepNavCard
+          label="Next step"
+          direction="next"
+          href={nextHref}
+          step={nextStep}
+          status={nextStepStatus}
+        />
+      </div>
 
       <div className="space-y-4">
         <SectionCard
@@ -773,66 +1013,125 @@ export default function StepDetailClient() {
           </SectionCard>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card p-4 shadow-sm space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-              Step metadata
-            </h3>
-            <dl className="space-y-2 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-gray-500 dark:text-gray-400">Duration</dt>
-                <dd className="font-medium text-gray-900 dark:text-gray-100">
-                  {step.duration_ms !== undefined
-                    ? formatDurationMs(step.duration_ms)
-                    : "—"}
-                </dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-gray-500 dark:text-gray-400">Started</dt>
-                <dd className="font-medium text-gray-900 dark:text-gray-100">
-                  {step.started_at ? formatRelativeTime(step.started_at) : "—"}
-                </dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-gray-500 dark:text-gray-400">Completed</dt>
-                <dd className="font-medium text-gray-900 dark:text-gray-100">
-                  {step.completed_at
-                    ? formatRelativeTime(step.completed_at)
-                    : "—"}
-                </dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-gray-500 dark:text-gray-400">Cost</dt>
-                <dd className="font-medium text-gray-900 dark:text-gray-100">
-                  {formattedCost || "—"}
-                </dd>
-              </div>
-            </dl>
-          </div>
-
-          {usageRows.length > 0 && (
-            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card p-4 shadow-sm space-y-3">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                Usage
+        <SectionCard
+          title="Step stats"
+          description="Configuration, timing, and usage details."
+          preview={statsPreview}
+        >
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-4 space-y-3">
+              <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                Configuration
               </h3>
               <dl className="space-y-2 text-sm">
-                {usageRows.map((row) => (
-                  <div
-                    key={row.label}
-                    className="flex items-center justify-between gap-3"
-                  >
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-gray-500 dark:text-gray-400">Step order</dt>
+                  <dd className="font-medium text-gray-900 dark:text-gray-100">
+                    {step.step_order ?? "—"}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-gray-500 dark:text-gray-400">Step type</dt>
+                  <dd className="font-medium text-gray-900 dark:text-gray-100 capitalize">
+                    {stepTypeLabel}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-gray-500 dark:text-gray-400">Model</dt>
+                  <dd className="font-medium text-gray-900 dark:text-gray-100">
+                    {step.model || "—"}
+                  </dd>
+                </div>
+                {toolChoice && (
+                  <div className="flex items-center justify-between gap-3">
                     <dt className="text-gray-500 dark:text-gray-400">
-                      {row.label}
+                      Tool choice
                     </dt>
                     <dd className="font-medium text-gray-900 dark:text-gray-100">
-                      {row.value}
+                      {toolChoice}
                     </dd>
                   </div>
-                ))}
+                )}
+                <div className="flex items-start justify-between gap-3">
+                  <dt className="text-gray-500 dark:text-gray-400">Tools</dt>
+                  <dd className="flex flex-wrap justify-end gap-1 text-right">
+                    {toolLabels.length > 0 ? (
+                      toolLabels.map((tool) => (
+                        <span
+                          key={tool}
+                          className="rounded-md border border-primary-100 dark:border-primary-800/40 bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 text-[11px] font-semibold text-primary-700 dark:text-primary-300"
+                        >
+                          {tool}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-gray-500 dark:text-gray-400">—</span>
+                    )}
+                  </dd>
+                </div>
               </dl>
             </div>
-          )}
-        </div>
+
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-4 space-y-3">
+              <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                Timing & cost
+              </h3>
+              <dl className="space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-gray-500 dark:text-gray-400">Duration</dt>
+                  <dd className="font-medium text-gray-900 dark:text-gray-100">
+                    {durationLabel || "—"}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-gray-500 dark:text-gray-400">Started</dt>
+                  <dd className="font-medium text-gray-900 dark:text-gray-100">
+                    {startedAtLabel || "—"}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-gray-500 dark:text-gray-400">Completed</dt>
+                  <dd className="font-medium text-gray-900 dark:text-gray-100">
+                    {completedAtLabel || "—"}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-gray-500 dark:text-gray-400">Cost</dt>
+                  <dd className="font-medium text-gray-900 dark:text-gray-100">
+                    {formattedCost || "—"}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-4 space-y-3">
+              <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                Usage
+              </h3>
+              {usageRows.length > 0 ? (
+                <dl className="space-y-2 text-sm">
+                  {usageRows.map((row) => (
+                    <div
+                      key={row.label}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <dt className="text-gray-500 dark:text-gray-400">
+                        {row.label}
+                      </dt>
+                      <dd className="font-medium text-gray-900 dark:text-gray-100">
+                        {row.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  No usage details recorded for this step yet.
+                </p>
+              )}
+            </div>
+          </div>
+        </SectionCard>
 
         {step.error && (
           <div className="rounded-2xl border border-red-200 dark:border-red-800 bg-red-50/70 dark:bg-red-900/20 p-4 text-sm text-red-700 dark:text-red-200">

@@ -411,7 +411,13 @@ def aws_s3_cp(args):
         print("Usage: aws s3 cp <source> <dest> [--region <region>]", file=sys.stderr)
         sys.exit(1)
     
-    s3 = boto3.client('s3', region_name=region)
+    # Use boto3 with default credentials (IAM role in Lambda)
+    # boto3 automatically uses IAM role credentials, no need to configure
+    try:
+        s3 = boto3.client('s3', region_name=region)
+    except Exception as e:
+        print(f"Failed to create S3 client: {{e}}", file=sys.stderr)
+        sys.exit(1)
     
     # Determine if source or dest is S3
     if source.startswith('s3://'):
@@ -419,15 +425,23 @@ def aws_s3_cp(args):
         bucket_key = source[5:].split('/', 1)
         bucket = bucket_key[0]
         key = bucket_key[1] if len(bucket_key) > 1 else ''
-        s3.download_file(bucket, key, dest)
-        print(f"download: s3://{{bucket}}/{{key}} to {{dest}}")
+        try:
+            s3.download_file(bucket, key, dest)
+            print(f"download: s3://{{bucket}}/{{key}} to {{dest}}")
+        except Exception as e:
+            print(f"Error downloading from S3: {{e}}", file=sys.stderr)
+            sys.exit(1)
     elif dest.startswith('s3://'):
         # Upload to S3
         bucket_key = dest[5:].split('/', 1)
         bucket = bucket_key[0]
         key = bucket_key[1] if len(bucket_key) > 1 else os.path.basename(source)
-        s3.upload_file(source, bucket, key)
-        print(f"upload: {{source}} to s3://{{bucket}}/{{key}}")
+        try:
+            s3.upload_file(source, bucket, key)
+            print(f"upload: {{source}} to s3://{{bucket}}/{{key}}")
+        except Exception as e:
+            print(f"Error uploading to S3: {{e}}", file=sys.stderr)
+            sys.exit(1)
     else:
         print("Either source or destination must be an S3 path (s3://...)", file=sys.stderr)
         sys.exit(1)

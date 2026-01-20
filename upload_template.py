@@ -18,8 +18,14 @@ def _normalize_prefix(prefix: str) -> str:
 parser = argparse.ArgumentParser(description="Upload report HTML + data.json to S3.")
 parser.add_argument("--bucket", default=os.getenv("SHELL_S3_UPLOAD_BUCKET", "cc360-pages"))
 parser.add_argument("--region", default=os.getenv("AWS_REGION", "us-west-2"))
-parser.add_argument("--tenant-id", default=os.getenv("TENANT_ID"))
-parser.add_argument("--job-id", default=os.getenv("JOB_ID"))
+parser.add_argument(
+    "--tenant-id",
+    default=os.getenv("TENANT_ID") or os.getenv("LM_TENANT_ID"),
+)
+parser.add_argument(
+    "--job-id",
+    default=os.getenv("JOB_ID") or os.getenv("LM_JOB_ID"),
+)
 parser.add_argument("--key-prefix", default=os.getenv("SHELL_S3_UPLOAD_KEY_PREFIX"))
 parser.add_argument("--report-subdir", default=os.getenv("REPORT_SUBDIR", "market-research-reports-lead-magnents"))
 args = parser.parse_args()

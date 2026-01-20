@@ -173,10 +173,10 @@ export function ExecutionSteps({
         )}
         {liveUpdatedAt && <span>Updated {liveUpdatedAt}</span>}
       </div>
-      <div className="mt-3 rounded-lg border border-border/60 bg-muted/40">
+      <div className="mt-3 rounded-lg border border-slate-800/80 bg-[#0d1117] shadow-inner ring-1 ring-white/5">
         <pre
           ref={liveOutputRef}
-          className="max-h-64 overflow-y-auto p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-words scrollbar-hide-until-hover"
+          className="max-h-64 overflow-y-auto p-4 font-mono text-sm leading-6 text-slate-100 whitespace-pre-wrap break-words scrollbar-hide-until-hover antialiased selection:bg-slate-700 selection:text-white"
           aria-live="polite"
         >
           {hasLiveOutput
