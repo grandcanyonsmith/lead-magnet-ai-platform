@@ -9,7 +9,6 @@ import { TourProvider } from "@/components/TourProvider";
 import { TourId } from "@/lib/tours";
 import { SearchModal } from "@/components/SearchModal";
 import { ShortcutsHelpModal } from "@/components/ShortcutsHelpModal";
-import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Settings } from "@/types/settings";
 import { logger } from "@/utils/logger";
@@ -132,6 +131,9 @@ export default function DashboardLayout({
   }
 
   const isEditorRoute = Boolean(pathname?.startsWith("/dashboard/editor"));
+  const isJobDetailRoute = Boolean(
+    pathname?.match(/^\/dashboard\/jobs\/[^/]+/),
+  );
 
   return (
     <TourProvider
@@ -139,7 +141,10 @@ export default function DashboardLayout({
       onTourComplete={handleTourComplete}
       onTourSkip={handleTourSkip}
     >
-      <div className="min-h-screen bg-muted/30 text-foreground font-sans">
+      <div
+        id="dashboard-scroll-container"
+        className="min-h-screen h-screen bg-muted/30 text-foreground font-sans scrollbar-hide overflow-x-hidden overflow-y-auto"
+      >
         <DashboardTopBar
           isSidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen((open) => !open)}
@@ -148,7 +153,7 @@ export default function DashboardLayout({
           role={role}
           signOut={signOut}
         />
-        <div id="dashboard-subheader" className="relative z-20" />
+        <div id="dashboard-subheader" className="sticky top-0 z-30" />
 
         <Sidebar
           isOpen={sidebarOpen}
@@ -158,20 +163,24 @@ export default function DashboardLayout({
 
         {/* Main content */}
         <div className="flex-1 min-w-0 w-full transition-all duration-300">
-          <ImpersonationBanner />
-
           {/* Page content */}
           <main
             className={
               isEditorRoute
                 ? "p-0 bg-[#0c0d10] min-h-screen"
-                : "py-6 sm:py-8 lg:py-10 bg-muted/30 min-h-screen"
+                : "py-6 sm:py-8 lg:py-10 bg-muted/30 min-h-[calc(100vh-3.5rem-3.0625rem)] sm:min-h-[calc(100vh-4rem-3.0625rem)] flex flex-col"
             }
           >
             {isEditorRoute ? (
               <div className="w-full">{children}</div>
+            ) : isJobDetailRoute ? (
+              <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col min-h-full">
+                <div className="mx-auto w-full max-w-3xl flex flex-col min-h-full">
+                  {children}
+                </div>
+              </div>
             ) : (
-              <div className="mx-auto w-full max-w-[1440px] px-6 sm:px-8 lg:px-12">
+              <div className="mx-auto w-full max-w-[1440px] px-6 sm:px-8 lg:px-12 flex flex-col min-h-full">
                 {children}
               </div>
             )}

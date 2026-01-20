@@ -326,7 +326,7 @@ export function WorkflowImprovePanel({
       icon={<SparklesIcon className="h-5 w-5" />}
     >
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="rounded-xl border border-border bg-muted/20 p-4">
             <label className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               What should be better next time? (optional)
@@ -426,7 +426,7 @@ export function WorkflowImprovePanel({
           </SectionCard>
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {extractedSteps.length > 0 && (
             <SectionCard
               title={`Execution steps summary (${extractedSteps.length})`}

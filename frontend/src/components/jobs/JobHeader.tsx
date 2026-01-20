@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo } from "react";
+import { Fragment } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowPathIcon,
@@ -10,11 +10,10 @@ import {
 } from "@heroicons/react/24/outline";
 import { Menu, Transition } from "@headlessui/react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { formatRelativeTime } from "@/utils/date";
 import type { Status } from "@/types/common";
-import type { Job } from "@/types/job";
+import type { Job, JobStepSummary } from "@/types/job";
 import type { Workflow } from "@/types/workflow";
-import type { FormSubmission } from "@/types/form";
+import type { JobDurationInfo } from "@/components/jobs/detail/JobOverviewSection";
 
 interface JobHeaderProps {
   error: string | null;
@@ -22,30 +21,20 @@ interface JobHeaderProps {
   onResubmit: () => void;
   job?: Job | null;
   workflow?: Workflow | null;
-  submission?: FormSubmission | null;
-  lastUpdatedLabel?: string | null;
-  lastRefreshedLabel?: string | null;
+  artifactCount?: number | null;
+  stepsSummary?: JobStepSummary | null;
+  jobDuration?: JobDurationInfo | null;
+  totalCost?: number | null;
+  loadingArtifacts?: boolean;
   refreshing?: boolean;
   onRefresh?: () => void;
 }
 
-interface LeadHighlight {
-  label: string;
-  value: string;
-}
-
-const STATUS_DOT_CLASS: Record<Status, string> = {
-  pending: "bg-gray-400",
-  processing: "bg-blue-500",
-  completed: "bg-green-500",
-  failed: "bg-red-500",
-};
-
-const STATUS_LABELS: Record<Status, string> = {
-  pending: "Pending",
-  processing: "Processing",
-  completed: "Completed",
-  failed: "Failed",
+const STATUS_BORDER_CLASS: Record<Status, string> = {
+  pending: "border-gray-400",
+  processing: "border-blue-500",
+  completed: "border-green-500",
+  failed: "border-red-500",
 };
 
 export function JobHeader({
@@ -54,62 +43,53 @@ export function JobHeader({
   onResubmit,
   job,
   workflow,
-  submission,
-  lastUpdatedLabel,
-  lastRefreshedLabel,
+  artifactCount,
+  stepsSummary,
+  jobDuration,
+  totalCost,
+  loadingArtifacts,
   refreshing,
   onRefresh,
 }: JobHeaderProps) {
   const router = useRouter();
-  const { leadName } = useMemo(
-    () => buildLeadHighlights(submission?.form_data),
-    [submission?.form_data],
-  );
 
-  const submittedLabel = submission?.created_at
-    ? formatRelativeTime(submission.created_at)
-    : null;
-  const updatedLabel =
-    lastUpdatedLabel ||
-    (job?.updated_at ? formatRelativeTime(job.updated_at) : null) ||
-    (job?.created_at ? formatRelativeTime(job.created_at) : null);
+  const heading = workflow?.workflow_name || "Lead report";
 
-  const heading = leadName || workflow?.workflow_name || "Lead report";
-  const description = [
-    workflow?.workflow_name && heading !== workflow.workflow_name
-      ? `Workflow: ${workflow.workflow_name}`
-      : null,
-    submittedLabel ? `Submitted ${submittedLabel}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ") || "Generated lead report and execution details.";
-
-  const statusLabel = job?.status ? STATUS_LABELS[job.status] : null;
-  const statusDotClass = job?.status ? STATUS_DOT_CLASS[job.status] : null;
-  const headingMaxLength = 60;
-  const truncatedHeading = truncateValue(heading, headingMaxLength);
+  const statusBorderClass = job?.status
+    ? STATUS_BORDER_CLASS[job.status]
+    : "border-transparent";
   const headingContent = (
     <span className="flex items-center gap-2 min-w-0">
-      {statusDotClass && statusLabel && (
-        <span
-          className={`h-2.5 w-2.5 rounded-full ${statusDotClass}`}
-          role="img"
-          aria-label={`Status: ${statusLabel}`}
-          title={statusLabel}
-        />
-      )}
-      <span className="min-w-0 truncate" title={heading}>
-        {truncatedHeading}
+      <span
+        className="min-w-0 text-sm sm:text-lg whitespace-normal break-words"
+        title={heading}
+      >
+        {heading}
       </span>
     </span>
   );
 
-  const timelineLabel = [
-    updatedLabel ? `Updated ${updatedLabel}` : null,
-    lastRefreshedLabel ? `Viewed ${lastRefreshedLabel}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const outputsValue = loadingArtifacts
+    ? "Loading..."
+    : typeof artifactCount === "number"
+      ? artifactCount.toLocaleString()
+      : "--";
+  const stepProgressValue =
+    stepsSummary && stepsSummary.total > 0
+      ? `${stepsSummary.completed}/${stepsSummary.total}`
+      : "--";
+  const runtimeValue = jobDuration?.label || "--";
+  const costValue =
+    typeof totalCost === "number" && Number.isFinite(totalCost)
+      ? `$${totalCost.toFixed(4)}`
+      : "--";
+
+  const stats = [
+    { label: "Steps", value: stepProgressValue },
+    { label: "Cost", value: costValue },
+    { label: "Runtime", value: runtimeValue },
+    { label: "Outputs", value: outputsValue },
+  ];
 
   const getMenuItemClass = (active: boolean, disabled?: boolean) => {
     const base =
@@ -152,14 +132,31 @@ export function JobHeader({
 
       <PageHeader
         heading={headingContent}
-        description={description}
         className="mb-0 pb-4"
+        actionsInlineOnMobile
         bottomContent={
-          timelineLabel ? (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {timelineLabel}
-            </p>
-          ) : null
+          <div className="overflow-x-auto scrollbar-hide">
+            <div className="flex min-w-max items-stretch divide-x divide-border/60 rounded-xl border border-border/60 bg-card/60 shadow-sm overflow-hidden">
+              {stats.map((stat) => {
+                const isStepsStat = stat.label === "Steps";
+                return (
+                  <div
+                    key={stat.label}
+                    className={`min-w-[160px] px-4 py-3 ${
+                      isStepsStat ? `border-b-2 ${statusBorderClass}` : ""
+                    }`}
+                  >
+                  <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {stat.label}
+                  </p>
+                  <p className="text-sm font-semibold text-foreground leading-tight">
+                    {stat.value}
+                  </p>
+                </div>
+                );
+              })}
+            </div>
+          </div>
         }
       >
         {hasActions && (
@@ -237,107 +234,4 @@ export function JobHeader({
       </PageHeader>
     </div>
   );
-}
-
-function buildLeadHighlights(
-  formData?: Record<string, unknown> | null,
-): { leadName: string | null; leadHighlights: LeadHighlight[] } {
-  if (!formData || typeof formData !== "object") {
-    return { leadName: null, leadHighlights: [] };
-  }
-
-  const data = formData as Record<string, unknown>;
-  const usedKeys = new Set<string>();
-
-  const leadName = findValueForKeys(
-    data,
-    ["name", "full_name", "first_name", "submitter_name", "contact_name"],
-    usedKeys,
-  );
-
-  const highlights: LeadHighlight[] = [];
-  if (leadName) {
-    highlights.push({ label: "Lead", value: leadName });
-  }
-
-  const fields = [
-    {
-      label: "Company",
-      keys: ["company", "company_name", "organization", "business_name"],
-    },
-    { label: "Email", keys: ["email", "email_address", "work_email"] },
-    {
-      label: "Phone",
-      keys: ["phone", "phone_number", "mobile", "contact_number"],
-    },
-    { label: "Website", keys: ["website", "company_website", "url"] },
-  ];
-
-  fields.forEach((field) => {
-    const value = findValueForKeys(data, field.keys, usedKeys);
-    if (value) {
-      highlights.push({ label: field.label, value });
-    }
-  });
-
-  if (highlights.length === 0) {
-    const fallbackEntries = Object.entries(data).slice(0, 2);
-    fallbackEntries.forEach(([key, value]) => {
-      const formatted = formatFieldValue(value);
-      if (!formatted) return;
-      const label = key.replace(/_/g, " ");
-      highlights.push({ label, value: formatted });
-    });
-  }
-
-  return {
-    leadName,
-    leadHighlights: highlights.map((item) => ({
-      ...item,
-      value: truncateValue(item.value, 120),
-    })),
-  };
-}
-
-function findValueForKeys(
-  data: Record<string, unknown>,
-  keys: string[],
-  usedKeys: Set<string>,
-): string | null {
-  const keySet = new Set(keys.map((key) => key.toLowerCase()));
-  const entry = Object.entries(data).find(([key, value]) => {
-    if (usedKeys.has(key.toLowerCase())) return false;
-    if (!keySet.has(key.toLowerCase())) return false;
-    return value !== null && value !== undefined;
-  });
-
-  if (!entry) return null;
-
-  const [key, value] = entry;
-  const formatted = formatFieldValue(value);
-  if (!formatted) return null;
-
-  usedKeys.add(key.toLowerCase());
-  return formatted;
-}
-
-function formatFieldValue(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed ? trimmed : null;
-  }
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-}
-
-function truncateValue(value: string, maxLength: number) {
-  if (value.length <= maxLength) return value;
-  return `${value.slice(0, maxLength - 3)}...`;
 }

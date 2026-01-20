@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import type { ReactNode } from "react";
 import Image from "next/image";
 import {
   FiFile,
@@ -21,6 +22,7 @@ interface PreviewRendererProps {
   className?: string;
   artifactId?: string;
   isFullScreen?: boolean;
+  previewVariant?: "default" | "compact";
   viewMode?: "desktop" | "tablet" | "mobile";
   onViewModeChange?: (mode: "desktop" | "tablet" | "mobile") => void;
 }
@@ -131,6 +133,7 @@ export function PreviewRenderer({
   className = "",
   artifactId,
   isFullScreen = false,
+  previewVariant = "default",
   viewMode,
   onViewModeChange,
 }: PreviewRendererProps) {
@@ -145,12 +148,17 @@ export function PreviewRenderer({
   const [jsonRaw, setJsonRaw] = useState<string | null>(null);
   const [jsonError, setJsonError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isCompactPreview = previewVariant === "compact" && !isFullScreen;
+  const compactHtmlScale = 0.5;
 
   // Determine effective content type with fallback to file extension
   const effectiveContentType =
     contentType ||
     detectContentTypeFromExtension(fileName) ||
     "application/octet-stream";
+  const isMarkdownLike =
+    effectiveContentType === "text/markdown" ||
+    effectiveContentType === "text/plain";
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -186,7 +194,7 @@ export function PreviewRenderer({
   useEffect(() => {
     if (
       isInView &&
-      effectiveContentType === "text/markdown" &&
+      isMarkdownLike &&
       !markdownContent &&
       !markdownError
     ) {
@@ -231,7 +239,7 @@ export function PreviewRenderer({
     }
   }, [
     isInView,
-    effectiveContentType,
+    isMarkdownLike,
     objectUrl,
     artifactId,
     markdownContent,
@@ -385,8 +393,7 @@ export function PreviewRenderer({
 
   // Attempt to parse markdown content as JSON if it looks like one
   const parsedMarkdownJson = useMemo(() => {
-    if (!markdownContent || effectiveContentType !== "text/markdown")
-      return null;
+    if (!markdownContent || !isMarkdownLike) return null;
     try {
       const trimmed = markdownContent.trim();
       // Check if it looks like JSON before parsing
@@ -411,7 +418,7 @@ export function PreviewRenderer({
       return null;
     }
     return null;
-  }, [markdownContent, effectiveContentType]);
+  }, [markdownContent, isMarkdownLike]);
 
   if (!objectUrl && !artifactId) {
     return (
@@ -422,6 +429,43 @@ export function PreviewRenderer({
       </div>
     );
   }
+
+  const renderCompactFrame = (content: ReactNode) => (
+    <div className="relative w-full h-full bg-gray-50 dark:bg-gray-900 p-2">
+      <div className="h-full w-full overflow-hidden rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
+        {content}
+      </div>
+    </div>
+  );
+
+  const renderCompactScaled = (
+    content: ReactNode,
+    options?: {
+      paddingClassName?: string;
+      scale?: number;
+      textClassName?: string;
+    },
+  ) => {
+    const {
+      paddingClassName = "p-3",
+      scale = 0.7,
+      textClassName = "text-[10px] leading-snug",
+    } = options || {};
+    const inverseScale = 100 / scale;
+
+    return (
+      <div
+        className="origin-top-left"
+        style={{
+          transform: `scale(${scale})`,
+          width: `${inverseScale}%`,
+          height: `${inverseScale}%`,
+        }}
+      >
+        <div className={`${paddingClassName} ${textClassName}`}>{content}</div>
+      </div>
+    );
+  };
 
   const renderPreview = () => {
     if (effectiveContentType.startsWith("image/")) {
@@ -623,13 +667,34 @@ export function PreviewRenderer({
                 </div>
               </div>
             ) : htmlContent ? (
-              <iframe
-                srcDoc={htmlContent}
-                className="w-full h-full border-0"
-                title={fileName || "HTML Preview"}
-                sandbox="allow-scripts allow-popups"
-                referrerPolicy="no-referrer"
-              />
+              isCompactPreview ? (
+                <div className="flex h-full w-full items-center justify-center bg-gray-50 dark:bg-gray-900 p-2">
+                  <div className="h-full w-full overflow-hidden rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
+                    <iframe
+                      srcDoc={htmlContent}
+                      className="border-0 origin-top-left"
+                      title={fileName || "HTML Preview"}
+                      sandbox="allow-scripts allow-popups"
+                      referrerPolicy="no-referrer"
+                      style={{
+                        transform: `scale(${compactHtmlScale})`,
+                        transformOrigin: "top left",
+                        width: `${100 / compactHtmlScale}%`,
+                        height: `${100 / compactHtmlScale}%`,
+                        display: "block",
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <iframe
+                  srcDoc={htmlContent}
+                  className="w-full h-full border-0"
+                  title={fileName || "HTML Preview"}
+                  sandbox="allow-scripts allow-popups"
+                  referrerPolicy="no-referrer"
+                />
+              )
             ) : (
               <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
                 <div className="text-center">
@@ -650,6 +715,46 @@ export function PreviewRenderer({
     }
 
     if (effectiveContentType === "application/json") {
+      if (isCompactPreview) {
+        return renderCompactFrame(
+          isInView ? (
+            jsonError && !jsonRaw ? (
+              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+                <div className="text-center">
+                  <FiCode className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    Failed to load JSON
+                  </p>
+                </div>
+              </div>
+            ) : jsonContent || jsonRaw ? (
+              renderCompactScaled(
+                <JsonViewer
+                  value={jsonContent}
+                  raw={jsonRaw || ""}
+                  defaultMode="tree"
+                  defaultExpandedDepth={1}
+                />,
+                { scale: 0.82, textClassName: "text-[11px] leading-normal" },
+              )
+            ) : (
+              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+                <div className="text-center">
+                  <FiCode className="w-10 h-10 text-blue-400 dark:text-blue-300 mx-auto mb-2 animate-pulse" />
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    Loading JSON...
+                  </p>
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
+              <FiCode className="w-10 h-10 text-blue-400 dark:text-blue-300" />
+            </div>
+          ),
+        );
+      }
+
       if (isInView) {
         if (jsonError && !jsonRaw) {
           return (
@@ -697,7 +802,7 @@ export function PreviewRenderer({
       );
     }
 
-    if (effectiveContentType === "text/markdown") {
+    if (isMarkdownLike) {
       // If we successfully parsed the markdown as JSON, render using JsonViewer
       if (parsedMarkdownJson) {
         const rawJson =
@@ -784,6 +889,20 @@ export function PreviewRenderer({
         }
 
         // Regular (non-fullscreen) view
+        if (isCompactPreview) {
+          return renderCompactFrame(
+            renderCompactScaled(
+              <JsonViewer
+                value={parsedMarkdownJson}
+                raw={cleanRaw}
+                defaultMode="tree"
+                defaultExpandedDepth={1}
+              />,
+              { scale: 0.82, textClassName: "text-[11px] leading-normal" },
+            ),
+          );
+        }
+
         return (
           <div className="relative w-full h-full bg-white dark:bg-gray-950 overflow-auto p-4">
             <JsonViewer
@@ -900,6 +1019,49 @@ export function PreviewRenderer({
       }
 
       // Regular markdown rendering
+      if (isCompactPreview) {
+        return renderCompactFrame(
+          isInView ? (
+            markdownError ? (
+              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+                <div className="text-center">
+                  <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    Failed to load markdown
+                  </p>
+                </div>
+              </div>
+            ) : markdownContent ? (
+              renderCompactScaled(
+                <div className="prose prose-sm max-w-none dark:prose-invert text-[10px] leading-snug prose-p:my-1 prose-headings:my-1 prose-li:my-0">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {markdownContent}
+                  </ReactMarkdown>
+                </div>,
+              )
+            ) : (
+              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+                <div className="text-center">
+                  <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2 animate-pulse" />
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    Loading markdown...
+                  </p>
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+              <div className="text-center">
+                <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                  Markdown File
+                </p>
+              </div>
+            </div>
+          ),
+        );
+      }
+
       return (
         <div className="relative w-full h-full bg-white dark:bg-gray-950 overflow-auto">
           {isInView ? (

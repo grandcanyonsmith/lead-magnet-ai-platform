@@ -13,7 +13,7 @@ import { usePreviewModal } from "@/hooks/usePreviewModal";
 import { api } from "@/lib/api";
 import { buildArtifactGalleryItems } from "@/utils/jobs/artifacts";
 import { summarizeStepProgress } from "@/utils/jobs/steps";
-import { formatRelativeTime, formatDuration } from "@/utils/date";
+import { formatDuration } from "@/utils/date";
 
 import { JobHeader } from "@/components/jobs/JobHeader";
 import { ResubmitModal } from "@/components/jobs/ResubmitModal";
@@ -78,7 +78,6 @@ export default function JobDetailClient() {
     executionStepsError,
     refreshJob,
     refreshing,
-    lastLoadedAt,
   } = useJobDetail({
     loadExecutionSteps: shouldLoadExecutionSteps,
     pollExecutionSteps: shouldLoadExecutionSteps,
@@ -102,10 +101,6 @@ export default function JobDetailClient() {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tabId);
     return `${pathname}?${params.toString()}`;
-  };
-
-  const handleSelectExecutionTab = () => {
-    router.push(buildTabHref("execution"));
   };
 
   const { previewItem, openPreview, closePreview } =
@@ -172,17 +167,6 @@ export default function JobDetailClient() {
   }, [job?.execution_steps, shouldLoadExecutionSteps]);
 
   const jobDuration = useMemo(() => getJobDuration(job), [job]);
-
-  const lastUpdatedLabel = useMemo(
-    () => (job?.updated_at ? formatRelativeTime(job.updated_at) : null),
-    [job?.updated_at],
-  );
-
-  const lastRefreshedLabel = useMemo(
-    () =>
-      lastLoadedAt ? formatRelativeTime(lastLoadedAt.toISOString()) : null,
-    [lastLoadedAt],
-  );
 
   const previewObjectUrl =
     previewItem?.artifact?.object_url ||
@@ -359,16 +343,18 @@ export default function JobDetailClient() {
 
   return (
     <ErrorBoundary fallback={errorFallback}>
-      <div>
+      <div className="flex min-h-full flex-col">
         <JobHeader
           error={error}
           resubmitting={resubmitting}
           onResubmit={handleResubmitClick}
           job={job}
           workflow={workflow}
-          submission={submission}
-          lastUpdatedLabel={lastUpdatedLabel}
-          lastRefreshedLabel={lastRefreshedLabel}
+          artifactCount={artifactGalleryItems.length}
+          stepsSummary={stepsSummary}
+          jobDuration={jobDuration}
+          totalCost={totalCost}
+          loadingArtifacts={loadingArtifacts}
           onRefresh={refreshJob}
           refreshing={refreshing}
         />
@@ -424,39 +410,38 @@ export default function JobDetailClient() {
         />
 
         {/* Tabs */}
-        <JobTabs
-          job={job}
-          activeTab={activeTab}
-          buildTabHref={buildTabHref}
-          mergedSteps={mergedSteps}
-          artifactGalleryItems={artifactGalleryItems}
-          workflow={workflow}
-          artifacts={jobArtifacts}
-          stepsSummary={stepsSummary}
-          jobDuration={jobDuration}
-          totalCost={totalCost}
-          form={form}
-          onSelectExecutionTab={handleSelectExecutionTab}
-          expandedSteps={expandedSteps}
-          toggleStep={toggleStep}
-          executionStepsError={executionStepsError}
-          imageArtifactsByStep={imageArtifactsByStep}
-          loadingArtifacts={loadingArtifacts}
-          submission={submission}
-          onResubmit={handleResubmitClick}
-          resubmitting={resubmitting}
-          onRefresh={refreshJob}
-          refreshing={refreshing}
-          onCopy={copyToClipboard}
-          onEditStep={handleEditStep}
-          onRerunStepClick={handleRerunStepClick}
-          rerunningStep={rerunningStep}
-          openPreview={openPreview}
-          trackingSessionCount={trackingSessionCount}
-          trackingSessionsLoading={trackingSessionsLoading}
-          onTrackingSessionsLoaded={setTrackingSessionCount}
-          onTrackingSessionsLoadingChange={setTrackingSessionsLoading}
-        />
+        <div className="flex-1 min-h-0">
+          <JobTabs
+            job={job}
+            activeTab={activeTab}
+            buildTabHref={buildTabHref}
+            mergedSteps={mergedSteps}
+            artifactGalleryItems={artifactGalleryItems}
+            workflow={workflow}
+            artifacts={jobArtifacts}
+            stepsSummary={stepsSummary}
+            form={form}
+            expandedSteps={expandedSteps}
+            toggleStep={toggleStep}
+            executionStepsError={executionStepsError}
+            imageArtifactsByStep={imageArtifactsByStep}
+            loadingArtifacts={loadingArtifacts}
+            submission={submission}
+            onResubmit={handleResubmitClick}
+            resubmitting={resubmitting}
+            onRefresh={refreshJob}
+            refreshing={refreshing}
+            onCopy={copyToClipboard}
+            onEditStep={handleEditStep}
+            onRerunStepClick={handleRerunStepClick}
+            rerunningStep={rerunningStep}
+            openPreview={openPreview}
+            trackingSessionCount={trackingSessionCount}
+            trackingSessionsLoading={trackingSessionsLoading}
+            onTrackingSessionsLoaded={setTrackingSessionCount}
+            onTrackingSessionsLoadingChange={setTrackingSessionsLoading}
+          />
+        </div>
 
         {/* Artifact Preview Modal */}
         {previewItem && previewObjectUrl && (

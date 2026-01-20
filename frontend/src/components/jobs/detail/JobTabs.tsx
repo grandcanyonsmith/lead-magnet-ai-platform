@@ -2,7 +2,6 @@ import { SubHeaderTabs } from "@/components/ui/SubHeaderTabs";
 import type { ComponentProps } from "react";
 import dynamic from "next/dynamic";
 import { JobSummaryTab } from "@/components/jobs/detail/JobSummaryTab";
-import type { JobDurationInfo } from "@/components/jobs/detail/JobOverviewSection";
 import type {
   ArtifactGalleryItem,
   Job,
@@ -149,10 +148,7 @@ interface JobTabsProps {
   workflow: Workflow | null;
   artifacts: Artifact[];
   stepsSummary: JobStepSummary;
-  jobDuration?: JobDurationInfo | null;
-  totalCost?: number | null;
   form: Form | null;
-  onSelectExecutionTab: () => void;
   expandedSteps: Set<number>;
   toggleStep: (stepOrder: number) => void;
   executionStepsError: string | null;
@@ -183,10 +179,7 @@ export function JobTabs({
   workflow,
   artifacts,
   stepsSummary,
-  jobDuration,
-  totalCost,
   form,
-  onSelectExecutionTab,
   expandedSteps,
   toggleStep,
   executionStepsError,
@@ -233,7 +226,7 @@ export function JobTabs({
   }));
 
   return (
-    <section className="mt-6">
+    <section className="mt-6 flex flex-1 min-h-0 flex-col">
       <SubHeaderTabs
         tabs={tabs}
         activeId={activeTab}
@@ -243,16 +236,12 @@ export function JobTabs({
         compactMaxVisible={2}
         compactBreakpointPx={420}
       />
-      <div className="min-w-0 pt-6">
+      <div className="min-w-0 pt-6 flex flex-1 min-h-0 flex-col overflow-hidden">
         {activeTab === "overview" && (
           <JobSummaryTab
-            job={job}
-            workflow={workflow}
-            stepsSummary={stepsSummary}
-            artifactCount={artifactGalleryItems.length}
-            jobDuration={jobDuration}
-            totalCost={totalCost}
-            onSelectExecutionTab={onSelectExecutionTab}
+            artifactGalleryItems={artifactGalleryItems}
+            loadingArtifacts={loadingArtifacts}
+            onPreview={openPreview}
           />
         )}
         {activeTab === "execution" && (

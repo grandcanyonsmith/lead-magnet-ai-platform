@@ -31,7 +31,6 @@ export function TechnicalDetails({
   submission,
 }: TechnicalDetailsProps) {
   const router = useRouter();
-  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
   const [copied, setCopied] = useState(false);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [loadingArtifacts, setLoadingArtifacts] = useState(false);
@@ -141,7 +140,7 @@ export function TechnicalDetails({
   // Fetch all artifacts for this job (including images)
   useEffect(() => {
     const fetchArtifacts = async () => {
-      if (!job?.job_id || !showTechnicalDetails) return;
+      if (!job?.job_id) return;
 
       try {
         setLoadingArtifacts(true);
@@ -162,7 +161,7 @@ export function TechnicalDetails({
     };
 
     fetchArtifacts();
-  }, [job?.job_id, showTechnicalDetails]);
+  }, [job?.job_id]);
 
   const formatTimestamp = (value?: string | null) => {
     if (!value) return "—";
@@ -195,229 +194,214 @@ export function TechnicalDetails({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+            onClick={copyAllToClipboard}
+            disabled={copyingAll}
+            title="Copy all artifacts text, image URLs, and form submission to clipboard"
           >
-            {showTechnicalDetails ? "Hide" : "Show"}
+            {copyingAll ? (
+              <>
+                <FiLoader className="w-4 h-4 animate-spin" />
+                <span className="hidden sm:inline">Copying...</span>
+              </>
+            ) : (
+              <>
+                <FiCopy className="w-4 h-4" />
+                <span className="hidden sm:inline">Copy All</span>
+              </>
+            )}
           </Button>
-          {showTechnicalDetails && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={copyAllToClipboard}
-              disabled={copyingAll}
-              title="Copy all artifacts text, image URLs, and form submission to clipboard"
-            >
-              {copyingAll ? (
-                <>
-                  <FiLoader className="w-4 h-4 animate-spin" />
-                  <span className="hidden sm:inline">Copying...</span>
-                </>
-              ) : (
-                <>
-                  <FiCopy className="w-4 h-4" />
-                  <span className="hidden sm:inline">Copy All</span>
-                </>
-              )}
-            </Button>
-          )}
         </div>
       }
     >
-      {showTechnicalDetails && (
-        <div className="space-y-6">
-          <SectionCard title="Identifiers" padding="sm">
-            <KeyValueList
-              items={[
-                {
-                  label: "Job ID",
-                  value: job.job_id,
-                  copyValue: job.job_id,
-                },
-                job.submission_id
-                  ? {
-                      label: "Submission ID",
-                      value: form?.public_slug ? (
-                        <a
-                          href={buildPublicFormUrl(
-                            form.public_slug,
-                            settings?.custom_domain,
-                          )}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700"
-                        >
-                          {job.submission_id}
-                          <FiExternalLink className="h-3 w-3" />
-                        </a>
-                      ) : (
-                        job.submission_id
-                      ),
-                      copyValue: job.submission_id,
-                    }
-                  : null,
-                job.workflow_id
-                  ? {
-                      label: "Workflow ID",
-                      value: job.workflow_id,
-                      copyValue: job.workflow_id,
-                    }
-                  : null,
-                job.tenant_id
-                  ? {
-                      label: "Tenant ID",
-                      value: job.tenant_id,
-                      copyValue: job.tenant_id,
-                    }
-                  : null,
-              ].filter(Boolean) as any}
-              onCopy={copyToClipboard}
-              columns={2}
-              dense
-            />
-          </SectionCard>
-
-          <SectionCard title="Timing" padding="sm">
-            <KeyValueList
-              items={[
-                {
-                  label: "Created",
-                  value: formatTimestamp(job.created_at),
-                  copyValue: job.created_at,
-                },
-                job.started_at
-                  ? {
-                      label: "Started",
-                      value: formatTimestamp(job.started_at),
-                      copyValue: job.started_at,
-                    }
-                  : null,
-                job.updated_at
-                  ? {
-                      label: "Last updated",
-                      value: formatTimestamp(job.updated_at),
-                      copyValue: job.updated_at,
-                    }
-                  : null,
-              ].filter(Boolean) as any}
-              onCopy={copyToClipboard}
-              columns={2}
-              dense
-            />
-          </SectionCard>
-
-          {(job.artifacts && job.artifacts.length > 0) ||
-          artifacts.length > 0 ? (
-            <SectionCard title="Artifacts" padding="sm">
-              {loadingArtifacts ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-                  <FiLoader className="w-4 h-4 animate-spin" />
-                  <span>Loading artifacts...</span>
-                </div>
-              ) : artifacts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {artifacts.map((artifact) => {
-                    const artifactUrl =
-                      artifact.object_url || artifact.public_url;
-                    const fileName =
-                      artifact.file_name ||
-                      artifact.artifact_name ||
-                      "Artifact";
-
-                    return (
-                      <Card
-                        key={artifact.artifact_id}
-                        className="overflow-hidden"
+      <div className="space-y-6">
+        <SectionCard title="Identifiers" padding="sm">
+          <KeyValueList
+            items={[
+              {
+                label: "Job ID",
+                value: job.job_id,
+                copyValue: job.job_id,
+              },
+              job.submission_id
+                ? {
+                    label: "Submission ID",
+                    value: form?.public_slug ? (
+                      <a
+                        href={buildPublicFormUrl(
+                          form.public_slug,
+                          settings?.custom_domain,
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-primary-600 hover:text-primary-700"
                       >
-                        <div className="aspect-video bg-muted/40">
-                          {artifactUrl ? (
-                            <PreviewRenderer
-                              contentType={artifact.content_type}
-                              objectUrl={artifactUrl}
-                              fileName={fileName}
-                              className="w-full h-full"
-                              artifactId={artifact.artifact_id}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                              <FiFile className="w-8 h-8" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-3 bg-muted/20 border-t border-border">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <p
-                                className="text-xs font-medium text-foreground truncate"
-                                title={fileName}
-                              >
-                                {fileName}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <button
-                                onClick={() =>
-                                  copyToClipboard(
-                                    artifactUrl || artifact.artifact_id,
-                                  )
-                                }
+                        {job.submission_id}
+                        <FiExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      job.submission_id
+                    ),
+                    copyValue: job.submission_id,
+                  }
+                : null,
+              job.workflow_id
+                ? {
+                    label: "Workflow ID",
+                    value: job.workflow_id,
+                    copyValue: job.workflow_id,
+                  }
+                : null,
+              job.tenant_id
+                ? {
+                    label: "Tenant ID",
+                    value: job.tenant_id,
+                    copyValue: job.tenant_id,
+                  }
+                : null,
+            ].filter(Boolean) as any}
+            onCopy={copyToClipboard}
+            columns={2}
+            dense
+          />
+        </SectionCard>
+
+        <SectionCard title="Timing" padding="sm">
+          <KeyValueList
+            items={[
+              {
+                label: "Created",
+                value: formatTimestamp(job.created_at),
+                copyValue: job.created_at,
+              },
+              job.started_at
+                ? {
+                    label: "Started",
+                    value: formatTimestamp(job.started_at),
+                    copyValue: job.started_at,
+                  }
+                : null,
+              job.updated_at
+                ? {
+                    label: "Last updated",
+                    value: formatTimestamp(job.updated_at),
+                    copyValue: job.updated_at,
+                  }
+                : null,
+            ].filter(Boolean) as any}
+            onCopy={copyToClipboard}
+            columns={2}
+            dense
+          />
+        </SectionCard>
+
+        {(job.artifacts && job.artifacts.length > 0) || artifacts.length > 0 ? (
+          <SectionCard title="Artifacts" padding="sm">
+            {loadingArtifacts ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                <FiLoader className="w-4 h-4 animate-spin" />
+                <span>Loading artifacts...</span>
+              </div>
+            ) : artifacts.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {artifacts.map((artifact) => {
+                  const artifactUrl =
+                    artifact.object_url || artifact.public_url;
+                  const fileName =
+                    artifact.file_name || artifact.artifact_name || "Artifact";
+
+                  return (
+                    <Card
+                      key={artifact.artifact_id}
+                      className="overflow-hidden"
+                    >
+                      <div className="aspect-video bg-muted/40">
+                        {artifactUrl ? (
+                          <PreviewRenderer
+                            contentType={artifact.content_type}
+                            objectUrl={artifactUrl}
+                            fileName={fileName}
+                            className="w-full h-full"
+                            artifactId={artifact.artifact_id}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                            <FiFile className="w-8 h-8" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3 bg-muted/20 border-t border-border">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className="text-xs font-medium text-foreground truncate"
+                              title={fileName}
+                            >
+                              {fileName}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              onClick={() =>
+                                copyToClipboard(
+                                  artifactUrl || artifact.artifact_id,
+                                )
+                              }
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                              title={
+                                artifactUrl ? "Copy Link" : "Copy Artifact ID"
+                              }
+                            >
+                              <FiCopy className="w-3.5 h-3.5" />
+                            </button>
+                            {artifactUrl && (
+                              <a
+                                href={artifactUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                                title={
-                                  artifactUrl ? "Copy Link" : "Copy Artifact ID"
-                                }
+                                title="Open in new tab"
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                <FiCopy className="w-3.5 h-3.5" />
-                              </button>
-                              {artifactUrl && (
-                                <a
-                                  href={artifactUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                                  title="Open in new tab"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <FiExternalLink className="w-3.5 h-3.5" />
-                                </a>
-                              )}
-                            </div>
+                                <FiExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            )}
                           </div>
                         </div>
-                      </Card>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => router.push("/dashboard/artifacts")}
-                  >
-                    <FiExternalLink className="w-4 h-4" />
-                    View artifacts
-                    {job.artifacts?.length ? ` (${job.artifacts.length})` : ""}
-                  </Button>
-                </div>
-              )}
-            </SectionCard>
-          ) : null}
-
-          {job.error_message && job.status === "failed" && (
-            <SectionCard title="Errors" padding="sm">
-              <div className="bg-muted/30 rounded-lg p-4 font-mono text-xs text-foreground whitespace-pre-wrap break-words">
-                {job.error_message}
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
-            </SectionCard>
-          )}
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.push("/dashboard/artifacts")}
+                >
+                  <FiExternalLink className="w-4 h-4" />
+                  View artifacts
+                  {job.artifacts?.length ? ` (${job.artifacts.length})` : ""}
+                </Button>
+              </div>
+            )}
+          </SectionCard>
+        ) : null}
 
-          {copied && (
-            <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-[60]">
-              Copied!
+        {job.error_message && job.status === "failed" && (
+          <SectionCard title="Errors" padding="sm">
+            <div className="bg-muted/30 rounded-lg p-4 font-mono text-xs text-foreground whitespace-pre-wrap break-words">
+              {job.error_message}
             </div>
-          )}
-        </div>
-      )}
+          </SectionCard>
+        )}
+
+        {copied && (
+          <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-[60]">
+            Copied!
+          </div>
+        )}
+      </div>
     </SectionCard>
   );
 }

@@ -57,6 +57,7 @@ interface StepHeaderProps {
   onRerunStepClick?: (stepIndex: number) => void;
   detailsHref?: string;
   detailsLabel?: string;
+  showMeta?: boolean;
 }
 
 // Type for tool - can be a string or an object with a type property
@@ -114,6 +115,61 @@ function renderToolBadges(tools?: string[] | unknown[]) {
   );
 }
 
+interface StepMetaRowProps {
+  step: MergedStep;
+  status: StepStatus;
+}
+
+export function StepMetaRow({ step, status }: StepMetaRowProps) {
+  const isCompleted = status === "completed";
+  const isInProgress = status === "in_progress";
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400">
+      {isCompleted &&
+        (step.duration_ms !== undefined || step.usage_info) && (
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 dark:bg-gray-800 px-2 py-0.5 border border-gray-200 dark:border-gray-700">
+            {step.duration_ms !== undefined && formatDurationMs(step.duration_ms)}
+            {step.usage_info?.cost_usd !== undefined && (
+              <>
+                <span className="text-gray-300 dark:text-gray-600">•</span>
+                <span>
+                  $
+                  {typeof step.usage_info.cost_usd === "number"
+                    ? step.usage_info.cost_usd.toFixed(4)
+                    : parseFloat(
+                        String(step.usage_info.cost_usd) || "0",
+                      ).toFixed(4)}
+                </span>
+              </>
+            )}
+          </div>
+        )}
+      {step.model && (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50/50 dark:bg-purple-900/30 px-2 py-0.5 text-[11px] font-medium text-purple-700 dark:text-purple-300 border border-purple-100/50 dark:border-purple-800/30">
+          {step.model}
+        </span>
+      )}
+      {((step.input?.tools && step.input.tools.length > 0) ||
+        (step.tools && step.tools.length > 0)) && (
+        <div className="flex items-center gap-1.5">
+          {renderToolBadges(step.input?.tools || step.tools)}
+        </div>
+      )}
+      {isInProgress && (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-200 animate-pulse">
+          Processing...
+        </span>
+      )}
+      {status === "failed" && (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 border border-red-200">
+          Failed
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function StepHeader({
   step,
   status,
@@ -125,11 +181,9 @@ export function StepHeader({
   onRerunStepClick,
   detailsHref,
   detailsLabel = "View step details",
+  showMeta = true,
 }: StepHeaderProps) {
   const isPending = status === "pending";
-  const isCompleted = status === "completed";
-  const isInProgress = status === "in_progress";
-  const statusBadge = STEP_STATUS_BADGE[status];
   
   // Use status for coloring instead of step type
   const isSystemStep = step.step_type === "form_submission" || step.step_type === "final_output";
@@ -163,49 +217,7 @@ export function StepHeader({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-4">
           <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400">
-              {isCompleted &&
-                (step.duration_ms !== undefined || step.usage_info) && (
-                  <div className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 dark:bg-gray-800 px-2 py-0.5 border border-gray-200 dark:border-gray-700">
-                    {step.duration_ms !== undefined &&
-                      formatDurationMs(step.duration_ms)}
-                    {step.usage_info?.cost_usd !== undefined && (
-                      <>
-                        <span className="text-gray-300 dark:text-gray-600">•</span>
-                        <span>
-                          $
-                          {typeof step.usage_info.cost_usd === "number"
-                            ? step.usage_info.cost_usd.toFixed(4)
-                            : parseFloat(
-                                String(step.usage_info.cost_usd) || "0",
-                                ).toFixed(4)}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                )}
-              {step.model && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50/50 dark:bg-purple-900/30 px-2 py-0.5 text-[11px] font-medium text-purple-700 dark:text-purple-300 border border-purple-100/50 dark:border-purple-800/30">
-                  {step.model}
-                </span>
-              )}
-              {((step.input?.tools && step.input.tools.length > 0) ||
-                (step.tools && step.tools.length > 0)) && (
-                <div className="flex items-center gap-1.5">
-                  {renderToolBadges(step.input?.tools || step.tools)}
-                </div>
-              )}
-              {isInProgress && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-200 animate-pulse">
-                  Processing...
-                </span>
-              )}
-              {status === "failed" && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 border border-red-200">
-                  Failed
-                </span>
-              )}
-            </div>
+            {showMeta && <StepMetaRow step={step} status={status} />}
             <h3
               className={`text-base sm:text-lg font-semibold break-words ${isPending ? "text-gray-500 dark:text-gray-500" : "text-gray-900 dark:text-white"}`}
             >

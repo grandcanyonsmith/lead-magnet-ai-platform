@@ -16,7 +16,6 @@ import { StepProgressBar } from "./StepProgressBar";
 import { ImagePreview } from "./ImagePreview";
 import { getStepStatus } from "./utils";
 import { Artifact } from "@/types/artifact";
-import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -110,8 +109,7 @@ export function ExecutionSteps({
   }
 
   return (
-    <ErrorBoundary>
-      <SectionCard
+    <SectionCard
         title="Execution timeline"
         description="Track step-by-step progress and outputs."
         className="mt-4 sm:mt-6"
@@ -435,6 +433,5 @@ export function ExecutionSteps({
           </div>
         </div>
       </SectionCard>
-    </ErrorBoundary>
   );
 }
