@@ -135,21 +135,40 @@ def _rewrite_work_paths(cmd: str, work_root: str) -> str:
     return pattern.sub(safe_root, cmd)
 
 def _resolve_upload_prefix(env_vars: Dict[str, Any], workspace_id: str, manifest_prefix: Optional[str] = None) -> str:
-    if manifest_prefix:
-        prefix = manifest_prefix
-    elif UPLOAD_PREFIX_TEMPLATE:
-        data = {
-            "tenant_id": env_vars.get("TENANT_ID") or env_vars.get("LM_TENANT_ID") or "",
-            "job_id": env_vars.get("LM_JOB_ID") or env_vars.get("JOB_ID") or "",
-            "step_index": env_vars.get("STEP_INDEX") or env_vars.get("LM_STEP_INDEX") or "",
-            "workspace_id": workspace_id or "",
-        }
+    data = {
+        "tenant_id": env_vars.get("TENANT_ID") or env_vars.get("LM_TENANT_ID") or "",
+        "job_id": env_vars.get("LM_JOB_ID") or env_vars.get("JOB_ID") or "",
+        "step_index": env_vars.get("STEP_INDEX") or env_vars.get("LM_STEP_INDEX") or "",
+        "workspace_id": workspace_id or "",
+    }
+
+    base_prefix = ""
+    if UPLOAD_PREFIX_TEMPLATE:
         try:
-            prefix = UPLOAD_PREFIX_TEMPLATE.format(**data)
+            base_prefix = UPLOAD_PREFIX_TEMPLATE.format(**data)
         except Exception:
-            prefix = UPLOAD_PREFIX
+            base_prefix = UPLOAD_PREFIX
     else:
-        prefix = UPLOAD_PREFIX
+        base_prefix = UPLOAD_PREFIX
+
+    base_prefix = (base_prefix or "").strip().lstrip("/")
+    if not base_prefix and data["tenant_id"] and data["job_id"]:
+        base_prefix = f"leadmagnet/{data['tenant_id']}/{data['job_id']}/"
+
+    if base_prefix and not base_prefix.endswith("/"):
+        base_prefix += "/"
+
+    manifest_clean = (manifest_prefix or "").strip().lstrip("/")
+    if ".." in manifest_clean:
+        manifest_clean = ""
+
+    if manifest_clean:
+        if base_prefix and manifest_clean.startswith(base_prefix):
+            prefix = manifest_clean
+        else:
+            prefix = f"{base_prefix}{manifest_clean}" if base_prefix else manifest_clean
+    else:
+        prefix = base_prefix
 
     prefix = (prefix or "").strip()
     if prefix and not prefix.endswith("/"):
@@ -243,7 +262,10 @@ def _upload_files(
     if not entries:
         return uploads, errors
 
-    s3 = boto3.client("s3")
+    # Initialize S3 client with region from environment or default to us-east-1
+    # For cross-region access, boto3 will automatically use the bucket's region
+    aws_region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
+    s3 = boto3.client("s3", region_name=aws_region)
     for abs_path, rel_path in entries:
         try:
             size = os.path.getsize(abs_path)

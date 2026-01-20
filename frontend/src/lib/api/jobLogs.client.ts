@@ -1,5 +1,22 @@
 import { authService } from "@/lib/auth";
 
+// Use same API URL pattern as other clients
+const API_URL = (() => {
+  const envUrl = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+  if (envUrl) return envUrl;
+
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      // Typical local setup: Next.js on :3000, API on :3001.
+      const origin = window.location.origin || "http://localhost:3000";
+      return origin.replace(/:\d+$/, ":3001");
+    }
+  }
+
+  return "https://czp5b77azd.execute-api.us-east-1.amazonaws.com";
+})();
+
 export interface LogEntry {
   timestamp: number;
   level: string;
@@ -27,7 +44,7 @@ export class JobLogsClient {
     if (limit) params.append("limit", limit.toString());
 
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/admin/jobs/${jobId}/logs?${params}`,
+      `${API_URL}/api/admin/jobs/${jobId}/logs?${params}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -43,8 +60,8 @@ export class JobLogsClient {
   }
 
   /**
-   * Stream logs via Server-Sent Events (SSE)
-   * Polls the stream endpoint and calls callbacks for each log entry
+   * Stream logs via polling
+   * Polls the logs endpoint every second and calls callbacks for new log entries
    */
   async streamLogs(
     jobId: string,
@@ -58,6 +75,7 @@ export class JobLogsClient {
     const token = await authService.getIdToken();
     let lastTimestamp = Date.now() - 300000; // Start from 5 minutes ago
     let isActive = true;
+    let seenLogIds = new Set<string>(); // Track seen logs to avoid duplicates
 
     // Poll for logs every 1 second
     const pollInterval = setInterval(async () => {
@@ -69,9 +87,11 @@ export class JobLogsClient {
       try {
         const params = new URLSearchParams();
         params.append("since", lastTimestamp.toString());
+        params.append("limit", "100");
 
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/admin/jobs/${jobId}/logs/stream?${params}`,
+          `${apiUrl}/api/admin/jobs/${jobId}/logs?${params}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -81,41 +101,30 @@ export class JobLogsClient {
         );
 
         if (!response.ok) {
-          throw new Error(`Failed to stream logs: ${response.status}`);
+          throw new Error(`Failed to fetch logs: ${response.status}`);
         }
 
-        const text = await response.text();
-        if (!text.trim()) return;
+        const data: LogsResponse = await response.json();
 
-        // Parse SSE format: "data: {...}\n\n"
-        const lines = text.split("\n");
-        for (const line of lines) {
-          if (!line.trim() || !line.startsWith("data: ")) continue;
-
-          try {
-            const data = JSON.parse(line.slice(6)); // Remove "data: " prefix
-
-            if (data.type === "log") {
-              callbacks.onLog({
-                timestamp: data.timestamp,
-                level: data.level,
-                message: data.message,
-              });
-              // Update last timestamp
-              if (data.timestamp * 1000 > lastTimestamp) {
-                lastTimestamp = data.timestamp * 1000;
-              }
-            } else if (data.type === "error") {
-              callbacks.onError?.(data.message);
-            } else if (data.type === "complete") {
-              callbacks.onComplete?.();
-              clearInterval(pollInterval);
-              return;
+        // Process new logs
+        for (const log of data.logs) {
+          // Create unique ID for log entry
+          const logId = `${log.timestamp}-${log.message.substring(0, 50)}`;
+          
+          if (!seenLogIds.has(logId)) {
+            seenLogIds.add(logId);
+            callbacks.onLog(log);
+            
+            // Update last timestamp
+            if (log.timestamp * 1000 > lastTimestamp) {
+              lastTimestamp = log.timestamp * 1000;
             }
-          } catch (e) {
-            console.warn("Failed to parse SSE data:", line);
           }
         }
+
+        // If no more logs and job might be complete, check completion
+        // (This would require checking job status separately)
+        
       } catch (error: any) {
         if (error.name === "AbortError") {
           clearInterval(pollInterval);

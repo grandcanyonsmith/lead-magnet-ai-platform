@@ -14,6 +14,10 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { api } from "@/lib/api";
 import { JsonViewer } from "@/components/ui/JsonViewer";
+import {
+  ShellExecutorLogsPreview,
+  isShellExecutorLogsPayload,
+} from "@/components/artifacts/ShellExecutorLogsPreview";
 
 interface PreviewRendererProps {
   contentType?: string;
@@ -713,6 +717,25 @@ export function PreviewRenderer({
     }
 
     if (effectiveContentType === "application/json") {
+      const shellExecutorLogsPayload = isShellExecutorLogsPayload(jsonContent)
+        ? jsonContent
+        : null;
+
+      if (shellExecutorLogsPayload) {
+        if (isCompactPreview) {
+          return (
+            <CompactPreviewFrame>
+              <ShellExecutorLogsPreview
+                payload={shellExecutorLogsPayload}
+                variant="compact"
+              />
+            </CompactPreviewFrame>
+          );
+        }
+
+        return <ShellExecutorLogsPreview payload={shellExecutorLogsPayload} />;
+      }
+
       if (isCompactPreview) {
         return (
           <CompactPreviewFrame>
@@ -804,6 +827,21 @@ export function PreviewRenderer({
     if (isMarkdownLike) {
       // If we successfully parsed the markdown as JSON, render using JsonViewer
       if (parsedMarkdownJson) {
+        if (isShellExecutorLogsPayload(parsedMarkdownJson)) {
+          if (isCompactPreview) {
+            return (
+              <CompactPreviewFrame>
+                <ShellExecutorLogsPreview
+                  payload={parsedMarkdownJson}
+                  variant="compact"
+                />
+              </CompactPreviewFrame>
+            );
+          }
+
+          return <ShellExecutorLogsPreview payload={parsedMarkdownJson} />;
+        }
+
         const rawJson =
           typeof markdownContent === "string" ? markdownContent : "";
         // Extract raw JSON from code block if needed for the "Raw" view in JsonViewer

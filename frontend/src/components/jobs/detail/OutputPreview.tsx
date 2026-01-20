@@ -9,7 +9,8 @@ interface OutputPreviewProps {
 }
 
 export function OutputPreview({ groupKey, preview, className }: OutputPreviewProps) {
-  const previewVariant = groupKey === "step_output" ? "compact" : undefined;
+  const previewVariant =
+    groupKey === "step_output" || groupKey === "logs" ? "compact" : undefined;
   const contentType = groupKey === "html" ? "text/html" : preview.contentType;
   const hasPreview = Boolean(preview.objectUrl || preview.artifactId);
 

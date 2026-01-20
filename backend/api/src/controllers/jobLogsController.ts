@@ -33,19 +33,53 @@ export class JobLogsController {
 
     try {
       // Filter logs containing the job ID
-      // The shell executor logs include job_id in the log messages
-      const command = new FilterLogEventsCommand({
+      // The shell executor logs include job_id in log messages and structured fields
+      // Try multiple filter patterns to catch different log formats
+      const filterPatterns = [
+        `"${jobId}"`, // Direct job ID match
+        `"job_id": "${jobId}"`, // JSON structured log
+        `"JOB_ID": "${jobId}"`, // Environment variable format
+      ];
+
+      // Try first pattern, fallback to others if needed
+      let command = new FilterLogEventsCommand({
         logGroupName: LOG_GROUP_NAME,
         startTime,
-        filterPattern: `"${jobId}"`,
+        filterPattern: filterPatterns[0],
         limit,
       });
 
-      const response = await cloudwatchLogs.send(command);
+      let response;
+      try {
+        response = await cloudwatchLogs.send(command);
+      } catch (error: any) {
+        // If filter pattern fails, try without filter (get all logs and filter client-side)
+        logger.warn("[JobLogsController] Filter pattern failed, fetching all logs", {
+          error: error.message,
+          jobId,
+        });
+        command = new FilterLogEventsCommand({
+          logGroupName: LOG_GROUP_NAME,
+          startTime,
+          limit: limit * 2, // Get more logs to filter client-side
+        });
+        response = await cloudwatchLogs.send(command);
+      }
+
       const events = response.events || [];
 
+      // Filter events client-side if filter pattern didn't work well
+      const filteredEvents = events.filter((event) => {
+        const message = event.message || "";
+        return (
+          message.includes(jobId) ||
+          message.includes(`job_id: ${jobId}`) ||
+          message.includes(`JOB_ID: ${jobId}`)
+        );
+      });
+
       // Format logs as SSE events
-      const logs = events.map((event) => ({
+      const logs = filteredEvents.map((event) => ({
         type: "log",
         timestamp: event.timestamp ? event.timestamp / 1000 : Date.now() / 1000,
         level: this._parseLogLevel(event.message || ""),
@@ -61,6 +95,8 @@ export class JobLogsController {
           logs,
           nextToken: response.nextToken,
           hasMore: !!response.nextToken,
+          filteredCount: filteredEvents.length,
+          totalCount: events.length,
         },
       };
     } catch (error: any) {
@@ -108,19 +144,50 @@ export class JobLogsController {
     const startTime = since || Date.now() - 300000; // Default: last 5 minutes
 
     try {
-      const command = new FilterLogEventsCommand({
+      // Use same filtering logic as getLogs
+      const filterPatterns = [
+        `"${jobId}"`,
+        `"job_id": "${jobId}"`,
+        `"JOB_ID": "${jobId}"`,
+      ];
+
+      let command = new FilterLogEventsCommand({
         logGroupName: LOG_GROUP_NAME,
         startTime,
-        filterPattern: `"${jobId}"`,
-        limit: 500, // Get more logs for streaming
+        filterPattern: filterPatterns[0],
+        limit: 500,
       });
 
-      const response = await cloudwatchLogs.send(command);
-      const events = response.events || [];
+      let response;
+      try {
+        response = await cloudwatchLogs.send(command);
+      } catch (error: any) {
+        logger.warn("[JobLogsController] Filter pattern failed for stream", {
+          error: error.message,
+          jobId,
+        });
+        command = new FilterLogEventsCommand({
+          logGroupName: LOG_GROUP_NAME,
+          startTime,
+          limit: 1000,
+        });
+        response = await cloudwatchLogs.send(command);
+      }
 
-      // Format as SSE stream (even though API Gateway doesn't support true streaming,
-      // the frontend can parse this format)
-      const sseData = events.map((event) => {
+      const events = response.events || [];
+      
+      // Filter client-side
+      const filteredEvents = events.filter((event) => {
+        const message = event.message || "";
+        return (
+          message.includes(jobId) ||
+          message.includes(`job_id: ${jobId}`) ||
+          message.includes(`JOB_ID: ${jobId}`)
+        );
+      });
+
+      // Format as SSE stream
+      const sseData = filteredEvents.map((event) => {
         const log = {
           type: "log",
           timestamp: event.timestamp ? event.timestamp / 1000 : Date.now() / 1000,

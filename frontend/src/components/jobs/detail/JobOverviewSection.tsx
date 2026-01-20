@@ -35,6 +35,7 @@ export function JobOverviewSection({
     outputGroups.find((group) => group.key === activeOutputGroup) ||
     fallbackGroup;
   const isHtmlGroup = activeGroup.key === "html";
+  const isLogsGroup = activeGroup.key === "logs";
   const outputsListClassName = isHtmlGroup
     ? "grid gap-4"
     : "grid grid-flow-col auto-cols-[16rem] grid-rows-2 gap-3 overflow-x-auto pb-2 pl-3 pr-1 sm:-mx-1 sm:px-1 snap-x snap-mandatory scrollbar-hide";
@@ -44,6 +45,12 @@ export function JobOverviewSection({
   const previewSizeClass = isHtmlGroup
     ? "min-h-[60vh] sm:min-h-[65vh] lg:min-h-[70vh]"
     : "aspect-[3/4]";
+  const outputsAriaLabel = isLogsGroup
+    ? "Logs"
+    : `${activeGroup.label} outputs`;
+  const emptyStateLabel = isLogsGroup
+    ? "logs"
+    : `${activeGroup.label.toLowerCase()} outputs`;
 
   return (
     <section className="mb-4 sm:mb-6 space-y-6">
@@ -76,7 +83,7 @@ export function JobOverviewSection({
                 <div
                   className={outputsListClassName}
                   role="list"
-                  aria-label={`${activeGroup.label} outputs`}
+                  aria-label={outputsAriaLabel}
                 >
                   {activeGroup.items.map((item) => {
                     const preview = getOutputPreviewMeta(item);
@@ -105,7 +112,7 @@ export function JobOverviewSection({
                 </div>
               ) : (
                 <div className="rounded-xl border border-dashed border-border/70 bg-muted/30 px-4 py-6 text-center text-xs text-muted-foreground">
-                  No {activeGroup.label.toLowerCase()} outputs yet.
+                  No {emptyStateLabel} yet.
                 </div>
               )}
             </div>

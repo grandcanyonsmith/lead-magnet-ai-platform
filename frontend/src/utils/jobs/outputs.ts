@@ -1,6 +1,6 @@
 import type { ArtifactGalleryItem } from "@/types/job";
 
-export type OutputGroupKey = "step_output" | "image" | "html";
+export type OutputGroupKey = "step_output" | "image" | "html" | "logs";
 
 export interface OutputGroupMeta {
   key: OutputGroupKey;
@@ -20,7 +20,12 @@ export interface OutputPreviewMeta {
   artifactId?: string;
 }
 
-const OUTPUT_GROUP_ORDER: OutputGroupKey[] = ["html", "image", "step_output"];
+const OUTPUT_GROUP_ORDER: OutputGroupKey[] = [
+  "html",
+  "image",
+  "step_output",
+  "logs",
+];
 
 const OUTPUT_GROUP_META: Record<OutputGroupKey, Omit<OutputGroupMeta, "key">> = {
   html: {
@@ -38,12 +43,18 @@ const OUTPUT_GROUP_META: Record<OutputGroupKey, Omit<OutputGroupMeta, "key">> = 
     badgeClassName:
       "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200",
   },
+  logs: {
+    label: "Logs",
+    badgeClassName:
+      "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200",
+  },
 };
 
 const TYPE_DESCRIPTIONS_BY_GROUP: Record<OutputGroupKey, string[]> = {
   step_output: ["step output", "step outputs", "output", "outputs"],
   image: ["image", "images"],
   html: ["html", "html output", "html outputs", "html final", "final html"],
+  logs: ["log", "logs"],
 };
 
 const getArtifactFileName = (item: ArtifactGalleryItem) =>
@@ -60,6 +71,19 @@ const isImageOutput = (item: ArtifactGalleryItem) => {
     item.kind === "imageArtifact" ||
     contentType.startsWith("image/") ||
     artifactType.includes("image")
+  );
+};
+
+const isLogOutput = (item: ArtifactGalleryItem) => {
+  const artifactType = String(item.artifact?.artifact_type || "").toLowerCase();
+  const fileName = getArtifactFileName(item).toLowerCase();
+  return (
+    artifactType.includes("shell_executor_logs") ||
+    artifactType.includes("code_executor_logs") ||
+    artifactType.includes("executor_logs") ||
+    fileName.includes("shell_executor_logs") ||
+    fileName.includes("code_executor_logs") ||
+    fileName.includes("executor_logs")
   );
 };
 
@@ -87,6 +111,7 @@ const isHtmlOutput = (item: ArtifactGalleryItem) => {
 };
 
 export const getOutputGroupKey = (item: ArtifactGalleryItem): OutputGroupKey => {
+  if (isLogOutput(item)) return "logs";
   if (isImageOutput(item)) return "image";
   if (isHtmlOutput(item)) return "html";
   return "step_output";
@@ -104,6 +129,7 @@ export const buildOutputGroups = (
     step_output: [],
     image: [],
     html: [],
+    logs: [],
   };
 
   items.forEach((item) => {

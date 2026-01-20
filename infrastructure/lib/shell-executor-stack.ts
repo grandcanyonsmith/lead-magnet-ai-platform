@@ -4,6 +4,7 @@ import * as efs from 'aws-cdk-lib/aws-efs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 
 export interface ShellExecutorStackProps extends cdk.StackProps {
@@ -122,6 +123,8 @@ export class ShellExecutorStack extends cdk.Stack {
       environment: {
         EFS_MOUNT_POINT: '/mnt/shell-executor',
         HOME: '/mnt/shell-executor', // Useful for some tools
+        AWS_REGION: this.region, // Set AWS region for boto3 clients
+        AWS_DEFAULT_REGION: this.region, // Also set default region
         SHELL_EXECUTOR_UPLOAD_MODE: process.env.SHELL_EXECUTOR_UPLOAD_MODE || 'manifest',
         SHELL_EXECUTOR_UPLOAD_BUCKET: process.env.SHELL_EXECUTOR_UPLOAD_BUCKET || 'cc360-pages',
         SHELL_EXECUTOR_MANIFEST_NAME: process.env.SHELL_EXECUTOR_MANIFEST_NAME || 'shell_executor_manifest.json',
@@ -130,6 +133,43 @@ export class ShellExecutorStack extends cdk.Stack {
       },
       logGroup,
     });
+
+    // Grant IAM permissions for S3 access (including cross-region)
+    // The shell executor needs to upload files to S3 buckets
+    this.executorFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          's3:PutObject',
+          's3:GetObject',
+          's3:DeleteObject',
+          's3:ListBucket',
+          's3:PutObjectAcl',
+        ],
+        resources: [
+          // Allow access to all S3 buckets (including cross-region)
+          'arn:aws:s3:::*',
+          'arn:aws:s3:::*/*',
+        ],
+      })
+    );
+
+    // Grant permissions for CloudWatch Logs (for logging)
+    this.executorFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'logs:CreateLogGroup',
+          'logs:CreateLogStream',
+          'logs:PutLogEvents',
+        ],
+        resources: [
+          `arn:aws:logs:${this.region}:${this.account}:*`,
+          // Also allow cross-region logging if needed
+          'arn:aws:logs:*:*:*',
+        ],
+      })
+    );
 
     // Outputs
     new cdk.CfnOutput(this, 'ShellExecutorFunctionArn', {

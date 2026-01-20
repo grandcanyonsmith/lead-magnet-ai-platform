@@ -82,7 +82,12 @@ class SimpleRouter {
     tenantId?: string,
   ): Promise<RouteResponse> {
     const method = event.requestContext.http.method;
-    const path = event.rawPath;
+    let path = event.rawPath;
+    
+    // Strip /api prefix if present (for local dev compatibility)
+    if (path.startsWith('/api')) {
+      path = path.substring(4);
+    }
 
     // Handle OPTIONS requests for CORS preflight
     if (method === "OPTIONS") {
