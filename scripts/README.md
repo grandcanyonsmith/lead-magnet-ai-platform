@@ -69,6 +69,16 @@ python3 scripts/jobs/download-shell-executor-outputs.py \
   --prefix coursecreator360-rich-snippet-booster/20260120/
 ```
 
+### Local AWS env helper
+
+```bash
+# Verify AWS env can be loaded from ~/.aws/credentials
+python3 scripts/with-aws-env.py --check
+
+# Run any command with AWS creds injected
+python3 scripts/with-aws-env.py -- python3 scripts/run-worker-manually.py <job_id>
+```
+
 ### Admin
 
 ```bash

@@ -27,6 +27,14 @@ CONTRACT_VERSION = "2025-12-29"
 DEFAULT_LAMBDA_CONNECT_TIMEOUT_SECS = 10
 # Lambda max runtime is 900s; keep client read timeout above that.
 DEFAULT_LAMBDA_READ_TIMEOUT_SECS = 930
+DEFAULT_SHELL_ENV_PASSTHROUGH = (
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_SESSION_TOKEN",
+    "AWS_REGION",
+    "AWS_DEFAULT_REGION",
+    "AWS_PROFILE",
+)
 
 
 def _read_positive_int_env(name: str, default: int) -> int:
@@ -38,6 +46,28 @@ def _read_positive_int_env(name: str, default: int) -> int:
     except Exception:
         return default
     return parsed if parsed > 0 else default
+
+
+def _get_shell_env_passthrough_keys() -> List[str]:
+    raw = (os.environ.get("SHELL_EXECUTOR_ENV_PASSTHROUGH") or "").strip()
+    if not raw:
+        return list(DEFAULT_SHELL_ENV_PASSTHROUGH)
+    return [k.strip() for k in raw.split(",") if k and k.strip()]
+
+
+def _build_shell_env(overrides: Optional[Dict[str, str]]) -> Dict[str, str]:
+    merged: Dict[str, str] = {}
+    for key in _get_shell_env_passthrough_keys():
+        value = os.environ.get(key)
+        if value is None:
+            continue
+        merged[str(key)] = str(value)
+    if overrides:
+        for key, value in overrides.items():
+            if value is None:
+                continue
+            merged[str(key)] = str(value)
+    return merged
 
 
 class ShellExecutorService:
@@ -95,6 +125,8 @@ class ShellExecutorService:
         if not commands or not isinstance(commands, list):
             raise ValueError("commands must be a non-empty list of strings")
 
+        merged_env = _build_shell_env(env)
+
         # ------------------------------------------------------------------
         # Local dev mode: execute commands on the local machine.
         # ------------------------------------------------------------------
@@ -105,7 +137,7 @@ class ShellExecutorService:
                 max_output_length=max_output_length,
                 workspace_id=workspace_id,
                 reset_workspace=reset_workspace,
-                env=env,
+                env=merged_env,
             )
 
         job_id = uuid.uuid4().hex
@@ -142,8 +174,8 @@ class ShellExecutorService:
             return result
         
         payload_env = {"JOB_ID": job_id}
-        if env:
-            for key, value in env.items():
+        if merged_env:
+            for key, value in merged_env.items():
                 if value is None:
                     continue
                 payload_env[str(key)] = str(value)
