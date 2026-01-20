@@ -54,6 +54,17 @@ function detectContentTypeFromExtension(fileName?: string): string | null {
   return typeMap[ext || ""] || null;
 }
 
+function normalizePreviewUrl(url?: string | null): string | null {
+  const raw = (url || "").trim();
+  if (!raw) return null;
+  try {
+    const parsed = new URL(raw);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return raw.split("?")[0].split("#")[0];
+  }
+}
+
 /**
  * Extract HTML content from markdown code blocks
  * Handles both ```html and ``` markers
@@ -187,9 +198,39 @@ export function PreviewRenderer({
   const [jsonContent, setJsonContent] = useState<any>(null);
   const [jsonRaw, setJsonRaw] = useState<string | null>(null);
   const [jsonError, setJsonError] = useState(false);
+  const [stableObjectUrl, setStableObjectUrl] = useState(objectUrl);
   const containerRef = useRef<HTMLDivElement>(null);
   const isCompactPreview = previewVariant === "compact" && !isFullScreen;
   const compactHtmlScale = 0.5;
+
+  const hasLoadError = imageError || htmlError || markdownError || jsonError;
+  const objectUrlKey = useMemo(
+    () => normalizePreviewUrl(objectUrl),
+    [objectUrl],
+  );
+  const stableObjectUrlKey = useMemo(
+    () => normalizePreviewUrl(stableObjectUrl),
+    [stableObjectUrl],
+  );
+  const previewObjectUrl = stableObjectUrl ?? objectUrl;
+
+  useEffect(() => {
+    if (!objectUrl) {
+      setStableObjectUrl(undefined);
+      return;
+    }
+    if (!stableObjectUrl) {
+      setStableObjectUrl(objectUrl);
+      return;
+    }
+
+    const keysDiffer =
+      objectUrlKey && stableObjectUrlKey && objectUrlKey !== stableObjectUrlKey;
+
+    if (keysDiffer || (hasLoadError && objectUrl !== stableObjectUrl)) {
+      setStableObjectUrl(objectUrl);
+    }
+  }, [objectUrl, objectUrlKey, stableObjectUrl, stableObjectUrlKey, hasLoadError]);
 
   // Determine effective content type with fallback to file extension
   const effectiveContentType =
@@ -217,9 +258,11 @@ export function PreviewRenderer({
     return () => observer.disconnect();
   }, []);
 
-  // Reset error state when objectUrl changes (switching to different artifact)
+  // Reset error state when preview source changes (switching to different artifact)
   useEffect(() => {
-    if (objectUrl) {
+    if (previewObjectUrl || artifactId) {
+      setImageLoaded(false);
+      setImageError(false);
       setMarkdownError(false);
       setMarkdownContent(null);
       setHtmlError(false);
@@ -228,7 +271,7 @@ export function PreviewRenderer({
       setJsonContent(null);
       setJsonRaw(null);
     }
-  }, [objectUrl]);
+  }, [previewObjectUrl, artifactId]);
 
   // Fetch markdown content when in view
   useEffect(() => {
@@ -245,9 +288,9 @@ export function PreviewRenderer({
           if (artifactId) {
             // Use API endpoint to proxy from S3 (avoids presigned URL expiration)
             text = await api.artifacts.getArtifactContent(artifactId);
-          } else if (objectUrl) {
+          } else if (previewObjectUrl) {
             // Fallback to direct URL fetch
-            const res = await fetch(objectUrl);
+            const res = await fetch(previewObjectUrl);
             if (!res.ok) {
               throw new Error(`HTTP ${res.status}: ${res.statusText}`);
             }
@@ -280,7 +323,7 @@ export function PreviewRenderer({
   }, [
     isInView,
     isMarkdownLike,
-    objectUrl,
+    previewObjectUrl,
     artifactId,
     markdownContent,
     markdownError,
@@ -302,9 +345,9 @@ export function PreviewRenderer({
           if (artifactId) {
             // Use API endpoint to proxy from S3 (avoids presigned URL expiration and CORS issues)
             text = await api.artifacts.getArtifactContent(artifactId);
-          } else if (objectUrl) {
+          } else if (previewObjectUrl) {
             // Fallback to direct URL fetch
-            const res = await fetch(objectUrl);
+            const res = await fetch(previewObjectUrl);
             if (!res.ok) {
               throw new Error(`HTTP ${res.status}: ${res.statusText}`);
             }
@@ -354,7 +397,7 @@ export function PreviewRenderer({
   }, [
     isInView,
     effectiveContentType,
-    objectUrl,
+    previewObjectUrl,
     artifactId,
     htmlContent,
     htmlError,
@@ -373,8 +416,8 @@ export function PreviewRenderer({
           let text: string;
           if (artifactId) {
             text = await api.artifacts.getArtifactContent(artifactId);
-          } else if (objectUrl) {
-            const res = await fetch(objectUrl);
+          } else if (previewObjectUrl) {
+            const res = await fetch(previewObjectUrl);
             if (!res.ok) {
               throw new Error(`HTTP ${res.status}: ${res.statusText}`);
             }
@@ -425,7 +468,7 @@ export function PreviewRenderer({
   }, [
     isInView,
     effectiveContentType,
-    objectUrl,
+    previewObjectUrl,
     artifactId,
     jsonContent,
     jsonError,
@@ -460,7 +503,7 @@ export function PreviewRenderer({
     return null;
   }, [markdownContent, isMarkdownLike]);
 
-  if (!objectUrl && !artifactId) {
+  if (!previewObjectUrl && !artifactId) {
     return (
       <div
         className={`flex items-center justify-center bg-gray-100 dark:bg-gray-800 ${className}`}
@@ -521,10 +564,10 @@ export function PreviewRenderer({
                 <FiImage className="w-12 h-12 text-white/50" />
               </div>
             )}
-            {isInView && objectUrl && (
+            {isInView && previewObjectUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={objectUrl}
+                src={previewObjectUrl}
                 alt={fileName || "Preview"}
                 className={`max-w-[95vw] max-h-[95vh] object-contain ${imageLoaded ? "opacity-100" : "opacity-0"} transition-opacity`}
                 onLoad={() => setImageLoaded(true)}
@@ -549,10 +592,10 @@ export function PreviewRenderer({
               <FiImage className="w-12 h-12 text-gray-400 dark:text-gray-500" />
             </div>
           )}
-          {isInView && objectUrl && (
+          {isInView && previewObjectUrl && (
             <div className="relative w-full h-full flex items-center justify-center p-4">
               <Image
-                src={objectUrl}
+                src={previewObjectUrl}
                 alt={fileName || "Preview"}
                 fill
                 className={`object-contain ${imageLoaded ? "opacity-100" : "opacity-0"}`}
@@ -570,9 +613,9 @@ export function PreviewRenderer({
     if (effectiveContentType === "application/pdf") {
       return (
         <div className="relative w-full h-full bg-white dark:bg-gray-950">
-          {isInView && objectUrl ? (
+          {isInView && previewObjectUrl ? (
             <iframe
-              src={`${objectUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+              src={`${previewObjectUrl}#toolbar=0&navpanes=0&scrollbar=0`}
               className="w-full h-full border-0"
               title={fileName || "PDF Preview"}
             />

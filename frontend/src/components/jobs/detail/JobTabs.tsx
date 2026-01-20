@@ -168,6 +168,8 @@ interface JobTabsProps {
   form: Form | null;
   expandedSteps: Set<number>;
   toggleStep: (stepOrder: number) => void;
+  expandAllSteps: (stepOrders: number[]) => void;
+  collapseAllSteps: () => void;
   executionStepsError: string | null;
   imageArtifactsByStep: Map<number, Artifact[]>;
   loadingArtifacts: boolean;
@@ -200,6 +202,8 @@ export function JobTabs({
   form,
   expandedSteps,
   toggleStep,
+  expandAllSteps,
+  collapseAllSteps,
   executionStepsError,
   imageArtifactsByStep,
   loadingArtifacts,
@@ -269,6 +273,8 @@ export function JobTabs({
             mergedSteps={mergedSteps}
             expandedSteps={expandedSteps}
             onToggleStep={toggleStep}
+            onExpandAllSteps={expandAllSteps}
+            onCollapseAllSteps={collapseAllSteps}
             executionStepsError={executionStepsError}
             onRefresh={onRefresh}
             refreshing={refreshing}

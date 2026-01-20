@@ -9,17 +9,29 @@ export function useJobExecutionSteps() {
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
 
   const toggleStep = (stepOrder: number) => {
-    const newExpanded = new Set(expandedSteps);
-    if (newExpanded.has(stepOrder)) {
-      newExpanded.delete(stepOrder);
-    } else {
-      newExpanded.add(stepOrder);
-    }
-    setExpandedSteps(newExpanded);
+    setExpandedSteps((prev) => {
+      const next = new Set(prev);
+      if (next.has(stepOrder)) {
+        next.delete(stepOrder);
+      } else {
+        next.add(stepOrder);
+      }
+      return next;
+    });
+  };
+
+  const expandAll = (stepOrders: number[]) => {
+    setExpandedSteps(new Set(stepOrders));
+  };
+
+  const collapseAll = () => {
+    setExpandedSteps(new Set());
   };
 
   return {
     expandedSteps,
     toggleStep,
+    expandAll,
+    collapseAll,
   };
 }

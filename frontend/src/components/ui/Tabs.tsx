@@ -1,22 +1,31 @@
 "use client"
 
 import * as React from "react"
-import { Tab } from "@headlessui/react"
 import { cn } from "@/lib/utils"
 
 const Tabs = React.forwardRef<
   HTMLDivElement,
   { defaultValue?: string; value?: string; onValueChange?: (value: string) => void; children: React.ReactNode; className?: string }
 >(({ defaultValue, value, onValueChange, children, className }, ref) => {
-  const [selectedIndex, setSelectedIndex] = React.useState(0)
-  // We need to manage state if not controlled, or sync if controlled.
-  // Headless UI Tabs uses index. Shadcn uses string values.
-  // For simplicity here, let's just make a Context-based implementation that doesn't rely on Headless UI if we want string values,
-  // OR we can map strings to indices.
-  // A custom context implementation is probably safer to match Shadcn API.
-  
+  const isControlled = value !== undefined
+  const [internalValue, setInternalValue] = React.useState(defaultValue)
+
+  React.useEffect(() => {
+    if (!isControlled) {
+      setInternalValue(defaultValue)
+    }
+  }, [defaultValue, isControlled])
+
+  const currentValue = isControlled ? value : internalValue
+  const handleValueChange = (nextValue: string) => {
+    if (!isControlled) {
+      setInternalValue(nextValue)
+    }
+    onValueChange?.(nextValue)
+  }
+
   return (
-    <TabsContext.Provider value={{ value: value || defaultValue, onValueChange }}>
+    <TabsContext.Provider value={{ value: currentValue, onValueChange: handleValueChange }}>
       <div ref={ref} className={cn("", className)}>
         {children}
       </div>

@@ -16,7 +16,7 @@ function normalizeUrlKey(url: string | null | undefined): string | null {
 }
 
 interface BuildArtifactGalleryItemsArgs {
-  job?: Job | null;
+  job?: Pick<Job, "job_id" | "output_url" | "completed_at" | "failed_at"> | null;
   artifacts?: Artifact[] | null;
   steps?: MergedStep[] | null;
 }
@@ -45,10 +45,12 @@ export function buildArtifactGalleryItems({
   });
 
   artifacts?.forEach((artifact, index) => {
+    const normalizedObjectUrl = normalizeUrlKey(artifact.object_url);
+    const normalizedPublicUrl = normalizeUrlKey(artifact.public_url);
     const uniqueKey =
       artifact.artifact_id ||
-      artifact.object_url ||
-      artifact.public_url ||
+      normalizedObjectUrl ||
+      normalizedPublicUrl ||
       `${artifact.file_name || artifact.artifact_name || "artifact"}-${index}`;
 
     if (!uniqueKey || seen.has(uniqueKey)) {
@@ -70,7 +72,7 @@ export function buildArtifactGalleryItems({
         ? formatStepLabel(meta?.stepOrder, meta?.stepType, meta?.stepName)
         : artifact.artifact_name || artifact.file_name || "Generated Artifact";
 
-    const urlKey = artifact.object_url || artifact.public_url;
+    const urlKey = normalizedObjectUrl || normalizedPublicUrl;
     if (urlKey) {
       seen.add(urlKey);
     }

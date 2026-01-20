@@ -81,7 +81,8 @@ export default function JobDetailClient() {
     pollExecutionSteps: shouldLoadExecutionSteps,
   });
 
-  const { expandedSteps, toggleStep } = useJobExecutionSteps();
+  const { expandedSteps, toggleStep, expandAll, collapseAll } =
+    useJobExecutionSteps();
 
   const mergedSteps = useMergedSteps({ job, workflow });
 
@@ -109,14 +110,27 @@ export default function JobDetailClient() {
   const { previewItem, openPreview, closePreview } =
     usePreviewModal<ArtifactGalleryItem>();
 
+  const jobOutputContext = useMemo(
+    () =>
+      job
+        ? {
+            job_id: job.job_id,
+            output_url: job.output_url,
+            completed_at: job.completed_at,
+            failed_at: job.failed_at,
+          }
+        : null,
+    [job?.job_id, job?.output_url, job?.completed_at, job?.failed_at],
+  );
+
   const artifactGalleryItems = useMemo(() => {
     if (!shouldLoadExecutionSteps) return [];
     return buildArtifactGalleryItems({
-      job,
+      job: jobOutputContext,
       artifacts: jobArtifacts,
       steps: mergedSteps,
     });
-  }, [job, jobArtifacts, mergedSteps, shouldLoadExecutionSteps]);
+  }, [jobArtifacts, mergedSteps, shouldLoadExecutionSteps, jobOutputContext]);
 
   const stepsSummary = useMemo<JobStepSummary>(
     () => summarizeStepProgress(mergedSteps),
@@ -427,6 +441,8 @@ export default function JobDetailClient() {
             form={form}
             expandedSteps={expandedSteps}
             toggleStep={toggleStep}
+            expandAllSteps={expandAll}
+            collapseAllSteps={collapseAll}
             executionStepsError={executionStepsError}
             imageArtifactsByStep={imageArtifactsByStep}
             loadingArtifacts={loadingArtifacts}

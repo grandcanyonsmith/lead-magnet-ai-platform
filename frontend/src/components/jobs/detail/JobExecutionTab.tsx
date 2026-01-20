@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { ExecutionSteps } from "@/components/jobs/ExecutionSteps";
 import { ArtifactGallery } from "@/components/jobs/detail/ArtifactGallery";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -11,6 +12,8 @@ interface JobExecutionTabProps {
   mergedSteps: MergedStep[];
   expandedSteps: Set<number>;
   onToggleStep: (stepOrder: number) => void;
+  onExpandAllSteps: (stepOrders: number[]) => void;
+  onCollapseAllSteps: () => void;
   executionStepsError: string | null;
   onRefresh?: () => void;
   refreshing?: boolean;
@@ -32,6 +35,8 @@ export function JobExecutionTab({
   mergedSteps,
   expandedSteps,
   onToggleStep,
+  onExpandAllSteps,
+  onCollapseAllSteps,
   executionStepsError,
   onRefresh,
   refreshing,
@@ -48,6 +53,24 @@ export function JobExecutionTab({
   onPreview,
 }: JobExecutionTabProps) {
   const canRetryExecution = Boolean(onRefresh) && !refreshing;
+  const [viewMode, setViewMode] = useState<"compact" | "expanded">("compact");
+  const timelineStepOrders = useMemo(
+    () =>
+      mergedSteps
+        .filter((step) => step.step_type !== "form_submission")
+        .map((step) => step.step_order)
+        .filter((order): order is number => order !== undefined && order !== null),
+    [mergedSteps],
+  );
+
+  const handleViewModeChange = (nextMode: "compact" | "expanded") => {
+    setViewMode(nextMode);
+    if (nextMode === "expanded") {
+      onExpandAllSteps?.(timelineStepOrders);
+    } else {
+      onCollapseAllSteps?.();
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -63,10 +86,13 @@ export function JobExecutionTab({
 
       <ExecutionSteps
         jobId={job.job_id}
-        variant="compact"
+        variant={viewMode}
         steps={mergedSteps}
         expandedSteps={expandedSteps}
         onToggleStep={onToggleStep}
+        onExpandAll={onExpandAllSteps}
+        onCollapseAll={onCollapseAllSteps}
+        onVariantChange={handleViewModeChange}
         onCopy={onCopy}
         jobStatus={job.status}
         liveStep={job.live_step}

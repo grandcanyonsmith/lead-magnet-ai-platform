@@ -60,7 +60,14 @@ export function StepHeader({
               )}
             </h3>
             {showMeta && (
-              <StepMetaRow step={step} status={status} allSteps={allSteps} />
+              <StepMetaRow
+                step={step}
+                status={status}
+                allSteps={allSteps}
+                canEdit={canEdit}
+                onEditStep={onEditStep}
+                jobStatus={jobStatus}
+              />
             )}
           </div>
         </div>

@@ -3,12 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
-import {
-  Disclosure,
-  DisclosureButton,
-  DisclosurePanel,
-} from "@headlessui/react";
-import { MergedStep } from "@/types/job";
+import type { JobLiveStep, MergedStep } from "@/types/job";
 import type { FormSubmission } from "@/types/form";
 import { StepHeader } from "./StepHeader";
 import { StepInputOutput } from "./StepInputOutput";
@@ -19,8 +14,10 @@ import { Artifact } from "@/types/artifact";
 import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { JobLiveStep } from "@/types/job";
 import { formatLiveOutputText } from "@/utils/jobFormatting";
+import { Button } from "@/components/ui/Button";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { Select } from "@/components/ui/Select";
 
 interface ExecutionStepsProps {
   jobId?: string;
@@ -28,6 +25,9 @@ interface ExecutionStepsProps {
   steps: MergedStep[];
   expandedSteps: Set<number>;
   onToggleStep: (stepOrder: number) => void;
+  onExpandAll?: (stepOrders: number[]) => void;
+  onCollapseAll?: () => void;
+  onVariantChange?: (variant: "compact" | "expanded") => void;
   onCopy: (text: string) => void;
   jobStatus?: string;
   liveStep?: JobLiveStep | null;
@@ -49,6 +49,9 @@ export function ExecutionSteps({
   steps,
   expandedSteps,
   onToggleStep,
+  onExpandAll,
+  onCollapseAll,
+  onVariantChange,
   onCopy,
   jobStatus,
   liveStep,
@@ -92,6 +95,14 @@ export function ExecutionSteps({
     typeof onResubmit === "function" &&
     typeof resubmitting === "boolean";
   const hasTimelineSteps = stepsForTimeline.length > 0;
+  const showTimelineLine = hasTimelineSteps || showSubmissionSummary;
+  const timelineStepOrders = useMemo(
+    () =>
+      stepsForTimeline
+        .map((step) => step.step_order)
+        .filter((order): order is number => order !== undefined && order !== null),
+    [stepsForTimeline],
+  );
 
   // Helper function for step status (not memoized - simple computation)
   const getStepStatusForStep = (step: MergedStep) => {
@@ -207,6 +218,68 @@ export function ExecutionSteps({
     </SectionCard>
   ) : null;
 
+  const headerActions =
+    (typeof onVariantChange === "function" ||
+      (variant === "expanded" && (onExpandAll || onCollapseAll))) &&
+    hasTimelineSteps ? (
+      <div className="flex flex-wrap items-center gap-2">
+        {typeof onVariantChange === "function" && (
+          <div className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-muted/40 p-1 text-xs">
+            <button
+              type="button"
+              onClick={() => onVariantChange("compact")}
+              className={`rounded-md px-3 py-1 font-semibold transition-colors ${
+                variant === "compact"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              aria-pressed={variant === "compact"}
+            >
+              Compact
+            </button>
+            <button
+              type="button"
+              onClick={() => onVariantChange("expanded")}
+              className={`rounded-md px-3 py-1 font-semibold transition-colors ${
+                variant === "expanded"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              aria-pressed={variant === "expanded"}
+            >
+              Expanded
+            </button>
+          </div>
+        )}
+        {variant === "expanded" && (
+          <>
+            {onExpandAll && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onExpandAll(timelineStepOrders)}
+                disabled={timelineStepOrders.length === 0}
+              >
+                Expand all
+              </Button>
+            )}
+            {onCollapseAll && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onCollapseAll()}
+                disabled={expandedSteps.size === 0}
+              >
+                Collapse all
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    ) : null;
+
   if (!steps || steps.length === 0) {
     const emptyStatusCopy =
       jobStatus === "failed"
@@ -216,12 +289,12 @@ export function ExecutionSteps({
           : "Steps will appear once the workflow starts running.";
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {liveOutputPanel}
         <SectionCard
           title="Execution timeline"
           description="Track step-by-step progress for this run."
-          className="mt-4 sm:mt-6"
+          className="mt-3 sm:mt-5"
         >
           <EmptyState
             title="No execution steps available"
@@ -234,14 +307,16 @@ export function ExecutionSteps({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {liveOutputPanel}
       <SectionCard
-          title="Execution timeline"
-          description="Track step-by-step progress and outputs."
-          className="mt-4 sm:mt-6"
-        >
-          <div className="space-y-4">
+        title="Execution timeline"
+        description="Track step-by-step progress and outputs."
+        className="mt-3 sm:mt-5"
+        actions={headerActions}
+      >
+        <div className="space-y-4">
+          {hasTimelineSteps && (
             <div className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2">
               <StepProgressBar
                 steps={sortedSteps}
@@ -249,318 +324,283 @@ export function ExecutionSteps({
                 getStepStatus={getStepStatusForStep}
               />
             </div>
+          )}
 
-            <div
-              id="execution-steps-list"
-              className="relative pl-4 sm:pl-6 space-y-0"
-            >
+          <div
+            id="execution-steps-list"
+            className="relative pl-4 sm:pl-6 space-y-0"
+          >
+            {showTimelineLine && (
               <div className="absolute left-4 sm:left-6 top-4 bottom-4 w-px bg-border/70" />
+            )}
 
-              {showSubmissionSummary && submission && (
-                <div className={`relative ${hasTimelineSteps ? "pb-8" : "pb-0"}`}>
-                  <div className="absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-background bg-green-500" />
-                  <div className="ml-6">
-                    <SubmissionSummary
-                      submission={submission}
-                      onResubmit={onResubmit}
-                      resubmitting={resubmitting}
-                      className="mb-0 sm:mb-0"
-                    />
-                  </div>
+            {showSubmissionSummary && submission && (
+              <div className={`relative ${hasTimelineSteps ? "pb-8" : "pb-0"}`}>
+                <div className="absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-background bg-green-500" />
+                <div className="ml-6">
+                  <SubmissionSummary
+                    submission={submission}
+                    onResubmit={onResubmit}
+                    resubmitting={resubmitting}
+                    className="mb-0 sm:mb-0"
+                  />
                 </div>
-              )}
+              </div>
+            )}
+            {stepsForTimeline.map((step) => {
+              const stepOrder = step.step_order ?? 0;
+              const isExpanded = expandedSteps.has(stepOrder);
+              const stepStatus = getStepStatusForStep(step);
+              const liveOutputForStep =
+                liveStep && liveStep.step_order === stepOrder
+                  ? liveStep.output_text
+                  : undefined;
+              const liveUpdatedAtForStep =
+                liveStep && liveStep.step_order === stepOrder
+                  ? liveStep.updated_at
+                  : undefined;
 
-              {stepsForTimeline.map((step) => {
-                const stepOrder = step.step_order ?? 0;
-                const isExpanded = expandedSteps.has(stepOrder);
-                const stepStatus = getStepStatusForStep(step);
-                const liveOutputForStep =
-                  liveStep && liveStep.step_order === stepOrder
-                    ? liveStep.output_text
-                    : undefined;
-                const liveUpdatedAtForStep =
-                  liveStep && liveStep.step_order === stepOrder
-                    ? liveStep.updated_at
-                    : undefined;
+              const detailsHref =
+                jobId && step.step_order !== undefined
+                  ? `/dashboard/jobs/${jobId}/steps/${step.step_order}`
+                  : undefined;
 
-                const detailsHref =
-                  jobId && step.step_order !== undefined
-                    ? `/dashboard/jobs/${jobId}/steps/${step.step_order}`
-                    : undefined;
+              return (
+                <div
+                  key={stepOrder}
+                  id={`execution-step-${stepOrder}`}
+                  className="relative pb-8 last:pb-0 scroll-mt-24"
+                >
+                  <div
+                    className={`absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-background ${
+                      stepStatus === "completed"
+                        ? "bg-green-500"
+                        : stepStatus === "in_progress"
+                          ? "bg-blue-500 animate-pulse"
+                          : stepStatus === "failed"
+                            ? "bg-red-500"
+                            : "bg-muted-foreground/40"
+                    }`}
+                  />
 
-                return (
-                  <div key={stepOrder} className="relative pb-8 last:pb-0">
-                    <div
-                      className={`absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-background ${
-                        stepStatus === "completed"
-                          ? "bg-green-500"
-                          : stepStatus === "in_progress"
-                            ? "bg-blue-500 animate-pulse"
-                            : stepStatus === "failed"
-                              ? "bg-red-500"
-                              : "bg-muted-foreground/40"
-                      }`}
+                  <div className="ml-6 rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md">
+                    <StepHeader
+                      step={step}
+                      status={stepStatus}
+                      jobStatus={jobStatus}
+                      canEdit={canEdit}
+                      rerunningStep={rerunningStep}
+                      allSteps={sortedSteps}
+                      onEditStep={onEditStep}
+                      onRerunStep={onRerunStep}
+                      onRerunStepClick={onRerunStepClick}
+                      detailsHref={detailsHref}
                     />
-
-                    <div className="ml-6 rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md">
-                      <StepHeader
-                        step={step}
-                        status={stepStatus}
-                        jobStatus={jobStatus}
-                        canEdit={canEdit}
-                        rerunningStep={rerunningStep}
-                        allSteps={sortedSteps}
-                        onEditStep={onEditStep}
-                        onRerunStep={onRerunStep}
-                        onRerunStepClick={onRerunStepClick}
-                        detailsHref={detailsHref}
-                      />
-                      {variant === "compact" ? (
-                        <div className="border-t border-border/60 px-4 pb-4 pt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                          {step.step_type !== "workflow_step" && (
-                            <span className="inline-flex items-center gap-2">
-                              {step.step_type.replace(/_/g, " ")}
+                    {variant === "compact" ? (
+                      <div className="border-t border-border/60 px-4 pb-4 pt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                        {step.step_type !== "workflow_step" && (
+                          <span className="inline-flex items-center gap-2">
+                            {step.step_type.replace(/_/g, " ")}
+                          </span>
+                        )}
+                        {detailsHref && (
+                          <Link
+                            href={detailsHref}
+                            className="inline-flex items-center gap-2 font-semibold text-primary-600 hover:text-primary-700"
+                          >
+                            View details
+                            <ChevronDownIcon className="h-3.5 w-3.5 rotate-[-90deg]" />
+                          </Link>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="w-full flex justify-center py-2 border-t border-border/60 hover:bg-muted/40 transition-colors text-xs font-medium text-muted-foreground"
+                          onClick={() => onToggleStep(stepOrder)}
+                          aria-expanded={isExpanded}
+                        >
+                          {isExpanded ? (
+                            <span className="flex items-center gap-1">
+                              Hide details <ChevronUpIcon className="w-3 h-3" />
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              Show details <ChevronDownIcon className="w-3 h-3" />
                             </span>
                           )}
-                          {detailsHref && (
-                            <Link
-                              href={detailsHref}
-                              className="inline-flex items-center gap-2 font-semibold text-primary-600 hover:text-primary-700"
-                            >
-                              View details
-                              <ChevronDownIcon className="h-3.5 w-3.5 rotate-[-90deg]" />
-                            </Link>
-                          )}
-                        </div>
-                      ) : (
-                        <Disclosure defaultOpen={isExpanded}>
-                          {({ open }) => (
-                            <>
-                              <DisclosureButton
-                                className="w-full flex justify-center py-2 border-t border-border/60 hover:bg-muted/40 transition-colors text-xs font-medium text-muted-foreground"
-                                onClick={() => onToggleStep(stepOrder)}
-                              >
-                                {open ? (
-                                  <span className="flex items-center gap-1">
-                                    Hide details{" "}
-                                    <ChevronUpIcon className="w-3 h-3" />
-                                  </span>
-                                ) : (
-                                  <span className="flex items-center gap-1">
-                                    Show details{" "}
-                                    <ChevronDownIcon className="w-3 h-3" />
-                                  </span>
-                                )}
-                              </DisclosureButton>
-                              <DisclosurePanel static>
-                                {open && (
-                                  <div className="border-t border-border/60 bg-muted/30">
-                                    <StepInputOutput
-                                      step={step}
-                                      status={stepStatus}
-                                      onCopy={onCopy}
-                                      liveOutput={liveOutputForStep}
-                                      liveUpdatedAt={liveUpdatedAtForStep}
-                                      imageArtifacts={
-                                        imageArtifactsByStep.get(stepOrder) || []
+                        </button>
+                        {isExpanded && (
+                          <div className="border-t border-border/60 bg-muted/30">
+                            <StepInputOutput
+                              step={step}
+                              status={stepStatus}
+                              onCopy={onCopy}
+                              liveOutput={liveOutputForStep}
+                              liveUpdatedAt={liveUpdatedAtForStep}
+                              imageArtifacts={
+                                imageArtifactsByStep.get(stepOrder) || []
+                              }
+                              loadingImageArtifacts={loadingImageArtifacts}
+                              onEditStep={onEditStep}
+                              canEdit={canEdit}
+                              variant={variant}
+                            />
+
+                            {(() => {
+                              const stepImageUrls =
+                                step.image_urls &&
+                                Array.isArray(step.image_urls) &&
+                                step.image_urls.length > 0
+                                  ? step.image_urls
+                                  : [];
+                              const stepImageArtifacts =
+                                imageArtifactsByStep.get(stepOrder) || [];
+                              const mainArtifactId = step.artifact_id;
+
+                              const getFilenameFromUrl = (url: string): string => {
+                                try {
+                                  const urlObj = new URL(url);
+                                  const pathname = urlObj.pathname;
+                                  const filename = pathname.split("/").pop() || "";
+                                  return filename;
+                                } catch {
+                                  const parts = url.split("/");
+                                  return parts[parts.length - 1] || url;
+                                }
+                              };
+
+                              const normalizeFilename = (filename: string): string => {
+                                return filename.split("?")[0].toLowerCase();
+                              };
+
+                              const displayedFiles = new Set<string>();
+                              const filesToShow: Array<{
+                                type: "artifact" | "imageArtifact" | "imageUrl";
+                                data: any;
+                                key: string;
+                              }> = [];
+
+                              if (mainArtifactId) {
+                                displayedFiles.add(`artifact:${mainArtifactId}`);
+                              }
+
+                              stepImageArtifacts.forEach((artifact: Artifact) => {
+                                const artifactId = artifact.artifact_id;
+                                const fileName =
+                                  artifact.file_name || artifact.artifact_name || "";
+                                const normalizedName = normalizeFilename(fileName);
+
+                                if (artifactId === mainArtifactId) {
+                                  return;
+                                }
+
+                                if (
+                                  normalizedName &&
+                                  displayedFiles.has(`filename:${normalizedName}`)
+                                ) {
+                                  return;
+                                }
+
+                                displayedFiles.add(`filename:${normalizedName}`);
+                                displayedFiles.add(`artifact:${artifactId}`);
+                                filesToShow.push({
+                                  type: "imageArtifact",
+                                  data: artifact,
+                                  key: `image-artifact-${artifactId}`,
+                                });
+                              });
+
+                              stepImageUrls.forEach((imageUrl: string, idx: number) => {
+                                const filename = getFilenameFromUrl(imageUrl);
+                                const normalizedName = normalizeFilename(filename);
+
+                                if (
+                                  normalizedName &&
+                                  displayedFiles.has(`filename:${normalizedName}`)
+                                ) {
+                                  return;
+                                }
+
+                                const matchesExistingArtifact =
+                                  stepImageArtifacts.some((artifact: Artifact) => {
+                                    const artifactUrl =
+                                      artifact.object_url || artifact.public_url;
+                                    return (
+                                      artifactUrl === imageUrl ||
+                                      normalizeFilename(
+                                        artifact.file_name ||
+                                          artifact.artifact_name ||
+                                          "",
+                                      ) === normalizedName
+                                    );
+                                  });
+
+                                if (matchesExistingArtifact) {
+                                  return;
+                                }
+
+                                displayedFiles.add(`filename:${normalizedName}`);
+                                filesToShow.push({
+                                  type: "imageUrl",
+                                  data: imageUrl,
+                                  key: `image-url-${idx}`,
+                                });
+                              });
+
+                              if (filesToShow.length > 0) {
+                                return (
+                                  <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-muted/20">
+                                    {filesToShow.map((file) => {
+                                      if (file.type === "imageArtifact") {
+                                        return (
+                                          <ImagePreview
+                                            key={file.key}
+                                            artifact={file.data}
+                                            imageIndex={0}
+                                            model={step.model}
+                                            tools={step.input?.tools || step.tools}
+                                            toolChoice={
+                                              step.input?.tool_choice ||
+                                              step.tool_choice
+                                            }
+                                          />
+                                        );
+                                      } else if (file.type === "imageUrl") {
+                                        return (
+                                          <ImagePreview
+                                            key={file.key}
+                                            imageUrl={file.data}
+                                            imageIndex={0}
+                                            model={step.model}
+                                            tools={step.input?.tools || step.tools}
+                                            toolChoice={
+                                              step.input?.tool_choice ||
+                                              step.tool_choice
+                                            }
+                                          />
+                                        );
                                       }
-                                      loadingImageArtifacts={loadingImageArtifacts}
-                                      onEditStep={onEditStep}
-                                      canEdit={canEdit}
-                                      variant={variant}
-                                    />
-
-                                    {variant === "expanded" &&
-                                      (() => {
-                                        const stepImageUrls =
-                                          step.image_urls &&
-                                          Array.isArray(step.image_urls) &&
-                                          step.image_urls.length > 0
-                                            ? step.image_urls
-                                            : [];
-                                        const stepImageArtifacts =
-                                          imageArtifactsByStep.get(stepOrder) || [];
-                                        const mainArtifactId = step.artifact_id;
-
-                                        const getFilenameFromUrl = (
-                                          url: string,
-                                        ): string => {
-                                          try {
-                                            const urlObj = new URL(url);
-                                            const pathname = urlObj.pathname;
-                                            const filename =
-                                              pathname.split("/").pop() || "";
-                                            return filename;
-                                          } catch {
-                                            const parts = url.split("/");
-                                            return parts[parts.length - 1] || url;
-                                          }
-                                        };
-
-                                        const normalizeFilename = (
-                                          filename: string,
-                                        ): string => {
-                                          return filename.split("?")[0].toLowerCase();
-                                        };
-
-                                        const displayedFiles = new Set<string>();
-                                        const filesToShow: Array<{
-                                          type:
-                                            | "artifact"
-                                            | "imageArtifact"
-                                            | "imageUrl";
-                                          data: any;
-                                          key: string;
-                                        }> = [];
-
-                                        if (mainArtifactId) {
-                                          displayedFiles.add(`artifact:${mainArtifactId}`);
-                                        }
-
-                                        stepImageArtifacts.forEach(
-                                          (artifact: Artifact) => {
-                                            const artifactId = artifact.artifact_id;
-                                            const fileName =
-                                              artifact.file_name ||
-                                              artifact.artifact_name ||
-                                              "";
-                                            const normalizedName =
-                                              normalizeFilename(fileName);
-
-                                            if (artifactId === mainArtifactId) {
-                                              return;
-                                            }
-
-                                            if (
-                                              normalizedName &&
-                                              displayedFiles.has(
-                                                `filename:${normalizedName}`,
-                                              )
-                                            ) {
-                                              return;
-                                            }
-
-                                            displayedFiles.add(
-                                              `filename:${normalizedName}`,
-                                            );
-                                            displayedFiles.add(`artifact:${artifactId}`);
-                                            filesToShow.push({
-                                              type: "imageArtifact",
-                                              data: artifact,
-                                              key: `image-artifact-${artifactId}`,
-                                            });
-                                          },
-                                        );
-
-                                        stepImageUrls.forEach(
-                                          (imageUrl: string, idx: number) => {
-                                            const filename =
-                                              getFilenameFromUrl(imageUrl);
-                                            const normalizedName =
-                                              normalizeFilename(filename);
-
-                                            if (
-                                              normalizedName &&
-                                              displayedFiles.has(
-                                                `filename:${normalizedName}`,
-                                              )
-                                            ) {
-                                              return;
-                                            }
-
-                                            const matchesExistingArtifact =
-                                              stepImageArtifacts.some(
-                                                (artifact: Artifact) => {
-                                                  const artifactUrl =
-                                                    artifact.object_url ||
-                                                    artifact.public_url;
-                                                  return (
-                                                    artifactUrl === imageUrl ||
-                                                    normalizeFilename(
-                                                      artifact.file_name ||
-                                                        artifact.artifact_name ||
-                                                        "",
-                                                    ) === normalizedName
-                                                  );
-                                                },
-                                              );
-
-                                            if (matchesExistingArtifact) {
-                                              return;
-                                            }
-
-                                            displayedFiles.add(
-                                              `filename:${normalizedName}`,
-                                            );
-                                            filesToShow.push({
-                                              type: "imageUrl",
-                                              data: imageUrl,
-                                              key: `image-url-${idx}`,
-                                            });
-                                          },
-                                        );
-
-                                        if (filesToShow.length > 0) {
-                                          return (
-                                            <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-muted/20">
-                                              {filesToShow.map((file) => {
-                                                if (file.type === "imageArtifact") {
-                                                  return (
-                                                    <ImagePreview
-                                                      key={file.key}
-                                                      artifact={file.data}
-                                                      imageIndex={0}
-                                                      model={step.model}
-                                                      tools={
-                                                        step.input?.tools ||
-                                                        step.tools
-                                                      }
-                                                      toolChoice={
-                                                        step.input?.tool_choice ||
-                                                        step.tool_choice
-                                                      }
-                                                    />
-                                                  );
-                                                } else if (file.type === "imageUrl") {
-                                                  return (
-                                                    <ImagePreview
-                                                      key={file.key}
-                                                      imageUrl={file.data}
-                                                      imageIndex={0}
-                                                      model={step.model}
-                                                      tools={
-                                                        step.input?.tools ||
-                                                        step.tools
-                                                      }
-                                                      toolChoice={
-                                                        step.input?.tool_choice ||
-                                                        step.tool_choice
-                                                      }
-                                                    />
-                                                  );
-                                                }
-                                                return null;
-                                              })}
-                                            </div>
-                                          );
-                                        }
-
-                                        return null;
-                                      })()}
+                                      return null;
+                                    })}
                                   </div>
-                                )}
-                              </DisclosurePanel>
-                            </>
-                          )}
-                        </Disclosure>
-                      )}
-                    </div>
+                                );
+                              }
+
+                              return null;
+                            })()}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
-        </SectionCard>
+        </div>
+      </SectionCard>
     </div>
   );
 }
