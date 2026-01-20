@@ -90,6 +90,23 @@ export function formatDurationMs(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+export function formatLiveOutputText(value: string): string {
+  if (!value) return value;
+  const normalized = value.replace(/\r\n/g, "\n");
+  if (normalized.includes("\n")) {
+    return normalized;
+  }
+  const promptMatches = normalized.match(/\$\s/g);
+  if (!promptMatches || promptMatches.length === 0) {
+    return normalized;
+  }
+  const hasShellMarker = /shell execution/i.test(normalized);
+  if (!hasShellMarker && promptMatches.length < 2) {
+    return normalized;
+  }
+  return normalized.replace(/\s\$\s/g, "\n$ ");
+}
+
 export function isJSON(str: string): boolean {
   try {
     JSON.parse(str);

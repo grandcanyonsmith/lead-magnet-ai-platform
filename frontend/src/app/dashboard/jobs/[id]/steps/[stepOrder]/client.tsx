@@ -32,6 +32,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { formatRelativeTime } from "@/utils/date";
 import {
   formatDurationMs,
+  formatLiveOutputText,
   formatStepInput,
   formatStepOutput,
   isHTML,
@@ -293,6 +294,7 @@ export default function StepDetailClient() {
     step?.step_order !== undefined &&
     job?.live_step?.step_order === step.step_order;
   const liveOutputText = typeof liveOutput === "string" ? liveOutput : "";
+  const formattedLiveOutputText = formatLiveOutputText(liveOutputText);
   const hasLiveOutput = liveOutputText.length > 0;
   const outputIsEmpty =
     step?.output === null || step?.output === undefined || step?.output === "";
@@ -612,7 +614,7 @@ export default function StepDetailClient() {
               </div>
               <pre className="mt-2 max-h-72 overflow-y-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-gray-800 dark:text-gray-200 scrollbar-hide-until-hover">
                 {hasLiveOutput
-                  ? liveOutputText
+                  ? formattedLiveOutputText
                   : "Waiting for model output..."}
               </pre>
               {job?.live_step?.error && (

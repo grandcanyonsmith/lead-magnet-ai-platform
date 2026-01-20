@@ -349,10 +349,111 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     # Prepare environment (inherit current env but allow overrides)
     cmd_env = os.environ.copy()
     cmd_env.update(env_vars)
+    
+    # Ensure AWS credentials are available for AWS CLI commands
+    # Lambda automatically provides credentials via IAM role, but AWS CLI needs them explicitly
+    # Set AWS_REGION if not already set (Lambda sets this automatically, but ensure it's available)
+    if "AWS_REGION" not in cmd_env:
+        cmd_env["AWS_REGION"] = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
+    if "AWS_DEFAULT_REGION" not in cmd_env:
+        cmd_env["AWS_DEFAULT_REGION"] = cmd_env["AWS_REGION"]
+    
+    # AWS CLI will automatically use IAM role credentials in Lambda via instance metadata
+    # But we can also ensure AWS_PROFILE is not set (which might interfere)
+    if "AWS_PROFILE" in cmd_env:
+        # Don't remove it if explicitly set, but ensure it doesn't conflict
+        pass
+    
+    # Set AWS_SDK_LOAD_CONFIG=1 to ensure boto3/botocore can find credentials
+    cmd_env["AWS_SDK_LOAD_CONFIG"] = "1"
     cmd_env["HOME"] = workspace_path
     cmd_env["WORK_ROOT"] = work_root
     cmd_env["WORKDIR"] = work_root
     cmd_env["PWD"] = work_root
+    
+    # Create AWS CLI wrapper script that uses boto3
+    # This allows 'aws s3 cp' commands to work even if AWS CLI isn't installed
+    aws_wrapper_script = f"""#!/usr/bin/env python3
+import sys
+import boto3
+import os
+import re
+import shutil
+
+def aws_s3_cp(args):
+    '''Wrapper for 'aws s3 cp' using boto3'''
+    # Parse: aws s3 cp <source> <dest> [--region <region>]
+    source = None
+    dest = None
+    region = os.environ.get('AWS_REGION', 'us-east-1')
+    
+    i = 0
+    while i < len(args):
+        if args[i] == '--region' and i + 1 < len(args):
+            region = args[i + 1]
+            i += 2
+        elif args[i].startswith('s3://'):
+            if source is None:
+                source = args[i]
+            else:
+                dest = args[i]
+            i += 1
+        elif not args[i].startswith('-'):
+            if source is None:
+                source = args[i]
+            else:
+                dest = args[i]
+            i += 1
+        else:
+            i += 1
+    
+    if not source or not dest:
+        print("Usage: aws s3 cp <source> <dest> [--region <region>]", file=sys.stderr)
+        sys.exit(1)
+    
+    s3 = boto3.client('s3', region_name=region)
+    
+    # Determine if source or dest is S3
+    if source.startswith('s3://'):
+        # Download from S3
+        bucket_key = source[5:].split('/', 1)
+        bucket = bucket_key[0]
+        key = bucket_key[1] if len(bucket_key) > 1 else ''
+        s3.download_file(bucket, key, dest)
+        print(f"download: s3://{{bucket}}/{{key}} to {{dest}}")
+    elif dest.startswith('s3://'):
+        # Upload to S3
+        bucket_key = dest[5:].split('/', 1)
+        bucket = bucket_key[0]
+        key = bucket_key[1] if len(bucket_key) > 1 else os.path.basename(source)
+        s3.upload_file(source, bucket, key)
+        print(f"upload: {{source}} to s3://{{bucket}}/{{key}}")
+    else:
+        print("Either source or destination must be an S3 path (s3://...)", file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print("AWS CLI wrapper - limited support for 's3 cp' commands", file=sys.stderr)
+        sys.exit(1)
+    
+    if sys.argv[1] == 's3' and len(sys.argv) > 2 and sys.argv[2] == 'cp':
+        aws_s3_cp(sys.argv[3:])
+    else:
+        print(f"AWS CLI wrapper: command '{{' '.join(sys.argv[1:])}}' not supported. Use boto3/Python for other operations.", file=sys.stderr)
+        sys.exit(1)
+"""
+    
+    # Write wrapper script to workspace and add to PATH
+    aws_wrapper_path = os.path.join(workspace_path, "aws")
+    try:
+        with open(aws_wrapper_path, "w") as f:
+            f.write(aws_wrapper_script)
+        os.chmod(aws_wrapper_path, 0o755)
+        # Add wrapper directory to PATH so 'aws' command is found
+        cmd_env["PATH"] = f"{workspace_path}:{cmd_env.get('PATH', '')}"
+    except Exception as e:
+        logger.warning(f"Failed to create AWS CLI wrapper: {e}", extra={"workspace_path": workspace_path})
     
     results = []
     

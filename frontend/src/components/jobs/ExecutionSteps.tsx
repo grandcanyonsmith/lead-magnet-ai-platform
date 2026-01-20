@@ -20,6 +20,7 @@ import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { JobLiveStep } from "@/types/job";
+import { formatLiveOutputText } from "@/utils/jobFormatting";
 
 interface ExecutionStepsProps {
   jobId?: string;
@@ -62,7 +63,7 @@ export function ExecutionSteps({
   onResubmit,
   resubmitting,
 }: ExecutionStepsProps) {
-  const liveOutputRef = useRef<HTMLDivElement>(null);
+  const liveOutputRef = useRef<HTMLPreElement>(null);
 
   // Sort steps by step_order once (must be before early return)
   const sortedSteps = useMemo(() => {
@@ -99,6 +100,10 @@ export function ExecutionSteps({
   const liveOutputText =
     typeof liveStep?.output_text === "string" ? liveStep.output_text : "";
   const hasLiveOutput = liveOutputText.length > 0;
+  const liveOutputDisplay = useMemo(
+    () => formatLiveOutputText(liveOutputText),
+    [liveOutputText],
+  );
   const shouldShowLivePanel =
     jobStatus === "processing" ||
     hasLiveOutput ||
@@ -169,17 +174,17 @@ export function ExecutionSteps({
         {liveUpdatedAt && <span>Updated {liveUpdatedAt}</span>}
       </div>
       <div className="mt-3 rounded-lg border border-border/60 bg-muted/40">
-        <div
+        <pre
           ref={liveOutputRef}
-          className="max-h-64 overflow-y-auto p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap scrollbar-hide-until-hover"
+          className="max-h-64 overflow-y-auto p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-words scrollbar-hide-until-hover"
           aria-live="polite"
         >
           {hasLiveOutput
-            ? liveOutputText
+            ? liveOutputDisplay
             : jobStatus === "processing"
               ? "Waiting for live output..."
               : "No live output available for this job."}
-        </div>
+        </pre>
       </div>
       {liveStep?.error && (
         <p className="mt-3 text-xs text-red-600">{liveStep.error}</p>

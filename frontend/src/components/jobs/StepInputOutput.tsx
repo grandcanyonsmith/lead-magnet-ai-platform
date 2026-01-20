@@ -12,7 +12,11 @@ import {
   FiEdit,
   FiCpu,
 } from "react-icons/fi";
-import { formatStepInput, formatStepOutput } from "@/utils/jobFormatting";
+import {
+  formatLiveOutputText,
+  formatStepInput,
+  formatStepOutput,
+} from "@/utils/jobFormatting";
 import { StepContent } from "./StepContent";
 import { MergedStep, StepStatus } from "@/types/job";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
@@ -177,7 +181,9 @@ export function StepInputOutput({
   const isPending = status === "pending";
   const isCompleted = status === "completed";
   const isInProgress = status === "in_progress";
-  const hasLiveOutput = typeof liveOutput === "string" && liveOutput.length > 0;
+  const liveOutputText = typeof liveOutput === "string" ? liveOutput : "";
+  const hasLiveOutput = liveOutputText.length > 0;
+  const formattedLiveOutput = formatLiveOutputText(liveOutputText);
   const shouldShowLiveOutput =
     isInProgress &&
     !hasImageGeneration(step, imageArtifacts) &&
@@ -521,7 +527,9 @@ export function StepInputOutput({
                         <pre
                           className={`text-sm md:text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono ${liveOutputHeightClass} overflow-y-auto scrollbar-hide-until-hover leading-relaxed`}
                         >
-                          {hasLiveOutput ? liveOutput : "Waiting for model output..."}
+                          {hasLiveOutput
+                            ? formattedLiveOutput
+                            : "Waiting for model output..."}
                         </pre>
                       </div>
                     )}
