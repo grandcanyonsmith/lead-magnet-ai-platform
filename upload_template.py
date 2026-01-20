@@ -2,13 +2,31 @@
 """
 Download template HTML from S3, upload to new location with data.json, and return URLs.
 """
+import argparse
 import boto3
 import json
+import os
 import uuid
 
+def _normalize_prefix(prefix: str) -> str:
+    normalized = (prefix or "").strip().lstrip("/")
+    if normalized and not normalized.endswith("/"):
+        normalized += "/"
+    return normalized
+
+
+parser = argparse.ArgumentParser(description="Upload report HTML + data.json to S3.")
+parser.add_argument("--bucket", default=os.getenv("SHELL_S3_UPLOAD_BUCKET", "cc360-pages"))
+parser.add_argument("--region", default=os.getenv("AWS_REGION", "us-west-2"))
+parser.add_argument("--tenant-id", default=os.getenv("TENANT_ID"))
+parser.add_argument("--job-id", default=os.getenv("JOB_ID"))
+parser.add_argument("--key-prefix", default=os.getenv("SHELL_S3_UPLOAD_KEY_PREFIX"))
+parser.add_argument("--report-subdir", default=os.getenv("REPORT_SUBDIR", "market-research-reports-lead-magnents"))
+args = parser.parse_args()
+
 # Initialize S3 client
-s3 = boto3.client('s3', region_name='us-west-2')
-bucket_name = 'cc360-pages'
+s3 = boto3.client('s3', region_name=args.region)
+bucket_name = args.bucket
 
 # Generate unique ID
 unique_id = str(uuid.uuid4())
@@ -26,8 +44,23 @@ except Exception as e:
     print(f"❌ Error downloading: {e}")
     exit(1)
 
+# Resolve upload prefix (keep within allowed leadmagnet/<tenant>/<job>/)
+prefix_root = args.key_prefix
+if not prefix_root:
+    if args.tenant_id and args.job_id:
+        prefix_root = f"leadmagnet/{args.tenant_id}/{args.job_id}/"
+    else:
+        prefix_root = "leadmagnet/"
+prefix_root = _normalize_prefix(prefix_root)
+
+report_subdir = (args.report_subdir or "").strip().strip("/")
+if report_subdir:
+    report_prefix = f"{prefix_root}{report_subdir}/{unique_id}/"
+else:
+    report_prefix = f"{prefix_root}{unique_id}/"
+
 # Upload HTML to new location
-html_key = f'market-research-reports-lead-magnents/{unique_id}/index.html'
+html_key = f"{report_prefix}index.html"
 print(f"\n📤 Uploading HTML to {html_key}...")
 
 try:
@@ -37,7 +70,7 @@ try:
         Body=html_content.encode('utf-8'),
         ContentType='text/html'
     )
-    html_url = f"https://{bucket_name}.s3.us-west-2.amazonaws.com/{html_key}"
+    html_url = f"https://{bucket_name}.s3.{args.region}.amazonaws.com/{html_key}"
     print(f"✅ Uploaded HTML successfully")
 except Exception as e:
     print(f"❌ Error uploading HTML: {e}")
@@ -325,7 +358,7 @@ json_data = {
 }
 
 # Upload JSON file
-json_key = f'market-research-reports-lead-magnents/{unique_id}/data.json'
+json_key = f"{report_prefix}data.json"
 print(f"\n📤 Uploading JSON to {json_key}...")
 
 try:
@@ -335,7 +368,7 @@ try:
         Body=json.dumps(json_data, indent=2).encode('utf-8'),
         ContentType='application/json'
     )
-    json_url = f"https://{bucket_name}.s3.us-west-2.amazonaws.com/{json_key}"
+    json_url = f"https://{bucket_name}.s3.{args.region}.amazonaws.com/{json_key}"
     print(f"✅ Uploaded JSON successfully")
 except Exception as e:
     print(f"❌ Error uploading JSON: {e}")
@@ -345,7 +378,7 @@ except Exception as e:
 print("\n" + "="*80)
 print("✅ Upload Complete!")
 print("="*80)
-print(f"\n📁 Folder: market-research-reports-lead-magnents/{unique_id}/")
+print(f"\n📁 Folder: {report_prefix}")
 print(f"\n📄 HTML File:")
 print(f"   URL: {html_url}")
 print(f"\n📄 JSON File:")

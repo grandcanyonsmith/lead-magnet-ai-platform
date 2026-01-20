@@ -84,6 +84,10 @@ class AIStepHandler(AbstractStepHandler):
             ]
         )
         
+        if force_shell and shell_keyword_hit:
+            # For file-producing steps, restrict tools to shell only to guarantee execution.
+            step_tools_raw = ["shell"]
+
         # Convert string tools to objects
         step_tools = []
         for tool in step_tools_raw:

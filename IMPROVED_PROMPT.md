@@ -16,19 +16,23 @@ Download the HTML template from S3, create a new report instance with a unique i
    - This will be used as the folder name for the new report instance
 
 3. **Upload HTML file**
-   - Destination path: `market-research-reports-lead-magnents/{unique_id}/index.html`
+   - Destination path: `{upload_prefix}market-research-reports-lead-magnents/{unique_id}/index.html`
    - Content-Type: `text/html`
    - Preserve the original HTML content exactly as downloaded
 
 4. **Upload JSON data file**
-   - Destination path: `market-research-reports-lead-magnents/{unique_id}/data.json`
+   - Destination path: `{upload_prefix}market-research-reports-lead-magnents/{unique_id}/data.json`
    - Content-Type: `application/json`
    - **Customize all JSON values** based on the specific course topic provided (do not use the example values)
    - Include the JSON structure with course-specific content (see JSON Data section below)
 
 5. **Return the HTML object URL**
-   - Format: `https://cc360-pages.s3.us-west-2.amazonaws.com/market-research-reports-lead-magnents/{unique_id}/index.html`
+   - Format: `https://cc360-pages.s3.us-west-2.amazonaws.com/{upload_prefix}market-research-reports-lead-magnents/{unique_id}/index.html`
    - This is the primary output/return value
+
+**Upload prefix rules**
+- `{upload_prefix}` must be within the allowed S3 prefix. Default is `leadmagnet/<tenant_id>/<job_id>/` (from `SHELL_S3_UPLOAD_KEY_PREFIX`).
+- Uploading outside the allowed prefix will fail with `AccessDenied`.
 
 ## JSON Data
 
@@ -327,7 +331,7 @@ The `data.json` file should contain the following structure (provided as a JSON 
 ## Expected Output
 
 After successful completion, return:
-- The HTML object URL: `https://cc360-pages.s3.us-west-2.amazonaws.com/market-research-reports-lead-magnents/{unique_id}/index.html`
+- The HTML object URL: `https://cc360-pages.s3.us-west-2.amazonaws.com/{upload_prefix}market-research-reports-lead-magnents/{unique_id}/index.html`
 - Confirmation that both files were uploaded successfully
 - The unique ID that was generated
 
@@ -342,14 +346,14 @@ After successful completion, return:
 ```
 ✅ Upload Complete!
 
-📁 Folder: market-research-reports-lead-magnents/d112f1b8-6592-4870-90ff-c73c76547305/
+📁 Folder: {upload_prefix}market-research-reports-lead-magnents/d112f1b8-6592-4870-90ff-c73c76547305/
 
 📄 HTML File:
-   URL: https://cc360-pages.s3.us-west-2.amazonaws.com/market-research-reports-lead-magnents/d112f1b8-6592-4870-90ff-c73c76547305/index.html
+   URL: https://cc360-pages.s3.us-west-2.amazonaws.com/{upload_prefix}market-research-reports-lead-magnents/d112f1b8-6592-4870-90ff-c73c76547305/index.html
 
 📄 JSON File:
-   URL: https://cc360-pages.s3.us-west-2.amazonaws.com/market-research-reports-lead-magnents/d112f1b8-6592-4870-90ff-c73c76547305/data.json
+   URL: https://cc360-pages.s3.us-west-2.amazonaws.com/{upload_prefix}market-research-reports-lead-magnents/d112f1b8-6592-4870-90ff-c73c76547305/data.json
 
 🎯 HTML Object URL (for your use):
-   https://cc360-pages.s3.us-west-2.amazonaws.com/market-research-reports-lead-magnents/d112f1b8-6592-4870-90ff-c73c76547305/index.html
+   https://cc360-pages.s3.us-west-2.amazonaws.com/{upload_prefix}market-research-reports-lead-magnents/d112f1b8-6592-4870-90ff-c73c76547305/index.html
 ```

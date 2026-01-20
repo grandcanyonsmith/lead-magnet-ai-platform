@@ -114,6 +114,7 @@ class ShellLoopService:
         job_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
         step_index: Optional[int] = None,
+        shell_log_collector: Optional[List[Dict[str, Any]]] = None,
     ) -> Any:
         """
         Run the shell tool loop and return the final OpenAI response object.
@@ -203,6 +204,7 @@ class ShellLoopService:
                     "LM_STEP_INDEX": str(step_index) if step_index is not None else "",
                     "SHELL_EXECUTOR_WORKSPACE_ID": workspace_id,
                 }
+                reset_workspace_flag = reset_workspace_next
                 exec_result = self.shell_executor_service.run_shell_job(
                     commands=[str(c) for c in commands],
                     timeout_ms=int(timeout_ms) if timeout_ms is not None else None,
@@ -216,6 +218,22 @@ class ShellLoopService:
                 # Contract supports returning max_output_length in result; fall back to the requested value.
                 result_max_len = exec_result.get("max_output_length", max_output_length)
                 output_items = exec_result.get("output") or exec_result.get("results") or []
+
+                if shell_log_collector is not None:
+                    try:
+                        shell_log_collector.append({
+                            "call_id": call_id,
+                            "commands": [str(c) for c in commands],
+                            "timeout_ms": int(timeout_ms) if timeout_ms is not None else None,
+                            "max_output_length": result_max_len,
+                            "output": output_items,
+                            "meta": exec_result.get("meta"),
+                            "workspace_id": workspace_id,
+                            "reset_workspace": reset_workspace_flag,
+                            "timestamp": time.time(),
+                        })
+                    except Exception:
+                        logger.debug("[ShellLoopService] Failed to collect shell log entry", exc_info=True)
 
                 tool_outputs.append({
                     "type": "shell_call_output",

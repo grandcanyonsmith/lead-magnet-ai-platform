@@ -305,6 +305,7 @@ class ReportGenerator:
                     output_format=output_format,
                 )
 
+                shell_executor_logs: List[Dict[str, Any]] = []
                 final_response = self.shell_loop_service.run_shell_loop(
                     openai_client=self.openai_client,
                     model=model,
@@ -323,10 +324,11 @@ class ReportGenerator:
                     tenant_id=tenant_id,
                     job_id=job_id,
                     step_index=step_index,
+                    shell_log_collector=shell_executor_logs,
                 )
 
                 # Process final response
-                return self.openai_client.process_api_response(
+                content, usage_info, request_details, response_details = self.openai_client.process_api_response(
                     response=final_response,
                     model=model,
                     instructions=instructions,
@@ -342,6 +344,9 @@ class ReportGenerator:
                     step_name=self._current_step_name,
                     step_instructions=self._current_step_instructions or instructions,
                 )
+                if shell_executor_logs:
+                    response_details["shell_executor_logs"] = shell_executor_logs
+                return content, usage_info, request_details, response_details
 
             except Exception as e:
                 logger.error(f"[ReportGenerator] Error in shell loop: {e}", exc_info=True)

@@ -11,6 +11,7 @@ import {
   ClipboardDocumentIcon,
   PencilSquareIcon,
 } from "@heroicons/react/24/outline";
+import { FiLoader } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import {
   Disclosure,
@@ -287,6 +288,32 @@ export default function StepDetailClient() {
     job?.live_step && step?.step_order === job.live_step.step_order
       ? job.live_step.updated_at
       : undefined;
+  const isLiveStep =
+    Boolean(job?.live_step) &&
+    step?.step_order !== undefined &&
+    job?.live_step?.step_order === step.step_order;
+  const liveOutputText = typeof liveOutput === "string" ? liveOutput : "";
+  const hasLiveOutput = liveOutputText.length > 0;
+  const outputIsEmpty =
+    step?.output === null || step?.output === undefined || step?.output === "";
+  const showLiveOutputPanel =
+    isLiveStep &&
+    (job?.status === "processing" ||
+      hasLiveOutput ||
+      Boolean(liveUpdatedAt) ||
+      Boolean(job?.live_step?.error) ||
+      Boolean(job?.live_step?.status));
+  const liveStatus = job?.live_step?.status
+    ? job.live_step.status.replace(/_/g, " ")
+    : null;
+  const liveUpdatedAtLabel = liveUpdatedAt
+    ? new Date(liveUpdatedAt).toLocaleTimeString([], {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    : null;
 
   const stepIndex = step
     ? sortedSteps.findIndex(
@@ -318,6 +345,14 @@ export default function StepDetailClient() {
     } catch {
       toast.error("Unable to copy");
     }
+  };
+
+  const handleCopyOutput = () => {
+    if (showLiveOutputPanel && outputIsEmpty && hasLiveOutput) {
+      handleCopy(liveOutputText, "Live output copied");
+      return;
+    }
+    handleCopy(toCopyText(outputContent), "Output copied");
   };
 
   if (loading) {
@@ -542,9 +577,7 @@ export default function StepDetailClient() {
           actions={
             <button
               type="button"
-              onClick={() =>
-                handleCopy(toCopyText(outputContent), "Output copied")
-              }
+              onClick={handleCopyOutput}
               className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
             >
               <ClipboardDocumentIcon className="h-3.5 w-3.5" />
@@ -552,10 +585,53 @@ export default function StepDetailClient() {
             </button>
           }
         >
-          <StepContent
-            formatted={outputContent}
-            imageUrls={stepImageUrls}
-          />
+          {showLiveOutputPanel && (
+            <div className="mb-4 rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-900/10 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <FiLoader className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-300" />
+                  <span className="text-xs font-semibold text-blue-800 dark:text-blue-200">
+                    Live output (streaming)
+                  </span>
+                  {liveStatus && (
+                    <span className="rounded-full border border-blue-200/70 dark:border-blue-800/40 bg-blue-100/60 dark:bg-blue-900/20 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-200">
+                      {liveStatus}
+                    </span>
+                  )}
+                  {job?.live_step?.truncated && (
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                      Output truncated
+                    </span>
+                  )}
+                </div>
+                {liveUpdatedAtLabel && (
+                  <span className="text-[11px] text-blue-700/70 dark:text-blue-200/60">
+                    Updated {liveUpdatedAtLabel}
+                  </span>
+                )}
+              </div>
+              <pre className="mt-2 max-h-72 overflow-y-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-gray-800 dark:text-gray-200 scrollbar-hide-until-hover">
+                {hasLiveOutput
+                  ? liveOutputText
+                  : "Waiting for model output..."}
+              </pre>
+              {job?.live_step?.error && (
+                <p className="mt-2 text-xs text-red-600">
+                  {job.live_step.error}
+                </p>
+              )}
+            </div>
+          )}
+          {showLiveOutputPanel && outputIsEmpty ? (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Final output will appear once this step completes.
+            </p>
+          ) : (
+            <StepContent
+              formatted={outputContent}
+              imageUrls={stepImageUrls}
+            />
+          )}
         </SectionCard>
 
         {formattedInstructions && (

@@ -3,6 +3,7 @@ AI Step Processor Service
 Handles processing of AI generation workflow steps.
 """
 
+import json
 import logging
 from datetime import datetime
 from typing import Dict, Any, List, Tuple, Optional
@@ -156,6 +157,39 @@ class AIStepProcessor:
         # Store usage record
         self.usage_service.store_usage_record(tenant_id, job_id, usage_info)
         
+        shell_executor_logs = response_details.get("shell_executor_logs")
+        if shell_executor_logs:
+            try:
+                safe_step_name = step_name.lower().replace(" ", "_")
+                log_payload = {
+                    "job_id": job_id,
+                    "tenant_id": tenant_id,
+                    "step_index": step_index,
+                    "step_order": step_index + 1,
+                    "step_name": step_name,
+                    "model": step_model,
+                    "logs": shell_executor_logs,
+                }
+                log_content = json.dumps(log_payload, indent=2)
+                log_artifact_id = self.artifact_service.store_artifact(
+                    tenant_id=tenant_id,
+                    job_id=job_id,
+                    artifact_type="shell_executor_logs",
+                    content=log_content,
+                    filename=f"step_{step_index + 1}_{safe_step_name}_shell_executor_logs.json",
+                )
+                response_details["shell_logs_artifact_id"] = log_artifact_id
+            except Exception as log_error:
+                logger.warning(
+                    "[AIStepProcessor] Failed to store shell executor logs artifact",
+                    extra={
+                        "job_id": job_id,
+                        "step_index": step_index,
+                        "error": str(log_error),
+                    },
+                    exc_info=True,
+                )
+
         # Determine file extension based on content and step name
         file_ext = detect_content_type(step_output, step_name)
         
