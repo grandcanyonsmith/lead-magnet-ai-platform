@@ -38,8 +38,8 @@ export function DashboardTopBar({
   const fallbackInitial = user?.name?.[0] || user?.email?.[0] || "U";
 
   return (
-    <header className="border-b border-border bg-background/80 backdrop-blur scrollbar-hide overflow-hidden">
-      <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 scrollbar-hide overflow-hidden">
+    <header className="relative z-40 border-b border-border bg-background/80 backdrop-blur scrollbar-hide overflow-visible">
+      <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 scrollbar-hide overflow-visible">
         <div className="flex h-14 items-center justify-between sm:h-16">
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button

@@ -189,7 +189,7 @@ export function SubHeaderTabs({
   };
 
   const navContent = (
-    <div className={cn("border-b border-border/60 bg-muted/20", className)}>
+    <div className={cn("border-b border-border/60 bg-muted", className)}>
       <div className="px-6 sm:px-8 lg:px-12">
         <nav
           role="tablist"

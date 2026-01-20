@@ -11,9 +11,10 @@ import {
 import { Menu, Transition } from "@headlessui/react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import type { Status } from "@/types/common";
-import type { Job, JobStepSummary } from "@/types/job";
+import type { Job, JobDurationInfo, JobStepSummary } from "@/types/job";
 import type { Workflow } from "@/types/workflow";
-import type { JobDurationInfo } from "@/components/jobs/detail/JobOverviewSection";
+import { buildJobHeaderStats } from "@/utils/jobs/headerStats";
+import { JobHeaderStats } from "@/components/jobs/JobHeaderStats";
 
 interface JobHeaderProps {
   error: string | null;
@@ -69,27 +70,13 @@ export function JobHeader({
     </span>
   );
 
-  const outputsValue = loadingArtifacts
-    ? "Loading..."
-    : typeof artifactCount === "number"
-      ? artifactCount.toLocaleString()
-      : "--";
-  const stepProgressValue =
-    stepsSummary && stepsSummary.total > 0
-      ? `${stepsSummary.completed}/${stepsSummary.total}`
-      : "--";
-  const runtimeValue = jobDuration?.label || "--";
-  const costValue =
-    typeof totalCost === "number" && Number.isFinite(totalCost)
-      ? `$${totalCost.toFixed(4)}`
-      : "--";
-
-  const stats = [
-    { label: "Steps", value: stepProgressValue },
-    { label: "Cost", value: costValue },
-    { label: "Runtime", value: runtimeValue },
-    { label: "Outputs", value: outputsValue },
-  ];
+  const stats = buildJobHeaderStats({
+    artifactCount,
+    stepsSummary,
+    jobDuration,
+    totalCost,
+    loadingArtifacts,
+  });
 
   const getMenuItemClass = (active: boolean, disabled?: boolean) => {
     const base =
@@ -135,28 +122,10 @@ export function JobHeader({
         className="mb-0 pb-4"
         actionsInlineOnMobile
         bottomContent={
-          <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex min-w-max items-stretch divide-x divide-border/60 rounded-xl border border-border/60 bg-card/60 shadow-sm overflow-hidden">
-              {stats.map((stat) => {
-                const isStepsStat = stat.label === "Steps";
-                return (
-                  <div
-                    key={stat.label}
-                    className={`min-w-[160px] px-4 py-3 ${
-                      isStepsStat ? `border-b-2 ${statusBorderClass}` : ""
-                    }`}
-                  >
-                  <p className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {stat.label}
-                  </p>
-                  <p className="text-sm font-semibold text-foreground leading-tight">
-                    {stat.value}
-                  </p>
-                </div>
-                );
-              })}
-            </div>
-          </div>
+          <JobHeaderStats
+            stats={stats}
+            highlightBorderClassName={statusBorderClass}
+          />
         }
       >
         {hasActions && (

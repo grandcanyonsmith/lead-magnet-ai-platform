@@ -29,9 +29,7 @@ import {
 } from "@/components/jobs/detail/JobTabs";
 
 import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
-import type { JobDurationInfo } from "@/components/jobs/detail/JobOverviewSection";
-
-import type { ArtifactGalleryItem, Job, JobStepSummary } from "@/types/job";
+import type { ArtifactGalleryItem, Job, JobDurationInfo, JobStepSummary } from "@/types/job";
 import type { WorkflowStep } from "@/types";
 
 // ---------------------------------------------------------------------------

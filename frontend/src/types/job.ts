@@ -137,6 +137,12 @@ export interface JobStepSummary {
   pending: number;
 }
 
+export interface JobDurationInfo {
+  seconds: number;
+  label: string;
+  isLive: boolean;
+}
+
 export type ArtifactGalleryItemKind =
   | "jobOutput"
   | "artifact"

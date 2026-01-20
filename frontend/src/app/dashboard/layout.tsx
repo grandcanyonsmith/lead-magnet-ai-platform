@@ -14,6 +14,7 @@ import { Settings } from "@/types/settings";
 import { logger } from "@/utils/logger";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { DashboardTopBar } from "@/components/dashboard/DashboardTopBar";
+import { JobDetailLayout } from "@/components/dashboard/JobDetailLayout";
 
 export default function DashboardLayout({
   children,
@@ -174,11 +175,7 @@ export default function DashboardLayout({
             {isEditorRoute ? (
               <div className="w-full">{children}</div>
             ) : isJobDetailRoute ? (
-              <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col min-h-full">
-                <div className="mx-auto w-full max-w-3xl flex flex-col min-h-full">
-                  {children}
-                </div>
-              </div>
+              <JobDetailLayout>{children}</JobDetailLayout>
             ) : (
               <div className="mx-auto w-full max-w-[1440px] px-6 sm:px-8 lg:px-12 flex flex-col min-h-full">
                 {children}

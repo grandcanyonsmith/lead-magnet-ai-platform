@@ -236,7 +236,7 @@ export function JobTabs({
         compactMaxVisible={2}
         compactBreakpointPx={420}
       />
-      <div className="min-w-0 pt-6 flex flex-1 min-h-0 flex-col overflow-hidden">
+      <div className="min-w-0 pt-2 sm:pt-4 flex flex-1 min-h-0 flex-col overflow-hidden">
         {activeTab === "overview" && (
           <JobSummaryTab
             artifactGalleryItems={artifactGalleryItems}
