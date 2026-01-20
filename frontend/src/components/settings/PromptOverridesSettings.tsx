@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/settings/FormField";
 import { PROMPT_OVERRIDE_DEFINITIONS } from "@/constants/promptOverrides";
 import { usePromptDefaults } from "@/hooks/api/useSettings";
+import { cn } from "@/lib/utils";
 import type { PromptDefault, PromptOverride, PromptOverrides } from "@/types/settings";
 
 type PromptOverridesSettingsProps = {
@@ -26,6 +28,56 @@ type OverrideDraft = {
   instructions: string;
   prompt: string;
 };
+
+const MarkdownRenderer = dynamic(() => import("react-markdown"), {
+  ssr: false,
+});
+
+function PromptMarkdown({
+  value,
+  className,
+}: {
+  value: string;
+  className?: string;
+}) {
+  const [remarkGfm, setRemarkGfm] = useState<any>(null);
+
+  useEffect(() => {
+    let active = true;
+    import("remark-gfm")
+      .then((mod) => {
+        if (active) setRemarkGfm(() => mod.default ?? mod);
+      })
+      .catch(() => {
+        if (active) setRemarkGfm(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!remarkGfm) {
+    return (
+      <pre className={cn("whitespace-pre-wrap break-words text-xs", className)}>
+        {value}
+      </pre>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "prose prose-sm dark:prose-invert max-w-none leading-relaxed break-words",
+        "prose-headings:mt-3 prose-headings:mb-2 prose-p:my-2",
+        "prose-li:my-1 prose-ul:my-2 prose-ol:my-2",
+        "prose-pre:my-3 prose-pre:overflow-x-auto prose-pre:bg-gray-50 dark:prose-pre:bg-gray-900/40",
+        className,
+      )}
+    >
+      <MarkdownRenderer remarkPlugins={[remarkGfm]}>{value}</MarkdownRenderer>
+    </div>
+  );
+}
 
 const parsePromptOverrides = (value: string): ParsedOverrides => {
   const trimmed = value.trim();
@@ -115,21 +167,41 @@ const buildOverridePayload = (draft: OverrideDraft): PromptOverride | null => {
   return Object.keys(next).length > 0 ? next : null;
 };
 
-const renderDefaultBlock = (
-  value: string | undefined,
-  loading: boolean,
-  emptyLabel: string,
-) => {
-  if (loading) {
-    return <p className="text-xs text-muted-foreground">Loading defaults...</p>;
-  }
-  if (!value || !value.trim()) {
-    return <p className="text-xs text-muted-foreground">{emptyLabel}</p>;
-  }
+const PromptPreviewCard = ({
+  title,
+  content,
+  emptyLabel,
+  loading,
+}: {
+  title: string;
+  content?: string;
+  emptyLabel: string;
+  loading?: boolean;
+}) => {
+  const trimmed = content?.trim();
+  const body = loading ? (
+    <p className="text-[11px] text-muted-foreground">Loading defaults...</p>
+  ) : !trimmed ? (
+    <p className="text-[11px] text-muted-foreground">{emptyLabel}</p>
+  ) : (
+    <PromptMarkdown value={trimmed} className="text-[11px] leading-snug sm:text-xs" />
+  );
+
   return (
-    <pre className="rounded-lg border border-gray-200 dark:border-border bg-white dark:bg-background p-3 text-xs text-foreground whitespace-pre-wrap break-words max-h-64 overflow-auto">
-      {value}
-    </pre>
+    <div className="flex w-full flex-col overflow-hidden rounded-xl border border-border bg-muted/40 shadow-sm transition group-hover:shadow-md">
+      <div className="aspect-[3/4] w-full overflow-hidden">
+        <div className="relative h-full w-full bg-gray-50 dark:bg-gray-900 p-2">
+          <div className="h-full w-full overflow-hidden rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
+            <div className="h-full overflow-auto p-3 sm:p-4">{body}</div>
+          </div>
+        </div>
+      </div>
+      <div className="border-t border-border/60 bg-background/80 px-3 py-2">
+        <p className="text-xs font-medium text-foreground line-clamp-1">
+          {title}
+        </p>
+      </div>
+    </div>
   );
 };
 
@@ -204,15 +276,15 @@ export function PromptOverridesSettings({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
+        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30 p-4 sm:p-6">
           <CardTitle className="text-lg">Prompt Overrides</CardTitle>
           <CardDescription>
             Review default prompts, create overrides, and manage enable/disable states
             for each prompt key.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-6 space-y-3">
-          <div className="rounded-lg border border-gray-100 dark:border-border bg-white dark:bg-background px-4 py-3">
+        <CardContent className="p-4 sm:p-6 space-y-3">
+          <div className="rounded-lg border border-gray-100 dark:border-border bg-white dark:bg-background px-3 sm:px-4 py-3">
             <p className="text-sm text-muted-foreground">
               Prompt overrides replace default system instructions and prompt templates
               on a per-tenant basis. Keys are documented in{" "}
@@ -220,8 +292,8 @@ export function PromptOverridesSettings({
             </p>
           </div>
           {defaultsError && (
-            <div className="rounded-lg border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 flex items-center justify-between gap-3">
-              <p className="text-xs text-amber-700 dark:text-amber-200">
+            <div className="rounded-lg border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-900/20 px-3 sm:px-4 py-3 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-amber-700 dark:text-amber-200 break-words">
                 Unable to load default prompt templates. Check the API response.
               </p>
               <Button
@@ -229,6 +301,7 @@ export function PromptOverridesSettings({
                 variant="outline"
                 size="sm"
                 onClick={() => refetchDefaults()}
+                className="w-full sm:w-auto"
               >
                 Retry
               </Button>
@@ -238,16 +311,16 @@ export function PromptOverridesSettings({
       </Card>
 
       <Card>
-        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
+        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30 p-4 sm:p-6">
           <CardTitle className="text-lg">Prompt Keys</CardTitle>
           <CardDescription>
             Each prompt shows the default template and any override currently saved.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-6 space-y-4">
+        <CardContent className="p-4 sm:p-6 space-y-4">
           {parsed.error && (
-            <div className="rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-900/20 px-4 py-3">
-              <p className="text-sm text-red-700 dark:text-red-200">
+            <div className="rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-900/20 px-3 sm:px-4 py-3">
+              <p className="text-sm text-red-700 dark:text-red-200 break-words">
                 {parsed.error}
               </p>
               {showFallbackWarning && (
@@ -270,22 +343,50 @@ export function PromptOverridesSettings({
               const defaultInstructions = defaultsForKey?.instructions;
               const defaultPrompt = defaultsForKey?.prompt;
               const isEditing = editingKey === item.key;
+              const previewCards = [
+                {
+                  id: `${item.key}-default-instructions`,
+                  title: "Default Instructions",
+                  content: defaultInstructions,
+                  emptyLabel: "No default instructions available.",
+                  loading: defaultsLoading,
+                },
+                {
+                  id: `${item.key}-default-prompt`,
+                  title: "Default Prompt",
+                  content: defaultPrompt,
+                  emptyLabel: "No default prompt available.",
+                  loading: defaultsLoading,
+                },
+                {
+                  id: `${item.key}-override-instructions`,
+                  title: "Override Instructions",
+                  content: instructions,
+                  emptyLabel: getEmptyFieldLabel(isDisabled, "instructions"),
+                },
+                {
+                  id: `${item.key}-override-prompt`,
+                  title: "Override Prompt",
+                  content: prompt,
+                  emptyLabel: getEmptyFieldLabel(isDisabled, "prompt"),
+                },
+              ];
 
               return (
                 <div
                   key={item.key}
-                  className="rounded-xl border border-border bg-muted/20 p-4 space-y-4"
+                  className="rounded-xl border border-border bg-muted/20 p-3 sm:p-4 space-y-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-foreground">
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground break-words">
                         {item.label}
                       </p>
-                      <p className="text-xs text-muted-foreground font-mono">
+                      <p className="text-xs text-muted-foreground font-mono break-words">
                         {item.key}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                       <Badge variant={status.variant}>{status.label}</Badge>
                       {!isEditing ? (
                         <Button
@@ -293,6 +394,7 @@ export function PromptOverridesSettings({
                           variant="outline"
                           size="sm"
                           onClick={() => startEdit(item.key)}
+                          className="w-full sm:w-auto"
                         >
                           Edit
                         </Button>
@@ -302,6 +404,7 @@ export function PromptOverridesSettings({
                           variant="secondary"
                           size="sm"
                           onClick={cancelEdit}
+                          className="w-full sm:w-auto"
                         >
                           Close
                         </Button>
@@ -309,7 +412,7 @@ export function PromptOverridesSettings({
                     </div>
                   </div>
 
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground break-words">
                     {status.description}
                     {typeof override?.enabled === "boolean" && (
                       <span className="ml-2">
@@ -318,59 +421,25 @@ export function PromptOverridesSettings({
                     )}
                   </p>
 
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    <div className="space-y-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Default Instructions
-                      </p>
-                      {renderDefaultBlock(
-                        defaultInstructions,
-                        defaultsLoading,
-                        "No default instructions available.",
-                      )}
-
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Default Prompt
-                      </p>
-                      {renderDefaultBlock(
-                        defaultPrompt,
-                        defaultsLoading,
-                        "No default prompt available.",
-                      )}
-                    </div>
-
-                    <div className="space-y-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Override Instructions
-                      </p>
-                      {instructions ? (
-                        <pre className="rounded-lg border border-gray-200 dark:border-border bg-white dark:bg-background p-3 text-xs text-foreground whitespace-pre-wrap break-words max-h-64 overflow-auto">
-                          {instructions}
-                        </pre>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          {getEmptyFieldLabel(isDisabled, "instructions")}
-                        </p>
-                      )}
-
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Override Prompt
-                      </p>
-                      {prompt ? (
-                        <pre className="rounded-lg border border-gray-200 dark:border-border bg-white dark:bg-background p-3 text-xs text-foreground whitespace-pre-wrap break-words max-h-64 overflow-auto">
-                          {prompt}
-                        </pre>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          {getEmptyFieldLabel(isDisabled, "prompt")}
-                        </p>
-                      )}
-                    </div>
+                  <div className="grid grid-flow-col auto-cols-[16rem] sm:auto-cols-[minmax(0,1fr)] grid-rows-2 gap-3 sm:gap-4 overflow-x-auto pb-2 pl-1 pr-1 sm:overflow-visible sm:pb-0 sm:pl-0 sm:pr-0 snap-x snap-mandatory sm:snap-none scrollbar-hide">
+                    {previewCards.map((card) => (
+                      <div
+                        key={card.id}
+                        className="group flex w-64 flex-shrink-0 snap-start flex-col text-left sm:w-auto sm:flex-shrink"
+                      >
+                        <PromptPreviewCard
+                          title={card.title}
+                          content={card.content}
+                          emptyLabel={card.emptyLabel}
+                          loading={card.loading}
+                        />
+                      </div>
+                    ))}
                   </div>
 
                   {isEditing && draft && (
-                    <div className="rounded-lg border border-gray-200 dark:border-border bg-white/70 dark:bg-background/40 p-4 space-y-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="rounded-lg border border-gray-200 dark:border-border bg-white/70 dark:bg-background/40 p-3 sm:p-4 space-y-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-2 text-sm font-medium">
                           <input
                             id={`toggle-${item.key}`}
@@ -393,6 +462,7 @@ export function PromptOverridesSettings({
                           size="sm"
                           onClick={() => applyDefaults(defaultsForKey)}
                           disabled={!defaultsForKey?.instructions && !defaultsForKey?.prompt}
+                          className="w-full sm:w-auto"
                         >
                           Copy defaults
                         </Button>
@@ -407,7 +477,7 @@ export function PromptOverridesSettings({
                           setDraft((prev) => (prev ? { ...prev, instructions: value } : prev))
                         }
                         placeholder="Add custom system instructions..."
-                        className="min-h-[160px]"
+                        className="min-h-[140px] sm:min-h-[160px]"
                       />
 
                       <FormField
@@ -419,16 +489,17 @@ export function PromptOverridesSettings({
                           setDraft((prev) => (prev ? { ...prev, prompt: value } : prev))
                         }
                         placeholder="Add a custom prompt template..."
-                        className="min-h-[180px]"
+                        className="min-h-[160px] sm:min-h-[180px]"
                       />
 
-                      <div className="flex flex-wrap items-center justify-end gap-2">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                         {override && (
                           <Button
                             type="button"
                             variant="destructive"
                             size="sm"
                             onClick={() => deleteOverride(item.key)}
+                            className="w-full sm:w-auto"
                           >
                             Delete override
                           </Button>
@@ -438,6 +509,7 @@ export function PromptOverridesSettings({
                           variant="secondary"
                           size="sm"
                           onClick={cancelEdit}
+                          className="w-full sm:w-auto"
                         >
                           Cancel
                         </Button>
@@ -445,6 +517,7 @@ export function PromptOverridesSettings({
                           type="button"
                           size="sm"
                           onClick={() => saveOverride(item.key)}
+                          className="w-full sm:w-auto"
                         >
                           Save override
                         </Button>
@@ -459,13 +532,13 @@ export function PromptOverridesSettings({
       </Card>
 
       <Card>
-        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
+        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30 p-4 sm:p-6">
           <CardTitle className="text-lg">Edit Overrides JSON</CardTitle>
           <CardDescription>
             Update the JSON payload directly if you want bulk edits.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <FormField
             label="Prompt Overrides (JSON)"
             name="prompt_overrides"
@@ -475,7 +548,7 @@ export function PromptOverridesSettings({
             error={inputError}
             helpText="Use keys from docs/prompt-overrides.md. Supports {{variables}} placeholders."
             placeholder='{"workflow_generation": {"instructions": "...", "prompt": "..."}}'
-            className="min-h-[200px]"
+            className="min-h-[160px] sm:min-h-[200px]"
           />
         </CardContent>
       </Card>

@@ -215,6 +215,12 @@ export function useMergedSteps({
             ...existingStep.input,
             tools: mergedTools,
             tool_choice: mergedToolChoice,
+            ...(workflowStep.service_tier !== undefined
+              ? { service_tier: workflowStep.service_tier }
+              : {}),
+            ...(workflowStep.reasoning_effort !== undefined
+              ? { reasoning_effort: workflowStep.reasoning_effort }
+              : {}),
           },
           // Preserve execution step fields: duration_ms, usage_info, started_at, completed_at, output, error, artifact_id, image_urls
           duration_ms: existingStep.duration_ms,
@@ -288,6 +294,12 @@ export function useMergedSteps({
               ...executingStep.input,
               tools: mergedTools,
               tool_choice: mergedToolChoice,
+              ...(workflowStep.service_tier !== undefined
+                ? { service_tier: workflowStep.service_tier }
+                : {}),
+              ...(workflowStep.reasoning_effort !== undefined
+                ? { reasoning_effort: workflowStep.reasoning_effort }
+                : {}),
             },
             // Preserve execution step fields
             duration_ms: executingStep.duration_ms,
@@ -345,6 +357,12 @@ export function useMergedSteps({
                 ...executionStepForOrder.input,
                 tools: mergedTools,
                 tool_choice: mergedToolChoice,
+                ...(workflowStep.service_tier !== undefined
+                  ? { service_tier: workflowStep.service_tier }
+                  : {}),
+                ...(workflowStep.reasoning_effort !== undefined
+                  ? { reasoning_effort: workflowStep.reasoning_effort }
+                  : {}),
               },
               // Preserve all execution step fields (duration_ms, usage_info, artifact_id, etc.)
               duration_ms: executionStepForOrder.duration_ms,
@@ -371,6 +389,12 @@ export function useMergedSteps({
               input: {
                 tools: workflowStep.tools || [],
                 tool_choice: workflowStep.tool_choice || "required",
+                ...(workflowStep.service_tier !== undefined
+                  ? { service_tier: workflowStep.service_tier }
+                  : {}),
+                ...(workflowStep.reasoning_effort !== undefined
+                  ? { reasoning_effort: workflowStep.reasoning_effort }
+                  : {}),
               },
               output: null,
               _status: stepStatus,

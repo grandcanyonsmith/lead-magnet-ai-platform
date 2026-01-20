@@ -309,6 +309,7 @@ export function ExecutionSteps({
                         jobStatus={jobStatus}
                         canEdit={canEdit}
                         rerunningStep={rerunningStep}
+                        allSteps={sortedSteps}
                         onEditStep={onEditStep}
                         onRerunStep={onRerunStep}
                         onRerunStepClick={onRerunStepClick}

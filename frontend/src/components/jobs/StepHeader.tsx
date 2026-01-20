@@ -3,8 +3,10 @@
  * Displays step header with status, name, metrics, and action buttons
  */
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, type ComponentType } from "react";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { MergedStep, StepStatus } from "@/types/job";
 import { formatDurationMs } from "@/utils/jobFormatting";
 import {
@@ -12,10 +14,9 @@ import {
   ArrowPathIcon,
   ArrowTopRightOnSquareIcon,
   EllipsisVerticalIcon,
-  XCircleIcon,
 } from "@heroicons/react/24/outline";
-import { CheckCircleIcon as CheckCircleIconSolid } from "@heroicons/react/24/solid";
 import { Menu, Transition } from "@headlessui/react";
+import { Brain, Zap } from "lucide-react";
 
 const STEP_STATUS_BADGE: Record<
   StepStatus,
@@ -46,12 +47,43 @@ const STEP_NUMBER_BG: Record<StepStatus, string> = {
   pending: "bg-gray-400",
 };
 
+const SERVICE_TIER_SPEED: Record<string, number> = {
+  flex: 1,
+  default: 2,
+  scale: 3,
+  priority: 4,
+};
+
+const REASONING_EFFORT_LEVELS: Record<string, number> = {
+  none: 1,
+  low: 2,
+  medium: 3,
+  high: 4,
+  xhigh: 5,
+};
+
+const SERVICE_TIER_LABELS: Record<string, string> = {
+  flex: "Flex",
+  default: "Default",
+  scale: "Scale",
+  priority: "Priority",
+};
+
+const REASONING_EFFORT_LABELS: Record<string, string> = {
+  none: "None",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  xhigh: "Extra High",
+};
+
 interface StepHeaderProps {
   step: MergedStep;
   status: StepStatus;
   jobStatus?: string;
   canEdit?: boolean;
   rerunningStep?: number | null;
+  allSteps?: MergedStep[];
   onEditStep?: (stepIndex: number) => void;
   onRerunStep?: (stepIndex: number) => Promise<void>;
   onRerunStepClick?: (stepIndex: number) => void;
@@ -68,25 +100,41 @@ function getToolName(tool: Tool): string {
   return typeof tool === "string" ? tool : tool.type || "unknown";
 }
 
-// Render status icon inline
-function renderStatusIcon(status: StepStatus) {
-  const iconClass = "w-5 h-5 flex-shrink-0";
-  switch (status) {
-    case "completed":
-      return <CheckCircleIconSolid className={`${iconClass} text-green-600`} />;
-    case "in_progress":
-      return (
-        <ArrowPathIcon className={`${iconClass} text-blue-600 animate-spin`} />
-      );
-    case "failed":
-      return <XCircleIcon className={`${iconClass} text-red-600`} />;
-    case "pending":
-    default:
-      return (
-        <div className={`${iconClass} rounded-full border-2 border-gray-300`} />
-      );
-  }
-}
+type BadgeIcon = ComponentType<{ className?: string }>;
+
+const getRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+
+const getString = (value: unknown): string | null =>
+  typeof value === "string" && value.trim() ? value : null;
+
+const getReasoningEffortFromValue = (value: unknown): string | null => {
+  const direct = getString(value);
+  if (direct) return direct;
+  const record = getRecord(value);
+  return record ? getString(record.effort) : null;
+};
+
+const extractServiceTier = (step: MergedStep): string | null => {
+  const input = getRecord(step.input);
+  return (
+    getString((step as { service_tier?: unknown }).service_tier) ||
+    getString(input?.service_tier)
+  );
+};
+
+const extractReasoningEffort = (step: MergedStep): string | null => {
+  const input = getRecord(step.input);
+  return (
+    getReasoningEffortFromValue(
+      (step as { reasoning_effort?: unknown }).reasoning_effort,
+    ) ||
+    getReasoningEffortFromValue(input?.reasoning_effort) ||
+    getReasoningEffortFromValue(input?.reasoning)
+  );
+};
 
 // Render tool badges inline
 function renderToolBadges(tools?: string[] | unknown[]) {
@@ -115,9 +163,38 @@ function renderToolBadges(tools?: string[] | unknown[]) {
   );
 }
 
+function renderIconBadge({
+  count,
+  Icon,
+  label,
+  className,
+  iconClassName,
+}: {
+  count: number;
+  Icon: BadgeIcon;
+  label: string;
+  className: string;
+  iconClassName: string;
+}) {
+  if (!count || count < 1) return null;
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 ${className}`}
+      role="img"
+      aria-label={label}
+      title={label}
+    >
+      {Array.from({ length: count }).map((_, idx) => (
+        <Icon key={`${label}-${idx}`} className={iconClassName} aria-hidden="true" />
+      ))}
+    </span>
+  );
+}
+
 interface StepMetaRowProps {
   step: MergedStep;
   status: StepStatus;
+  allSteps?: MergedStep[];
 }
 
 interface StepTimingRowProps {
@@ -151,7 +228,38 @@ function StepTimingRow({ step, status }: StepTimingRowProps) {
   );
 }
 
-export function StepMetaRow({ step, status }: StepMetaRowProps) {
+const getOutputText = (value: unknown) => {
+  if (value === null || value === undefined) return "No output yet";
+  if (typeof value === "string") {
+    return value.trim() || "No output yet";
+  }
+  const text = JSON.stringify(value, null, 2);
+  return text || "No output yet";
+};
+
+const isMarkdownLike = (value: string) =>
+  /(^|\n)#{1,6}\s/.test(value) ||
+  /```/.test(value) ||
+  /\*\*[^*]+\*\*/.test(value) ||
+  /__[^_]+__/.test(value) ||
+  /(^|\n)\s*[-*+]\s+/.test(value) ||
+  /(^|\n)\s*\d+\.\s+/.test(value) ||
+  /\[[^\]]+\]\([^)]+\)/.test(value);
+
+const renderDependencyOutputPreview = (value: unknown) => {
+  const preview = getOutputText(value);
+  if (typeof preview === "string" && isMarkdownLike(preview)) {
+    return (
+      <div className="prose prose-sm max-w-none text-[11px] leading-snug text-foreground/90 dark:prose-invert prose-p:my-1 prose-headings:my-1 prose-li:my-0 prose-pre:my-1 prose-pre:overflow-x-auto">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{preview}</ReactMarkdown>
+      </div>
+    );
+  }
+
+  return <pre className="whitespace-pre-wrap break-words">{preview}</pre>;
+};
+
+export function StepMetaRow({ step, status, allSteps }: StepMetaRowProps) {
   const isInProgress = status === "in_progress";
   const [showContext, setShowContext] = useState(false);
   const instructions = step.instructions?.trim();
@@ -161,25 +269,38 @@ export function StepMetaRow({ step, status }: StepMetaRowProps) {
       index: dep,
       label: step.dependency_labels?.[idx] || `Step ${dep + 1}`,
     })) || [];
-  const hasContext =
-    Boolean(instructions) ||
-    Boolean(step.input) ||
-    dependencyItems.length > 0;
-  const inputValue = (() => {
-    if (!step.input) return null;
-    if (typeof step.input === "string") return step.input;
-    if (typeof step.input === "object") {
-      const inputObj = step.input as Record<string, unknown>;
-      if ("input" in inputObj && inputObj.input !== undefined) {
-        return inputObj.input;
-      }
-      if ("payload" in inputObj && inputObj.payload !== undefined) {
-        return inputObj.payload;
-      }
-      return inputObj;
-    }
-    return String(step.input);
-  })();
+  const dependencyPreviews = dependencyItems
+    .map((dependency) => ({
+      dependency,
+      step: allSteps?.find(
+        (candidate) => candidate.step_order === dependency.index + 1,
+      ),
+    }))
+    .filter(
+      (
+        item,
+      ): item is { dependency: typeof dependencyItems[number]; step: MergedStep } =>
+        Boolean(item.step),
+    );
+  const hasDependencies = dependencyPreviews.length > 0;
+  const hasContext = Boolean(instructions) || hasDependencies;
+  const serviceTier = extractServiceTier(step);
+  const normalizedServiceTier = serviceTier?.toLowerCase();
+  const speedCount =
+    normalizedServiceTier && normalizedServiceTier !== "auto"
+      ? SERVICE_TIER_SPEED[normalizedServiceTier]
+      : undefined;
+  const speedLabel = normalizedServiceTier
+    ? SERVICE_TIER_LABELS[normalizedServiceTier]
+    : undefined;
+  const reasoningEffort = extractReasoningEffort(step);
+  const normalizedReasoningEffort = reasoningEffort?.toLowerCase();
+  const reasoningCount = normalizedReasoningEffort
+    ? REASONING_EFFORT_LEVELS[normalizedReasoningEffort]
+    : undefined;
+  const reasoningLabel = normalizedReasoningEffort
+    ? REASONING_EFFORT_LABELS[normalizedReasoningEffort]
+    : undefined;
 
   return (
     <div className="space-y-2">
@@ -189,23 +310,30 @@ export function StepMetaRow({ step, status }: StepMetaRowProps) {
             {step.model}
           </span>
         )}
+        {speedCount &&
+          speedLabel &&
+          renderIconBadge({
+            count: speedCount,
+            Icon: Zap,
+            label: `Speed: ${speedLabel}`,
+            className:
+              "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-200 dark:border-amber-800/40",
+            iconClassName: "h-3 w-3 text-amber-500",
+          })}
+        {reasoningCount &&
+          reasoningLabel &&
+          renderIconBadge({
+            count: reasoningCount,
+            Icon: Brain,
+            label: `Reasoning: ${reasoningLabel}`,
+            className:
+              "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-200 dark:border-indigo-800/40",
+            iconClassName: "h-3 w-3 text-indigo-500",
+          })}
         {((step.input?.tools && step.input.tools.length > 0) ||
           (step.tools && step.tools.length > 0)) && (
           <div className="flex items-center gap-1.5">
             {renderToolBadges(step.input?.tools || step.tools)}
-          </div>
-        )}
-        {dependencyItems.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {dependencyItems.map((dependency) => (
-              <span
-                key={`dependency-${dependency.index}`}
-                title={`Depends on: ${dependency.label}`}
-                className="px-1.5 py-0.5 text-[10px] font-semibold rounded-md border whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800/50"
-              >
-                Step {dependency.index + 1}
-              </span>
-            ))}
           </div>
         )}
         {hasContext && (
@@ -214,9 +342,14 @@ export function StepMetaRow({ step, status }: StepMetaRowProps) {
             aria-expanded={showContext}
             aria-controls={contextId}
             onClick={() => setShowContext((prev) => !prev)}
-            className="px-1.5 py-0.5 text-[10px] font-semibold rounded-md border whitespace-nowrap bg-teal-50 text-teal-700 border-teal-200 transition-colors hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-200 dark:border-teal-800/50 dark:hover:bg-teal-900/50"
+            className="inline-flex items-center gap-1.5 px-1.5 py-0.5 text-[10px] font-semibold rounded-md border whitespace-nowrap bg-teal-50 text-teal-700 border-teal-200 transition-colors hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-200 dark:border-teal-800/50 dark:hover:bg-teal-900/50"
           >
-            Context
+            <span>Context</span>
+            {dependencyItems.length > 0 && (
+              <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[9px] font-semibold text-teal-700 dark:bg-teal-900/60 dark:text-teal-200">
+                {dependencyItems.length}
+              </span>
+            )}
           </button>
         )}
         {isInProgress && (
@@ -235,36 +368,42 @@ export function StepMetaRow({ step, status }: StepMetaRowProps) {
           id={contextId}
           className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-foreground/90 space-y-3"
         >
-          <div className="space-y-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Input
-            </div>
-            {dependencyItems.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {hasDependencies && (
+            <div className="space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Input
+              </div>
+              <div className="space-y-2">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Steps
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {dependencyItems.map((dependency) => (
-                    <span
-                      key={`dependency-context-${dependency.index}`}
+                </div>
+                <div className="grid grid-flow-col auto-cols-[16rem] grid-rows-1 gap-3 overflow-x-auto pb-2 pl-3 pr-1 sm:-mx-1 sm:px-1 snap-x snap-mandatory scrollbar-hide">
+                  {dependencyPreviews.map(({ dependency, step: dependencyStep }) => (
+                    <div
+                      key={`dependency-context-${dependencyStep.step_order ?? dependency.index}`}
                       title={dependency.label}
-                      className="px-1.5 py-0.5 text-[10px] font-semibold rounded-md border whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800/50"
+                      className="group flex w-64 flex-shrink-0 snap-start flex-col text-left"
                     >
-                      Step {dependency.index + 1}
-                    </span>
+                      <div className="flex w-full flex-col overflow-hidden rounded-xl border border-border bg-muted/40 shadow-sm transition group-hover:shadow-md">
+                        <div className="aspect-[3/4] w-full overflow-hidden">
+                          <div className="h-full w-full overflow-y-auto scrollbar-hide-until-hover p-4 text-[11px] text-foreground/90">
+                            {renderDependencyOutputPreview(dependencyStep.output)}
+                          </div>
+                        </div>
+                        <div className="border-t border-border/60 bg-background/80 px-3 py-2">
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-foreground line-clamp-1">
+                              {dependency.label}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
-            )}
-            <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] whitespace-pre-wrap font-mono text-foreground/90">
-              {inputValue !== null && inputValue !== undefined
-                ? typeof inputValue === "string"
-                  ? inputValue
-                  : JSON.stringify(inputValue, null, 2)
-                : "No input available"}
             </div>
-          </div>
+          )}
           <div className="space-y-2">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Instructions
@@ -285,6 +424,7 @@ export function StepHeader({
   jobStatus,
   canEdit = false,
   rerunningStep,
+  allSteps,
   onEditStep,
   onRerunStep,
   onRerunStepClick,
@@ -341,7 +481,9 @@ export function StepHeader({
                 step.step_name || `Step ${step.step_order ?? 0}`
               )}
             </h3>
-            {showMeta && <StepMetaRow step={step} status={status} />}
+            {showMeta && (
+              <StepMetaRow step={step} status={status} allSteps={allSteps} />
+            )}
           </div>
         </div>
 
