@@ -6,6 +6,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Settings } from "@/types";
+import {
+  DEFAULT_AI_MODEL,
+  DEFAULT_SERVICE_TIER,
+  DEFAULT_TEXT_VERBOSITY,
+  DEFAULT_TOOL_CHOICE,
+  DEFAULT_WORKFLOW_IMPROVEMENT_REASONING_EFFORT,
+  DEFAULT_WORKFLOW_IMPROVEMENT_SERVICE_TIER,
+} from "@/constants/settingsDefaults";
 import { FormField } from "./FormField";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { BuildingOfficeIcon } from "@heroicons/react/24/outline";
@@ -193,7 +201,7 @@ export function GeneralSettings({
             label="Preferred AI Brain"
             name="default_ai_model"
             type="text"
-            value={settings.default_ai_model || "gpt-5.2"}
+            value={settings.default_ai_model || DEFAULT_AI_MODEL}
             onChange={(value) => onChange("default_ai_model", value)}
             options={AI_MODEL_OPTIONS}
             helpText="Default AI model used for generating lead magnets"
@@ -203,7 +211,7 @@ export function GeneralSettings({
             label="Default Tool Usage"
             name="default_tool_choice"
             type="text"
-            value={settings.default_tool_choice || "required"}
+            value={settings.default_tool_choice || DEFAULT_TOOL_CHOICE}
             onChange={(value) => onChange("default_tool_choice", value)}
             options={TOOL_CHOICE_OPTIONS}
             helpText="Default tool choice for new steps (you can override per-step)"
@@ -213,7 +221,7 @@ export function GeneralSettings({
             label="Default Service Tier"
             name="default_service_tier"
             type="text"
-            value={settings.default_service_tier || "auto"}
+            value={settings.default_service_tier || DEFAULT_SERVICE_TIER}
             onChange={(value) => onChange("default_service_tier", value)}
             options={SERVICE_TIER_OPTIONS}
             helpText="Default service tier for new AI steps (override per-step if needed)"
@@ -223,7 +231,7 @@ export function GeneralSettings({
             label="Default Output Verbosity"
             name="default_text_verbosity"
             type="text"
-            value={settings.default_text_verbosity || ""}
+            value={settings.default_text_verbosity || DEFAULT_TEXT_VERBOSITY}
             onChange={(value) => onChange("default_text_verbosity", value)}
             options={OUTPUT_VERBOSITY_OPTIONS}
             helpText="Default output verbosity for new AI steps (override per-step if needed)"
@@ -261,7 +269,10 @@ export function GeneralSettings({
               label="Review Service Tier"
               name="default_workflow_improvement_service_tier"
               type="text"
-              value={settings.default_workflow_improvement_service_tier || "priority"}
+            value={
+              settings.default_workflow_improvement_service_tier ||
+              DEFAULT_WORKFLOW_IMPROVEMENT_SERVICE_TIER
+            }
               onChange={(value) =>
                 onChange("default_workflow_improvement_service_tier", value)
               }
@@ -273,7 +284,8 @@ export function GeneralSettings({
               name="default_workflow_improvement_reasoning_effort"
               type="text"
               value={
-                settings.default_workflow_improvement_reasoning_effort || "high"
+              settings.default_workflow_improvement_reasoning_effort ||
+              DEFAULT_WORKFLOW_IMPROVEMENT_REASONING_EFFORT
               }
               onChange={(value) =>
                 onChange("default_workflow_improvement_reasoning_effort", value)

@@ -399,7 +399,7 @@ export default function WorkflowVersionsClient() {
   };
 
   return (
-    <div className="container mx-auto max-w-7xl space-y-10 pb-16">
+    <div className="container mx-auto max-w-7xl space-y-10 pb-16 px-4 sm:px-6">
       <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur shadow-sm">
         <div className="flex flex-col gap-3 py-4 sm:gap-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -483,9 +483,8 @@ export default function WorkflowVersionsClient() {
             title={`All versions (${sortedVersions.length})`}
             description="Restore an earlier configuration to create a new version."
             padding="sm"
-            stickyHeader
             className="lg:col-span-4 xl:col-span-3 lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-hidden"
-            contentClassName="lg:max-h-[calc(100vh-14rem)] lg:overflow-y-auto lg:pr-1"
+            contentClassName="max-h-[300px] overflow-y-auto lg:max-h-[calc(100vh-14rem)] lg:pr-1"
           >
             {sortedVersions.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
@@ -700,7 +699,7 @@ export default function WorkflowVersionsClient() {
                           <p className="text-xs font-medium text-muted-foreground">
                             Instructions
                           </p>
-                          <pre className="mt-2 whitespace-pre-wrap text-sm text-foreground font-sans">
+                          <pre className="mt-2 whitespace-pre-wrap break-words text-sm text-foreground font-sans">
                             {step.instructions || "—"}
                           </pre>
                         </div>
@@ -716,7 +715,7 @@ export default function WorkflowVersionsClient() {
                 title={`Generated lead magnets (${selectedVersionJobs.length})`}
                 description="Select a job to preview the generated deliverables."
                 padding="sm"
-                contentClassName="xl:max-h-[520px] xl:overflow-y-auto xl:pr-1"
+                contentClassName="max-h-[300px] overflow-y-auto xl:max-h-[520px] xl:pr-1"
               >
                 {selectedVersionJobs.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
@@ -759,7 +758,7 @@ export default function WorkflowVersionsClient() {
                                 {subtitle}
                               </p>
                             </div>
-                            <StatusBadge status={job.status} />
+                            <StatusBadge status={job.status} className="shrink-0" />
                           </div>
                         </button>
                       );

@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { AIModel, Tool } from "@/types";
 import { WorkflowStep, WorkflowTrigger } from "@/types/workflow";
+import {
+  resolveServiceTier,
+  resolveTextVerbosity,
+  resolveToolChoice,
+} from "@/utils/workflowDefaults";
 import { useWorkflowId } from "./useWorkflowId";
 
 export interface WorkflowFormData {
@@ -15,35 +20,6 @@ export interface WorkflowFormData {
   trigger?: WorkflowTrigger;
 }
 
-const DEFAULT_TOOL_CHOICE: WorkflowStep["tool_choice"] = "required";
-
-const resolveToolChoice = (value?: string): WorkflowStep["tool_choice"] => {
-  return value === "auto" || value === "required" || value === "none"
-    ? value
-    : DEFAULT_TOOL_CHOICE;
-};
-
-const resolveServiceTier = (
-  value?: string,
-): WorkflowStep["service_tier"] | undefined => {
-  if (
-    value === "default" ||
-    value === "flex" ||
-    value === "scale" ||
-    value === "priority"
-  ) {
-    return value;
-  }
-  return undefined;
-};
-
-const resolveTextVerbosity = (
-  value?: string,
-): WorkflowStep["text_verbosity"] | undefined => {
-  return value === "low" || value === "medium" || value === "high"
-    ? value
-    : undefined;
-};
 
 export function useWorkflowEdit(
   defaultToolChoice?: WorkflowStep["tool_choice"],

@@ -46,6 +46,9 @@ See [Testing Guide](../docs/testing/README.md) for full details.
 
 # Test webhooks
 ./scripts/testing/test-webhook.sh
+
+# Smoke test Docker VM (CUA)
+./scripts/testing/test-cua-docker-vm-smoke.sh --help
 ```
 
 ### Job Management

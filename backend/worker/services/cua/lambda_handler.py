@@ -4,7 +4,10 @@ import time
 from typing import Dict, Any
 
 from services.tools.execution import CUAgent
-from services.cua.drivers.playwright import PlaywrightEnvironment
+from services.cua.environment_factory import (
+    resolve_cua_environment_config,
+    create_async_environment,
+)
 from services.cua.screenshot_service import S3ScreenshotService
 from s3_service import S3Service
 from services.openai_client import OpenAIClient
@@ -115,7 +118,8 @@ class StreamingHandler:
         # #endregion
 
         # Initialize deps
-        env = PlaywrightEnvironment()
+        env_config = resolve_cua_environment_config(tools)
+        env = create_async_environment(env_config.environment)
         # Initialize OpenAI Client (assuming it handles auth via env vars)
         openai_client = OpenAIClient()
         

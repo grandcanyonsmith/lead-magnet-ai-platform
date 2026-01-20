@@ -8,8 +8,8 @@ import {
   FiExternalLink,
   FiImage,
 } from "react-icons/fi";
-import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 
 type JsonViewMode = "tree" | "raw";
 
@@ -28,56 +28,10 @@ const MAX_STRING_PREVIEW_LINES = 14;
 const URL_PATH_PREVIEW = 42;
 const URL_HOST_MAX = 32;
 
-const MarkdownRenderer = dynamic(() => import("react-markdown"), {
-  ssr: false,
-});
-
 type PrismStyles = {
   dark: unknown;
   light: unknown;
 };
-
-function LazyMarkdown({
-  children,
-  components,
-  className,
-}: {
-  children: string;
-  components?: Record<string, React.ComponentType<any>>;
-  className?: string;
-}) {
-  const [remarkGfm, setRemarkGfm] = useState<any>(null);
-
-  useEffect(() => {
-    let active = true;
-    import("remark-gfm")
-      .then((mod) => {
-        if (active) setRemarkGfm(() => mod.default ?? mod);
-      })
-      .catch(() => {
-        if (active) setRemarkGfm(null);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (!remarkGfm) {
-    return (
-      <pre className={clsx("whitespace-pre-wrap break-words", className)}>
-        {children}
-      </pre>
-    );
-  }
-
-  return (
-    <div className={className}>
-      <MarkdownRenderer remarkPlugins={[remarkGfm]} components={components}>
-        {children}
-      </MarkdownRenderer>
-    </div>
-  );
-}
 
 function LazySyntaxHighlighter({
   value,
@@ -480,7 +434,9 @@ function JsonStringValue({ value }: { value: string }) {
                   shouldScrollExpanded && "max-h-[60vh] overflow-auto",
                 )}
               >
-                <LazyMarkdown
+                <MarkdownRenderer
+                  value={String(value)}
+                  fallbackClassName="whitespace-pre-wrap break-words"
                   components={{
                     pre: ({ children }) => <>{children}</>,
                     code: ({ inline, children, ...props }: any) => {
@@ -516,9 +472,7 @@ function JsonStringValue({ value }: { value: string }) {
                       </td>
                     ),
                   }}
-                >
-                  {value}
-                </LazyMarkdown>
+                />
               </div>
             ) : displayFenced ? (
               <div className="space-y-2">

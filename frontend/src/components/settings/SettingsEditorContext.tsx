@@ -10,6 +10,15 @@ import React, {
   useState,
 } from "react";
 import { usePathname } from "next/navigation";
+import {
+  DEFAULT_AI_MODEL,
+  DEFAULT_AI_MODEL_BASELINE,
+  DEFAULT_SERVICE_TIER,
+  DEFAULT_TEXT_VERBOSITY,
+  DEFAULT_TOOL_CHOICE,
+  DEFAULT_WORKFLOW_IMPROVEMENT_REASONING_EFFORT,
+  DEFAULT_WORKFLOW_IMPROVEMENT_SERVICE_TIER,
+} from "@/constants/settingsDefaults";
 import { useSettings, useUpdateSettings } from "@/hooks/api/useSettings";
 import type { Settings } from "@/types";
 import type {
@@ -202,17 +211,19 @@ export function SettingsEditorProvider({
         organization_name: settings.organization_name || "",
         contact_email: settings.contact_email || "",
         website_url: sanitizeUrl(settings.website_url) || "",
-        default_ai_model: settings.default_ai_model || "gpt-5.2",
-        default_tool_choice: settings.default_tool_choice || "required",
-        default_service_tier: settings.default_service_tier || "auto",
-        default_text_verbosity: settings.default_text_verbosity || "",
+        default_ai_model: settings.default_ai_model || DEFAULT_AI_MODEL,
+        default_tool_choice: settings.default_tool_choice || DEFAULT_TOOL_CHOICE,
+        default_service_tier: settings.default_service_tier || DEFAULT_SERVICE_TIER,
+        default_text_verbosity: settings.default_text_verbosity || DEFAULT_TEXT_VERBOSITY,
         default_workflow_improvement_user_id: normalizeReviewUserId(
           settings.default_workflow_improvement_user_id,
         ),
         default_workflow_improvement_service_tier:
-          settings.default_workflow_improvement_service_tier || "priority",
+          settings.default_workflow_improvement_service_tier ||
+          DEFAULT_WORKFLOW_IMPROVEMENT_SERVICE_TIER,
         default_workflow_improvement_reasoning_effort:
-          settings.default_workflow_improvement_reasoning_effort || "high",
+          settings.default_workflow_improvement_reasoning_effort ||
+          DEFAULT_WORKFLOW_IMPROVEMENT_REASONING_EFFORT,
         logo_url: sanitizeUrl(settings.logo_url) || "",
         ghl_webhook_url: sanitizeUrl(settings.ghl_webhook_url) || "",
         custom_domain: settings.custom_domain || "",
@@ -245,17 +256,19 @@ export function SettingsEditorProvider({
         organization_name: settings.organization_name || "",
         contact_email: settings.contact_email || "",
         website_url: settings.website_url || "",
-        default_ai_model: settings.default_ai_model || "gpt-5.2",
-        default_tool_choice: settings.default_tool_choice || "required",
-        default_service_tier: settings.default_service_tier || "auto",
-        default_text_verbosity: settings.default_text_verbosity || "",
+        default_ai_model: settings.default_ai_model || DEFAULT_AI_MODEL,
+        default_tool_choice: settings.default_tool_choice || DEFAULT_TOOL_CHOICE,
+        default_service_tier: settings.default_service_tier || DEFAULT_SERVICE_TIER,
+        default_text_verbosity: settings.default_text_verbosity || DEFAULT_TEXT_VERBOSITY,
         default_workflow_improvement_user_id: normalizeReviewUserId(
           settings.default_workflow_improvement_user_id,
         ),
         default_workflow_improvement_service_tier:
-          settings.default_workflow_improvement_service_tier || "priority",
+          settings.default_workflow_improvement_service_tier ||
+          DEFAULT_WORKFLOW_IMPROVEMENT_SERVICE_TIER,
         default_workflow_improvement_reasoning_effort:
-          settings.default_workflow_improvement_reasoning_effort || "high",
+          settings.default_workflow_improvement_reasoning_effort ||
+          DEFAULT_WORKFLOW_IMPROVEMENT_REASONING_EFFORT,
         logo_url: settings.logo_url || "",
         ghl_webhook_url: settings.ghl_webhook_url || "",
         custom_domain: settings.custom_domain || "",
@@ -293,21 +306,23 @@ export function SettingsEditorProvider({
       formData.contact_email !== (compareTo.contact_email || "") ||
       formData.website_url !== (compareTo.website_url || "") ||
       formData.default_ai_model !==
-        (compareTo.default_ai_model || "gpt-5.1-codex") ||
+        (compareTo.default_ai_model || DEFAULT_AI_MODEL_BASELINE) ||
       formData.default_tool_choice !==
-        (compareTo.default_tool_choice || "required") ||
+        (compareTo.default_tool_choice || DEFAULT_TOOL_CHOICE) ||
       formData.default_service_tier !==
-        (compareTo.default_service_tier || "auto") ||
+        (compareTo.default_service_tier || DEFAULT_SERVICE_TIER) ||
       formData.default_text_verbosity !==
-        (compareTo.default_text_verbosity || "") ||
+        (compareTo.default_text_verbosity || DEFAULT_TEXT_VERBOSITY) ||
       formData.default_workflow_improvement_user_id !==
         normalizeReviewUserId(
           compareTo.default_workflow_improvement_user_id as string | undefined,
         ) ||
       formData.default_workflow_improvement_service_tier !==
-        (compareTo.default_workflow_improvement_service_tier || "priority") ||
+        (compareTo.default_workflow_improvement_service_tier ||
+          DEFAULT_WORKFLOW_IMPROVEMENT_SERVICE_TIER) ||
       formData.default_workflow_improvement_reasoning_effort !==
-        (compareTo.default_workflow_improvement_reasoning_effort || "high") ||
+        (compareTo.default_workflow_improvement_reasoning_effort ||
+          DEFAULT_WORKFLOW_IMPROVEMENT_REASONING_EFFORT) ||
       formData.logo_url !== (compareTo.logo_url || "") ||
       formData.ghl_webhook_url !== (compareTo.ghl_webhook_url || "") ||
       formDomain !== compareDomain ||
@@ -374,17 +389,20 @@ export function SettingsEditorProvider({
             organization_name: settings.organization_name || "",
             contact_email: settings.contact_email || "",
             website_url: sanitizeUrl(settings.website_url) || "",
-            default_ai_model: settings.default_ai_model || "gpt-5.2",
-            default_tool_choice: settings.default_tool_choice || "required",
-            default_service_tier: settings.default_service_tier || "auto",
-            default_text_verbosity: settings.default_text_verbosity || "",
+            default_ai_model: settings.default_ai_model || DEFAULT_AI_MODEL,
+            default_tool_choice: settings.default_tool_choice || DEFAULT_TOOL_CHOICE,
+            default_service_tier: settings.default_service_tier || DEFAULT_SERVICE_TIER,
+            default_text_verbosity:
+              settings.default_text_verbosity || DEFAULT_TEXT_VERBOSITY,
             default_workflow_improvement_user_id: normalizeReviewUserId(
               settings.default_workflow_improvement_user_id,
             ),
             default_workflow_improvement_service_tier:
-              settings.default_workflow_improvement_service_tier || "priority",
+              settings.default_workflow_improvement_service_tier ||
+              DEFAULT_WORKFLOW_IMPROVEMENT_SERVICE_TIER,
             default_workflow_improvement_reasoning_effort:
-              settings.default_workflow_improvement_reasoning_effort || "high",
+              settings.default_workflow_improvement_reasoning_effort ||
+              DEFAULT_WORKFLOW_IMPROVEMENT_REASONING_EFFORT,
             logo_url: sanitizeUrl(settings.logo_url) || "",
             ghl_webhook_url: sanitizeUrl(settings.ghl_webhook_url) || "",
             custom_domain: settings.custom_domain || "",
@@ -445,13 +463,15 @@ export function SettingsEditorProvider({
       website_url: sanitizeUrl(formData.website_url),
       default_ai_model: formData.default_ai_model,
       default_tool_choice: formData.default_tool_choice,
-      default_service_tier: formData.default_service_tier || "auto",
+      default_service_tier: formData.default_service_tier || DEFAULT_SERVICE_TIER,
       default_text_verbosity: formData.default_text_verbosity || undefined,
       default_workflow_improvement_user_id: normalizedReviewUserId,
       default_workflow_improvement_service_tier:
-        formData.default_workflow_improvement_service_tier || "priority",
+        formData.default_workflow_improvement_service_tier ||
+        DEFAULT_WORKFLOW_IMPROVEMENT_SERVICE_TIER,
       default_workflow_improvement_reasoning_effort:
-        formData.default_workflow_improvement_reasoning_effort || "high",
+        formData.default_workflow_improvement_reasoning_effort ||
+        DEFAULT_WORKFLOW_IMPROVEMENT_REASONING_EFFORT,
       logo_url: sanitizeUrl(formData.logo_url),
       ghl_webhook_url: sanitizeUrl(formData.ghl_webhook_url),
       custom_domain: sanitizeDomain(formData.custom_domain),
@@ -475,16 +495,18 @@ export function SettingsEditorProvider({
       organization_name: payload.organization_name || "",
       contact_email: payload.contact_email || "",
       website_url: payload.website_url || "",
-      default_ai_model: payload.default_ai_model || "gpt-5.1-codex",
-      default_tool_choice: payload.default_tool_choice || "required",
-      default_service_tier: payload.default_service_tier || "auto",
-      default_text_verbosity: payload.default_text_verbosity || "",
+      default_ai_model: payload.default_ai_model || DEFAULT_AI_MODEL_BASELINE,
+      default_tool_choice: payload.default_tool_choice || DEFAULT_TOOL_CHOICE,
+      default_service_tier: payload.default_service_tier || DEFAULT_SERVICE_TIER,
+      default_text_verbosity: payload.default_text_verbosity || DEFAULT_TEXT_VERBOSITY,
       default_workflow_improvement_user_id:
         payload.default_workflow_improvement_user_id || "",
       default_workflow_improvement_service_tier:
-        payload.default_workflow_improvement_service_tier || "priority",
+        payload.default_workflow_improvement_service_tier ||
+        DEFAULT_WORKFLOW_IMPROVEMENT_SERVICE_TIER,
       default_workflow_improvement_reasoning_effort:
-        payload.default_workflow_improvement_reasoning_effort || "high",
+        payload.default_workflow_improvement_reasoning_effort ||
+        DEFAULT_WORKFLOW_IMPROVEMENT_REASONING_EFFORT,
       logo_url: payload.logo_url || "",
       ghl_webhook_url: payload.ghl_webhook_url || "",
       custom_domain: payload.custom_domain || "",

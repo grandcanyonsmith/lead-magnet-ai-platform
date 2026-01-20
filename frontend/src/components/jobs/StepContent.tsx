@@ -1,57 +1,13 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
 import {
   extractImageUrls,
   extractImageUrlsFromObject,
 } from "@/utils/imageUtils";
 import { InlineImage } from "./InlineImage";
 import { JsonViewer } from "@/components/ui/JsonViewer";
-
-const MarkdownRenderer = dynamic(() => import("react-markdown"), {
-  ssr: false,
-});
-
-function LazyMarkdown({
-  children,
-  className,
-}: {
-  children: string;
-  className?: string;
-}) {
-  const [remarkGfm, setRemarkGfm] = useState<any>(null);
-
-  useEffect(() => {
-    let active = true;
-    import("remark-gfm")
-      .then((mod) => {
-        if (active) setRemarkGfm(() => mod.default ?? mod);
-      })
-      .catch(() => {
-        if (active) setRemarkGfm(null);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (!remarkGfm) {
-    return (
-      <pre className={className ?? "whitespace-pre-wrap break-words"}>
-        {children}
-      </pre>
-    );
-  }
-
-  return (
-    <div className={className}>
-      <MarkdownRenderer remarkPlugins={[remarkGfm]}>
-        {children}
-      </MarkdownRenderer>
-    </div>
-  );
-}
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 
 function LazySyntaxHighlighter({
   value,
@@ -449,7 +405,10 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
           )}
           <>
             <div className="prose prose-sm dark:prose-invert max-w-none bg-white dark:bg-card p-4 md:p-4 rounded-xl border border-gray-200 dark:border-gray-700 leading-relaxed break-words">
-              <LazyMarkdown>{markdownText}</LazyMarkdown>
+              <MarkdownRenderer
+                value={markdownText}
+                fallbackClassName="whitespace-pre-wrap break-words"
+              />
             </div>
             {/* Render plain image URLs that aren't in markdown format */}
             {renderImageStrip(extractedImageUrls, {

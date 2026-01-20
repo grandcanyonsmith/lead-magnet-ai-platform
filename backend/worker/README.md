@@ -33,6 +33,18 @@ python3 worker.py --job-id <JOB_ID>
 
 See [Local Development Guide](../../docs/guides/LOCAL_DEVELOPMENT.md) for full setup.
 
+## 🧪 Docker VM Smoke Test (CUA)
+
+Use this script to verify Docker VM actions + screenshot capture:
+
+```bash
+python3 run_docker_vm_smoke.py
+python3 run_docker_vm_smoke.py --url https://example.com --output /tmp/cua_smoke.png
+```
+
+The script respects the Docker CUA env vars (see `docs/guides/CUA_DEPLOYMENT.md`)
+and expects `xdotool` plus the configured screenshot tool inside the container.
+
 ## 🧪 Testing
 
 ```bash

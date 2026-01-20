@@ -177,7 +177,7 @@ export default function DashboardLayout({
             ) : isJobDetailRoute ? (
               <JobDetailLayout>{children}</JobDetailLayout>
             ) : (
-              <div className="mx-auto w-full max-w-[1440px] px-6 sm:px-8 lg:px-12 flex flex-col min-h-full">
+              <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-12 flex flex-col min-h-full">
                 {children}
               </div>
             )}

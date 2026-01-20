@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { JsonViewer } from "@/components/ui/JsonViewer";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { FiChevronRight, FiChevronDown, FiCode, FiFileText, FiLayout, FiClock, FiAlertCircle, FiInfo } from 'react-icons/fi';
 
 interface LogViewerProps {
@@ -210,8 +209,9 @@ const ContentRenderer: React.FC<{ content: any, type: ContentType }> = ({ conten
     if (type === 'markdown') {
         return (
             <div className="prose prose-sm dark:prose-invert max-w-none break-words">
-                <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
+                <MarkdownRenderer
+                    value={String(content)}
+                    fallbackClassName="whitespace-pre-wrap break-words"
                     components={{
                         code({ node, inline, className, children, ...props }: any) {
                             const match = /language-(\w+)/.exec(className || '');
@@ -231,9 +231,7 @@ const ContentRenderer: React.FC<{ content: any, type: ContentType }> = ({ conten
                             );
                         }
                     }}
-                >
-                    {content}
-                </ReactMarkdown>
+                />
             </div>
         );
     }

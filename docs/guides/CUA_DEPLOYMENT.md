@@ -84,3 +84,33 @@ The CUA loop will automatically activate when:
 
 No additional configuration needed - it works automatically!
 
+### Environment Selection
+
+By default, CUA uses the Playwright browser environment. You can override this with:
+
+- Tool config: set `environment` on the `computer_use_preview` tool (e.g. `docker_vm` or `playwright`)
+- Env var: `CUA_ENVIRONMENT=docker_vm|playwright`
+
+Tool config takes precedence over the env var.
+
+### Docker VM Configuration
+
+When using `docker_vm`, the worker will execute actions via `docker exec` + `xdotool`
+and capture screenshots from the container. These settings are configurable:
+
+- `CUA_DOCKER_CONTAINER_NAME` (default `cua-image`)
+- `CUA_DOCKER_VNC_DISPLAY` (default `:99`)
+- `CUA_DOCKER_AUTO_START` (default `true`)
+- `CUA_DOCKER_RUN_CMD` (optional, create container if missing; supports `{container_name}`, `{display}`, `{display_width}`, `{display_height}`)
+- `CUA_DOCKER_STOP_ON_CLEANUP` (default `false`)
+- `CUA_DOCKER_XDOTOOL_CMD` (default `xdotool`)
+- `CUA_DOCKER_XDOTOOL_DELAY_MS` (default `50`)
+- `CUA_DOCKER_SCREENSHOT_CMD` (default `import -window root png:-`)
+- `CUA_DOCKER_SCROLL_STEP` (default `120`)
+- `CUA_DOCKER_READY_TIMEOUT_SECONDS` (default `20`)
+- `CUA_DOCKER_WINDOW_ID` (optional; focus a specific window before actions)
+- `CUA_DOCKER_BIN` (default `docker`)
+
+Your container must have `xdotool` and whatever screenshot tool you configure
+(`import` from ImageMagick by default).
+

@@ -190,7 +190,7 @@ export function SubHeaderTabs({
 
   const navContent = (
     <div className={cn("border-b border-border/60 bg-muted", className)}>
-      <div className="px-6 sm:px-8 lg:px-12">
+      <div className="px-4 sm:px-6 lg:px-12">
         <nav
           role="tablist"
           aria-label="Section navigation"
@@ -198,7 +198,7 @@ export function SubHeaderTabs({
         >
           {overflowEnabled ? (
             <>
-              <div className="inline-flex items-center gap-3 sm:hidden">
+              <div className="flex w-full items-center gap-3 overflow-x-auto scrollbar-hide sm:hidden">
                 {mobileTabs.map(renderTab)}
                 {overflowTabs.length > 0 && (
                   <>

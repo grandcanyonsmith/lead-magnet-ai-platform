@@ -65,7 +65,8 @@ def get_code_interpreter_tool_definition() -> Dict[str, Any]:
 def get_computer_use_tool_definition(
     display_width: int = 1024,
     display_height: int = 768,
-    computer_use_preview: bool = True
+    computer_use_preview: bool = True,
+    environment: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Returns the definition for the computer use tool.
@@ -76,9 +77,12 @@ def get_computer_use_tool_definition(
         computer_use_preview: Whether to use the preview type (default True)
     """
     tool_type = "computer_use_preview" if computer_use_preview else "computer_use"
-    return {
+    tool = {
         "type": tool_type,
         "display_width": display_width,
         "display_height": display_height,
         # Note: 'container' parameter is handled by ToolValidator/Builder depending on API requirements
     }
+    if environment:
+        tool["environment"] = environment
+    return tool

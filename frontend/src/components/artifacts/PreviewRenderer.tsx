@@ -10,8 +10,7 @@ import {
   FiTablet,
   FiSmartphone,
 } from "react-icons/fi";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { api } from "@/lib/api";
 import { JsonViewer } from "@/components/ui/JsonViewer";
 import {
@@ -1085,9 +1084,10 @@ export function PreviewRenderer({
                     }`}
                   >
                     <div className="p-8 prose prose-lg max-w-none dark:prose-invert">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {markdownContent}
-                      </ReactMarkdown>
+                      <MarkdownRenderer
+                        value={markdownContent}
+                        fallbackClassName="whitespace-pre-wrap break-words"
+                      />
                     </div>
                   </div>
                 ) : (
@@ -1130,9 +1130,10 @@ export function PreviewRenderer({
               ) : markdownContent ? (
                 <CompactScaledContent>
                   <div className="prose prose-sm max-w-none dark:prose-invert text-[10px] leading-snug prose-p:my-1 prose-headings:my-1 prose-li:my-0">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {markdownContent}
-                    </ReactMarkdown>
+                    <MarkdownRenderer
+                      value={markdownContent}
+                      fallbackClassName="whitespace-pre-wrap break-words"
+                    />
                   </div>
                 </CompactScaledContent>
               ) : (
@@ -1173,9 +1174,10 @@ export function PreviewRenderer({
               </div>
             ) : markdownContent ? (
               <div className="p-4 prose prose-sm max-w-none dark:prose-invert">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {markdownContent}
-                </ReactMarkdown>
+                <MarkdownRenderer
+                  value={markdownContent}
+                  fallbackClassName="whitespace-pre-wrap break-words"
+                />
               </div>
             ) : (
               <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">

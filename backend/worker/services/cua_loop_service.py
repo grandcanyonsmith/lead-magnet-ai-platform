@@ -12,7 +12,10 @@ from typing import Tuple, List, Dict, Any, Optional
 warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
 warnings.filterwarnings('ignore', message='.*PydanticSerializationUnexpectedValue.*')
 
-from services.browser_service import BrowserService
+from services.cua.environment_factory import (
+    resolve_cua_environment_config,
+    create_sync_controller,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,26 +72,25 @@ class CUALoopService:
         })
         
         # Extract computer_use_preview tool config
-        computer_use_tool = None
-        display_width = 1024
-        display_height = 768
-        environment = 'browser'
-        
-        for tool in tools:
-            tool_type = tool.get('type') if isinstance(tool, dict) else tool
-            if tool_type == 'computer_use_preview':
-                computer_use_tool = tool if isinstance(tool, dict) else {'type': tool_type}
-                # Convert to int in case they're Decimal from DynamoDB
-                display_width = int(computer_use_tool.get('display_width', 1024))
-                display_height = int(computer_use_tool.get('display_height', 768))
-                environment = computer_use_tool.get('environment', 'browser')
-                break
-        
-        if not computer_use_tool:
+        computer_use_tool_present = any(
+            (isinstance(t, str) and t == "computer_use_preview")
+            or (isinstance(t, dict) and t.get("type") == "computer_use_preview")
+            for t in tools
+        )
+        if not computer_use_tool_present:
             raise ValueError("computer_use_preview tool not found in tools list")
+
+        env_config = resolve_cua_environment_config(tools)
+        display_width = env_config.display_width
+        display_height = env_config.display_height
+        environment_name = env_config.environment
+        logger.info(
+            f"[CUALoopService] Using CUA environment: {environment_name}",
+            extra={"display_width": display_width, "display_height": display_height},
+        )
         
-        # Initialize browser
-        browser = BrowserService()
+        # Initialize browser/controller
+        browser = create_sync_controller(environment_name)
         screenshot_urls = []
         start_time = time.time()
         iteration = 0
