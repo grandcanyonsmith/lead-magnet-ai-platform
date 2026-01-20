@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 import {
@@ -64,6 +64,7 @@ export function ExecutionSteps({
   resubmitting,
 }: ExecutionStepsProps) {
   const liveOutputRef = useRef<HTMLPreElement>(null);
+  const [autoScrollLiveOutput, setAutoScrollLiveOutput] = useState(true);
 
   // Sort steps by step_order once (must be before early return)
   const sortedSteps = useMemo(() => {
@@ -111,9 +112,9 @@ export function ExecutionSteps({
     Boolean(liveStep?.status);
 
   useEffect(() => {
-    if (!liveOutputRef.current) return;
+    if (!autoScrollLiveOutput || !liveOutputRef.current) return;
     liveOutputRef.current.scrollTop = liveOutputRef.current.scrollHeight;
-  }, [liveStep?.output_text, liveStep?.updated_at]);
+  }, [autoScrollLiveOutput, liveStep?.output_text, liveStep?.updated_at]);
 
   const liveStepHref =
     jobId && liveStepOrder !== undefined
@@ -142,15 +143,29 @@ export function ExecutionSteps({
       title="Live execution log"
       description="Streaming output from the active step while the job runs."
       actions={
-        liveStepHref ? (
-          <Link
-            href={liveStepHref}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-primary-600 hover:text-primary-700"
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setAutoScrollLiveOutput((prev) => !prev)}
+            aria-pressed={autoScrollLiveOutput}
+            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors ${
+              autoScrollLiveOutput
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-border/70 bg-muted/60 text-muted-foreground hover:text-foreground"
+            }`}
           >
-            View step details
-            <ChevronDownIcon className="h-3.5 w-3.5 rotate-[-90deg]" />
-          </Link>
-        ) : null
+            Auto-scroll {autoScrollLiveOutput ? "on" : "off"}
+          </button>
+          {liveStepHref && (
+            <Link
+              href={liveStepHref}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-primary-600 hover:text-primary-700"
+            >
+              View step details
+              <ChevronDownIcon className="h-3.5 w-3.5 rotate-[-90deg]" />
+            </Link>
+          )}
+        </div>
       }
     >
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">

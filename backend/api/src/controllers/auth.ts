@@ -189,9 +189,11 @@ class AuthController {
 
       // Construct public URL
       const cloudfrontDomain = env.cloudfrontDomain;
+      // Determine bucket region - cc360-pages is in us-west-2
+      const bucketRegion = bucket === "cc360-pages" ? "us-west-2" : env.awsRegion;
       const publicUrl = cloudfrontDomain
         ? `https://${cloudfrontDomain}/${key}`
-        : `https://${bucket}.s3.${env.awsRegion}.amazonaws.com/${key}`;
+        : `https://${bucket}.s3.${bucketRegion}.amazonaws.com/${key}`;
 
       return {
         statusCode: 200,

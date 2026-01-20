@@ -3,7 +3,7 @@
  */
 
 import { BaseApiClient, TokenProvider } from "./base.client";
-import { Settings, SettingsUpdateRequest } from "@/types";
+import { PromptDefaults, Settings, SettingsUpdateRequest } from "@/types";
 
 export class SettingsClient extends BaseApiClient {
   constructor(tokenProvider: TokenProvider) {
@@ -18,6 +18,10 @@ export class SettingsClient extends BaseApiClient {
 
   async updateSettings(data: SettingsUpdateRequest): Promise<Settings> {
     return this.put<Settings>("/admin/settings", data);
+  }
+
+  async getPromptDefaults(): Promise<PromptDefaults> {
+    return this.get<PromptDefaults>("/admin/settings/prompt-defaults");
   }
 
   async updateOnboardingSurvey(

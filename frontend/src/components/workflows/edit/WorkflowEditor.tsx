@@ -1,0 +1,537 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { FileText, Save, AlertCircle, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { AIModel, Tool } from "@/types";
+import { useWorkflowEdit } from "@/hooks/useWorkflowEdit";
+import { useFormEdit } from "@/hooks/useFormEdit";
+import { useTemplateEdit } from "@/hooks/useTemplateEdit";
+import { WorkflowTab } from "@/components/workflows/edit/WorkflowTab";
+import { FormTab } from "@/components/workflows/edit/FormTab";
+import { TemplateTab } from "@/components/workflows/edit/TemplateTab";
+import { extractPlaceholders } from "@/utils/templateUtils";
+import { formatHTML } from "@/utils/templateUtils";
+import { useSettings } from "@/hooks/api/useSettings";
+
+// UI Components
+import { Tabs, TabsContent } from "@/components/ui/Tabs";
+import { SubHeaderTabs } from "@/components/ui/SubHeaderTabs";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import { LoadingState } from "@/components/ui/LoadingState";
+
+export interface WorkflowEditorProps {
+  workflowIdOverride?: string;
+  portalTargetId?: string | null;
+  onExit?: () => void;
+  onSaveSuccess?: () => void;
+  loadingFullPage?: boolean;
+}
+
+export function WorkflowEditor({
+  workflowIdOverride,
+  portalTargetId = "dashboard-subheader",
+  onExit,
+  onSaveSuccess,
+  loadingFullPage = true,
+}: WorkflowEditorProps) {
+  const [activeTab, setActiveTab] = useState<"workflow" | "form" | "template">(
+    "workflow",
+  );
+  const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(
+    null,
+  );
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  const router = useRouter();
+
+  const { settings } = useSettings();
+
+  const handleExit = () => {
+    if (onExit) {
+      onExit();
+      return;
+    }
+    router.back();
+  };
+
+  const handleSaveSuccess = () => {
+    if (onSaveSuccess) {
+      onSaveSuccess();
+      return;
+    }
+    router.push("/dashboard/workflows");
+  };
+
+  // Main workflow hook
+  const workflowEdit = useWorkflowEdit(
+    settings?.default_tool_choice,
+    settings?.default_service_tier,
+    settings?.default_text_verbosity || undefined,
+    workflowIdOverride,
+  );
+  const {
+    workflowId,
+    loading,
+    submitting,
+    setSubmitting,
+    error,
+    setError,
+    workflowVersion,
+    formData,
+    steps,
+    setSteps,
+    formId,
+    workflowForm,
+    handleChange,
+    handleAddStep,
+    handleDeleteStep,
+    handleMoveStepUp,
+    handleMoveStepDown,
+  } = workflowEdit;
+
+  // Form edit hook
+  const formEdit = useFormEdit(formData.workflow_name, formId, workflowForm);
+  const {
+    formFormData,
+    handleFormChange,
+    handleFieldChange,
+    addField,
+    removeField,
+    moveFieldUp,
+    moveFieldDown,
+  } = formEdit;
+
+  // Template edit hook
+  const templateEdit = useTemplateEdit(
+    formData.workflow_name,
+    templateId,
+    formData.template_id,
+  );
+  const {
+    templateLoading,
+    templateData,
+    detectedPlaceholders,
+    templateViewMode,
+    devicePreviewSize,
+    previewKey,
+    refining,
+    generationStatus,
+    editPrompt,
+    handleTemplateChange,
+    handleHtmlChange,
+    handleRefine,
+    insertPlaceholder,
+    setTemplateViewMode,
+    setDevicePreviewSize,
+    setEditPrompt,
+    handleUndo,
+    handleRedo,
+    canUndo,
+    canRedo,
+    history,
+    historyIndex,
+    jumpToHistory,
+    commitHtmlChange,
+    selectedSelectors,
+    setSelectedSelectors,
+  } = templateEdit;
+
+  // Update templateId when formData.template_id changes
+  useEffect(() => {
+    if (formData.template_id) {
+      setTemplateId(formData.template_id);
+    }
+  }, [formData.template_id]);
+
+  // Switch away from template tab if no template
+  useEffect(() => {
+    const hasTemplate = templateId || (templateData.html_content?.trim() || "");
+    if (!hasTemplate && activeTab === "template") {
+      setActiveTab("workflow");
+    }
+  }, [templateId, templateData.html_content, activeTab]);
+
+  const hasTemplateTab = Boolean(
+    templateId || (templateData.html_content?.trim() || ""),
+  );
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setError(null);
+
+    // Validation
+    if (!formData.workflow_name.trim()) {
+      setError("Lead magnet name is required");
+      return;
+    }
+
+    // Validate steps
+    if (steps.length === 0) {
+      setError("At least one workflow step is required");
+      return;
+    }
+
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      const isWebhookStep = Boolean(
+        (step.webhook_url && step.webhook_url.trim()) ||
+          step.step_type === "webhook",
+      );
+      const isHandoffStep = Boolean(
+        step.handoff_workflow_id && step.handoff_workflow_id.trim(),
+      );
+      const isAiStep = !isWebhookStep && !isHandoffStep;
+
+      if (isWebhookStep && isHandoffStep) {
+        setError(
+          `Step ${i + 1} cannot be both a webhook step and a lead magnet handoff step. Please choose one.`,
+        );
+        return;
+      }
+
+      if (!step.step_name.trim()) {
+        setError(`Step ${i + 1} name is required`);
+        return;
+      }
+      // Only validate instructions for AI generation steps
+      if (isAiStep && (!step.instructions || !step.instructions.trim())) {
+        setError(
+          `Step ${i + 1} instructions are required for AI generation steps`,
+        );
+        return;
+      }
+      // Validate HTTP URL for HTTP request steps
+      if (isWebhookStep && (!step.webhook_url || !step.webhook_url.trim())) {
+        setError(`Step ${i + 1} HTTP URL is required for HTTP request steps`);
+        return;
+      }
+
+      if (isHandoffStep && (!step.handoff_workflow_id || !step.handoff_workflow_id.trim())) {
+        setError(
+          `Step ${i + 1} target lead magnet is required for handoff steps`,
+        );
+        return;
+      }
+
+      if (isHandoffStep && workflowId && step.handoff_workflow_id === workflowId) {
+        setError(
+          `Step ${i + 1} cannot hand off to itself. Choose a different lead magnet.`,
+        );
+        return;
+      }
+    }
+
+    // Template validation - if template tab is accessible, ensure template exists
+    const hasTemplate = templateId || (templateData.html_content?.trim() || "");
+    if (activeTab === "template" && !hasTemplate) {
+      setError("Template HTML content is required");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      // Create or update template if template content exists
+      let finalTemplateId = templateId;
+      if (templateData.html_content?.trim()) {
+        const placeholders = extractPlaceholders(templateData.html_content);
+
+        if (templateId) {
+          // Update existing template
+          await api.updateTemplate(templateId, {
+            template_name: templateData.template_name.trim(),
+            template_description:
+              templateData.template_description.trim() || undefined,
+            html_content: templateData.html_content?.trim() || "",
+            placeholder_tags:
+              placeholders.length > 0 ? placeholders : undefined,
+            is_published: templateData.is_published,
+          });
+          finalTemplateId = templateId;
+        } else {
+          // Create new template
+          const template = await api.createTemplate({
+            template_name: templateData.template_name.trim(),
+            template_description:
+              templateData.template_description.trim() || "",
+            html_content: templateData.html_content?.trim() || "",
+            placeholder_tags:
+              placeholders.length > 0 ? placeholders : undefined,
+            is_published: templateData.is_published,
+          });
+          finalTemplateId = template.template_id;
+          setTemplateId(template.template_id);
+        }
+      }
+
+      // Update workflow with steps
+      await api.updateWorkflow(workflowId, {
+        workflow_name: formData.workflow_name.trim(),
+        workflow_description: formData.workflow_description.trim() || undefined,
+        trigger: formData.trigger,
+        steps: steps.map((step, index: number) => {
+          // Clean up tools if tool_choice is 'none'
+          const cleanedTools =
+            step.tool_choice === "none" ? [] : step.tools || [];
+
+          return {
+            ...step,
+            step_order: index,
+            model: step.model as AIModel,
+            tools:
+              cleanedTools.length > 0 ? (cleanedTools as Tool[]) : undefined,
+            tool_choice:
+              step.tool_choice || settings?.default_tool_choice || "required",
+            depends_on:
+              step.depends_on && step.depends_on.length > 0
+                ? step.depends_on
+                : undefined,
+          };
+        }),
+        // Legacy fields removed - all workflows must use steps format
+        template_id: finalTemplateId || undefined,
+        template_version: 0,
+      });
+
+      // Update form if it exists
+      if (formId) {
+        await api.updateForm(formId, {
+          form_name: formFormData.form_name.trim(),
+          public_slug: formFormData.public_slug.trim(),
+          form_fields_schema: formFormData.form_fields_schema as any,
+          rate_limit_enabled: formFormData.rate_limit_enabled,
+          rate_limit_per_hour: formFormData.rate_limit_per_hour,
+          captcha_enabled: formFormData.captcha_enabled,
+          custom_css: formFormData.custom_css.trim() || undefined,
+          thank_you_message: formFormData.thank_you_message.trim() || undefined,
+          redirect_url: formFormData.redirect_url.trim() || undefined,
+        });
+      }
+
+      handleSaveSuccess();
+    } catch (error: any) {
+      console.error("Failed to update:", error);
+      setError(
+        error.response?.data?.message || error.message || "Failed to update",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRefineWithError = async () => {
+    const result = await handleRefine();
+    if (result.error) {
+      setError(result.error);
+      return result;
+    }
+    return result;
+  };
+
+  const handleFormatHtml = () => {
+    if (!templateData.html_content) return;
+    const formatted = formatHTML(templateData.html_content);
+    handleTemplateChange("html_content", formatted);
+  };
+
+  if (loading) {
+    return (
+      <LoadingState
+        fullPage={loadingFullPage}
+        message="Loading workflow configuration..."
+        variant="spinner"
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-6 w-full pb-20">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sticky top-0 z-30 bg-background/95 backdrop-blur py-3 sm:py-4 border-b">
+        <div className="flex items-start gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleExit}
+            className="h-9 w-9 text-muted-foreground hover:text-foreground -ml-2"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl">
+                Edit Lead Magnet
+              </h1>
+              <Badge variant="secondary">v{workflowVersion}</Badge>
+            </div>
+            <p className="hidden sm:block text-sm text-muted-foreground">
+              Configure your workflow logic, intake form, and output design.
+            </p>
+          </div>
+        </div>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+          <Button
+            variant="outline"
+            onClick={handleExit}
+            disabled={submitting}
+            className="w-full sm:w-auto"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              workflowId
+                ? router.push(`/dashboard/workflows/${workflowId}/versions`)
+                : null
+            }
+            disabled={submitting || !workflowId}
+            className="w-full sm:w-auto"
+          >
+            Version History
+          </Button>
+          <Button
+            onClick={() => handleSubmit()}
+            disabled={submitting}
+            isLoading={submitting}
+            className="w-full sm:w-auto"
+          >
+            <Save className="mr-2 h-4 w-4" />
+            Save Changes
+          </Button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-destructive/20 dark:border-destructive/40 bg-destructive/10 dark:bg-destructive/20 p-4 text-destructive dark:text-destructive">
+          <div className="flex items-center gap-2 font-medium">
+            <AlertCircle className="h-4 w-4" />
+            Error
+          </div>
+          <p className="mt-1 text-sm opacity-90">{error}</p>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <SubHeaderTabs
+        tabs={[
+          { id: "workflow", label: "Settings" },
+          { id: "form", label: "Form" },
+          ...(hasTemplateTab ? [{ id: "template", label: "Design" }] : []),
+        ]}
+        activeId={activeTab}
+        onSelect={(id) => setActiveTab(id as "workflow" | "form" | "template")}
+        portalTargetId={portalTargetId ?? undefined}
+        enableOverflowMenu
+        mobileMaxVisible={3}
+        compactMaxVisible={2}
+        compactBreakpointPx={420}
+      />
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as any)}
+        className="w-full"
+      >
+        <TabsContent value="workflow" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+          <WorkflowTab
+            workflowId={workflowId || ""}
+            formData={formData}
+            steps={steps}
+            submitting={submitting}
+            selectedStepIndex={selectedStepIndex}
+            isSidePanelOpen={isSidePanelOpen}
+            onFormDataChange={handleChange}
+            onStepsChange={setSteps}
+            onAddStep={handleAddStep}
+            onStepClick={(index) => {
+              if (index === -1 || index === null) {
+                // Close panel
+                setSelectedStepIndex(null);
+                setIsSidePanelOpen(false);
+              } else {
+                // Open panel with selected step
+                setSelectedStepIndex(index);
+                setIsSidePanelOpen(true);
+              }
+            }}
+            onStepsReorder={setSteps}
+            onSubmit={handleSubmit}
+            onCancel={handleExit}
+            onDeleteStep={handleDeleteStep}
+            onMoveStepUp={handleMoveStepUp}
+            onMoveStepDown={handleMoveStepDown}
+            settings={settings}
+          />
+        </TabsContent>
+
+        <TabsContent value="form" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+          {formId ? (
+            <FormTab
+              formFormData={formFormData}
+              workflowName={formData.workflow_name}
+              submitting={submitting}
+              customDomain={settings?.custom_domain}
+              onFormChange={handleFormChange}
+              onFieldChange={handleFieldChange}
+              onAddField={addField}
+              onRemoveField={removeField}
+              onMoveFieldUp={moveFieldUp}
+              onMoveFieldDown={moveFieldDown}
+              onSubmit={handleSubmit}
+              onCancel={handleExit}
+            />
+          ) : (
+            <Card className="flex flex-col items-center justify-center p-12 text-center">
+              <div className="rounded-full bg-muted p-3">
+                <FileText className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="mt-4 text-lg font-semibold">No Form Found</h3>
+              <p className="mt-2 text-sm text-muted-foreground max-w-sm">
+                No form found for this lead magnet. Forms are automatically created when you create a lead magnet.
+              </p>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="template" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
+          <TemplateTab
+            templateData={templateData}
+            templateLoading={templateLoading}
+            detectedPlaceholders={detectedPlaceholders}
+            templateViewMode={templateViewMode}
+            devicePreviewSize={devicePreviewSize}
+            previewKey={previewKey}
+            refining={refining}
+            generationStatus={generationStatus}
+            editPrompt={editPrompt}
+            selectedSelectors={selectedSelectors}
+            onSelectionChange={setSelectedSelectors}
+            onTemplateChange={handleTemplateChange}
+            onHtmlChange={handleHtmlChange}
+            onViewModeChange={setTemplateViewMode}
+            onDeviceSizeChange={setDevicePreviewSize}
+            onInsertPlaceholder={insertPlaceholder}
+            onRefine={handleRefineWithError}
+            onEditPromptChange={setEditPrompt}
+            onFormatHtml={handleFormatHtml}
+            onSubmit={handleSubmit}
+            onCancel={handleExit}
+            submitting={submitting}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            history={history}
+            historyIndex={historyIndex}
+            onJumpToHistory={jumpToHistory}
+            onCommitChange={commitHtmlChange}
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

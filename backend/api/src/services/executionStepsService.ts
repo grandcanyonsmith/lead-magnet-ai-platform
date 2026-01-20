@@ -43,10 +43,14 @@ export class ExecutionStepsService {
 
       const looksLikeArtifact =
         path.startsWith("cust_") && path.includes("/jobs/");
+      // Check for S3 URLs in both us-east-1 and us-west-2 (cc360-pages is in us-west-2)
+      const bucketRegion = ARTIFACTS_BUCKET === "cc360-pages" ? "us-west-2" : AWS_REGION;
       const isDirectS3 =
         ARTIFACTS_BUCKET &&
-        parsed.hostname ===
-          `${ARTIFACTS_BUCKET}.s3.${AWS_REGION}.amazonaws.com`;
+        (parsed.hostname ===
+          `${ARTIFACTS_BUCKET}.s3.${AWS_REGION}.amazonaws.com` ||
+         parsed.hostname ===
+          `${ARTIFACTS_BUCKET}.s3.${bucketRegion}.amazonaws.com`);
       const isCloudFront = parsed.hostname.endsWith(".cloudfront.net");
 
       if (isDirectS3 || (isCloudFront && looksLikeArtifact)) {

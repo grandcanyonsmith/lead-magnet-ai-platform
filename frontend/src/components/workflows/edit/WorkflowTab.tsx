@@ -199,7 +199,7 @@ export function WorkflowTab({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>General Information</CardTitle>

@@ -101,6 +101,11 @@ export default function JobDetailClient() {
     return `${pathname}?${params.toString()}`;
   };
 
+  const editTabHref = buildTabHref("edit");
+  const handleEditExit = () => {
+    router.push(buildTabHref("overview"));
+  };
+
   const { previewItem, openPreview, closePreview } =
     usePreviewModal<ArtifactGalleryItem>();
 
@@ -348,6 +353,7 @@ export default function JobDetailClient() {
           onResubmit={handleResubmitClick}
           job={job}
           workflow={workflow}
+          editHref={editTabHref}
           artifactCount={artifactGalleryItems.length}
           stepsSummary={stepsSummary}
           jobDuration={jobDuration}
@@ -438,6 +444,7 @@ export default function JobDetailClient() {
             trackingSessionsLoading={trackingSessionsLoading}
             onTrackingSessionsLoaded={setTrackingSessionCount}
             onTrackingSessionsLoadingChange={setTrackingSessionsLoading}
+            onEditExit={handleEditExit}
           />
         </div>
 

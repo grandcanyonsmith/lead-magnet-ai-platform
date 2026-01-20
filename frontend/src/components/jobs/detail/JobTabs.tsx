@@ -35,6 +35,9 @@ type JobTechnicalTabProps = ComponentProps<
 type JobDebugTabProps = ComponentProps<
   typeof import("@/components/jobs/detail/JobDebugTab").JobDebugTab
 >;
+type JobEditTabProps = ComponentProps<
+  typeof import("@/components/jobs/detail/JobEditTab").JobEditTab
+>;
 
 const JobExecutionTab = dynamic<JobExecutionTabProps>(
   () =>
@@ -76,6 +79,14 @@ const JobDebugTab = dynamic<JobDebugTabProps>(
   { loading: () => <TabFallback label="debug payload" /> },
 );
 
+const JobEditTab = dynamic<JobEditTabProps>(
+  () =>
+    import("@/components/jobs/detail/JobEditTab").then(
+      (mod) => mod.JobEditTab,
+    ),
+  { loading: () => <TabFallback label="lead magnet editor" /> },
+);
+
 const TAB_CONFIG = [
   {
     id: "overview",
@@ -95,6 +106,12 @@ const TAB_CONFIG = [
     id: "improve",
     label: "Improve",
     description: "Review & refine workflow",
+    group: "workflow" as TabGroupId,
+  },
+  {
+    id: "edit",
+    label: "Edit",
+    description: "Update lead magnet settings",
     group: "workflow" as TabGroupId,
   },
   {
@@ -168,6 +185,7 @@ interface JobTabsProps {
   trackingSessionsLoading?: boolean;
   onTrackingSessionsLoaded?: (count: number) => void;
   onTrackingSessionsLoadingChange?: (loading: boolean) => void;
+  onEditExit?: () => void;
 }
 
 export function JobTabs({
@@ -199,6 +217,7 @@ export function JobTabs({
   trackingSessionsLoading,
   onTrackingSessionsLoaded,
   onTrackingSessionsLoadingChange,
+  onEditExit,
 }: JobTabsProps) {
   const stepsBadge = stepsSummary.total;
   const artifactsBadge = artifactGalleryItems.length;
@@ -273,6 +292,9 @@ export function JobTabs({
             mergedSteps={mergedSteps}
             artifacts={artifacts}
           />
+        )}
+        {activeTab === "edit" && (
+          <JobEditTab workflow={workflow} onExit={onEditExit} />
         )}
         {activeTab === "tracking" && (
           <JobTrackingTab

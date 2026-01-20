@@ -60,6 +60,13 @@ export interface PromptOverride {
 
 export type PromptOverrides = Record<string, PromptOverride>;
 
+export interface PromptDefault {
+  instructions?: string;
+  prompt?: string;
+}
+
+export type PromptDefaults = Record<string, PromptDefault>;
+
 export interface SettingsUpdateRequest {
   onboarding_survey_completed?: boolean;
   onboarding_survey_responses?: OnboardingSurveyResponses;

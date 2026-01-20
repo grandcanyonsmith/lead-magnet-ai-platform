@@ -11,6 +11,7 @@ import {
   ValidationError,
 } from "../utils/errors";
 import { env } from "../utils/env";
+import { getPromptDefaults } from "../services/promptDefaults";
 
 const USER_SETTINGS_TABLE = env.userSettingsTable;
 const API_URL = env.apiUrl || env.apiGatewayUrl;
@@ -262,6 +263,26 @@ class SettingsController {
       throw new InternalServerError("Failed to retrieve settings", {
         originalError: error instanceof Error ? error.message : String(error),
       });
+    }
+  }
+
+  async getPromptDefaults(
+    _params: Record<string, string>,
+    _body: any,
+    _query: Record<string, string | undefined>,
+    _tenantId: string | undefined,
+    _context?: RequestContext,
+  ): Promise<RouteResponse> {
+    try {
+      return {
+        statusCode: 200,
+        body: getPromptDefaults(),
+      };
+    } catch (error: any) {
+      logger.error("[SettingsController.getPromptDefaults] Failed to load defaults", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw new InternalServerError("Unable to load prompt defaults");
     }
   }
 

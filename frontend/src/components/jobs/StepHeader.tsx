@@ -3,7 +3,7 @@
  * Displays step header with status, name, metrics, and action buttons
  */
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { MergedStep, StepStatus } from "@/types/job";
 import { formatDurationMs } from "@/utils/jobFormatting";
@@ -120,51 +120,104 @@ interface StepMetaRowProps {
   status: StepStatus;
 }
 
-export function StepMetaRow({ step, status }: StepMetaRowProps) {
+interface StepTimingRowProps {
+  step: MergedStep;
+  status: StepStatus;
+}
+
+function StepTimingRow({ step, status }: StepTimingRowProps) {
   const isCompleted = status === "completed";
-  const isInProgress = status === "in_progress";
+  const hasTiming = step.duration_ms !== undefined || step.usage_info;
+
+  if (!isCompleted || !hasTiming) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400">
-      {isCompleted &&
-        (step.duration_ms !== undefined || step.usage_info) && (
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 dark:bg-gray-800 px-2 py-0.5 border border-gray-200 dark:border-gray-700">
-            {step.duration_ms !== undefined && formatDurationMs(step.duration_ms)}
-            {step.usage_info?.cost_usd !== undefined && (
-              <>
-                <span className="text-gray-300 dark:text-gray-600">•</span>
-                <span>
-                  $
-                  {typeof step.usage_info.cost_usd === "number"
-                    ? step.usage_info.cost_usd.toFixed(4)
-                    : parseFloat(
-                        String(step.usage_info.cost_usd) || "0",
-                      ).toFixed(4)}
-                </span>
-              </>
-            )}
+      <div className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 dark:bg-gray-800 px-2 py-0.5 border border-gray-200 dark:border-gray-700">
+        {step.duration_ms !== undefined && formatDurationMs(step.duration_ms)}
+        {step.usage_info?.cost_usd !== undefined && (
+          <>
+            <span className="text-gray-300 dark:text-gray-600">•</span>
+            <span>
+              $
+              {typeof step.usage_info.cost_usd === "number"
+                ? step.usage_info.cost_usd.toFixed(4)
+                : parseFloat(String(step.usage_info.cost_usd) || "0").toFixed(4)}
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function StepMetaRow({ step, status }: StepMetaRowProps) {
+  const isInProgress = status === "in_progress";
+  const [showInstructions, setShowInstructions] = useState(false);
+  const instructions = step.instructions?.trim();
+  const instructionsId = `step-instructions-${step.step_order ?? "unknown"}`;
+  const dependencyItems =
+    step.depends_on?.map((dep, idx) => ({
+      index: dep,
+      label: step.dependency_labels?.[idx] || `Step ${dep + 1}`,
+    })) || [];
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400">
+        {step.model && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50/50 dark:bg-purple-900/30 px-2 py-0.5 text-[11px] font-medium text-purple-700 dark:text-purple-300 border border-purple-100/50 dark:border-purple-800/30">
+            {step.model}
+          </span>
+        )}
+        {((step.input?.tools && step.input.tools.length > 0) ||
+          (step.tools && step.tools.length > 0)) && (
+          <div className="flex items-center gap-1.5">
+            {renderToolBadges(step.input?.tools || step.tools)}
           </div>
         )}
-      {step.model && (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50/50 dark:bg-purple-900/30 px-2 py-0.5 text-[11px] font-medium text-purple-700 dark:text-purple-300 border border-purple-100/50 dark:border-purple-800/30">
-          {step.model}
-        </span>
-      )}
-      {((step.input?.tools && step.input.tools.length > 0) ||
-        (step.tools && step.tools.length > 0)) && (
-        <div className="flex items-center gap-1.5">
-          {renderToolBadges(step.input?.tools || step.tools)}
+        {dependencyItems.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {dependencyItems.map((dependency) => (
+              <span
+                key={`dependency-${dependency.index}`}
+                title={`Depends on: ${dependency.label}`}
+                className="px-1.5 py-0.5 text-[10px] font-semibold rounded-md border whitespace-nowrap bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800/50"
+              >
+                Step {dependency.index + 1}
+              </span>
+            ))}
+          </div>
+        )}
+        {instructions && (
+          <button
+            type="button"
+            aria-expanded={showInstructions}
+            aria-controls={instructionsId}
+            onClick={() => setShowInstructions((prev) => !prev)}
+            className="px-1.5 py-0.5 text-[10px] font-semibold rounded-md border whitespace-nowrap bg-teal-50 text-teal-700 border-teal-200 transition-colors hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-200 dark:border-teal-800/50 dark:hover:bg-teal-900/50"
+          >
+            Instructions
+          </button>
+        )}
+        {isInProgress && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-200 animate-pulse">
+            Processing...
+          </span>
+        )}
+        {status === "failed" && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 border border-red-200">
+            Failed
+          </span>
+        )}
+      </div>
+      {instructions && showInstructions && (
+        <div
+          id={instructionsId}
+          className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-foreground/90 whitespace-pre-wrap"
+        >
+          {instructions}
         </div>
-      )}
-      {isInProgress && (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 border border-blue-200 animate-pulse">
-          Processing...
-        </span>
-      )}
-      {status === "failed" && (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 border border-red-200">
-          Failed
-        </span>
       )}
     </div>
   );
@@ -217,7 +270,7 @@ export function StepHeader({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-4">
           <div className="min-w-0 space-y-1">
-            {showMeta && <StepMetaRow step={step} status={status} />}
+            {showMeta && <StepTimingRow step={step} status={status} />}
             <h3
               className={`text-base sm:text-lg font-semibold break-words ${isPending ? "text-gray-500 dark:text-gray-500" : "text-gray-900 dark:text-white"}`}
             >
@@ -232,6 +285,7 @@ export function StepHeader({
                 step.step_name || `Step ${step.step_order ?? 0}`
               )}
             </h3>
+            {showMeta && <StepMetaRow step={step} status={status} />}
           </div>
         </div>
 

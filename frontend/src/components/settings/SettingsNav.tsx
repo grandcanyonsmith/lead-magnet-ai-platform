@@ -20,6 +20,11 @@ const NAV_ITEMS = [
     href: "/dashboard/settings/delivery",
   },
   {
+    id: "prompt-overrides",
+    label: "Prompt Overrides",
+    href: "/dashboard/settings/prompt-overrides",
+  },
+  {
     id: "billing",
     label: "Billing & Usage",
     href: "/dashboard/settings/billing",

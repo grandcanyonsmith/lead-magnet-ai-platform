@@ -1,6 +1,5 @@
 import { ExecutionSteps } from "@/components/jobs/ExecutionSteps";
 import { ArtifactGallery } from "@/components/jobs/detail/ArtifactGallery";
-import { JobLogsStream } from "@/components/jobs/JobLogsStream";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { Artifact } from "@/types/artifact";
@@ -81,19 +80,6 @@ export function JobExecutionTab({
         onResubmit={onResubmit}
         resubmitting={resubmitting}
       />
-
-      {/* Live Log Streaming - Show when job is processing */}
-      {job.status === "processing" && (
-        <SectionCard
-          title="Live Execution Logs"
-          description="Real-time logs from shell executor commands"
-        >
-          <JobLogsStream
-            jobId={job.job_id}
-            enabled={job.status === "processing"}
-          />
-        </SectionCard>
-      )}
 
       <SectionCard
         title="Outputs"

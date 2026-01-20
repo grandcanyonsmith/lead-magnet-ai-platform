@@ -49,9 +49,14 @@ export function useWorkflowEdit(
   defaultToolChoice?: WorkflowStep["tool_choice"],
   defaultServiceTier?: WorkflowStep["service_tier"],
   defaultTextVerbosity?: WorkflowStep["text_verbosity"],
+  workflowIdOverride?: string,
 ) {
   const router = useRouter();
-  const workflowId = useWorkflowId();
+  const routeWorkflowId = useWorkflowId();
+  const workflowId =
+    workflowIdOverride && workflowIdOverride.trim() !== ""
+      ? workflowIdOverride
+      : routeWorkflowId;
   const resolvedDefaultToolChoice = resolveToolChoice(defaultToolChoice);
   const resolvedDefaultServiceTier = resolveServiceTier(defaultServiceTier);
   const resolvedDefaultTextVerbosity = resolveTextVerbosity(defaultTextVerbosity);

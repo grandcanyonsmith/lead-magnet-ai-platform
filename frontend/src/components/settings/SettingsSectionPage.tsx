@@ -12,9 +12,15 @@ import { GeneralSettings } from "@/components/settings/GeneralSettings";
 import { BrandingSettings } from "@/components/settings/BrandingSettings";
 import { DeliverySettings } from "@/components/settings/DeliverySettings";
 import { BillingUsage } from "@/components/settings/BillingUsage";
+import { PromptOverridesSettings } from "@/components/settings/PromptOverridesSettings";
 import { useSettingsEditor } from "@/components/settings/SettingsEditorContext";
 
-type SettingsSection = "general" | "branding" | "delivery" | "billing";
+type SettingsSection =
+  | "general"
+  | "branding"
+  | "delivery"
+  | "billing"
+  | "prompt-overrides";
 
 export function SettingsSectionPage({ section }: { section: SettingsSection }) {
   const {
@@ -70,8 +76,6 @@ export function SettingsSectionPage({ section }: { section: SettingsSection }) {
         <GeneralSettings
           settings={currentSettings}
           onChange={setField}
-          promptOverridesJson={promptOverridesJson}
-          onPromptOverridesChange={setPromptOverridesJson}
           errors={errors}
         />
       )}
@@ -90,6 +94,15 @@ export function SettingsSectionPage({ section }: { section: SettingsSection }) {
           onChange={setField}
           onSettingsUpdate={applyServerSettingsUpdate}
           errors={errors}
+        />
+      )}
+
+      {section === "prompt-overrides" && (
+        <PromptOverridesSettings
+          promptOverridesJson={promptOverridesJson}
+          onPromptOverridesChange={setPromptOverridesJson}
+          errors={errors}
+          fallbackOverrides={currentSettings.prompt_overrides}
         />
       )}
 

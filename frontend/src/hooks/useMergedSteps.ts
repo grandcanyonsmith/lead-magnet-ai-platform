@@ -94,6 +94,19 @@ export function useMergedSteps({
 
     const executionSteps = job.execution_steps || [];
     const workflowSteps = workflow?.steps || [];
+    const getDependencyLabels = (dependsOn?: number[]) => {
+      if (!dependsOn || dependsOn.length === 0) return undefined;
+      return dependsOn.map(
+        (dep) => workflowSteps[dep]?.step_name || `Step ${dep + 1}`,
+      );
+    };
+    const buildDependencies = (dependsOn?: number[]) => {
+      if (!dependsOn || dependsOn.length === 0) return {};
+      return {
+        depends_on: dependsOn,
+        dependency_labels: getDependencyLabels(dependsOn),
+      };
+    };
 
     if (
       !workflowSteps ||
@@ -212,6 +225,7 @@ export function useMergedSteps({
           error: existingStep.error,
           artifact_id: existingStep.artifact_id,
           image_urls: existingStep.image_urls,
+          ...buildDependencies(workflowStep.depends_on),
         });
       } else {
         // Step hasn't been executed yet - check if it's currently executing
@@ -285,6 +299,7 @@ export function useMergedSteps({
             artifact_id: executingStep.artifact_id,
             image_urls: executingStep.image_urls,
             _status: "in_progress" as const,
+            ...buildDependencies(workflowStep.depends_on),
           });
         } else {
           // Step hasn't been executed yet - check if there's an execution step we can use
@@ -341,6 +356,7 @@ export function useMergedSteps({
               artifact_id: executionStepForOrder.artifact_id,
               image_urls: executionStepForOrder.image_urls,
               _status: stepStatus,
+              ...buildDependencies(workflowStep.depends_on),
             });
           } else {
             // No execution step found - create new step with workflow step data only
@@ -358,6 +374,7 @@ export function useMergedSteps({
               },
               output: null,
               _status: stepStatus,
+              ...buildDependencies(workflowStep.depends_on),
             });
           }
         }

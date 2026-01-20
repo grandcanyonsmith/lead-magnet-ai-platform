@@ -22,6 +22,7 @@ interface JobHeaderProps {
   onResubmit: () => void;
   job?: Job | null;
   workflow?: Workflow | null;
+  editHref?: string;
   artifactCount?: number | null;
   stepsSummary?: JobStepSummary | null;
   jobDuration?: JobDurationInfo | null;
@@ -44,6 +45,7 @@ export function JobHeader({
   onResubmit,
   job,
   workflow,
+  editHref,
   artifactCount,
   stepsSummary,
   jobDuration,
@@ -90,6 +92,11 @@ export function JobHeader({
   };
 
   const hasActions = Boolean(workflow?.workflow_id || onRefresh || onResubmit);
+  const resolvedEditHref =
+    editHref ||
+    (workflow?.workflow_id
+      ? `/dashboard/workflows/${workflow.workflow_id}/edit`
+      : "");
 
   return (
     <div className="mb-8 space-y-4">
@@ -153,9 +160,9 @@ export function JobHeader({
                         <button
                           type="button"
                           onClick={() =>
-                            router.push(
-                              `/dashboard/workflows/${workflow.workflow_id}/edit`,
-                            )
+                            resolvedEditHref
+                              ? router.push(resolvedEditHref)
+                              : null
                           }
                           className={getMenuItemClass(active)}
                         >

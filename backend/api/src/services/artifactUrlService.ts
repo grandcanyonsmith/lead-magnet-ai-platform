@@ -93,12 +93,21 @@ export class ArtifactUrlService {
 
   /**
    * Generate a direct S3 public URL for an S3 key
+   * Handles buckets in different regions (e.g., cc360-pages is in us-west-2)
    */
   static getDirectS3Url(s3Key: string): string {
     if (!ARTIFACTS_BUCKET) {
       throw new Error("ARTIFACTS_BUCKET is not configured");
     }
-    return `https://${ARTIFACTS_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${s3Key}`;
+    
+    // Determine bucket region - some buckets are in different regions
+    // cc360-pages is in us-west-2, artifacts buckets are typically in us-east-1
+    let bucketRegion = AWS_REGION;
+    if (ARTIFACTS_BUCKET === "cc360-pages") {
+      bucketRegion = "us-west-2";
+    }
+    
+    return `https://${ARTIFACTS_BUCKET}.s3.${bucketRegion}.amazonaws.com/${s3Key}`;
   }
 
   /**

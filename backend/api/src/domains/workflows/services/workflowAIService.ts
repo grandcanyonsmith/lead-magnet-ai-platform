@@ -70,7 +70,7 @@ const VALID_SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'scale', 'priori
 const VALID_REASONING_EFFORTS = new Set(['none', 'low', 'medium', 'high', 'xhigh']);
 const VALID_TEXT_VERBOSITIES = new Set(['low', 'medium', 'high']);
 
-const buildWorkflowAiSystemPrompt = (
+export const buildWorkflowAiSystemPrompt = (
   defaultToolChoice: ToolChoice,
   defaultServiceTier?: string,
   defaultTextVerbosity?: string,

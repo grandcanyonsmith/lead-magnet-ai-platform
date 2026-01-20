@@ -6,9 +6,12 @@ import clsx from "clsx";
 import { SettingsEditorProvider, useSettingsEditor } from "./SettingsEditorContext";
 import { SettingsNav } from "./SettingsNav";
 
-function deriveInitialSection(pathname: string | null): "general" | "branding" | "delivery" | "billing" {
+function deriveInitialSection(
+  pathname: string | null,
+): "general" | "branding" | "delivery" | "billing" | "prompt-overrides" {
   if (!pathname) return "general";
   if (pathname.includes("/dashboard/settings/billing")) return "billing";
+  if (pathname.includes("/dashboard/settings/prompt-overrides")) return "prompt-overrides";
   if (pathname.includes("/dashboard/settings/branding")) return "branding";
   if (pathname.includes("/dashboard/settings/delivery")) return "delivery";
   return "general";

@@ -395,6 +395,10 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.settings.updateSettings(data);
   }
 
+  async getPromptDefaults() {
+    return this.settings.getPromptDefaults();
+  }
+
   // Cloudflare - delegate to settings client
   async connectCloudflare(apiToken: string) {
     return this.settings.connectCloudflare(apiToken);

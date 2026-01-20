@@ -56,6 +56,8 @@ export interface ExecutionStep {
 
 export interface MergedStep extends ExecutionStep {
   _status: StepStatus;
+  depends_on?: number[];
+  dependency_labels?: string[];
 }
 
 export interface JobLiveStep {

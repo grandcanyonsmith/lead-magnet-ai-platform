@@ -8,7 +8,7 @@ import { useMemo } from "react";
 import { useQuery } from "@/hooks/useQuery";
 import { useMutation } from "@/hooks/useMutation";
 import { api } from "@/lib/api";
-import { Settings, SettingsUpdateRequest } from "@/types";
+import { PromptDefaults, Settings, SettingsUpdateRequest } from "@/types";
 import { normalizeError } from "./hookHelpers";
 import { UsageResponse } from "@/types/usage";
 
@@ -16,6 +16,7 @@ import { UsageResponse } from "@/types/usage";
 export const settingsKeys = {
   all: ["settings"] as const,
   detail: () => [...settingsKeys.all, "detail"] as const,
+  promptDefaults: () => [...settingsKeys.all, "prompt-defaults"] as const,
   usage: (startDate?: string, endDate?: string) =>
     [...settingsKeys.all, "usage", startDate, endDate] as const,
 };
@@ -40,6 +41,32 @@ export function useSettings(): UseSettingsResult {
 
   return {
     settings: data || null,
+    loading: isLoading,
+    error: normalizeError(error),
+    refetch: () => refetch(),
+  };
+}
+
+interface UsePromptDefaultsResult {
+  promptDefaults: PromptDefaults | null;
+  loading: boolean;
+  error: string | null;
+  refetch: () => void;
+}
+
+export function usePromptDefaults(): UsePromptDefaultsResult {
+  const queryKey = useMemo(() => settingsKeys.promptDefaults(), []);
+
+  const { data, isLoading, error, refetch } = useQuery<PromptDefaults>(
+    queryKey,
+    () => api.getPromptDefaults(),
+    {
+      enabled: true,
+    },
+  );
+
+  return {
+    promptDefaults: data || null,
     loading: isLoading,
     error: normalizeError(error),
     refetch: () => refetch(),

@@ -283,7 +283,9 @@ class S3ContextService:
         )
 
         # Public object URL (assumes bucket/object is public via bucket policy/CloudFront).
-        dest_object_url = f"https://{bucket}.s3.{region}.amazonaws.com/{dest_key}"
+        # Determine correct region for bucket (cc360-pages is in us-west-2)
+        bucket_region = "us-west-2" if bucket == "cc360-pages" else region
+        dest_object_url = f"https://{bucket}.s3.{bucket_region}.amazonaws.com/{dest_key}"
 
         block = "\n".join([
             "=== S3 Upload (Computer Use / Shell Tool) ===",
@@ -467,7 +469,9 @@ class S3ContextService:
             duration_ms = int(
                 (datetime.utcnow() - publish_started_at).total_seconds() * 1000
             )
-            object_url = f"https://{bucket}.s3.{region}.amazonaws.com/{dest_key}"
+            # Determine correct region for bucket (cc360-pages is in us-west-2)
+            bucket_region = "us-west-2" if bucket == "cc360-pages" else region
+            object_url = f"https://{bucket}.s3.{bucket_region}.amazonaws.com/{dest_key}"
 
             publish_output = {
                 "success": True,

@@ -76,6 +76,20 @@ export function registerAdminRoutes(): void {
   );
 
   router.register(
+    "GET",
+    "/admin/settings/prompt-defaults",
+    async (_params, _body, _query, tenantId, context) => {
+      return await settingsController.getPromptDefaults(
+        _params,
+        _body,
+        _query,
+        tenantId,
+        context,
+      );
+    },
+  );
+
+  router.register(
     "PUT",
     "/admin/settings",
     async (_params, body, _query, tenantId, context) => {

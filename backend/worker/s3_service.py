@@ -193,7 +193,9 @@ class S3Service:
             else:
                 # Fallback: direct S3 public URL
                 # Format: https://{bucket}.s3.{region}.amazonaws.com/{key}
-                public_url = f"https://{self.bucket_name}.s3.{region}.amazonaws.com/{key}"
+                # Determine correct region for bucket (cc360-pages is in us-west-2)
+                bucket_region = "us-west-2" if self.bucket_name == "cc360-pages" else region
+                public_url = f"https://{self.bucket_name}.s3.{bucket_region}.amazonaws.com/{key}"
             
             logger.info(f"[S3] Uploaded image to S3 with public access", extra={
                 'key': key,

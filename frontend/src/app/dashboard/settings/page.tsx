@@ -10,19 +10,21 @@ function SettingsRedirect() {
 
   useEffect(() => {
     const tab = searchParams?.get("tab");
-    const target =
-      tab === "branding"
-        ? "/dashboard/settings/branding"
-        : tab === "delivery"
-          ? "/dashboard/settings/delivery"
-          : tab === "billing"
-            ? "/dashboard/settings/billing"
-            : "/dashboard/settings/general";
+    let target = "/dashboard/settings/general";
+    if (tab === "branding") {
+      target = "/dashboard/settings/branding";
+    } else if (tab === "delivery") {
+      target = "/dashboard/settings/delivery";
+    } else if (tab === "prompt-overrides") {
+      target = "/dashboard/settings/prompt-overrides";
+    } else if (tab === "billing") {
+      target = "/dashboard/settings/billing";
+    }
 
     router.replace(target);
   }, [router, searchParams]);
 
-    return <LoadingState message="Loading settings..." fullPage />;
+  return <LoadingState message="Loading settings..." fullPage />;
 }
 
 export default function SettingsRootPage() {

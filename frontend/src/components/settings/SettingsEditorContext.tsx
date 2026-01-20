@@ -18,7 +18,12 @@ import type {
 } from "@/types/settings";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 
-type SettingsSection = "general" | "branding" | "delivery" | "billing";
+type SettingsSection =
+  | "general"
+  | "branding"
+  | "delivery"
+  | "billing"
+  | "prompt-overrides";
 
 type SettingsEditorContextValue = {
   section: SettingsSection;

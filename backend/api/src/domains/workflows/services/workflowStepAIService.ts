@@ -52,7 +52,7 @@ const VALID_TOOL_CHOICES = new Set<ToolChoice>(['auto', 'required', 'none']);
 const VALID_SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'scale', 'priority']);
 const VALID_TEXT_VERBOSITIES = new Set(['low', 'medium', 'high']);
 
-const buildStepSystemPrompt = (
+export const buildStepSystemPrompt = (
   defaultToolChoice: ToolChoice,
   defaultServiceTier?: string,
   defaultTextVerbosity?: string,

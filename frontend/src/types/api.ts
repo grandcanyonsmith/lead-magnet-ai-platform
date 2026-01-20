@@ -48,7 +48,7 @@ import {
 } from "./job";
 import { Artifact, ArtifactListResponse, ArtifactListParams } from "./artifact";
 import { Notification, NotificationListResponse } from "./notification";
-import { Settings, SettingsUpdateRequest } from "./settings";
+import { PromptDefaults, Settings, SettingsUpdateRequest } from "./settings";
 import { AnalyticsResponse } from "./analytics";
 import { UsageResponse } from "./usage";
 
@@ -206,6 +206,7 @@ export interface ApiClient {
   // Settings
   getSettings(): Promise<Settings>;
   updateSettings(data: SettingsUpdateRequest): Promise<Settings>;
+  getPromptDefaults(): Promise<PromptDefaults>;
 
   // Cloudflare
   connectCloudflare(apiToken: string): Promise<{ message: string; connected: boolean }>;
