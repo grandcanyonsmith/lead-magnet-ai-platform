@@ -23,9 +23,14 @@ import { useWorkflowGenerationStatus } from "@/hooks/useWorkflowGenerationStatus
 import { useSettings } from "@/hooks/api/useSettings";
 import { useWorkflowIdeation } from "@/hooks/useWorkflowIdeation";
 import {
+  AIModel,
   WorkflowIdeationDeliverable,
   WorkflowIdeationMessage,
 } from "@/types";
+import { AI_MODELS, DEFAULT_AI_MODEL } from "@/constants/models";
+
+const isAIModel = (value?: string): value is AIModel =>
+  !!value && AI_MODELS.some((model) => model.value === value);
 
 export default function NewWorkflowPage() {
   const router = useRouter();
@@ -70,6 +75,9 @@ export default function NewWorkflowPage() {
   );
   const submission = useWorkflowSubmission();
   const generationStatus = useWorkflowGenerationStatus(generationJobId);
+  const resolvedModel = isAIModel(settings?.default_ai_model)
+    ? settings.default_ai_model
+    : DEFAULT_AI_MODEL;
   // Handle AI generation result
   useEffect(() => {
     if (aiGeneration.result) {
@@ -117,7 +125,7 @@ export default function NewWorkflowPage() {
     setStep("creating");
     const result = await aiGeneration.generateWorkflow(
       description.trim(),
-      settings?.default_ai_model || "gpt-5.2",
+      resolvedModel,
     );
 
     if (result && result.job_id) {
@@ -165,7 +173,7 @@ export default function NewWorkflowPage() {
 
     const result = await ideation.ideate(
       nextMessages,
-      settings?.default_ai_model || "gpt-5.2",
+      resolvedModel,
     );
 
     if (result) {

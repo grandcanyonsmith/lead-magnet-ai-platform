@@ -40,8 +40,10 @@ export function Tooltip({ content, children, position = "top" }: TooltipProps) {
             if (open) close();
           }}
         >
-          <PopoverButton as="span" ref={buttonRef} className="inline-flex">
-            {children}
+          <PopoverButton as="span" className="inline-flex">
+            <span ref={buttonRef} className="inline-flex">
+              {children}
+            </span>
           </PopoverButton>
           <Transition
             as={Fragment}
