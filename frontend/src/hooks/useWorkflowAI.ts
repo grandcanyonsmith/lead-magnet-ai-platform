@@ -14,6 +14,7 @@ export function useWorkflowAI(workflowId: string) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [proposal, setProposal] = useState<WorkflowAIEditResponse | null>(null);
+  const [streamedOutput, setStreamedOutput] = useState<string>("");
   const requestSeqRef = useRef(0);
 
   // Cancel any in-flight polling when unmounting
@@ -23,6 +24,48 @@ export function useWorkflowAI(workflowId: string) {
     };
   }, []);
 
+  const pollWorkflowEditJob = async (
+    jobId: string,
+    requestSeq: number,
+  ): Promise<{ jobId: string; result: WorkflowAIEditResponse }> => {
+    while (requestSeqRef.current === requestSeq) {
+      const statusRes = await api.getWorkflowAIEditStatus(jobId);
+      const status = statusRes.status as WorkflowAIEditJobStatus;
+
+      if (status === "completed") {
+        if (!statusRes.result) {
+          throw new Error("Workflow AI edit completed but returned no result");
+        }
+        setProposal(statusRes.result);
+        return { jobId, result: statusRes.result };
+      }
+
+      if (status === "failed") {
+        throw new Error(statusRes.error_message || "Workflow AI edit failed");
+      }
+
+      await delay(2000);
+    }
+
+    throw new Error("Workflow AI edit cancelled");
+  };
+
+  const parseStreamedProposal = (raw: string): WorkflowAIEditResponse | null => {
+    const cleaned = raw.trim();
+    if (!cleaned) return null;
+    try {
+      return JSON.parse(cleaned) as WorkflowAIEditResponse;
+    } catch {
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return null;
+      try {
+        return JSON.parse(jsonMatch[0]) as WorkflowAIEditResponse;
+      } catch {
+        return null;
+      }
+    }
+  };
+
   const generateWorkflowEdit = async (
     userPrompt: string,
     contextJobId?: string,
@@ -30,43 +73,59 @@ export function useWorkflowAI(workflowId: string) {
     setIsGenerating(true);
     setError(null);
     setProposal(null);
+    setStreamedOutput("");
 
     const requestSeq = requestSeqRef.current + 1;
     requestSeqRef.current = requestSeq;
 
     try {
-      const start = await api.editWorkflowWithAI(workflowId, {
-        userPrompt,
-        ...(contextJobId ? { contextJobId } : {}),
-      });
+      let streamError: string | null = null;
+      let streamedText = "";
 
-      const jobId = start.job_id;
-      if (!jobId) {
-        throw new Error("Failed to start workflow AI edit job (missing job_id)");
+      const streamResult = await api.streamWorkflowEdit(
+        workflowId,
+        {
+          userPrompt,
+          ...(contextJobId ? { contextJobId } : {}),
+        },
+        {
+          onDelta: (text) => {
+            if (requestSeqRef.current !== requestSeq) return;
+            streamedText += text;
+            setStreamedOutput((prev) => prev + text);
+          },
+          onComplete: (result) => {
+            if (requestSeqRef.current !== requestSeq) return;
+            if (result) {
+              setProposal(result);
+            }
+          },
+          onError: (err) => {
+            if (requestSeqRef.current !== requestSeq) return;
+            streamError = err;
+          },
+        },
+      );
+
+      if (streamError) {
+        throw new Error(streamError);
       }
 
-      // Poll until completed/failed
-      // Note: we intentionally do NOT enforce a strict timeout here—AI latency can vary.
-      while (requestSeqRef.current === requestSeq) {
-        const statusRes = await api.getWorkflowAIEditStatus(jobId);
-        const status = statusRes.status as WorkflowAIEditJobStatus;
-
-        if (status === "completed") {
-          if (!statusRes.result) {
-            throw new Error("Workflow AI edit completed but returned no result");
-          }
-          setProposal(statusRes.result);
-          return { jobId, result: statusRes.result };
-        }
-
-        if (status === "failed") {
-          throw new Error(statusRes.error_message || "Workflow AI edit failed");
-        }
-
-        await delay(2000);
+      if (streamResult.result) {
+        return { jobId: streamResult.jobId || "", result: streamResult.result };
       }
 
-      throw new Error("Workflow AI edit cancelled");
+      if (streamResult.jobId) {
+        return await pollWorkflowEditJob(streamResult.jobId, requestSeq);
+      }
+
+      const parsed = parseStreamedProposal(streamedText);
+      if (parsed) {
+        setProposal(parsed);
+        return { jobId: "", result: parsed };
+      }
+
+      throw new Error("Workflow AI edit completed but returned no result");
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.error ||
@@ -82,6 +141,7 @@ export function useWorkflowAI(workflowId: string) {
   const clearProposal = () => {
     setProposal(null);
     setError(null);
+    setStreamedOutput("");
   };
 
   return {
@@ -90,5 +150,6 @@ export function useWorkflowAI(workflowId: string) {
     isGenerating,
     error,
     proposal,
+    streamedOutput,
   };
 }

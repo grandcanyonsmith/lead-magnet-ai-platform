@@ -290,6 +290,20 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.workflows.editWorkflowWithAI(workflowId, request);
   }
 
+  async streamWorkflowEdit(
+    workflowId: string,
+    request: Parameters<WorkflowsClient["streamWorkflowEdit"]>[1],
+    callbacks: Parameters<WorkflowsClient["streamWorkflowEdit"]>[2],
+    signal?: Parameters<WorkflowsClient["streamWorkflowEdit"]>[3],
+  ) {
+    return this.workflows.streamWorkflowEdit(
+      workflowId,
+      request,
+      callbacks,
+      signal,
+    );
+  }
+
   async getWorkflowAIEditStatus(jobId: string) {
     return this.workflows.getWorkflowAIEditStatus(jobId);
   }

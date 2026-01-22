@@ -74,6 +74,7 @@ export function WorkflowTab({
     isGenerating,
     error: aiError,
     proposal,
+    streamedOutput,
   } = useWorkflowAI(workflowId);
 
   const handleGenerateAI = async () => {
@@ -280,6 +281,17 @@ export function WorkflowTab({
                   {aiError && (
                     <div className="text-sm text-red-500 bg-red-50 dark:bg-red-950/50 p-3 rounded-md border border-red-200 dark:border-red-900">
                       {aiError}
+                    </div>
+                  )}
+
+                  {streamedOutput && !proposal && (
+                    <div className="rounded-md border border-purple-200/60 dark:border-purple-900/60 bg-purple-50/40 dark:bg-purple-950/40 p-3">
+                      <div className="text-[10px] font-semibold uppercase text-purple-600 dark:text-purple-300 mb-2">
+                        Live Response
+                      </div>
+                      <pre className="text-xs whitespace-pre-wrap font-mono text-purple-900 dark:text-purple-100 max-h-56 overflow-auto">
+                        {streamedOutput}
+                      </pre>
                     </div>
                   )}
 

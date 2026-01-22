@@ -1,10 +1,13 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import toast from "react-hot-toast";
 
 const LARGE_COMMAND_THRESHOLD = 12;
 const LARGE_CALL_THRESHOLD = 4;
 const MAX_OUTPUT_PREVIEW_LINES = 14;
 const MAX_OUTPUT_PREVIEW_CHARS = 1200;
+const PYTHON_HEREDOC_START =
+  /^\s*\$?\s*python(?:\d+(?:\.\d+)?)?(?:\s|$).*<<\s*['"]?([A-Za-z0-9_]+)['"]?/i;
+const PYTHON_DASH_C = /^\s*\$?\s*python(?:\d+(?:\.\d+)?)?\s+-c\s+/i;
 
 interface ShellExecutorOutcome {
   type?: string;
@@ -62,6 +65,8 @@ interface FilteredLogEntry {
   errorCount: number;
   matchedCount: number;
 }
+
+type ShellCommandSegment = { type: "shell" | "python"; content: string };
 
 const EMPTY_LOGS: ShellExecutorCallLog[] = [];
 
@@ -138,6 +143,108 @@ const highlightMatches = (text: string, query: string) => {
       part
     ),
   );
+};
+
+const normalizeEscapes = (value: string) =>
+  value
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/\\"/g, '"')
+    .replace(/\\'/g, "'");
+
+const extractPythonDashC = (line: string): string | null => {
+  const match = line.match(PYTHON_DASH_C);
+  if (!match) return null;
+  const rest = line.slice(match[0].length).trimStart();
+  const quote = rest[0];
+  if (quote !== '"' && quote !== "'") return null;
+  let code = "";
+  let escaped = false;
+  for (let i = 1; i < rest.length; i += 1) {
+    const ch = rest[i];
+    if (escaped) {
+      code += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (ch === quote) {
+      return normalizeEscapes(code);
+    }
+    code += ch;
+  }
+  return null;
+};
+
+const splitShellCommandSegments = (command: string): ShellCommandSegment[] => {
+  const normalized = command.replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n");
+  const segments: ShellCommandSegment[] = [];
+  let shellBuffer: string[] = [];
+  let pythonBuffer: string[] = [];
+  let pythonEndMarker: string | null = null;
+
+  const flushShell = () => {
+    if (shellBuffer.length === 0) return;
+    segments.push({ type: "shell", content: shellBuffer.join("\n") });
+    shellBuffer = [];
+  };
+
+  const flushPython = () => {
+    if (pythonBuffer.length === 0) return;
+    segments.push({ type: "python", content: pythonBuffer.join("\n") });
+    pythonBuffer = [];
+  };
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i] ?? "";
+    if (!pythonEndMarker) {
+      const match = line.match(PYTHON_HEREDOC_START);
+      if (match) {
+        const marker = match[1];
+        const hasClosingMarker = lines
+          .slice(i + 1)
+          .some((nextLine) => nextLine.trim() === marker);
+        if (hasClosingMarker) {
+          shellBuffer.push(line);
+          flushShell();
+          pythonEndMarker = marker;
+          continue;
+        }
+      }
+      const inlineCode = extractPythonDashC(line);
+      if (inlineCode) {
+        shellBuffer.push(line);
+        flushShell();
+        segments.push({ type: "python", content: inlineCode });
+        continue;
+      }
+      shellBuffer.push(line);
+      continue;
+    }
+
+    if (line.trim() === pythonEndMarker) {
+      flushPython();
+      shellBuffer.push(line);
+      flushShell();
+      pythonEndMarker = null;
+      continue;
+    }
+    pythonBuffer.push(line);
+  }
+
+  if (pythonEndMarker) {
+    flushPython();
+  }
+  flushShell();
+
+  if (segments.length === 0) {
+    return [{ type: "shell", content: normalized }];
+  }
+  return segments;
 };
 
 const isErrorOutput = (output?: ShellExecutorOutputItem) => {
@@ -239,6 +346,58 @@ const formatLogsAsText = (payload: ShellExecutorLogsPayload) => {
 
   return lines.join("\n");
 };
+
+function LazySyntaxHighlighter({
+  value,
+  language,
+  className,
+  ...props
+}: {
+  value: string;
+  language?: string;
+  className?: string;
+  [key: string]: any;
+}) {
+  const [SyntaxHighlighter, setSyntaxHighlighter] =
+    useState<ComponentType<any> | null>(null);
+  const [style, setStyle] = useState<unknown | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      import("react-syntax-highlighter"),
+      import("react-syntax-highlighter/dist/esm/styles/prism"),
+    ])
+      .then(([syntaxModule, styleModule]) => {
+        if (!active) return;
+        setSyntaxHighlighter(() => syntaxModule.Prism);
+        setStyle(styleModule.vscDarkPlus);
+      })
+      .catch(() => {
+        if (active) {
+          setSyntaxHighlighter(null);
+          setStyle(null);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!SyntaxHighlighter || !style) {
+    return (
+      <pre className={className ?? "m-0 whitespace-pre-wrap break-words font-mono"}>
+        {value}
+      </pre>
+    );
+  }
+
+  return (
+    <SyntaxHighlighter language={language} style={style} className={className} {...props}>
+      {value}
+    </SyntaxHighlighter>
+  );
+}
 
 export function ShellExecutorLogsPreview({
   payload,
@@ -408,6 +567,52 @@ export function ShellExecutorLogsPreview({
     : `${totalCalls} call${totalCalls === 1 ? "" : "s"} · ${totalCommands} command${
         totalCommands === 1 ? "" : "s"
       }`;
+
+  const renderCommandSegments = (command: string) => {
+    const segments = splitShellCommandSegments(command);
+    const renderShell = (content: string, key: string) => (
+      <pre
+        key={key}
+        className="m-0 whitespace-pre-wrap break-words font-mono text-[11px] text-slate-100"
+      >
+        {hasQuery ? highlightMatches(content, trimmedQuery) : content}
+      </pre>
+    );
+
+    if (segments.length === 1 && segments[0]?.type === "shell") {
+      return renderShell(segments[0].content, "shell");
+    }
+
+    return (
+      <div className="space-y-2">
+        {segments.map((segment, index) =>
+          segment.type === "python" ? (
+            <LazySyntaxHighlighter
+              key={`python-${index}`}
+              value={segment.content}
+              language="python"
+              wrapLongLines
+              className="rounded-md border border-sky-500/20 bg-black/30 text-[11px]"
+              customStyle={{
+                margin: 0,
+                padding: "8px 10px",
+                background: "transparent",
+                lineHeight: "1.6",
+              }}
+              codeTagProps={{
+                style: {
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                },
+              }}
+            />
+          ) : (
+            renderShell(segment.content, `shell-${index}`)
+          ),
+        )}
+      </div>
+    );
+  };
 
   const renderOutputSection = (
     label: "stdout" | "stderr",
@@ -694,9 +899,6 @@ export function ShellExecutorLogsPreview({
                             typeof output?.outcome?.exit_code === "number" &&
                             output?.outcome?.exit_code !== 0;
                           const commandKey = `${callKey}-${entryCommand.index}`;
-                          const commandDisplay = hasQuery
-                            ? highlightMatches(entryCommand.command, trimmedQuery)
-                            : entryCommand.command;
 
                           return (
                             <div
@@ -704,9 +906,11 @@ export function ShellExecutorLogsPreview({
                               className="rounded-md border border-white/10 bg-black/40"
                             >
                               <div className="flex items-start justify-between gap-2 px-3 py-2 text-[11px] text-slate-100">
-                                <div className="flex min-w-0 items-start gap-2">
+                                <div className="flex min-w-0 flex-1 items-start gap-2">
                                   <span className="text-slate-500">$</span>
-                                  <code className="break-all">{commandDisplay}</code>
+                                  <div className="min-w-0 flex-1">
+                                    {renderCommandSegments(entryCommand.command)}
+                                  </div>
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <button

@@ -106,6 +106,17 @@ export function registerWorkflowRoutes(): void {
     return await workflowAIController.aiGenerateStep(tenantId!, params.id, body);
   });
 
+  // AI edit workflow (streamed)
+  router.register('POST', '/admin/workflows/:id/ai-edit/stream', async (params, body, _query, tenantId, context) => {
+    logger.info('[Router] Matched /admin/workflows/:id/ai-edit/stream route', { id: params.id });
+    return await workflowAIController.aiEditWorkflowStream(
+      tenantId!,
+      params.id,
+      body,
+      context,
+    );
+  });
+
   // AI edit workflow
   router.register('POST', '/admin/workflows/:id/ai-edit', async (params, body, _query, tenantId, context) => {
     logger.info('[Router] Matched /admin/workflows/:id/ai-edit route', { id: params.id });

@@ -117,7 +117,7 @@ export function ArtifactGallery({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" style={{ contain: 'layout' }}>
       {displayItems.map((item) => (
         <ArtifactCard key={item.id} item={item} onPreview={onPreview} />
       ))}
@@ -205,11 +205,11 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
     fileName.endsWith(".md");
 
   return (
-    <Card className="group relative flex flex-col overflow-hidden transition-all hover:shadow-md">
+    <Card className="group relative flex flex-col overflow-hidden transition-all hover:shadow-md" style={{ contentVisibility: 'auto' }}>
       {/* Preview Area */}
-      <div className="aspect-[4/3] bg-muted/60 relative overflow-hidden group/preview">
+      <div className="aspect-[4/3] bg-muted/60 relative overflow-hidden group/preview" style={{ minHeight: 0 }}>
         {artifactUrl && item.kind !== "jobOutput" ? (
-          <div className="relative h-full w-full">
+          <div className="relative h-full w-full" style={{ contain: 'layout style paint', minHeight: 0 }}>
             <PreviewRenderer
               contentType={
                 item.artifact?.content_type ||

@@ -158,6 +158,25 @@ export interface ApiClient {
     message?: string;
   }>;
 
+  streamWorkflowEdit(
+    workflowId: string,
+    request: {
+      userPrompt: string;
+      contextJobId?: string;
+    },
+    callbacks: {
+      onDelta: (text: string) => void;
+      onComplete: (result?: WorkflowAIEditResponse) => void;
+      onError: (error: string) => void;
+    },
+    signal?: AbortSignal,
+  ): Promise<{
+    result?: WorkflowAIEditResponse;
+    jobId?: string;
+    status?: "pending" | "processing" | "completed" | "failed";
+    message?: string;
+  }>;
+
   getWorkflowAIEditStatus(jobId: string): Promise<{
     job_id: string;
     status: "pending" | "processing" | "completed" | "failed";
