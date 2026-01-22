@@ -25,6 +25,12 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "react-icons/fi": [
+        "./src/components/icons/feather"
+      ],
+      "lucide-react": [
+        "./src/components/icons/lucide"
       ]
     }
   },

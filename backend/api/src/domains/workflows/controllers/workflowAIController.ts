@@ -2,6 +2,7 @@ import { ApiError } from '@utils/errors';
 import { RouteResponse } from '@routes/routes';
 import { RequestContext } from '@routes/router';
 import { WorkflowStepAIService, AIStepGenerationRequest } from '@domains/workflows/services/workflowStepAIService';
+import { WorkflowAIService, WorkflowAIEditRequest } from '@domains/workflows/services/workflowAIService';
 import { workflowInstructionsService } from '@domains/workflows/services/workflowInstructionsService';
 import { logger } from '@utils/logger';
 import { getOpenAIClient } from '@services/openaiService';
@@ -755,6 +756,137 @@ export class WorkflowAIController {
       });
       throw new ApiError(`Failed to start workflow edit: ${error.message}`, 500);
     }
+  }
+
+  /**
+   * Edit a workflow using AI with streaming output.
+   */
+  async aiEditWorkflowStream(
+    tenantId: string,
+    workflowId: string,
+    body: any,
+    context?: RequestContext,
+  ): Promise<RouteResponse> {
+    const { db } = await import('@utils/db');
+    const { env } = await import('@utils/env');
+    const WORKFLOWS_TABLE = env.workflowsTable;
+    const USER_SETTINGS_TABLE = env.userSettingsTable;
+
+    const userPrompt = typeof body.userPrompt === 'string' ? body.userPrompt : '';
+    const contextJobId = typeof body.contextJobId === 'string' ? body.contextJobId : null;
+
+    if (!userPrompt && !contextJobId) {
+      throw new ApiError('Either userPrompt or contextJobId is required', 400);
+    }
+
+    const workflow = await db.get(WORKFLOWS_TABLE, { workflow_id: workflowId });
+
+    if (!workflow || workflow.deleted_at) {
+      throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
+    }
+
+    if (workflow.tenant_id !== tenantId) {
+      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
+    }
+
+    const res = (context as any)?.res;
+    if (!res) {
+      return await this.aiEditWorkflow(tenantId, workflowId, body, context);
+    }
+
+    logger.info('[AI Workflow Edit] Starting streamed edit', {
+      workflowId,
+      workflowName: workflow.workflow_name,
+      userPrompt: userPrompt.substring(0, 100),
+      currentStepCount: workflow.steps?.length || 0,
+      contextJobId,
+    });
+
+    const settings = USER_SETTINGS_TABLE
+      ? await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId })
+      : null;
+    const defaultToolChoice =
+      settings?.default_tool_choice === 'auto' ||
+      settings?.default_tool_choice === 'required' ||
+      settings?.default_tool_choice === 'none'
+        ? settings.default_tool_choice
+        : undefined;
+    const defaultServiceTier =
+      settings?.default_service_tier &&
+      ["auto", "default", "flex", "scale", "priority"].includes(
+        settings.default_service_tier,
+      )
+        ? settings.default_service_tier
+        : undefined;
+    const defaultTextVerbosity =
+      settings?.default_text_verbosity &&
+      ["low", "medium", "high"].includes(settings.default_text_verbosity)
+        ? settings.default_text_verbosity
+        : undefined;
+    const reviewServiceTier =
+      settings?.default_workflow_improvement_service_tier &&
+      ["auto", "default", "flex", "scale", "priority"].includes(
+        settings.default_workflow_improvement_service_tier,
+      )
+        ? settings.default_workflow_improvement_service_tier
+        : "priority";
+    const reviewReasoningEffort =
+      settings?.default_workflow_improvement_reasoning_effort &&
+      ["none", "low", "medium", "high", "xhigh"].includes(
+        settings.default_workflow_improvement_reasoning_effort,
+      )
+        ? settings.default_workflow_improvement_reasoning_effort
+        : "high";
+    const promptOverrides = getPromptOverridesFromSettings(settings || undefined);
+
+    const aiRequest: WorkflowAIEditRequest = {
+      userPrompt,
+      defaultToolChoice,
+      defaultServiceTier,
+      defaultTextVerbosity,
+      reviewServiceTier,
+      reviewReasoningEffort,
+      tenantId,
+      promptOverrides,
+      workflowContext: {
+        workflow_id: workflowId,
+        workflow_name: workflow.workflow_name || 'Untitled Workflow',
+        workflow_description: workflow.workflow_description || '',
+        template_id: workflow.template_id,
+        current_steps: workflow.steps || [],
+      },
+    };
+
+    res.writeHead(200, {
+      'Content-Type': 'application/x-ndjson',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    });
+    if (typeof res.flushHeaders === 'function') {
+      res.flushHeaders();
+    }
+
+    try {
+      const openai = await getOpenAIClient();
+      const aiService = new WorkflowAIService(openai);
+
+      const result = await aiService.streamEditWorkflow(aiRequest, {
+        onDelta: (text) => {
+          res.write(JSON.stringify({ type: 'delta', text }) + '\n');
+        },
+      });
+
+      res.write(JSON.stringify({ type: 'done', result }) + '\n');
+    } catch (error: any) {
+      const message = error?.message || 'Failed to stream workflow edit';
+      res.write(JSON.stringify({ type: 'error', message }) + '\n');
+    } finally {
+      if (!res.writableEnded) {
+        res.end();
+      }
+    }
+
+    return { statusCode: 200, body: { handled: true } };
   }
 }
 

@@ -190,6 +190,9 @@ const JSON_MARKDOWN_MAX_DEPTH = 5;
 const JSON_MARKDOWN_MAX_ARRAY_ITEMS = 60;
 const JSON_MARKDOWN_MAX_FIELDS = 60;
 const JSON_MARKDOWN_MAX_CHARS = 200_000;
+const JSON_MARKDOWN_TABLE_MAX_ROWS = 24;
+const JSON_MARKDOWN_TABLE_MAX_COLUMNS = 8;
+const JSON_MARKDOWN_TABLE_CELL_MAX_CHARS = 140;
 const JSON_MARKDOWN_SINGLE_KEYS = new Set([
   "markdown",
   "md",
@@ -232,6 +235,48 @@ function formatJsonSummary(value: unknown): string {
   if (Array.isArray(value)) return `[Array(${value.length})]`;
   if (isPlainObject(value)) return `[Object(${Object.keys(value).length})]`;
   return String(value);
+}
+
+function sanitizeMarkdownTableCell(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  const raw = formatJsonPrimitive(value);
+  const normalized = raw.replace(/\r\n/g, "\n").replace(/\n/g, "<br/>");
+  const escaped = normalized.replace(/\|/g, "\\|");
+  if (escaped.length > JSON_MARKDOWN_TABLE_CELL_MAX_CHARS) {
+    return `${escaped.slice(0, JSON_MARKDOWN_TABLE_CELL_MAX_CHARS)}…`;
+  }
+  return escaped;
+}
+
+function buildMarkdownTableRows(
+  items: Array<Record<string, unknown>>,
+): { lines: string[]; shownCount: number } | null {
+  if (items.length === 0) return null;
+  const candidateKeys = Array.from(
+    new Set(items.flatMap((item) => Object.keys(item))),
+  );
+  const filteredKeys = candidateKeys.filter((key) =>
+    items.every((item) => {
+      if (!(key in item)) return true;
+      return isJsonPrimitive(item[key]);
+    }),
+  );
+  if (filteredKeys.length === 0) return null;
+  const columns = filteredKeys.slice(0, JSON_MARKDOWN_TABLE_MAX_COLUMNS);
+  if (columns.length === 0) return null;
+
+  const shownCount = Math.min(items.length, JSON_MARKDOWN_TABLE_MAX_ROWS);
+  const lines: string[] = [];
+  lines.push(`| ${columns.join(" | ")} |`);
+  lines.push(`| ${columns.map(() => "---").join(" | ")} |`);
+  items.slice(0, shownCount).forEach((item) => {
+    const row = columns
+      .map((key) => sanitizeMarkdownTableCell(item[key]))
+      .join(" | ");
+    lines.push(`| ${row} |`);
+  });
+
+  return { lines, shownCount };
 }
 
 function extractSingleMarkdownField(value: unknown): string | null {
@@ -289,6 +334,19 @@ function buildJsonMarkdownLines(
       lines.push("_(empty)_");
       return lines;
     }
+    const onlyObjects = value.every((item) => isPlainObject(item));
+    if (onlyObjects) {
+      const table = buildMarkdownTableRows(value as Array<Record<string, unknown>>);
+      if (table) {
+        lines.push(...table.lines);
+        if (value.length > table.shownCount) {
+          lines.push("");
+          lines.push(`_(+${value.length - table.shownCount} more rows)_`);
+        }
+        return lines;
+      }
+    }
+
     const allPrimitive = value.every((item) => isJsonPrimitive(item));
     const shown = Math.min(value.length, JSON_MARKDOWN_MAX_ARRAY_ITEMS);
     if (allPrimitive) {
@@ -342,8 +400,26 @@ function buildJsonMarkdownLines(
 
 function convertJsonToMarkdown(value: unknown): string | null {
   if (value === undefined) return null;
-  const singleField = extractSingleMarkdownField(value);
-  let markdown = singleField ?? buildJsonMarkdownLines(value, 0).join("\n");
+  let workingValue = value;
+  if (typeof workingValue === "string") {
+    const trimmed = workingValue.trim();
+    if (
+      (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+      (trimmed.startsWith("[") && trimmed.endsWith("]"))
+    ) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (typeof parsed === "object") {
+          workingValue = parsed;
+        }
+      } catch {
+        // keep as string
+      }
+    }
+  }
+  const singleField = extractSingleMarkdownField(workingValue);
+  let markdown =
+    singleField ?? buildJsonMarkdownLines(workingValue, 0).join("\n");
   markdown = markdown.replace(/\n{3,}/g, "\n\n").trim();
   if (!markdown) return null;
   if (markdown.length > JSON_MARKDOWN_MAX_CHARS) {
@@ -398,6 +474,11 @@ export function PreviewRenderer({
   viewMode,
   onViewModeChange,
 }: PreviewRendererProps) {
+  // #region agent log
+  const renderId = useRef(0);
+  renderId.current += 1;
+  fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:477',message:'Component render',data:{renderId:renderId.current,contentType,fileName,artifactId,isFullScreen,previewVariant},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isInView, setIsInView] = useState(false);
@@ -408,6 +489,14 @@ export function PreviewRenderer({
   const [jsonContent, setJsonContent] = useState<any>(null);
   const [jsonRaw, setJsonRaw] = useState<string | null>(null);
   const [jsonError, setJsonError] = useState(false);
+  const [jsonViewMode, setJsonViewMode] = useState<"markdown" | "json">(
+    "markdown",
+  );
+  // #region agent log
+  useEffect(() => {
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:490',message:'jsonViewMode changed',data:{jsonViewMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  }, [jsonViewMode]);
+  // #endregion
   const [stableObjectUrl, setStableObjectUrl] = useState(objectUrl);
   const containerRef = useRef<HTMLDivElement>(null);
   const isCompactPreview = previewVariant === "compact" && !isFullScreen;
@@ -461,10 +550,15 @@ export function PreviewRenderer({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:464',message:'IntersectionObserver triggered',data:{isIntersecting:entry.isIntersecting,intersectionRatio:entry.intersectionRatio},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
           setIsInView(true);
+          // Once in view, we can disconnect to prevent re-triggering
+          observer.disconnect();
         }
       },
-      { threshold: 0.1 },
+      { threshold: 0.1, rootMargin: '50px' },
     );
 
     if (containerRef.current) {
@@ -486,6 +580,7 @@ export function PreviewRenderer({
       setJsonError(false);
       setJsonContent(null);
       setJsonRaw(null);
+      setJsonViewMode("markdown");
     }
   }, [previewObjectUrl, artifactId]);
 
@@ -627,6 +722,9 @@ export function PreviewRenderer({
       !jsonContent &&
       !jsonError
     ) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:705',message:'JSON fetch starting',data:{isInView,effectiveContentType,hasJsonContent:!!jsonContent,hasJsonRaw:!!jsonRaw,jsonError},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       const fetchJson = async () => {
         try {
           let text: string;
@@ -644,12 +742,18 @@ export function PreviewRenderer({
 
           try {
             const parsed = JSON.parse(text);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:730',message:'JSON parsed successfully, setting state',data:{textLength:text.length,parsedType:typeof parsed,isArray:Array.isArray(parsed)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
             setJsonContent(parsed);
             setJsonRaw(text);
             setJsonError(false);
           } catch (e) {
             // Failed to parse JSON
             console.error("Failed to parse JSON artifact:", e);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:738',message:'JSON parse failed',data:{textLength:text.length,error:String(e)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
             setJsonRaw(text);
             setJsonError(true);
           }
@@ -726,6 +830,14 @@ export function PreviewRenderer({
     return convertJsonToMarkdown(value);
   }, [jsonContent, jsonRaw, jsonError]);
 
+  const parsedMarkdownJsonMarkdown = useMemo(() => {
+    if (!parsedMarkdownJson) return null;
+    return convertJsonToMarkdown(parsedMarkdownJson);
+  }, [parsedMarkdownJson]);
+
+  const jsonMarkdownPreview = jsonMarkdown ?? parsedMarkdownJsonMarkdown;
+  const resolvedJsonViewMode = jsonMarkdownPreview ? jsonViewMode : "json";
+
   if (!previewObjectUrl && !artifactId) {
     return (
       <div
@@ -737,8 +849,8 @@ export function PreviewRenderer({
   }
 
   const CompactPreviewFrame = ({ children }: { children: ReactNode }) => (
-    <div className="relative w-full h-full bg-gray-50 dark:bg-gray-900 p-2">
-      <div className="h-full w-full overflow-hidden rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
+    <div className="relative w-full h-full bg-gray-50 dark:bg-gray-900 p-2" style={{ contain: 'layout style paint', minHeight: 0 }}>
+      <div className="h-full w-full overflow-hidden rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm" style={{ minHeight: 0 }}>
         {children}
       </div>
     </div>
@@ -767,6 +879,55 @@ export function PreviewRenderer({
         }}
       >
         <div className={`${paddingClassName} ${textClassName}`}>{children}</div>
+      </div>
+    );
+  };
+
+  const renderJsonViewToggle = ({
+    size = "default",
+    className = "",
+  }: {
+    size?: "default" | "compact";
+    className?: string;
+  }) => {
+    if (!jsonMarkdownPreview) return null;
+    const isCompact = size === "compact";
+    const buttonBase = isCompact
+      ? "px-2 py-0.5 text-[10px] font-semibold"
+      : "px-2.5 py-1 text-[11px] font-semibold";
+    const buttonClass = (active: boolean) =>
+      `${buttonBase} rounded-md border transition-colors ${
+        active
+          ? "bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:border-gray-100"
+          : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+      }`;
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        <span
+          className={`uppercase tracking-wide text-gray-500 dark:text-gray-400 ${
+            isCompact ? "text-[9px]" : "text-[10px]"
+          }`}
+        >
+          Preview
+        </span>
+        <div className="inline-flex items-center gap-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 p-0.5">
+          <button
+            type="button"
+            className={buttonClass(resolvedJsonViewMode === "markdown")}
+            aria-pressed={resolvedJsonViewMode === "markdown"}
+            onClick={() => setJsonViewMode("markdown")}
+          >
+            Markdown
+          </button>
+          <button
+            type="button"
+            className={buttonClass(resolvedJsonViewMode === "json")}
+            aria-pressed={resolvedJsonViewMode === "json"}
+            onClick={() => setJsonViewMode("json")}
+          >
+            JSON
+          </button>
+        </div>
       </div>
     );
   };
@@ -823,6 +984,9 @@ export function PreviewRenderer({
             </div>
           )}
           <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="px-6 pt-4">
+              {renderJsonViewToggle({ className: "justify-end" })}
+            </div>
             <div
               className={`transition-all duration-300 ${
                 viewMode === "tablet"
@@ -832,7 +996,7 @@ export function PreviewRenderer({
                     : "w-full"
               }`}
             >
-              <div className="p-8 prose prose-lg max-w-none dark:prose-invert">
+              <div className="p-8 pt-6 prose prose-lg max-w-none dark:prose-invert">
                 <MarkdownRenderer
                   value={markdownValue}
                   fallbackClassName="whitespace-pre-wrap break-words"
@@ -844,40 +1008,51 @@ export function PreviewRenderer({
       );
     }
 
-    if (isCompactPreview) {
-      return (
-        <CompactPreviewFrame>
-          {isInView ? (
-            <CompactScaledContent>
-              <div className="prose prose-sm max-w-none dark:prose-invert text-[10px] leading-snug prose-p:my-1 prose-headings:my-1 prose-li:my-0">
-                <MarkdownRenderer
-                  value={markdownValue}
-                  fallbackClassName="whitespace-pre-wrap break-words"
-                />
+      if (isCompactPreview) {
+        return (
+          <CompactPreviewFrame>
+            {isInView ? (
+              <div className="flex h-full flex-col">
+                <div className="px-2 pt-2">
+                  {renderJsonViewToggle({
+                    size: "compact",
+                    className: "justify-end",
+                  })}
+                </div>
+                <CompactScaledContent>
+                  <div className="prose prose-sm max-w-none dark:prose-invert text-[10px] leading-snug prose-p:my-1 prose-headings:my-1 prose-li:my-0" style={{ contain: 'layout style paint' }}>
+                    <MarkdownRenderer
+                      value={markdownValue}
+                      fallbackClassName="whitespace-pre-wrap break-words"
+                    />
+                  </div>
+                </CompactScaledContent>
               </div>
-            </CompactScaledContent>
-          ) : (
-            <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
-              <div className="text-center">
-                <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                  Markdown Preview
-                </p>
+            ) : (
+              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+                <div className="text-center">
+                  <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    Markdown Preview
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-        </CompactPreviewFrame>
-      );
-    }
+            )}
+          </CompactPreviewFrame>
+        );
+      }
 
     return (
-      <div className="relative w-full h-full bg-white dark:bg-gray-950 overflow-auto">
+      <div className="relative w-full h-full bg-white dark:bg-gray-950 overflow-auto" style={{ contain: 'layout style paint' }}>
         {isInView ? (
-          <div className="p-4 prose prose-sm max-w-none dark:prose-invert">
-            <MarkdownRenderer
-              value={markdownValue}
-              fallbackClassName="whitespace-pre-wrap break-words"
-            />
+          <div className="p-4 space-y-3">
+            {renderJsonViewToggle({ className: "justify-end" })}
+            <div className="prose prose-sm max-w-none dark:prose-invert">
+              <MarkdownRenderer
+                value={markdownValue}
+                fallbackClassName="whitespace-pre-wrap break-words"
+              />
+            </div>
           </div>
         ) : (
           <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
@@ -894,6 +1069,10 @@ export function PreviewRenderer({
   };
 
   const renderPreview = () => {
+    // #region agent log
+    const renderPath = effectiveContentType.startsWith("image/") ? "image" : effectiveContentType === "application/json" ? "json" : effectiveContentType.startsWith("text/html") ? "html" : isMarkdownLike ? "markdown" : "other";
+    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:1071',message:'renderPreview called',data:{renderPath,effectiveContentType,isInView,hasJsonContent:!!jsonContent,hasJsonRaw:!!jsonRaw,jsonViewMode,resolvedJsonViewMode,hasJsonMarkdown:!!jsonMarkdown,hasJsonMarkdownPreview:!!jsonMarkdownPreview,hasHtmlContent:!!htmlContent,hasMarkdownContent:!!markdownContent,isCompactPreview,isFullScreen},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     if (effectiveContentType.startsWith("image/")) {
       if (isFullScreen) {
         // Full-screen mode: use regular img tag for better scaling
@@ -1191,7 +1370,10 @@ export function PreviewRenderer({
         );
       }
 
-      if (jsonMarkdown) {
+      if (resolvedJsonViewMode === "markdown" && jsonMarkdown) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:1347',message:'Rendering markdown preview',data:{resolvedJsonViewMode,hasJsonMarkdown:!!jsonMarkdown,jsonMarkdownLength:jsonMarkdown?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
         return renderJsonMarkdownPreview(jsonMarkdown);
       }
 
@@ -1209,14 +1391,29 @@ export function PreviewRenderer({
                   </div>
                 </div>
               ) : jsonContent || jsonRaw ? (
-                <CompactScaledContent scale={0.82} textClassName="text-[11px] leading-normal">
-                  <JsonViewer
-                    value={jsonContent}
-                    raw={jsonRaw || ""}
-                    defaultMode="tree"
-                    defaultExpandedDepth={1}
-                  />
-                </CompactScaledContent>
+                <div className="flex h-full flex-col" style={{ minHeight: 0 }}>
+                  <div className="px-2 pt-2 flex-shrink-0">
+                    {renderJsonViewToggle({
+                      size: "compact",
+                      className: "justify-end",
+                    })}
+                  </div>
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <CompactScaledContent
+                      scale={0.82}
+                      textClassName="text-[11px] leading-normal"
+                    >
+                      <div style={{ contain: 'layout style paint', minHeight: 0 }}>
+                        <JsonViewer
+                          value={jsonContent}
+                          raw={jsonRaw || ""}
+                          defaultMode="tree"
+                          defaultExpandedDepth={1}
+                        />
+                      </div>
+                    </CompactScaledContent>
+                  </div>
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
                   <div className="text-center">
@@ -1252,8 +1449,9 @@ export function PreviewRenderer({
 
         if (jsonContent || jsonRaw) {
           return (
-            <div className="relative w-full h-full bg-white dark:bg-gray-950 flex flex-col">
-              <div className="flex-1 min-h-0 overflow-y-auto p-4">
+            <div className="relative w-full h-full bg-white dark:bg-gray-950 flex flex-col" style={{ contain: 'layout style paint', minHeight: 0 }}>
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3" style={{ willChange: 'scroll-position', minHeight: 0 }}>
+                {renderJsonViewToggle({ className: "justify-end" })}
                 <JsonViewer
                   value={jsonContent}
                   raw={jsonRaw || ""}
@@ -1332,6 +1530,10 @@ export function PreviewRenderer({
 
       // If we successfully parsed the markdown as JSON, render using JsonViewer
       if (parsedMarkdownJson) {
+        if (resolvedJsonViewMode === "markdown" && parsedMarkdownJsonMarkdown) {
+          return renderJsonMarkdownPreview(parsedMarkdownJsonMarkdown);
+        }
+
         const rawJson =
           typeof markdownContent === "string" ? markdownContent : "";
         // Extract raw JSON from code block if needed for the "Raw" view in JsonViewer
@@ -1394,8 +1596,11 @@ export function PreviewRenderer({
               )}
 
               <div className="flex-1 min-h-0 overflow-y-auto">
+                <div className="px-6 pt-4">
+                  {renderJsonViewToggle({ className: "justify-end" })}
+                </div>
                 <div
-                  className={`transition-all duration-300 h-full p-4 ${
+                  className={`transition-all duration-300 h-full p-4 pt-6 ${
                     viewMode === "tablet"
                       ? "w-[768px] max-w-[768px] mx-auto border-x border-gray-200 dark:border-gray-800"
                       : viewMode === "mobile"
@@ -1419,20 +1624,32 @@ export function PreviewRenderer({
         if (isCompactPreview) {
           return (
             <CompactPreviewFrame>
-              <CompactScaledContent scale={0.82} textClassName="text-[11px] leading-normal">
-                <JsonViewer
-                  value={parsedMarkdownJson}
-                  raw={cleanRaw}
-                  defaultMode="tree"
-                  defaultExpandedDepth={1}
-                />
-              </CompactScaledContent>
+              <div className="flex h-full flex-col">
+                <div className="px-2 pt-2">
+                  {renderJsonViewToggle({
+                    size: "compact",
+                    className: "justify-end",
+                  })}
+                </div>
+                <CompactScaledContent
+                  scale={0.82}
+                  textClassName="text-[11px] leading-normal"
+                >
+                  <JsonViewer
+                    value={parsedMarkdownJson}
+                    raw={cleanRaw}
+                    defaultMode="tree"
+                    defaultExpandedDepth={1}
+                  />
+                </CompactScaledContent>
+              </div>
             </CompactPreviewFrame>
           );
         }
 
         return (
-          <div className="relative w-full h-full bg-white dark:bg-gray-950 overflow-auto p-4">
+          <div className="relative w-full h-full bg-white dark:bg-gray-950 overflow-auto p-4 space-y-3">
+            {renderJsonViewToggle({ className: "justify-end" })}
             <JsonViewer
               value={parsedMarkdownJson}
               raw={cleanRaw}
@@ -1664,7 +1881,7 @@ export function PreviewRenderer({
   };
 
   return (
-    <div ref={containerRef} className={`overflow-hidden ${className}`}>
+    <div ref={containerRef} className={`overflow-hidden ${className}`} style={{ contentVisibility: 'auto', minHeight: '0', height: '100%', width: '100%' }}>
       {renderPreview()}
     </div>
   );

@@ -742,7 +742,7 @@ function JsonTree({
   defaultExpandedDepth?: number;
 }) {
   return (
-      <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700/60">
+      <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-slate-700/60" style={{ contain: 'layout style paint' }}>
         <div className="bg-gray-50 dark:bg-slate-950/70 text-gray-900 dark:text-slate-100 font-mono text-xs leading-relaxed p-4">
         <JsonNode
           value={value}
@@ -772,7 +772,7 @@ export function JsonViewer({
   const shouldHighlight = !isLarge || forceHighlight;
 
   return (
-    <div className={clsx("space-y-2", className)}>
+    <div className={clsx("space-y-2", className)} style={{ contain: 'layout style paint' }}>
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-1">
           <button

@@ -216,6 +216,13 @@ export const workflowContracts = {
     docs: "docs/contracts/README.md#workflows",
     __types: defineTypes<void, WorkflowAIEditRequest, WorkflowAIEditStartResponse>(),
   },
+  aiEditStream: {
+    method: "POST",
+    path: "/admin/workflows/:id/ai-edit/stream",
+    description: "Stream workflow AI edit output.",
+    docs: "docs/contracts/README.md#workflows",
+    __types: defineTypes<void, WorkflowAIEditRequest, WorkflowAIEditResponse>(),
+  },
   aiEditStatus: {
     method: "GET",
     path: "/admin/workflows/ai-edit-status/:jobId",
