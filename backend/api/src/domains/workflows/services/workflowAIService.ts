@@ -103,7 +103,9 @@ ${AVAILABLE_MODELS.join(', ')}
 
 3. **Manage Dependencies**:
    - \`depends_on\` is CRITICAL.
+   - \`depends_on\` uses 0-based indices (first step = 0).
    - If adding a step at index 0, shift all other indices in \`depends_on\` arrays.
+   - If steps are added, removed, or reordered, update \`depends_on\` across all steps to match new indices.
    - Ensure the flow is logical: Research -> Analysis -> Creation -> Formatting.
 
 4. **Autonomy (No Human-in-the-Loop)**:
@@ -142,7 +144,7 @@ Return a JSON object:
       "instructions": string,
       "tools": string[],
       "tool_choice": "auto" | "required" | "none",
-      "depends_on": number[]
+      "depends_on": number[] (0-based indices)
     }
   ],
   "changes_summary": string (Clear, professional summary of what was improved)
@@ -206,11 +208,15 @@ export class WorkflowAIService {
         const tools = step.tools && Array.isArray(step.tools) && step.tools.length > 0 
           ? ` [Tools: ${step.tools.map((t: any) => typeof t === 'string' ? t : (t?.type || 'unknown')).join(', ')}]`
           : '';
-        const deps = step.depends_on && Array.isArray(step.depends_on) && step.depends_on.length > 0
-          ? ` [Depends on: ${step.depends_on.map((d: number) => d + 1).join(', ')}]`
-          : '';
+        const deps = Array.isArray(step.depends_on)
+          ? ` [depends_on: ${step.depends_on.length > 0 ? step.depends_on.join(', ') : '[]'}]`
+          : ' [depends_on: []]';
+        const orderSuffix =
+          typeof step.step_order === "number" && step.step_order !== index
+            ? ` [order: ${step.step_order}]`
+            : '';
         contextParts.push(
-          `${index + 1}. ${step.step_name} (${step.model})${tools}${deps}`
+          `Index ${index} (Step ${index + 1}): ${step.step_name} (${step.model})${tools}${deps}${orderSuffix}`
         );
         if (step.step_description) {
           contextParts.push(`   ${step.step_description}`);

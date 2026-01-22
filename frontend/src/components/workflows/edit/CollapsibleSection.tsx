@@ -1,5 +1,6 @@
 "use client";
 
+import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 
 interface CollapsibleSectionProps {
@@ -16,22 +17,24 @@ export function CollapsibleSection({
   children,
 }: CollapsibleSectionProps) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center justify-between bg-muted/40 px-4 py-3 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
-      >
-        <h3 className="text-sm font-semibold text-foreground">
-          {title}
-        </h3>
-        {isCollapsed ? (
-          <FiChevronDown className="w-5 h-5 text-muted-foreground" />
-        ) : (
-          <FiChevronUp className="w-5 h-5 text-muted-foreground" />
-        )}
-      </button>
-      {!isCollapsed && <div className="p-4">{children}</div>}
-    </div>
+    <Disclosure defaultOpen={!isCollapsed}>
+      {({ open }) => (
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
+          <DisclosureButton
+            type="button"
+            onClick={onToggle}
+            className="flex w-full items-center justify-between bg-muted/40 px-4 py-3 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+          >
+            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+            {open ? (
+              <FiChevronUp className="w-5 h-5 text-muted-foreground" />
+            ) : (
+              <FiChevronDown className="w-5 h-5 text-muted-foreground" />
+            )}
+          </DisclosureButton>
+          <DisclosurePanel className="p-4">{children}</DisclosurePanel>
+        </div>
+      )}
+    </Disclosure>
   );
 }

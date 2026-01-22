@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import Image from "next/image";
 import {
   FiTerminal,
   FiImage,
@@ -22,6 +23,7 @@ import {
 import { authService } from "@/lib/auth";
 import toast from "react-hot-toast";
 import { FullScreenPreviewModal } from "@/components/ui/FullScreenPreviewModal";
+import { PanelHeader } from "@/components/ui/PanelHeader";
 
 interface StreamViewerProps {
   endpoint: string;
@@ -364,7 +366,7 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
     <>
       <div className={containerClasses}>
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-sm select-none">
+        <PanelHeader className="backdrop-blur-sm select-none">
           <div className="flex items-center gap-4">
             <div className={`
               flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border
@@ -445,7 +447,7 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
                </button>
             </div>
           </div>
-        </div>
+        </PanelHeader>
 
         <div className="flex flex-1 overflow-hidden relative">
           {/* Logs Panel */}
@@ -620,10 +622,13 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
                     onClick={() => setIsPreviewOpen(true)}
                   >
                     <div className="absolute inset-0 pattern-dots opacity-5 pointer-events-none" />
-                    <img 
+                    <Image
                       src={currentScreenshotSrc}
-                      alt="Screenshot" 
-                      className="max-w-full max-h-full object-contain shadow-xl rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all hover:scale-[1.01]"
+                      alt="Screenshot"
+                      fill
+                      sizes="(min-width: 1024px) 70vw, 100vw"
+                      className="object-contain shadow-xl rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all hover:scale-[1.01]"
+                      unoptimized
                     />
                     
                     {/* Hover Overlay */}

@@ -63,6 +63,8 @@ interface FilteredLogEntry {
   matchedCount: number;
 }
 
+const EMPTY_LOGS: ShellExecutorCallLog[] = [];
+
 export const isShellExecutorLogsPayload = (
   value: unknown,
 ): value is ShellExecutorLogsPayload => {
@@ -191,7 +193,7 @@ const getExecutorLabel = (payload: ShellExecutorLogsPayload) => {
 };
 
 const formatLogsAsText = (payload: ShellExecutorLogsPayload) => {
-  const logs = Array.isArray(payload.logs) ? payload.logs : [];
+  const logs = Array.isArray(payload.logs) ? payload.logs : EMPTY_LOGS;
   const lines: string[] = [];
 
   lines.push(`${getExecutorLabel(payload)} - ${getStepLabel(payload)}`);
@@ -245,7 +247,10 @@ export function ShellExecutorLogsPreview({
   payload: ShellExecutorLogsPayload;
   variant?: ShellExecutorLogsPreviewVariant;
 }) {
-  const logs = Array.isArray(payload.logs) ? payload.logs : [];
+  const logs = useMemo(
+    () => (Array.isArray(payload.logs) ? payload.logs : EMPTY_LOGS),
+    [payload.logs],
+  );
   const stepLabel = getStepLabel(payload);
   const executorLabel = getExecutorLabel(payload);
   const isCompact = variant === "compact";

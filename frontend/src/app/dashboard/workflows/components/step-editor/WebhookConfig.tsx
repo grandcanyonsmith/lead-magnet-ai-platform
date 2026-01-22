@@ -7,6 +7,7 @@ import { useRunSelection } from "./hooks/useRunSelection";
 import { KeyValueEditor } from "./parts/KeyValueEditor";
 import { WebhookBodyConfig } from "./parts/WebhookBodyConfig";
 import { WebhookTestPanel } from "./parts/WebhookTestPanel";
+import { Select } from "@/components/ui/Select";
 
 interface WebhookConfigProps {
   step: WorkflowStep;
@@ -76,10 +77,10 @@ export default function WebhookConfig({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Method
           </label>
-          <select
+          <Select
             value={step.webhook_method || "POST"}
-            onChange={(e) =>
-              onChange("webhook_method", e.target.value as HTTPMethod)
+            onChange={(nextValue) =>
+              onChange("webhook_method", nextValue as HTTPMethod)
             }
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
           >
@@ -88,7 +89,7 @@ export default function WebhookConfig({
             <option value="PUT">PUT</option>
             <option value="PATCH">PATCH</option>
             <option value="DELETE">DELETE</option>
-          </select>
+          </Select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

@@ -15,6 +15,7 @@ export function OutputPreview({ groupKey, preview, className }: OutputPreviewPro
       ? `${className ?? ""} overflow-y-auto scrollbar-hide-until-hover`.trim()
       : className;
   const contentType = groupKey === "html" ? "text/html" : preview.contentType;
+  const viewMode = groupKey === "html" ? "mobile" : undefined;
   const hasPreview = Boolean(preview.objectUrl || preview.artifactId);
 
   if (!hasPreview) {
@@ -33,6 +34,7 @@ export function OutputPreview({ groupKey, preview, className }: OutputPreviewPro
       artifactId={preview.artifactId}
       previewVariant={previewVariant}
       className={previewClassName}
+      viewMode={viewMode}
     />
   );
 }

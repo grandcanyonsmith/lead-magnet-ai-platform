@@ -652,10 +652,8 @@ export function WorkflowImprovePanel({
               </div>
               <Select
                 value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(
-                    event.target.value as "all" | WorkflowImprovementStatus,
-                  )
+                onChange={(nextValue) =>
+                  setStatusFilter(nextValue as "all" | WorkflowImprovementStatus)
                 }
               >
                 <option value="all">All statuses</option>

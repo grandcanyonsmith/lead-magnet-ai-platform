@@ -1,3 +1,5 @@
+"use client";
+
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
@@ -117,8 +119,8 @@ export function ModelDetailsPanel({
         <div className="space-y-2">
           <Select
             value={draftModel}
-            onChange={(event) =>
-              onDraftModelChange(event.target.value as AIModel)
+            onChange={(nextValue) =>
+              onDraftModelChange(nextValue as AIModel)
             }
             className="h-9"
             aria-label="Select model"
@@ -211,8 +213,8 @@ export function SpeedDetailsPanel({
         <div className="space-y-2">
           <Select
             value={draftServiceTier}
-            onChange={(event) =>
-              onDraftServiceTierChange(event.target.value as ServiceTier)
+            onChange={(nextValue) =>
+              onDraftServiceTierChange(nextValue as ServiceTier)
             }
             className="h-9"
             aria-label="Select service tier"
@@ -292,9 +294,9 @@ export function ReasoningDetailsPanel({
         <div className="space-y-2">
           <Select
             value={draftReasoningEffort}
-            onChange={(event) =>
+            onChange={(nextValue) =>
               onDraftReasoningEffortChange(
-                event.target.value as ReasoningEffortOption,
+                nextValue as ReasoningEffortOption,
               )
             }
             className="h-9"
@@ -444,8 +446,8 @@ export function ImageSettingsPanel({
               </label>
               <Select
                 value={draftImageSettings.model || "gpt-image-1.5"}
-                onChange={(event) =>
-                  onDraftImageSettingsChange("model", event.target.value)
+                onChange={(nextValue) =>
+                  onDraftImageSettingsChange("model", nextValue)
                 }
                 className="h-9"
                 aria-label="Select image model"
@@ -460,10 +462,10 @@ export function ImageSettingsPanel({
               </label>
               <Select
                 value={draftImageSettings.size || "auto"}
-                onChange={(event) =>
+                onChange={(nextValue) =>
                   onDraftImageSettingsChange(
                     "size",
-                    event.target.value as ImageGenerationSettings["size"],
+                    nextValue as ImageGenerationSettings["size"],
                   )
                 }
                 className="h-9"
@@ -482,10 +484,10 @@ export function ImageSettingsPanel({
               </label>
               <Select
                 value={draftImageSettings.quality || "auto"}
-                onChange={(event) =>
+                onChange={(nextValue) =>
                   onDraftImageSettingsChange(
                     "quality",
-                    event.target.value as ImageGenerationSettings["quality"],
+                    nextValue as ImageGenerationSettings["quality"],
                   )
                 }
                 className="h-9"
@@ -504,10 +506,10 @@ export function ImageSettingsPanel({
               </label>
               <Select
                 value={draftImageSettings.format || ""}
-                onChange={(event) =>
+                onChange={(nextValue) =>
                   onDraftImageSettingsChange(
                     "format",
-                    (event.target.value || undefined) as ImageGenerationSettings["format"],
+                    (nextValue || undefined) as ImageGenerationSettings["format"],
                   )
                 }
                 className="h-9"
@@ -526,10 +528,10 @@ export function ImageSettingsPanel({
               </label>
               <Select
                 value={draftImageSettings.background || "auto"}
-                onChange={(event) =>
+                onChange={(nextValue) =>
                   onDraftImageSettingsChange(
                     "background",
-                    event.target.value as ImageGenerationSettings["background"],
+                    nextValue as ImageGenerationSettings["background"],
                   )
                 }
                 className="h-9"
@@ -547,10 +549,10 @@ export function ImageSettingsPanel({
               </label>
               <Select
                 value={draftImageSettings.input_fidelity || ""}
-                onChange={(event) =>
+                onChange={(nextValue) =>
                   onDraftImageSettingsChange(
                     "input_fidelity",
-                    (event.target.value || undefined) as ImageGenerationSettings["input_fidelity"],
+                    (nextValue || undefined) as ImageGenerationSettings["input_fidelity"],
                   )
                 }
                 className="h-9"

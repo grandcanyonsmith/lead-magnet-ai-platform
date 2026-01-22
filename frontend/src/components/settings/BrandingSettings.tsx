@@ -8,7 +8,10 @@ import { useState } from "react";
 import Image from "next/image";
 import { Settings } from "@/types";
 import { FormField } from "./FormField";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
+import { AlertBanner } from "@/components/ui/AlertBanner";
+import { CardHeaderIntro } from "@/components/ui/CardHeaderIntro";
+import { SectionLabel } from "@/components/ui/SectionLabel";
 import {
   PhotoIcon,
   SparklesIcon,
@@ -40,19 +43,12 @@ export function BrandingSettings({
     <div className="space-y-6">
       {/* Visual Identity Section */}
       <Card>
-        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-              <PhotoIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <CardTitle className="text-lg">
-              Visual Identity
-            </CardTitle>
-          </div>
-          <CardDescription className="ml-12">
-            Customize how your brand appears on forms and lead magnets.
-          </CardDescription>
-        </CardHeader>
+        <CardHeaderIntro
+          icon={<PhotoIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />}
+          iconWrapperClassName="bg-purple-50 dark:bg-purple-900/20"
+          title="Visual Identity"
+          description="Customize how your brand appears on forms and lead magnets."
+        />
 
         <CardContent className="p-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -79,20 +75,16 @@ export function BrandingSettings({
               />
 
               {imageError && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
-                  <span className="text-red-500 dark:text-red-400 mt-0.5">⚠️</span>
-                  <p className="text-sm text-red-700 dark:text-red-300">
-                    Failed to load image. Please check that the URL is correct
-                    and public.
-                  </p>
-                </div>
+                <AlertBanner
+                  variant="error"
+                  icon={<span aria-hidden>⚠️</span>}
+                  description="Failed to load image. Please check that the URL is correct and public."
+                />
               )}
             </div>
 
             <div className="bg-gray-50 dark:bg-secondary/30 rounded-xl border border-gray-200 dark:border-border p-6 flex flex-col items-center justify-center min-h-[160px]">
-              <p className="text-xs font-medium text-gray-500 dark:text-muted-foreground mb-4 uppercase tracking-wider">
-                Logo Preview
-              </p>
+              <SectionLabel className="mb-4">Logo Preview</SectionLabel>
               {settings.logo_url && !imageError ? (
                 <div className="relative h-20 w-full max-w-[240px]">
                   <Image
@@ -118,20 +110,12 @@ export function BrandingSettings({
 
       {/* Brand Voice & Context */}
       <Card>
-        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
-              <SparklesIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <CardTitle className="text-lg">
-              Brand Identity
-            </CardTitle>
-          </div>
-          <CardDescription className="ml-12">
-            Train the AI on your brand&apos;s voice, values, and target
-            audience.
-          </CardDescription>
-        </CardHeader>
+        <CardHeaderIntro
+          icon={<SparklesIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
+          iconWrapperClassName="bg-indigo-50 dark:bg-indigo-900/20"
+          title="Brand Identity"
+          description="Train the AI on your brand's voice, values, and target audience."
+        />
 
         <CardContent className="p-8 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -210,17 +194,12 @@ export function BrandingSettings({
 
       {/* Resources */}
       <Card>
-        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-              <DocumentTextIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <CardTitle className="text-lg">Resources</CardTitle>
-          </div>
-          <CardDescription className="ml-12">
-            External documents to provide additional context.
-          </CardDescription>
-        </CardHeader>
+        <CardHeaderIntro
+          icon={<DocumentTextIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />}
+          iconWrapperClassName="bg-amber-50 dark:bg-amber-900/20"
+          title="Resources"
+          description="External documents to provide additional context."
+        />
 
         <CardContent className="p-8">
           <FormField

@@ -9,6 +9,8 @@ import {
   WorkflowUpdateRequest,
   WorkflowGenerationRequest,
   WorkflowGenerationResponse,
+  WorkflowIdeationRequest,
+  WorkflowIdeationResponse,
   WorkflowRefineInstructionsRequest,
   WorkflowRefineInstructionsResponse,
   WorkflowVersionListResponse,
@@ -116,6 +118,9 @@ export interface ApiClient {
   generateWorkflowWithAI(
     request: WorkflowGenerationRequest,
   ): Promise<WorkflowGenerationResponse>;
+  ideateWorkflow(
+    request: WorkflowIdeationRequest,
+  ): Promise<WorkflowIdeationResponse>;
   getWorkflowGenerationStatus(
     jobId: string,
   ): Promise<WorkflowGenerationResponse>;

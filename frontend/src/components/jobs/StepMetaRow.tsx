@@ -45,6 +45,8 @@ type StepMetaUpdate = {
   image_generation?: ImageGenerationSettings;
 };
 
+const EMPTY_TOOL_LIST: Tool[] = [];
+
 const DEFAULT_IMAGE_SETTINGS = {
   model: "gpt-image-1.5",
   size: "auto",
@@ -167,7 +169,7 @@ export function StepMetaRow({
   const tools = Array.isArray(step.input?.tools)
     ? step.input?.tools
     : step.tools;
-  const toolList = Array.isArray(tools) ? tools : [];
+  const toolList = Array.isArray(tools) ? tools : EMPTY_TOOL_LIST;
   const imageTool = toolList.find(
     (tool) => getToolName(tool as Tool) === "image_generation",
   );

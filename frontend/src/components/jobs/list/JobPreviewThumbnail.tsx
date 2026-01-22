@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { useJobPreview } from "@/hooks/useJobPreview";
 import {
   ArrowPathIcon,
@@ -26,10 +27,17 @@ export function JobPreviewThumbnail({
 }: JobPreviewThumbnailProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const preview = useJobPreview(job, {
     enabled: true,
     lazy: showOnHover && !isHovered,
   });
+  const isImage = preview.contentType?.startsWith("image/");
+  const imageUrl = preview.url || "";
+
+  useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
 
   // Trigger fetch on hover if lazy mode
   const handleMouseEnter = () => {
@@ -102,8 +110,6 @@ export function JobPreviewThumbnail({
     );
   }
 
-  const isImage = preview.contentType?.startsWith("image/");
-
   return (
     <>
       <div
@@ -116,33 +122,33 @@ export function JobPreviewThumbnail({
         onClick={handleClick}
         title="Click to preview"
       >
-        {isImage ? (
-          <img
-            src={preview.url || undefined}
+        {isImage && imageUrl && !imageError ? (
+          <Image
+            src={imageUrl}
             alt="Job output preview"
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onError={(e) => {
-              // Fallback to icon if image fails to load
-              const target = e.currentTarget;
-              target.style.display = "none";
-              const parent = target.parentElement;
-              if (parent && !parent.querySelector(".fallback-icon")) {
-                const icon = document.createElement("div");
-                icon.className = `fallback-icon flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800`;
-                icon.innerHTML = `<svg class="${iconSizes[size]} text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>`;
-                parent.appendChild(icon);
-              }
-            }}
+            fill
+            sizes="(min-width: 1024px) 20vw, (min-width: 640px) 30vw, 50vw"
+            className="object-cover"
+            onError={() => setImageError(true)}
+            unoptimized
           />
         ) : (
           <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800">
-            <DocumentIcon
-              className={clsx(
-                "text-gray-400 dark:text-gray-500",
-                iconSizes[size],
-              )}
-            />
+            {isImage ? (
+              <PhotoIcon
+                className={clsx(
+                  "text-gray-400 dark:text-gray-500",
+                  iconSizes[size],
+                )}
+              />
+            ) : (
+              <DocumentIcon
+                className={clsx(
+                  "text-gray-400 dark:text-gray-500",
+                  iconSizes[size],
+                )}
+              />
+            )}
           </div>
         )}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />

@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth/context";
 import { authService } from "@/lib/auth";
 import { useJobFiltersContext } from "@/contexts/JobFiltersContext";
 import { Avatar } from "@/components/ui/Avatar";
+import { Select } from "@/components/ui/Select";
 
 export const UserMenu: React.FC = () => {
   const router = useRouter();
@@ -160,40 +161,42 @@ export const UserMenu: React.FC = () => {
                       <label className="block text-xs text-gray-600 mb-1">
                         Status
                       </label>
-                      <select
-                        value={jobFilters.statusFilter}
-                        onChange={(e) => {
-                          jobFilters.setStatusFilter(e.target.value);
-                        }}
-                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <option value="all">All Statuses</option>
-                        <option value="pending">Queued</option>
-                        <option value="processing">Generating</option>
-                        <option value="completed">Ready</option>
-                        <option value="failed">Error</option>
-                      </select>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Select
+                          value={jobFilters.statusFilter}
+                          onChange={(nextValue) => {
+                            jobFilters.setStatusFilter(nextValue);
+                          }}
+                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
+                        >
+                          <option value="all">All Statuses</option>
+                          <option value="pending">Queued</option>
+                          <option value="processing">Generating</option>
+                          <option value="completed">Ready</option>
+                          <option value="failed">Error</option>
+                        </Select>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs text-gray-600 mb-1">
                         Lead Magnet
                       </label>
-                      <select
-                        value={jobFilters.workflowFilter}
-                        onChange={(e) => {
-                          jobFilters.setWorkflowFilter(e.target.value);
-                        }}
-                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <option value="all">All Lead Magnets</option>
-                        {jobFilters.workflows.map((wf: any) => (
-                          <option key={wf.workflow_id} value={wf.workflow_id}>
-                            {wf.workflow_name || wf.workflow_id}
-                          </option>
-                        ))}
-                      </select>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Select
+                          value={jobFilters.workflowFilter}
+                          onChange={(nextValue) => {
+                            jobFilters.setWorkflowFilter(nextValue);
+                          }}
+                          className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-primary-500 focus:border-transparent"
+                        >
+                          <option value="all">All Lead Magnets</option>
+                          {jobFilters.workflows.map((wf: any) => (
+                            <option key={wf.workflow_id} value={wf.workflow_id}>
+                              {wf.workflow_name || wf.workflow_id}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 </div>

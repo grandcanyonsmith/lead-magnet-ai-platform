@@ -11,6 +11,9 @@ import {
   Shield,
 } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
+import { Select } from "@/components/ui/Select";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Switch } from "@/components/ui/Switch";
 import { FormFormData, FormField } from "@/hooks/useFormEdit";
 import { getFieldTypeIcon } from "@/utils/formUtils";
 import { buildPublicFormUrl } from "@/utils/url";
@@ -53,17 +56,19 @@ function FormPreview({ formFormData }: { formFormData: FormFormData }) {
                 disabled
               />
             ) : field.field_type === "select" && field.options ? (
-              <select
+              <Select
+                value=""
+                onChange={() => {}}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary"
                 disabled
+                placeholder="Select an option..."
               >
-                <option value="">Select an option...</option>
                 {field.options.map((option) => (
                   <option key={option} value={option}>
                     {option}
                   </option>
                 ))}
-              </select>
+              </Select>
             ) : (
               <input
                 type={
@@ -254,10 +259,10 @@ export function FormTab({
                     <label className="block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-muted-foreground">
                       Field type
                     </label>
-                    <select
+                    <Select
                       value={field.field_type}
-                      onChange={(e) =>
-                        onFieldChange(index, "field_type", e.target.value)
+                      onChange={(nextValue) =>
+                        onFieldChange(index, "field_type", nextValue)
                       }
                       className="mt-2 w-full rounded-xl border border-gray-200 dark:border-border px-3 py-2 text-sm bg-white dark:bg-secondary text-gray-900 dark:text-foreground focus:border-primary-500 dark:focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary/20"
                     >
@@ -267,7 +272,7 @@ export function FormTab({
                       <option value="textarea">Textarea</option>
                       <option value="select">Select</option>
                       <option value="number">Number</option>
-                    </select>
+                    </Select>
                   </div>
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-muted-foreground">
@@ -325,13 +330,11 @@ export function FormTab({
                 )}
 
                 <label className="mt-3 flex items-center gap-2 text-sm text-gray-600 dark:text-muted-foreground">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={field.required}
-                    onChange={(e) =>
-                      onFieldChange(index, "required", e.target.checked)
+                    onChange={(checked) =>
+                      onFieldChange(index, "required", checked)
                     }
-                    className="h-4 w-4 rounded border-gray-300 dark:border-border text-primary-600 dark:text-primary focus:ring-primary-500"
                   />
                   Required field
                 </label>
@@ -363,13 +366,11 @@ export function FormTab({
         >
           <div className="space-y-4">
             <label className="flex items-center gap-3">
-              <input
-                type="checkbox"
+              <Switch
                 checked={formFormData.rate_limit_enabled}
-                onChange={(e) =>
-                  onFormChange("rate_limit_enabled", e.target.checked)
+                onChange={(checked) =>
+                  onFormChange("rate_limit_enabled", checked)
                 }
-                className="h-4 w-4 rounded border-gray-300 dark:border-border text-primary-600 dark:text-primary focus:ring-primary-500"
               />
               <span className="text-sm font-medium text-gray-900 dark:text-foreground">
                 Enable rate limiting
@@ -398,13 +399,11 @@ export function FormTab({
             )}
 
             <label className="flex items-center gap-3">
-              <input
-                type="checkbox"
+              <Switch
                 checked={formFormData.captcha_enabled}
-                onChange={(e) =>
-                  onFormChange("captcha_enabled", e.target.checked)
+                onChange={(checked) =>
+                  onFormChange("captcha_enabled", checked)
                 }
-                className="h-4 w-4 rounded border-gray-300 dark:border-border text-primary-600 dark:text-primary focus:ring-primary-500"
               />
               <span className="text-sm font-medium text-gray-900 dark:text-foreground">
                 Enable CAPTCHA

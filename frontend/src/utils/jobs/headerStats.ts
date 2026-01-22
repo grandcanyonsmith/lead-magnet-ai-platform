@@ -8,8 +8,7 @@ export type JobHeaderStatsContext =
   | "improve"
   | "edit"
   | "tracking"
-  | "technical"
-  | "raw";
+  | "technical";
 
 type JobHeaderStatKey =
   | "steps"
@@ -191,7 +190,6 @@ export const buildJobHeaderStats = ({
       "avgPageViews",
     ],
     technical: ["steps", "runtime", "outputs"],
-    raw: ["steps", "runtime", "outputs"],
   };
 
   const statKeys = contextMap[context] ?? contextMap.overview;

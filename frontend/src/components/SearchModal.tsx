@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { Fragment, useState, useEffect, useRef, useMemo } from "react";
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  Transition,
+  TransitionChild,
+} from "@headlessui/react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   FiSearch,
@@ -277,135 +284,159 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-gray-900/60 dark:bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog
+        as="div"
+        className="relative z-50"
+        onClose={onClose}
+        initialFocus={inputRef}
+      >
+        <TransitionChild
+          as={Fragment}
+          enter="ease-out duration-200"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-150"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-gray-900/60 dark:bg-black/70 backdrop-blur-sm" />
+        </TransitionChild>
 
-      {/* Modal */}
-      <div className="relative w-full max-w-2xl bg-white dark:bg-card rounded-lg shadow-2xl border border-gray-200 dark:border-border">
-        {/* Search Input */}
-        <div className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-border">
-          <FiSearch className="w-5 h-5 text-gray-400 dark:text-muted-foreground flex-shrink-0" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Search pages, workflows, jobs, form submissions..."
-            className="flex-1 text-base outline-none placeholder-gray-400 dark:placeholder-muted-foreground bg-transparent text-gray-900 dark:text-foreground"
-          />
-          <div className="flex items-center gap-2">
-            <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-gray-500 dark:text-muted-foreground bg-gray-100 dark:bg-secondary border border-gray-300 dark:border-border rounded">
-              <FiCommand className="w-3 h-3" />K
-            </kbd>
-            <button
-              onClick={onClose}
-              className="p-1 text-gray-400 dark:text-muted-foreground hover:text-gray-600 dark:hover:text-foreground rounded hover:bg-gray-100 dark:hover:bg-secondary transition-colors"
-              aria-label="Close"
-            >
-              <FiX className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4">
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out duration-200"
+            enterFrom="opacity-0 scale-95"
+            enterTo="opacity-100 scale-100"
+            leave="ease-in duration-150"
+            leaveFrom="opacity-100 scale-100"
+            leaveTo="opacity-0 scale-95"
+          >
+            <DialogPanel className="relative w-full max-w-2xl bg-white dark:bg-card rounded-lg shadow-2xl border border-gray-200 dark:border-border">
+              <DialogTitle className="sr-only">Search</DialogTitle>
 
-        {/* Results */}
-        <div ref={resultsRef} className="max-h-96 overflow-y-auto">
-          {loading ? (
-            <div className="p-8 text-center text-gray-500 dark:text-muted-foreground">Loading...</div>
-          ) : searchResults.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 dark:text-muted-foreground">
-              <FiSearch className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-muted-foreground/40" />
-              <p>No results found</p>
-              <p className="text-sm text-gray-400 dark:text-muted-foreground/70 mt-1">
-                Try a different search term
-              </p>
-            </div>
-          ) : (
-            <div className="py-2">
-              {searchResults.map((result, index) => (
-                <button
-                  key={result.id}
-                  onClick={() => handleSelect(result)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                    index === selectedIndex
-                      ? "bg-primary-50 dark:bg-primary/20 text-primary-900 dark:text-primary-foreground"
-                      : "hover:bg-gray-50 dark:hover:bg-secondary text-gray-900 dark:text-foreground"
-                  }`}
-                >
-                  <div
-                    className={`flex-shrink-0 ${index === selectedIndex ? "text-primary-600 dark:text-primary" : "text-gray-400 dark:text-muted-foreground"}`}
+              {/* Search Input */}
+              <div className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-border">
+                <FiSearch className="w-5 h-5 text-gray-400 dark:text-muted-foreground flex-shrink-0" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Search pages, workflows, jobs, form submissions..."
+                  className="flex-1 text-base outline-none placeholder-gray-400 dark:placeholder-muted-foreground bg-transparent text-gray-900 dark:text-foreground"
+                />
+                <div className="flex items-center gap-2">
+                  <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-gray-500 dark:text-muted-foreground bg-gray-100 dark:bg-secondary border border-gray-300 dark:border-border rounded">
+                    <FiCommand className="w-3 h-3" />K
+                  </kbd>
+                  <button
+                    onClick={onClose}
+                    className="p-1 text-gray-400 dark:text-muted-foreground hover:text-gray-600 dark:hover:text-foreground rounded hover:bg-gray-100 dark:hover:bg-secondary transition-colors"
+                    aria-label="Close"
                   >
-                    {getIcon(result.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{result.title}</div>
-                    {result.subtitle && (
-                      <div
-                        className={`text-sm truncate ${index === selectedIndex ? "text-primary-600 dark:text-primary/80" : "text-gray-500 dark:text-muted-foreground"}`}
-                      >
-                        {result.subtitle}
-                      </div>
-                    )}
-                    {result.preview && (
-                      <div
-                        className={`text-xs truncate ${index === selectedIndex ? "text-primary-700 dark:text-primary/70" : "text-gray-500 dark:text-muted-foreground/80"}`}
-                      >
-                        {result.preview}
-                      </div>
-                    )}
-                  </div>
-                  {result.type === "workflow" && (
-                    <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-secondary text-gray-600 dark:text-muted-foreground rounded">
-                      Workflow
-                    </span>
-                  )}
-                  {result.type === "job" && (
-                    <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-secondary text-gray-600 dark:text-muted-foreground rounded">
-                      Job
-                    </span>
-                  )}
-                  {result.type === "submission" && (
-                    <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-secondary text-gray-600 dark:text-muted-foreground rounded">
-                      Submission
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+                    <FiX className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
 
-        {/* Footer */}
-        <div className="px-4 py-3 border-t border-gray-200 dark:border-border bg-gray-50 dark:bg-secondary/50 flex items-center justify-between text-xs text-gray-500 dark:text-muted-foreground">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-white dark:bg-card border border-gray-300 dark:border-border rounded text-gray-700 dark:text-foreground">
-                ↑↓
-              </kbd>
-              Navigate
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-white dark:bg-card border border-gray-300 dark:border-border rounded text-gray-700 dark:text-foreground">
-                ↵
-              </kbd>
-              Select
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-white dark:bg-card border border-gray-300 dark:border-border rounded text-gray-700 dark:text-foreground">
-                Esc
-              </kbd>
-              Close
-            </span>
-          </div>
+              {/* Results */}
+              <div ref={resultsRef} className="max-h-96 overflow-y-auto">
+                {loading ? (
+                  <div className="p-8 text-center text-gray-500 dark:text-muted-foreground">Loading...</div>
+                ) : searchResults.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500 dark:text-muted-foreground">
+                    <FiSearch className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-muted-foreground/40" />
+                    <p>No results found</p>
+                    <p className="text-sm text-gray-400 dark:text-muted-foreground/70 mt-1">
+                      Try a different search term
+                    </p>
+                  </div>
+                ) : (
+                  <div className="py-2">
+                    {searchResults.map((result, index) => (
+                      <button
+                        key={result.id}
+                        onClick={() => handleSelect(result)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                          index === selectedIndex
+                            ? "bg-primary-50 dark:bg-primary/20 text-primary-900 dark:text-primary-foreground"
+                            : "hover:bg-gray-50 dark:hover:bg-secondary text-gray-900 dark:text-foreground"
+                        }`}
+                      >
+                        <div
+                          className={`flex-shrink-0 ${index === selectedIndex ? "text-primary-600 dark:text-primary" : "text-gray-400 dark:text-muted-foreground"}`}
+                        >
+                          {getIcon(result.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">{result.title}</div>
+                          {result.subtitle && (
+                            <div
+                              className={`text-sm truncate ${index === selectedIndex ? "text-primary-600 dark:text-primary/80" : "text-gray-500 dark:text-muted-foreground"}`}
+                            >
+                              {result.subtitle}
+                            </div>
+                          )}
+                          {result.preview && (
+                            <div
+                              className={`text-xs truncate ${index === selectedIndex ? "text-primary-700 dark:text-primary/70" : "text-gray-500 dark:text-muted-foreground/80"}`}
+                            >
+                              {result.preview}
+                            </div>
+                          )}
+                        </div>
+                        {result.type === "workflow" && (
+                          <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-secondary text-gray-600 dark:text-muted-foreground rounded">
+                            Workflow
+                          </span>
+                        )}
+                        {result.type === "job" && (
+                          <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-secondary text-gray-600 dark:text-muted-foreground rounded">
+                            Job
+                          </span>
+                        )}
+                        {result.type === "submission" && (
+                          <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-secondary text-gray-600 dark:text-muted-foreground rounded">
+                            Submission
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-4 py-3 border-t border-gray-200 dark:border-border bg-gray-50 dark:bg-secondary/50 flex items-center justify-between text-xs text-gray-500 dark:text-muted-foreground">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1">
+                    <kbd className="px-1.5 py-0.5 bg-white dark:bg-card border border-gray-300 dark:border-border rounded text-gray-700 dark:text-foreground">
+                      ↑↓
+                    </kbd>
+                    Navigate
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="px-1.5 py-0.5 bg-white dark:bg-card border border-gray-300 dark:border-border rounded text-gray-700 dark:text-foreground">
+                      ↵
+                    </kbd>
+                    Select
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <kbd className="px-1.5 py-0.5 bg-white dark:bg-card border border-gray-300 dark:border-border rounded text-gray-700 dark:text-foreground">
+                      Esc
+                    </kbd>
+                    Close
+                  </span>
+                </div>
+              </div>
+            </DialogPanel>
+          </TransitionChild>
         </div>
-      </div>
-    </div>
+      </Dialog>
+    </Transition>
   );
 };

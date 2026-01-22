@@ -25,6 +25,8 @@ export interface AIStepGenerationRequest {
       step_description?: string;
       model: string;
       tools?: any[];
+      depends_on?: number[];
+      step_order?: number;
     }>;
   };
   currentStep?: WorkflowStep;
@@ -116,10 +118,12 @@ Available Tools:
    - \`step_description\` should clearly state the *value* of the step.
    - \`reasoning_effort\` should be chosen per-step based on complexity ("low" for simple transforms, "high/xhigh" for deep analysis).
    - \`text_verbosity\` should be chosen per-step ("low" for terse outputs, "high" for detailed reports).
-   - \`depends_on\`: Array of step indices this step depends on.
+   - \`depends_on\`: Array of step indices this step depends on (0-based, first step = 0).
+     - Use the index numbers shown in the "Current Steps" list.
      - **CRITICAL**: If this step uses output from previous steps, list their indices here.
      - If this is the first step, use \`[]\`.
      - If inserting a step, ensure dependencies make sense.
+     - Only change \`depends_on\` when the user asks to update dependencies or step order.
 
 9. **Instruction Hygiene**:
    - Do NOT include "safety disclaimers" about PII (e.g. "Note: you included a phone number...") in the step instructions. The system handles PII securely.
@@ -148,7 +152,7 @@ Available Tools:
       }
     ],
     "tool_choice": "auto" | "required" | "none",
-    "depends_on": [number]
+    "depends_on": [number] // 0-based indices
   }
 }
 \`\`\`
@@ -200,8 +204,15 @@ export class WorkflowStepAIService {
         const tools = step.tools && step.tools.length > 0 
           ? ` [Tools: ${step.tools.map(t => typeof t === 'string' ? t : t.type).join(', ')}]`
           : '';
+        const dependsOn = Array.isArray(step.depends_on)
+          ? ` [depends_on: ${step.depends_on.length > 0 ? step.depends_on.join(', ') : '[]'}]`
+          : ' [depends_on: []]';
+        const orderSuffix =
+          typeof step.step_order === "number" && step.step_order !== index
+            ? ` [order: ${step.step_order}]`
+            : '';
         contextParts.push(
-          `${index + 1}. ${step.step_name} (${step.model})${tools}${
+          `Index ${index} (Step ${index + 1}): ${step.step_name} (${step.model})${tools}${dependsOn}${orderSuffix}${
             step.step_description ? ` - ${step.step_description}` : ''
           }`
         );
@@ -213,7 +224,8 @@ export class WorkflowStepAIService {
       contextParts.push(`Editing Step ${currentStepIndex + 1}:`);
       contextParts.push(JSON.stringify(currentStep, null, 2));
       contextParts.push('');
-      contextParts.push('IMPORTANT: If you are not changing the dependencies (depends_on field), you MUST return the existing depends_on array unchanged.');
+      contextParts.push('IMPORTANT: depends_on uses 0-based indices matching the "Current Steps" list.');
+      contextParts.push('If you are not changing dependencies, return the existing depends_on array unchanged.');
     }
 
     const contextMessage = contextParts.join('\n');
@@ -382,17 +394,44 @@ Please generate the workflow step configuration.`;
         parsedResponse.step_index = currentStepIndex;
       }
 
+      const normalizeDependsOn = (
+        deps: any,
+        maxIndex: number,
+        selfIndex?: number,
+      ): number[] | null => {
+        if (deps === undefined || deps === null) return null;
+        if (!Array.isArray(deps)) return null;
+        const filtered = deps.filter(
+          (dep) =>
+            Number.isInteger(dep) &&
+            dep >= 0 &&
+            dep < maxIndex &&
+            dep !== selfIndex,
+        );
+        return Array.from(new Set(filtered));
+      };
+
+      const maxDependencyIndex = workflowContext.current_steps.length;
+      const normalizedDependsOn = normalizeDependsOn(
+        parsedResponse.step.depends_on,
+        maxDependencyIndex,
+        parsedResponse.action === 'update' ? currentStepIndex : undefined,
+      );
+
+      if (normalizedDependsOn !== null) {
+        parsedResponse.step.depends_on = normalizedDependsOn;
+      }
+
       // CRITICAL: Preserve existing dependencies if AI didn't return them
       // This ensures we don't accidentally delete dependency relationships
       if (parsedResponse.action === 'update' && currentStep) {
-        // If AI didn't provide depends_on, preserve the original
-        if (parsedResponse.step.depends_on === undefined || parsedResponse.step.depends_on === null) {
+        if (normalizedDependsOn === null) {
           parsedResponse.step.depends_on = currentStep.depends_on || [];
           console.log('[WorkflowStepAI] Preserved existing dependencies', {
             depends_on: parsedResponse.step.depends_on,
           });
         }
-        
+
         // Also preserve step_order if not provided
         if (parsedResponse.step.step_order === undefined) {
           parsedResponse.step.step_order = currentStep.step_order;

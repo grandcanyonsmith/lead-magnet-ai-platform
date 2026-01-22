@@ -13,6 +13,7 @@ interface AIAssistProps {
   useWorkflowStepAI: any; // Using the hook return type would be better if exported
   onAccept: (proposed: WorkflowStep) => void;
   collapsible?: boolean;
+  allSteps?: WorkflowStep[];
 }
 
 export default function AIAssist({
@@ -22,6 +23,7 @@ export default function AIAssist({
   useWorkflowStepAI,
   onAccept,
   collapsible = true,
+  allSteps,
 }: AIAssistProps) {
   const [isOpen, setIsOpen] = useState(!collapsible);
   const [aiPrompt, setAiPrompt] = useState("");
@@ -125,6 +127,7 @@ export default function AIAssist({
               onAccept={handleAcceptProposal}
               onReject={handleRejectProposal}
               isLoading={false}
+              allSteps={allSteps}
             />
           </div>
         )}

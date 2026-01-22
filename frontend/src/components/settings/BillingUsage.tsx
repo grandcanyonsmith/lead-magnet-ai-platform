@@ -24,7 +24,10 @@ import { BillingClient, SubscriptionInfo } from "@/lib/api/billing.client";
 import { authService } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
+import { AlertBanner } from "@/components/ui/AlertBanner";
+import { CardHeaderIntro } from "@/components/ui/CardHeaderIntro";
+import { SectionLabel } from "@/components/ui/SectionLabel";
 import { Button } from "@/components/ui/Button";
 
 export function BillingUsage() {
@@ -153,36 +156,31 @@ export function BillingUsage() {
     <div className="space-y-6">
       {/* Subscription Section */}
       <Card>
-        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30 flex flex-row items-center justify-between gap-4 p-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <CreditCardIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">Billing & Subscription</CardTitle>
-              <CardDescription>
-                Manage your subscription plan and payment methods.
-              </CardDescription>
-            </div>
-          </div>
-
-          {subscription?.has_subscription && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleManageSubscription}
-              disabled={portalLoading}
-              isLoading={portalLoading}
-            >
-              {!portalLoading && (
-                <>
-                  Manage Billing
-                  <ArrowTopRightOnSquareIcon className="w-4 h-4 ml-2 text-gray-400" />
-                </>
-              )}
-            </Button>
-          )}
-        </CardHeader>
+        <CardHeaderIntro
+          className="p-6"
+          icon={<CreditCardIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
+          iconWrapperClassName="bg-blue-50 dark:bg-blue-900/20"
+          title="Billing & Subscription"
+          description="Manage your subscription plan and payment methods."
+          actions={
+            subscription?.has_subscription ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManageSubscription}
+                disabled={portalLoading}
+                isLoading={portalLoading}
+              >
+                {!portalLoading && (
+                  <>
+                    Manage Billing
+                    <ArrowTopRightOnSquareIcon className="w-4 h-4 ml-2 text-gray-400" />
+                  </>
+                )}
+              </Button>
+            ) : null
+          }
+        />
 
         <CardContent className="p-6">
           {subscriptionLoading ? (
@@ -191,17 +189,16 @@ export function BillingUsage() {
               <div className="h-20 bg-gray-50 dark:bg-secondary/50 rounded-lg"></div>
             </div>
           ) : subscriptionError ? (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
-              <ExclamationCircleIcon className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5" />
-              <p className="text-sm text-red-800 dark:text-red-300">{subscriptionError}</p>
-            </div>
+            <AlertBanner
+              variant="error"
+              icon={<ExclamationCircleIcon className="w-5 h-5" />}
+              description={subscriptionError}
+            />
           ) : subscription ? (
             <div className="bg-gradient-to-br from-gray-50 dark:from-secondary/30 to-white dark:to-card border border-gray-200 dark:border-border rounded-xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-muted-foreground uppercase tracking-wider mb-1">
-                    Status
-                  </p>
+                  <SectionLabel className="text-sm mb-1">Status</SectionLabel>
                   <div className="flex items-center gap-2">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getSubscriptionStatusColor(subscription.status)}`}
@@ -212,9 +209,7 @@ export function BillingUsage() {
                 </div>
                 {subscription.current_period_end && (
                   <div className="text-right">
-                    <p className="text-sm font-medium text-gray-500 dark:text-muted-foreground uppercase tracking-wider mb-1">
-                      Renews
-                    </p>
+                    <SectionLabel className="text-sm mb-1">Renews</SectionLabel>
                     <p className="text-sm font-medium text-gray-900 dark:text-foreground">
                       {new Date(
                         subscription.current_period_end * 1000,
@@ -229,26 +224,20 @@ export function BillingUsage() {
               </div>
 
               {!subscription.has_subscription && (
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
-                  <div className="flex items-start">
-                    <ExclamationCircleIcon className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 mr-3 flex-shrink-0" />
-                    <div>
-                      <h4 className="text-sm font-medium text-amber-900 dark:text-amber-300">
-                        No active subscription
-                      </h4>
-                      <p className="text-sm text-amber-800 dark:text-amber-300/80 mt-1 mb-3">
-                        Subscribe now to unlock full access to Lead Magnet AI
-                        features.
-                      </p>
-                      <Button
-                        onClick={() => router.push("/setup-billing")}
-                        className="bg-amber-600 hover:bg-amber-700 text-white border-none"
-                      >
-                        Start Subscription
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                <AlertBanner
+                  variant="warning"
+                  icon={<ExclamationCircleIcon className="w-5 h-5" />}
+                  title="No active subscription"
+                  description="Subscribe now to unlock full access to Lead Magnet AI features."
+                  actions={
+                    <Button
+                      onClick={() => router.push("/setup-billing")}
+                      className="bg-amber-600 hover:bg-amber-700 text-white border-none"
+                    >
+                      Start Subscription
+                    </Button>
+                  }
+                />
               )}
 
               {subscription.has_subscription && subscription.usage && (
@@ -297,20 +286,13 @@ export function BillingUsage() {
 
       {/* Usage Analytics Section */}
       <Card>
-        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30 p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                <ChartBarIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Usage Analytics</CardTitle>
-                <CardDescription>
-                  Track API consumption and costs over time.
-                </CardDescription>
-              </div>
-            </div>
-
+        <CardHeaderIntro
+          className="p-6"
+          icon={<ChartBarIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />}
+          iconWrapperClassName="bg-purple-50 dark:bg-purple-900/20"
+          title="Usage Analytics"
+          description="Track API consumption and costs over time."
+          actions={
             <div className="flex items-center gap-2">
               <DateRangePicker
                 startDate={startDate}
@@ -326,8 +308,8 @@ export function BillingUsage() {
                 />
               )}
             </div>
-          </div>
-        </CardHeader>
+          }
+        />
 
         <CardContent className="p-6">
           {loading ? (
@@ -403,11 +385,7 @@ export function BillingUsage() {
               {usage.openai?.by_service &&
                 Object.keys(usage.openai.by_service).length > 0 && (
                   <Card className="border-gray-200 shadow-none">
-                    <CardHeader className="px-6 py-4">
-                      <h4 className="text-base font-semibold text-gray-900">
-                        Usage Breakdown
-                      </h4>
-                    </CardHeader>
+                    <CardHeaderIntro className="px-6 py-4" title="Usage Breakdown" />
                     <CardContent className="px-6 pb-6 pt-0">
                       <UsageCharts usage={usage} />
                     </CardContent>

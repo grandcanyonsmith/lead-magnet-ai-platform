@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { authService } from "@/lib/auth";
 import { FiArrowRight, FiArrowLeft, FiCheck } from "react-icons/fi";
+import { Select } from "@/components/ui/Select";
 
 const industries = [
   "Technology",
@@ -160,40 +161,40 @@ export default function OnboardingSurveyPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Industry <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 value={formData.industry}
-                onChange={(e) =>
-                  setFormData({ ...formData, industry: e.target.value })
+                onChange={(nextValue) =>
+                  setFormData({ ...formData, industry: nextValue })
                 }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Select your industry"
               >
-                <option value="">Select your industry</option>
                 {industries.map((industry) => (
                   <option key={industry} value={industry}>
                     {industry}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Company Size <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 value={formData.companySize}
-                onChange={(e) =>
-                  setFormData({ ...formData, companySize: e.target.value })
+                onChange={(nextValue) =>
+                  setFormData({ ...formData, companySize: nextValue })
                 }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Select company size"
               >
-                <option value="">Select company size</option>
                 {companySizes.map((size) => (
                   <option key={size} value={size}>
                     {size} employees
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
         );

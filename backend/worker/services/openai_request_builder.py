@@ -187,7 +187,7 @@ class OpenAIRequestBuilder:
 
         # Deep research model requirement:
         # Deep research models require at least one of 'web_search_preview', 'mcp', or 'file_search' tools.
-        # If none are present, add 'file_search' defensively so the API call is accepted.
+        # If none are present, add 'web_search_preview' defensively so the API call is accepted.
         if isinstance(model, str) and "deep-research" in model.lower():
             required_tool_types = {"web_search_preview", "mcp", "file_search"}
             has_required_tool = False
@@ -205,11 +205,11 @@ class OpenAIRequestBuilder:
             if not has_required_tool:
                 logger.info(
                     "[OpenAI Request Builder] Deep research model requires at least one of "
-                    "web_search_preview, mcp, or file_search. Adding file_search as default.",
+                    "web_search_preview, mcp, or file_search. Adding web_search_preview as default.",
                     extra={"model": model},
                 )
                 tools = list(tools)
-                tools.append({"type": "file_search"})
+                tools.append({"type": "web_search_preview"})
         
         if tools and len(tools) > 0:
             # Filter out incompatible tools when computer_use_preview is present

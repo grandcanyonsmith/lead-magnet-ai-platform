@@ -10,6 +10,7 @@ interface StepDiffPreviewProps {
   onAccept: () => void;
   onReject: () => void;
   isLoading?: boolean;
+  allSteps?: WorkflowStep[];
 }
 
 export default function StepDiffPreview({
@@ -19,7 +20,19 @@ export default function StepDiffPreview({
   onAccept,
   onReject,
   isLoading = false,
+  allSteps,
 }: StepDiffPreviewProps) {
+  const formatDependsOn = (dependsOn: number[] | undefined) => {
+    if (!Array.isArray(dependsOn) || dependsOn.length === 0) return "(none)";
+    return dependsOn
+      .map((dep) => {
+        const step = allSteps?.[dep];
+        const name = step?.step_name ? `: ${step.step_name}` : "";
+        return `Step ${dep + 1}${name}`;
+      })
+      .join(", ");
+  };
+
   const getFieldDiffs = (): Array<{
     field: string;
     label: string;
@@ -59,6 +72,12 @@ export default function StepDiffPreview({
           label: "Tool Choice",
           from: null,
           to: proposed.tool_choice,
+        },
+        {
+          field: "depends_on",
+          label: "Dependencies",
+          from: null,
+          to: proposed.depends_on,
         },
       ].filter((diff) => diff.to);
     }
@@ -137,8 +156,11 @@ export default function StepDiffPreview({
     return diffs;
   };
 
-  const renderValue = (value: any): string => {
+  const renderValue = (value: any, field?: string): string => {
     if (value === null || value === undefined) return "(not set)";
+    if (field === "depends_on") {
+      return formatDependsOn(Array.isArray(value) ? value : undefined);
+    }
     if (Array.isArray(value)) {
       if (value.length === 0) return "(none)";
       return value
@@ -196,7 +218,7 @@ export default function StepDiffPreview({
                     Before:
                   </span>
                   <span className="text-red-700 bg-red-50 px-2 py-1 rounded flex-1 break-words">
-                    {renderValue(diff.from)}
+                    {renderValue(diff.from, diff.field)}
                   </span>
                 </div>
               )}
@@ -206,7 +228,7 @@ export default function StepDiffPreview({
                   {action === "add" ? "Value:" : "After:"}
                 </span>
                 <span className="text-green-700 bg-green-50 px-2 py-1 rounded flex-1 break-words">
-                  {renderValue(diff.to)}
+                  {renderValue(diff.to, diff.field)}
                 </span>
               </div>
             </div>

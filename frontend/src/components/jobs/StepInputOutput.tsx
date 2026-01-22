@@ -13,15 +13,12 @@ import {
   FiEdit,
   FiCpu,
 } from "react-icons/fi";
-import {
-  formatLiveOutputText,
-  formatStepInput,
-  formatStepOutput,
-} from "@/utils/jobFormatting";
+import { formatStepInput, formatStepOutput } from "@/utils/jobFormatting";
 import { StepContent } from "./StepContent";
 import { MergedStep, StepStatus } from "@/types/job";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { Artifact } from "@/types/artifact";
+import { LiveOutputRenderer } from "./LiveOutputRenderer";
 
 interface StepInputOutputProps {
   step: MergedStep;
@@ -189,7 +186,6 @@ export function StepInputOutput({
   const isInProgress = status === "in_progress";
   const liveOutputText = typeof liveOutput === "string" ? liveOutput : "";
   const hasLiveOutput = liveOutputText.length > 0;
-  const formattedLiveOutput = formatLiveOutputText(liveOutputText);
   const shouldShowLiveOutput =
     isInProgress &&
     !hasImageGeneration(step, imageArtifacts) &&
@@ -567,13 +563,15 @@ export function StepInputOutput({
                             </span>
                           )}
                         </div>
-                        <pre
-                          className={`text-sm md:text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono ${liveOutputHeightClass} overflow-y-auto scrollbar-hide-until-hover leading-relaxed`}
-                        >
-                          {hasLiveOutput
-                            ? formattedLiveOutput
-                            : "Waiting for model output..."}
-                        </pre>
+                        <LiveOutputRenderer
+                          value={
+                            hasLiveOutput
+                              ? liveOutputText
+                              : "Waiting for model output..."
+                          }
+                          className={`text-sm md:text-xs text-gray-800 dark:text-gray-200 font-mono ${liveOutputHeightClass} overflow-y-auto scrollbar-hide-until-hover leading-relaxed`}
+                          textClassName="m-0 whitespace-pre-wrap break-words"
+                        />
                       </div>
                     )}
                     {!shouldShowLiveOutput &&

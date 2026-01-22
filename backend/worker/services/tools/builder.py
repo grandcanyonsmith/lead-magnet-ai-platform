@@ -71,6 +71,26 @@ class ToolBuilder:
                 if cleaned_tool.get("type") == "web_search_preview":
                     cleaned_tool = {"type": "web_search_preview"}
 
+                # Require vector_store_ids for file_search tools
+                if cleaned_tool.get("type") == "file_search":
+                    vector_store_ids = cleaned_tool.get("vector_store_ids")
+                    if isinstance(vector_store_ids, str):
+                        vector_store_ids = [vector_store_ids]
+                    if isinstance(vector_store_ids, list):
+                        normalized_ids = [
+                            item.strip()
+                            for item in vector_store_ids
+                            if isinstance(item, str) and item.strip()
+                        ]
+                    else:
+                        normalized_ids = []
+                    if not normalized_ids:
+                        logger.warning(
+                            f"Skipping file_search tool - vector_store_ids not provided or empty (tool[{idx}])"
+                        )
+                        continue
+                    cleaned_tool["vector_store_ids"] = normalized_ids
+
                 # OpenAI rejects `container` on `computer_use_preview` (unknown_parameter).
                 if cleaned_tool.get("type") == "computer_use_preview" and "container" in cleaned_tool:
                     logger.info(

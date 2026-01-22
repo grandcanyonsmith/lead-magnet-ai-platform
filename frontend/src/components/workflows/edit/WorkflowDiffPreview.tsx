@@ -29,6 +29,17 @@ export function WorkflowDiffPreview({
   rejectLabel = "Reject",
   actionsDisabled = false,
 }: WorkflowDiffPreviewProps) {
+  const formatDependsOn = (dependsOn: number[] | undefined, steps: any[]) => {
+    if (!Array.isArray(dependsOn) || dependsOn.length === 0) return "none";
+    return dependsOn
+      .map((dep) => {
+        const step = steps?.[dep];
+        const name = step?.step_name ? `: ${step.step_name}` : "";
+        return `Step ${dep + 1}${name}`;
+      })
+      .join(", ");
+  };
+
   const isActionDisabled = isApplying || actionsDisabled;
   const hasNameChange =
     proposal.workflow_name &&
@@ -44,7 +55,9 @@ export function WorkflowDiffPreview({
       (currentStep.step_name !== proposedStep.step_name ||
         currentStep.step_description !== proposedStep.step_description ||
         currentStep.model !== proposedStep.model ||
-        currentStep.instructions !== proposedStep.instructions);
+        currentStep.instructions !== proposedStep.instructions ||
+        JSON.stringify(currentStep.depends_on) !==
+          JSON.stringify(proposedStep.depends_on));
 
     return {
       proposedStep,
@@ -186,15 +199,13 @@ export function WorkflowDiffPreview({
                                 .join(", ")}
                             </span>
                           )}
-                        {step.proposedStep.depends_on &&
-                          step.proposedStep.depends_on.length > 0 && (
-                            <span className="max-w-full break-words rounded border border-border bg-background/80 px-2 py-1">
-                              Depends on:{" "}
-                              {step.proposedStep.depends_on
-                                .map((d: number) => d + 1)
-                                .join(", ")}
-                            </span>
+                        <span className="max-w-full break-words rounded border border-border bg-background/80 px-2 py-1">
+                          Depends on:{" "}
+                          {formatDependsOn(
+                            step.proposedStep.depends_on,
+                            proposal.steps,
                           )}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -256,15 +267,13 @@ export function WorkflowDiffPreview({
                                   .join(", ")}
                               </span>
                             )}
-                          {step.proposedStep.depends_on &&
-                            step.proposedStep.depends_on.length > 0 && (
-                              <span className="max-w-full break-words rounded border border-border bg-background/80 px-2 py-1">
-                                Depends on:{" "}
-                                {step.proposedStep.depends_on
-                                  .map((d: number) => d + 1)
-                                  .join(", ")}
-                              </span>
+                          <span className="max-w-full break-words rounded border border-border bg-background/80 px-2 py-1">
+                            Depends on:{" "}
+                            {formatDependsOn(
+                              step.proposedStep.depends_on,
+                              proposal.steps,
                             )}
+                          </span>
                         </div>
                       </div>
                     </div>

@@ -3,7 +3,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { Menu, Search, LogOut, Settings } from "lucide-react";
-import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Avatar } from "@/components/ui/Avatar";
 import {
   DropdownMenu,
@@ -68,12 +67,6 @@ export function DashboardTopBar({
               </svg>
             </div>
 
-            <div className="flex min-w-0 flex-1">
-              <Breadcrumbs
-                className="ml-2 min-w-0 flex-1"
-                listClassName="min-w-0"
-              />
-            </div>
           </div>
 
           <div className="flex items-center gap-2">

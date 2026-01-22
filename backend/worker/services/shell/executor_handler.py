@@ -31,8 +31,8 @@ UPLOAD_PREFIX = (os.environ.get("SHELL_EXECUTOR_UPLOAD_PREFIX") or "").strip()
 UPLOAD_PREFIX_TEMPLATE = (os.environ.get("SHELL_EXECUTOR_UPLOAD_PREFIX_TEMPLATE") or "").strip()
 UPLOAD_MANIFEST_NAME = (os.environ.get("SHELL_EXECUTOR_MANIFEST_NAME") or "shell_executor_manifest.json").strip()
 UPLOAD_MANIFEST_PATH = (os.environ.get("SHELL_EXECUTOR_MANIFEST_PATH") or "").strip()
-UPLOAD_DIST_SUBDIR = (os.environ.get("SHELL_EXECUTOR_UPLOAD_DIST_SUBDIR") or "work/dist").strip()
-UPLOAD_BUILD_SUBDIR = (os.environ.get("SHELL_EXECUTOR_UPLOAD_BUILD_SUBDIR") or "work/build").strip()
+UPLOAD_DIST_SUBDIR = (os.environ.get("SHELL_EXECUTOR_UPLOAD_DIST_SUBDIR") or "dist").strip()
+UPLOAD_BUILD_SUBDIR = (os.environ.get("SHELL_EXECUTOR_UPLOAD_BUILD_SUBDIR") or "build").strip()
 UPLOAD_ACL = (os.environ.get("SHELL_EXECUTOR_UPLOAD_ACL") or "").strip()
 
 def truncate(text: Optional[str], max_len: int) -> str:
@@ -204,6 +204,32 @@ def _collect_files_under(base_dir: str, rel_base: str) -> List[Tuple[str, str]]:
             collected.append((abs_path, rel_path))
     return collected
 
+def _normalize_upload_base(base: str, work_root: str) -> str:
+    """
+    Normalize upload base paths so "work/..." and "/work/..." map to work_root.
+    """
+    cleaned = (base or "").strip()
+    if not cleaned:
+        return work_root
+
+    if cleaned in ("/work", "work"):
+        cleaned = ""
+    elif cleaned.startswith("/work/"):
+        cleaned = cleaned[len("/work/"):]
+    elif cleaned.startswith("work/"):
+        cleaned = cleaned[len("work/"):]
+
+    if not cleaned:
+        return work_root
+
+    if not os.path.isabs(cleaned):
+        return os.path.join(work_root, cleaned.lstrip("/"))
+
+    if cleaned.startswith("/work/") and work_root.rstrip("/") != "/work":
+        return os.path.join(work_root, cleaned[len("/work/"):])
+
+    return cleaned
+
 def _collect_upload_entries(mode: str, work_root: str, workspace_path: str) -> Tuple[List[Tuple[str, str]], Optional[str], Optional[str]]:
     mode = (mode or "").strip().lower()
     if not mode:
@@ -235,14 +261,12 @@ def _collect_upload_entries(mode: str, work_root: str, workspace_path: str) -> T
 
     if mode in ("dist", "build", "all"):
         if mode == "dist":
-            base = UPLOAD_DIST_SUBDIR
+            base = _normalize_upload_base(UPLOAD_DIST_SUBDIR, work_root)
         elif mode == "build":
-            base = UPLOAD_BUILD_SUBDIR
+            base = _normalize_upload_base(UPLOAD_BUILD_SUBDIR, work_root)
         else:
             base = work_root
 
-        if not os.path.isabs(base):
-            base = os.path.join(work_root, base.lstrip("/"))
         if not os.path.exists(base):
             logger.warning("Upload base directory not found", extra={"base": base, "mode": mode})
             return [], None, None

@@ -111,13 +111,13 @@ class ToolValidator:
         required_tool_types = {'web_search_preview', 'mcp', 'file_search'}
         
         if not tools:
-            # If no tools provided and it's a deep research model, add file_search
+            # If no tools provided and it's a deep research model, add web_search_preview
             if is_deep_research_model:
                 logger.info(
                     f"[ToolValidator] Deep research model '{model}' requires at least one of "
-                    "web_search_preview, mcp, or file_search. Adding file_search as default."
+                    "web_search_preview, mcp, or file_search. Adding web_search_preview as default."
                 )
-                return [{"type": "file_search"}], tool_choice
+                return [{"type": "web_search_preview"}], tool_choice
             return [], "none"
         
         validated_tools = []
@@ -139,6 +139,26 @@ class ToolValidator:
                     extra={"model": model, "tool_choice": tool_choice},
                 )
                 continue
+            
+            if tool_type == "file_search":
+                vector_store_ids = tool_dict.get("vector_store_ids")
+                if isinstance(vector_store_ids, str):
+                    vector_store_ids = [vector_store_ids]
+                if isinstance(vector_store_ids, list):
+                    normalized_ids = [
+                        item.strip()
+                        for item in vector_store_ids
+                        if isinstance(item, str) and item.strip()
+                    ]
+                else:
+                    normalized_ids = []
+                if not normalized_ids:
+                    logger.warning(
+                        "[ToolValidator] Skipping file_search tool - vector_store_ids not provided or empty",
+                        extra={"model": model, "tool_choice": tool_choice},
+                    )
+                    continue
+                tool_dict["vector_store_ids"] = normalized_ids
 
             # Track if container was added during validation
             tool_type_before = tool_type
@@ -175,10 +195,10 @@ class ToolValidator:
             if not has_required_tool:
                 logger.warning(
                     f"[ToolValidator] Deep research model '{model}' requires at least one of "
-                    "web_search_preview, mcp, or file_search. Adding file_search.",
+                    "web_search_preview, mcp, or file_search. Adding web_search_preview.",
                     extra={'model': model, 'validated_tools': [t.get('type') for t in validated_tools]}
                 )
-                validated_tools.append({"type": "file_search"})
+                validated_tools.append({"type": "web_search_preview"})
         
         if not validated_tools:
             normalized_tool_choice = "none"

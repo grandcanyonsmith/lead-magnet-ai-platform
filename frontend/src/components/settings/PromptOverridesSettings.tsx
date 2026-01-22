@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
+import { AlertBanner } from "@/components/ui/AlertBanner";
+import { CardHeaderIntro } from "@/components/ui/CardHeaderIntro";
 import { Button } from "@/components/ui/Button";
 import { PromptOverrideCard } from "@/components/settings/PromptOverrideCard";
 import { PromptOverridesJsonEditor } from "@/components/settings/PromptOverridesJsonEditor";
@@ -94,13 +96,11 @@ export function PromptOverridesSettings({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30 p-4 sm:p-6">
-          <CardTitle className="text-lg">Prompt Overrides</CardTitle>
-          <CardDescription>
-            Review default prompts, create overrides, and manage enable/disable states
-            for each prompt key.
-          </CardDescription>
-        </CardHeader>
+        <CardHeaderIntro
+          className="p-4 sm:p-6"
+          title="Prompt Overrides"
+          description="Review default prompts, create overrides, and manage enable/disable states for each prompt key."
+        />
         <CardContent className="p-4 sm:p-6 space-y-3">
           <div className="rounded-lg border border-gray-100 dark:border-border bg-white dark:bg-background px-3 sm:px-4 py-3">
             <p className="text-sm text-muted-foreground">
@@ -110,34 +110,35 @@ export function PromptOverridesSettings({
             </p>
           </div>
           {defaultsError && (
-            <div className="rounded-lg border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-900/20 px-3 sm:px-4 py-3 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-amber-700 dark:text-amber-200 break-words">
-                Unable to load default prompt templates. Check the API response.
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => refetchDefaults()}
-                className="w-full sm:w-auto"
-              >
-                Retry
-              </Button>
-            </div>
+            <AlertBanner
+              variant="warning"
+              description="Unable to load default prompt templates. Check the API response."
+              descriptionClassName="text-xs"
+              actions={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetchDefaults()}
+                  className="w-full sm:w-auto"
+                >
+                  Retry
+                </Button>
+              }
+            />
           )}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30 p-4 sm:p-6">
-          <CardTitle className="text-lg">Prompt Keys</CardTitle>
-          <CardDescription>
-            Each prompt shows the default template and any override currently saved.
-          </CardDescription>
-        </CardHeader>
+        <CardHeaderIntro
+          className="p-4 sm:p-6"
+          title="Prompt Keys"
+          description="Each prompt shows the default template and any override currently saved."
+        />
         <CardContent className="p-4 sm:p-6 space-y-4">
           {parsed.error && (
-            <div className="rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-900/20 px-3 sm:px-4 py-3">
+            <AlertBanner variant="error">
               <p className="text-sm text-red-700 dark:text-red-200 break-words">
                 {parsed.error}
               </p>
@@ -146,7 +147,7 @@ export function PromptOverridesSettings({
                   Previewing the last saved overrides until the JSON is fixed.
                 </p>
               )}
-            </div>
+            </AlertBanner>
           )}
 
           <div className="space-y-4">

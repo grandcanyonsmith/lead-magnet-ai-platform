@@ -1,4 +1,5 @@
 import React from "react";
+import { Select } from "@/components/ui/Select";
 import { FiCopy, FiPlus, FiTrash2 } from "react-icons/fi";
 import { JsonViewer } from "@/components/ui/JsonViewer";
 import toast from "react-hot-toast";
@@ -99,12 +100,13 @@ export function WebhookTestPanel({
             </div>
           ) : (
             <>
-              <select
+              <Select
                 value={selectedRunId}
-                onChange={(e) => {
-                  setSelectedRunId(e.target.value);
+                onChange={(nextValue) => {
+                  setSelectedRunId(nextValue);
                 }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
+                placeholder="No run selected"
               >
                 <option value="">No run selected</option>
                 {(availableRuns || []).map((job: any) => {
@@ -120,7 +122,7 @@ export function WebhookTestPanel({
                     </option>
                   );
                 })}
-              </select>
+              </Select>
 
               {selectedRunId && (
                 <div className="mt-2">

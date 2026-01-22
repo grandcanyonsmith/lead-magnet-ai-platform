@@ -1,10 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { FiX, FiSave, FiLoader, FiZap } from "react-icons/fi";
 import { api } from "@/lib/api";
 import { toast } from "react-hot-toast";
 import { JsonViewer } from "@/components/ui/JsonViewer";
+import { AlertBanner } from "@/components/ui/AlertBanner";
+import { PanelHeader } from "@/components/ui/PanelHeader";
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  Transition,
+  TransitionChild,
+} from "@headlessui/react";
 
 interface QuickEditStepModalProps {
   isOpen: boolean;
@@ -99,37 +108,49 @@ export function QuickEditStepModal({
     return JSON.stringify(output, null, 2);
   };
 
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-          onClick={handleClose}
-        />
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-50" onClose={handleClose}>
+        <TransitionChild
+          as={Fragment}
+          enter="ease-out duration-200"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-150"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-black/50 transition-opacity" />
+        </TransitionChild>
 
-        {/* Modal */}
-        <div className="relative z-50 w-full max-w-4xl bg-white dark:bg-card rounded-lg shadow-xl max-h-[90vh] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <FiZap className="w-5 h-5 text-purple-600" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Quick Edit Step
-              </h3>
-            </div>
-            <button
-              onClick={handleClose}
-              disabled={generating || saving}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors disabled:opacity-50"
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <TransitionChild
+              as={Fragment}
+              enter="ease-out duration-200"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-150"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
             >
-              <FiX className="w-5 h-5" />
-            </button>
-          </div>
+              <DialogPanel className="relative z-50 w-full max-w-4xl bg-white dark:bg-card rounded-lg shadow-xl max-h-[90vh] flex flex-col">
+                {/* Header */}
+                <PanelHeader className="px-6 py-4 border-gray-200 dark:border-gray-700 bg-white dark:bg-card flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <FiZap className="w-5 h-5 text-purple-600" />
+                    <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Quick Edit Step
+                    </DialogTitle>
+                  </div>
+                  <button
+                    onClick={handleClose}
+                    disabled={generating || saving}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors disabled:opacity-50"
+                  >
+                    <FiX className="w-5 h-5" />
+                  </button>
+                </PanelHeader>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -183,12 +204,11 @@ export function QuickEditStepModal({
             {proposedChanges && (
               <div className="space-y-4">
                 {/* Changes Summary */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/40 rounded-lg p-4">
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    <span className="font-medium">Summary:</span>{" "}
-                    {proposedChanges.changes_summary}
-                  </p>
-                </div>
+                <AlertBanner
+                  variant="info"
+                  title="Summary"
+                  description={proposedChanges.changes_summary}
+                />
 
                 {/* Before/After Comparison */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -273,8 +293,11 @@ export function QuickEditStepModal({
               </div>
             )}
           </div>
+              </DialogPanel>
+            </TransitionChild>
+          </div>
         </div>
-      </div>
-    </div>
+      </Dialog>
+    </Transition>
   );
 }

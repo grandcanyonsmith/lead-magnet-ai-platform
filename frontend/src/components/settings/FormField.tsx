@@ -74,7 +74,7 @@ export function FormField({
           id={inputId}
           name={name}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(nextValue) => onChange(nextValue)}
           required={required}
           disabled={disabled}
           className={cn(className, error && "border-red-500 focus-visible:ring-red-500")}

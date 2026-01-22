@@ -33,9 +33,6 @@ type JobTrackingTabProps = ComponentProps<
 type JobTechnicalTabProps = ComponentProps<
   typeof import("@/components/jobs/detail/JobTechnicalTab").JobTechnicalTab
 >;
-type JobDebugTabProps = ComponentProps<
-  typeof import("@/components/jobs/detail/JobDebugTab").JobDebugTab
->;
 type JobEditTabProps = ComponentProps<
   typeof import("@/components/jobs/detail/JobEditTab").JobEditTab
 >;
@@ -70,14 +67,6 @@ const JobTechnicalTab = dynamic<JobTechnicalTabProps>(
       (mod) => mod.JobTechnicalTab,
     ),
   { loading: () => <TabFallback label="technical details" /> },
-);
-
-const JobDebugTab = dynamic<JobDebugTabProps>(
-  () =>
-    import("@/components/jobs/detail/JobDebugTab").then(
-      (mod) => mod.JobDebugTab,
-    ),
-  { loading: () => <TabFallback label="debug payload" /> },
 );
 
 const JobEditTab = dynamic<JobEditTabProps>(
@@ -125,13 +114,7 @@ const TAB_CONFIG = [
   {
     id: "technical",
     label: "Technical",
-    description: "IDs, inputs, artifacts",
-    group: "advanced" as TabGroupId,
-  },
-  {
-    id: "raw",
-    label: "Debug",
-    description: "Raw execution payload",
+    description: "IDs, inputs, artifacts, raw JSON",
     group: "advanced" as TabGroupId,
   },
 ] as const;
@@ -142,6 +125,8 @@ const DEFAULT_TAB: JobTabId = "overview";
 
 const LEGACY_TAB_ALIASES: Record<string, JobTabId> = {
   summary: "overview",
+  raw: "technical",
+  debug: "technical",
 };
 
 const isJobTabId = (value: string | null): value is JobTabId =>
@@ -330,7 +315,6 @@ export function JobTabs({
         {activeTab === "technical" && (
           <JobTechnicalTab job={job} form={form} submission={submission} />
         )}
-        {activeTab === "raw" && <JobDebugTab data={job} />}
       </div>
     </section>
   );

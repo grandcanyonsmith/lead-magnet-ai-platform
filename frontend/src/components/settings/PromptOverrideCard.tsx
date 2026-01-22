@@ -1,8 +1,11 @@
+"use client";
+
 import type { Dispatch, SetStateAction } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { FormField } from "@/components/settings/FormField";
+import { Switch } from "@/components/ui/Switch";
 import { cn } from "@/lib/utils";
 import type { PromptDefault, PromptOverride } from "@/types/settings";
 import {
@@ -190,16 +193,14 @@ export function PromptOverrideCard({
         <div className="rounded-lg border border-gray-200 dark:border-border bg-white/70 dark:bg-background/40 p-3 sm:p-4 space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-sm font-medium">
-              <input
+              <Switch
                 id={`toggle-${item.key}`}
-                type="checkbox"
                 checked={draft.enabled}
-                onChange={(event) =>
+                onChange={(checked) =>
                   setDraft((prev) =>
-                    prev ? { ...prev, enabled: event.target.checked } : prev,
+                    prev ? { ...prev, enabled: checked } : prev,
                   )
                 }
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
               <label htmlFor={`toggle-${item.key}`}>Override enabled</label>
             </div>

@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { AlertBanner } from "@/components/ui/AlertBanner";
+import { PanelHeader } from "@/components/ui/PanelHeader";
 import { WorkflowVersionSummary } from "@/types";
 
 interface WorkflowVersionModalProps {
@@ -98,7 +100,7 @@ export function WorkflowVersionModal({
           onClick={onClose}
         />
         <div className="relative z-50 w-full max-w-2xl rounded-xl bg-white dark:bg-card shadow-xl border border-gray-200 dark:border-border">
-          <div className="flex items-center justify-between border-b border-gray-200 dark:border-border px-6 py-4">
+          <PanelHeader className="px-6 py-4 border-gray-200 dark:border-border bg-white dark:bg-card">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-foreground">
                 Version History
@@ -110,7 +112,7 @@ export function WorkflowVersionModal({
             <Button variant="ghost" size="sm" onClick={onClose}>
               Close
             </Button>
-          </div>
+          </PanelHeader>
 
           <div className="p-6 space-y-4">
             {loading && (
@@ -119,9 +121,7 @@ export function WorkflowVersionModal({
               </div>
             )}
             {error && (
-              <div className="rounded-md border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-700 dark:text-red-200">
-                {error}
-              </div>
+              <AlertBanner variant="error" className="p-3" description={error} />
             )}
 
             {!loading && !error && versions.length === 0 && (

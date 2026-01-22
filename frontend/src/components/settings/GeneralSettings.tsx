@@ -15,7 +15,8 @@ import {
   DEFAULT_WORKFLOW_IMPROVEMENT_SERVICE_TIER,
 } from "@/constants/settingsDefaults";
 import { FormField } from "./FormField";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
+import { CardHeaderIntro } from "@/components/ui/CardHeaderIntro";
 import { BuildingOfficeIcon } from "@heroicons/react/24/outline";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -141,19 +142,12 @@ export function GeneralSettings({
 
   return (
     <Card>
-      <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <BuildingOfficeIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          </div>
-          <CardTitle className="text-lg">
-            General Information
-          </CardTitle>
-        </div>
-        <CardDescription className="ml-12">
-          Configure your organization details and default AI preferences.
-        </CardDescription>
-      </CardHeader>
+      <CardHeaderIntro
+        icon={<BuildingOfficeIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
+        iconWrapperClassName="bg-blue-50 dark:bg-blue-900/20"
+        title="General Information"
+        description="Configure your organization details and default AI preferences."
+      />
 
       <CardContent className="space-y-8 pt-6">
         <div className="border-b border-gray-100 dark:border-border pb-8">

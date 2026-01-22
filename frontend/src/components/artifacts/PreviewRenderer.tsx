@@ -18,6 +18,11 @@ import {
   isShellExecutorLogsPayload,
   type ShellExecutorLogsPayload,
 } from "@/components/artifacts/ShellExecutorLogsPreview";
+import {
+  CodeExecutorLogsPreview,
+  isCodeExecutorLogsPayload,
+  type CodeExecutorLogsPayload,
+} from "@/components/artifacts/CodeExecutorLogsPreview";
 
 interface PreviewRendererProps {
   contentType?: string;
@@ -150,18 +155,223 @@ function extractJsonFromCodeBlock(value: string): string {
   return trimmed;
 }
 
+function parseNestedJsonString(value: string, maxDepth = 2): unknown | null {
+  let current: unknown = value;
+  let parsedAtLeastOnce = false;
+
+  for (let depth = 0; depth < maxDepth; depth += 1) {
+    if (typeof current !== "string") break;
+    const trimmed = extractJsonFromCodeBlock(current).trim();
+    if (!trimmed) break;
+
+    try {
+      current = JSON.parse(trimmed);
+      parsedAtLeastOnce = true;
+    } catch {
+      break;
+    }
+  }
+
+  return parsedAtLeastOnce ? current : null;
+}
+
+function formatExecutorLogsContent(value: string): string {
+  const parsed = parseNestedJsonString(value);
+  if (parsed === null) return value;
+  if (typeof parsed === "string") return parsed;
+  try {
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return value;
+  }
+}
+
+const JSON_MARKDOWN_MAX_DEPTH = 5;
+const JSON_MARKDOWN_MAX_ARRAY_ITEMS = 60;
+const JSON_MARKDOWN_MAX_FIELDS = 60;
+const JSON_MARKDOWN_MAX_CHARS = 200_000;
+const JSON_MARKDOWN_SINGLE_KEYS = new Set([
+  "markdown",
+  "md",
+  "content",
+  "body",
+  "text",
+  "output",
+  "result",
+]);
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+function isJsonPrimitive(
+  value: unknown,
+): value is string | number | boolean | null {
+  return (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  );
+}
+
+function formatJsonPrimitive(value: unknown): string {
+  if (value === null) return "null";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return String(value);
+}
+
+function formatJsonSummary(value: unknown): string {
+  if (Array.isArray(value)) return `[Array(${value.length})]`;
+  if (isPlainObject(value)) return `[Object(${Object.keys(value).length})]`;
+  return String(value);
+}
+
+function extractSingleMarkdownField(value: unknown): string | null {
+  if (!isPlainObject(value)) return null;
+  const entries = Object.entries(value);
+  if (entries.length !== 1) return null;
+  const [key, fieldValue] = entries[0] ?? [];
+  const normalizedKey = String(key || "").toLowerCase();
+  if (!JSON_MARKDOWN_SINGLE_KEYS.has(normalizedKey)) return null;
+  return typeof fieldValue === "string" ? fieldValue : null;
+}
+
+function buildJsonMarkdownLines(
+  value: unknown,
+  depth: number,
+  label?: string,
+): string[] {
+  const lines: string[] = [];
+  const headingLevel = Math.min(6, depth + 2);
+  const headingPrefix = "#".repeat(headingLevel);
+
+  if (depth >= JSON_MARKDOWN_MAX_DEPTH) {
+    const summary = formatJsonSummary(value);
+    if (label) {
+      lines.push(`- **${label}**: ${summary}`);
+    } else {
+      lines.push(summary);
+    }
+    return lines;
+  }
+
+  if (isJsonPrimitive(value)) {
+    const textValue = formatJsonPrimitive(value);
+    const isLongText =
+      typeof value === "string" &&
+      (value.includes("\n") || value.length > 160);
+    if (label) {
+      if (isLongText) {
+        lines.push(`${headingPrefix} ${label}`);
+        lines.push(textValue);
+      } else {
+        lines.push(`- **${label}**: ${textValue}`);
+      }
+    } else {
+      lines.push(textValue);
+    }
+    return lines;
+  }
+
+  if (Array.isArray(value)) {
+    if (label) {
+      lines.push(`${headingPrefix} ${label}`);
+    }
+    if (value.length === 0) {
+      lines.push("_(empty)_");
+      return lines;
+    }
+    const allPrimitive = value.every((item) => isJsonPrimitive(item));
+    const shown = Math.min(value.length, JSON_MARKDOWN_MAX_ARRAY_ITEMS);
+    if (allPrimitive) {
+      value.slice(0, shown).forEach((item) => {
+        lines.push(`- ${formatJsonPrimitive(item)}`);
+      });
+    } else {
+      value.slice(0, shown).forEach((item, index) => {
+        if (index > 0) lines.push("");
+        lines.push(
+          ...buildJsonMarkdownLines(item, depth + 1, `Item ${index + 1}`),
+        );
+      });
+    }
+    if (value.length > shown) {
+      if (!allPrimitive) lines.push("");
+      lines.push(`_(+${value.length - shown} more items)_`);
+    }
+    return lines;
+  }
+
+  if (isPlainObject(value)) {
+    if (label) {
+      lines.push(`${headingPrefix} ${label}`);
+    }
+    const entries = Object.entries(value);
+    if (entries.length === 0) {
+      lines.push("_(empty)_");
+      return lines;
+    }
+    const shown = Math.min(entries.length, JSON_MARKDOWN_MAX_FIELDS);
+    entries.slice(0, shown).forEach(([key, entryValue], index) => {
+      if (index > 0) lines.push("");
+      lines.push(...buildJsonMarkdownLines(entryValue, depth + 1, key));
+    });
+    if (entries.length > shown) {
+      lines.push("");
+      lines.push(`_(+${entries.length - shown} more fields)_`);
+    }
+    return lines;
+  }
+
+  const fallback = String(value);
+  if (label) {
+    lines.push(`- **${label}**: ${fallback}`);
+  } else {
+    lines.push(fallback);
+  }
+  return lines;
+}
+
+function convertJsonToMarkdown(value: unknown): string | null {
+  if (value === undefined) return null;
+  const singleField = extractSingleMarkdownField(value);
+  let markdown = singleField ?? buildJsonMarkdownLines(value, 0).join("\n");
+  markdown = markdown.replace(/\n{3,}/g, "\n\n").trim();
+  if (!markdown) return null;
+  if (markdown.length > JSON_MARKDOWN_MAX_CHARS) {
+    markdown = `${markdown.slice(0, JSON_MARKDOWN_MAX_CHARS)}\n\n_(truncated)_`;
+  }
+  return markdown;
+}
+
 function tryParseShellExecutorLogsPayload(
   value: unknown,
 ): ShellExecutorLogsPayload | null {
   if (!value) return null;
   if (isShellExecutorLogsPayload(value)) return value;
   if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(extractJsonFromCodeBlock(value));
-      return isShellExecutorLogsPayload(parsed) ? parsed : null;
-    } catch {
-      return null;
-    }
+    const parsed = parseNestedJsonString(value);
+    return parsed && isShellExecutorLogsPayload(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function tryParseCodeExecutorLogsPayload(
+  value: unknown,
+): CodeExecutorLogsPayload | null {
+  if (!value) return null;
+  if (isCodeExecutorLogsPayload(value)) return value;
+  if (typeof value === "string") {
+    const parsed = parseNestedJsonString(value);
+    return parsed && isCodeExecutorLogsPayload(parsed) ? parsed : null;
   }
   return null;
 }
@@ -202,6 +412,12 @@ export function PreviewRenderer({
   const containerRef = useRef<HTMLDivElement>(null);
   const isCompactPreview = previewVariant === "compact" && !isFullScreen;
   const compactHtmlScale = 0.5;
+  const htmlViewModeClassName =
+    viewMode === "tablet"
+      ? "w-full max-w-[768px] mx-auto"
+      : viewMode === "mobile"
+        ? "w-full max-w-[375px] mx-auto"
+        : "w-full";
 
   const hasLoadError = imageError || htmlError || markdownError || jsonError;
   const objectUrlKey = useMemo(
@@ -503,6 +719,13 @@ export function PreviewRenderer({
     return null;
   }, [markdownContent, isMarkdownLike]);
 
+  const jsonMarkdown = useMemo(() => {
+    if (jsonError) return null;
+    if (jsonContent === null && jsonRaw === null) return null;
+    const value = jsonContent ?? jsonRaw;
+    return convertJsonToMarkdown(value);
+  }, [jsonContent, jsonRaw, jsonError]);
+
   if (!previewObjectUrl && !artifactId) {
     return (
       <div
@@ -544,6 +767,128 @@ export function PreviewRenderer({
         }}
       >
         <div className={`${paddingClassName} ${textClassName}`}>{children}</div>
+      </div>
+    );
+  };
+
+  const renderJsonMarkdownPreview = (markdownValue: string) => {
+    if (isFullScreen) {
+      return (
+        <div className="relative w-full h-full bg-white dark:bg-gray-950 flex flex-col">
+          {onViewModeChange && (
+            <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onViewModeChange("desktop")}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === "desktop"
+                      ? "bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  }`}
+                  aria-label="Desktop view"
+                  title="Desktop view"
+                >
+                  <FiMonitor className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => onViewModeChange("tablet")}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === "tablet"
+                      ? "bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  }`}
+                  aria-label="Tablet view"
+                  title="Tablet view"
+                >
+                  <FiTablet className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => onViewModeChange("mobile")}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === "mobile"
+                      ? "bg-gray-700 text-white dark:bg-gray-200 dark:text-gray-900"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  }`}
+                  aria-label="Mobile view"
+                  title="Mobile view"
+                >
+                  <FiSmartphone className="w-5 h-5" />
+                </button>
+              </div>
+              {fileName && (
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate max-w-md">
+                  {fileName}
+                </div>
+              )}
+            </div>
+          )}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div
+              className={`transition-all duration-300 ${
+                viewMode === "tablet"
+                  ? "w-[768px] max-w-[768px] mx-auto"
+                  : viewMode === "mobile"
+                    ? "w-[375px] max-w-[375px] mx-auto"
+                    : "w-full"
+              }`}
+            >
+              <div className="p-8 prose prose-lg max-w-none dark:prose-invert">
+                <MarkdownRenderer
+                  value={markdownValue}
+                  fallbackClassName="whitespace-pre-wrap break-words"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (isCompactPreview) {
+      return (
+        <CompactPreviewFrame>
+          {isInView ? (
+            <CompactScaledContent>
+              <div className="prose prose-sm max-w-none dark:prose-invert text-[10px] leading-snug prose-p:my-1 prose-headings:my-1 prose-li:my-0">
+                <MarkdownRenderer
+                  value={markdownValue}
+                  fallbackClassName="whitespace-pre-wrap break-words"
+                />
+              </div>
+            </CompactScaledContent>
+          ) : (
+            <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+              <div className="text-center">
+                <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                  Markdown Preview
+                </p>
+              </div>
+            </div>
+          )}
+        </CompactPreviewFrame>
+      );
+    }
+
+    return (
+      <div className="relative w-full h-full bg-white dark:bg-gray-950 overflow-auto">
+        {isInView ? (
+          <div className="p-4 prose prose-sm max-w-none dark:prose-invert">
+            <MarkdownRenderer
+              value={markdownValue}
+              fallbackClassName="whitespace-pre-wrap break-words"
+            />
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+            <div className="text-center">
+              <FiFileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Markdown Preview
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -768,13 +1113,15 @@ export function PreviewRenderer({
                   </div>
                 </div>
               ) : (
-                <iframe
-                  srcDoc={htmlContent}
-                  className="w-full h-full border-0"
-                  title={fileName || "HTML Preview"}
-                  sandbox="allow-scripts allow-popups"
-                  referrerPolicy="no-referrer"
-                />
+                <div className={`h-full ${htmlViewModeClassName}`}>
+                  <iframe
+                    srcDoc={htmlContent}
+                    className="w-full h-full border-0"
+                    title={fileName || "HTML Preview"}
+                    sandbox="allow-scripts allow-popups"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
               )
             ) : (
               <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
@@ -796,6 +1143,24 @@ export function PreviewRenderer({
     }
 
     if (effectiveContentType === "application/json") {
+      const codeExecutorLogsPayload =
+        tryParseCodeExecutorLogsPayload(jsonContent) ||
+        tryParseCodeExecutorLogsPayload(jsonRaw);
+      if (codeExecutorLogsPayload) {
+        if (isCompactPreview) {
+          return (
+            <CompactPreviewFrame>
+              <CodeExecutorLogsPreview
+                payload={codeExecutorLogsPayload}
+                variant="compact"
+              />
+            </CompactPreviewFrame>
+          );
+        }
+
+        return <CodeExecutorLogsPreview payload={codeExecutorLogsPayload} />;
+      }
+
       const shellExecutorLogsPayload =
         tryParseShellExecutorLogsPayload(jsonContent) ||
         tryParseShellExecutorLogsPayload(jsonRaw);
@@ -816,11 +1181,18 @@ export function PreviewRenderer({
       }
 
       if (isExecutorLogsFileName(fileName) && typeof jsonRaw === "string") {
+        const formattedLogs = formatExecutorLogsContent(jsonRaw);
         return (
           <div className="h-full w-full overflow-y-auto rounded-md bg-[#0d1117] p-3 font-mono text-[11px] text-slate-100">
-            <pre className="whitespace-pre-wrap break-words">{jsonRaw}</pre>
+            <pre className="whitespace-pre-wrap break-words">
+              {formattedLogs}
+            </pre>
           </div>
         );
+      }
+
+      if (jsonMarkdown) {
+        return renderJsonMarkdownPreview(jsonMarkdown);
       }
 
       if (isCompactPreview) {
@@ -912,6 +1284,24 @@ export function PreviewRenderer({
     }
 
     if (isMarkdownLike) {
+      const codeExecutorLogsPayload =
+        tryParseCodeExecutorLogsPayload(parsedMarkdownJson) ||
+        tryParseCodeExecutorLogsPayload(markdownContent);
+      if (codeExecutorLogsPayload) {
+        if (isCompactPreview) {
+          return (
+            <CompactPreviewFrame>
+              <CodeExecutorLogsPreview
+                payload={codeExecutorLogsPayload}
+                variant="compact"
+              />
+            </CompactPreviewFrame>
+          );
+        }
+
+        return <CodeExecutorLogsPreview payload={codeExecutorLogsPayload} />;
+      }
+
       const shellExecutorLogsPayload =
         tryParseShellExecutorLogsPayload(parsedMarkdownJson) ||
         tryParseShellExecutorLogsPayload(markdownContent);
@@ -932,9 +1322,10 @@ export function PreviewRenderer({
       }
 
       if (isExecutorLogsFileName(fileName) && markdownContent) {
+      const formattedLogs = formatExecutorLogsContent(markdownContent);
         return (
           <div className="h-full w-full overflow-y-auto rounded-md bg-[#0d1117] p-3 font-mono text-[11px] text-slate-100">
-            <pre className="whitespace-pre-wrap break-words">{markdownContent}</pre>
+          <pre className="whitespace-pre-wrap break-words">{formattedLogs}</pre>
           </div>
         );
       }

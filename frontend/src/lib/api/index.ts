@@ -253,6 +253,12 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.workflows.generateWorkflowWithAI(request);
   }
 
+  async ideateWorkflow(
+    request: Parameters<WorkflowsClient["ideateWorkflow"]>[0],
+  ) {
+    return this.workflows.ideateWorkflow(request);
+  }
+
   async getWorkflowGenerationStatus(jobId: string) {
     return this.workflows.getWorkflowGenerationStatus(jobId);
   }
