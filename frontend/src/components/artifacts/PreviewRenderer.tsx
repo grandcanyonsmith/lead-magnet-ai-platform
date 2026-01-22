@@ -791,6 +791,7 @@ export function PreviewRenderer({
     previewObjectUrl,
     artifactId,
     jsonContent,
+    jsonRaw,
     jsonError,
   ]);
 
