@@ -16,11 +16,43 @@ export function AvatarUpload() {
   const webcamRef = useRef<Webcam>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const uploadFile = useCallback(
+    async (file: File) => {
+      setUploading(true);
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+
+        await api.post("/me/avatar-upload", {
+          file: dataUrl,
+          filename: file.name,
+          contentType: file.type,
+        });
+
+        await refreshAuth();
+        toast.success("Profile photo updated successfully");
+      } catch (error) {
+        console.error("Error uploading avatar:", error);
+        toast.error("Failed to update profile photo");
+      } finally {
+        setUploading(false);
+      }
+    },
+    [refreshAuth],
+  );
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     await uploadFile(file);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const capture = useCallback(() => {
@@ -30,48 +62,18 @@ export function AvatarUpload() {
       fetch(imageSrc)
         .then((res) => res.blob())
         .then((blob) => {
-          const file = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
+          const file = new File([blob], "camera-capture.jpg", {
+            type: "image/jpeg",
+          });
           uploadFile(file);
           setIsCameraOpen(false);
+        })
+        .catch((error) => {
+          console.error("Error capturing photo:", error);
+          toast.error("Failed to capture photo");
         });
     }
-  }, [webcamRef]);
-
-  const uploadFile = async (file: File) => {
-    setUploading(true);
-    try {
-      // 1. Get presigned URL
-      const { uploadUrl, publicUrl } = await api.post<{ uploadUrl: string; publicUrl: string; key: string }>(
-        "/me/avatar-upload-url",
-        {
-          contentType: file.type,
-        }
-      );
-
-      // 2. Upload to S3
-      await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": file.type,
-        },
-      });
-
-      // 3. Update user profile
-      await api.patch("/me", {
-        profile_photo_url: publicUrl,
-      });
-
-      // 4. Refresh user context
-      await refreshAuth();
-      toast.success("Profile photo updated successfully");
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
-      toast.error("Failed to update profile photo");
-    } finally {
-      setUploading(false);
-    }
-  };
+  }, [uploadFile]);
 
   return (
     <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
