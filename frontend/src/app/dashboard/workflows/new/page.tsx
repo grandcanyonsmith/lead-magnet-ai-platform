@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -22,6 +22,7 @@ import { useWorkflowSubmission } from "@/hooks/useWorkflowSubmission";
 import { useWorkflowGenerationStatus } from "@/hooks/useWorkflowGenerationStatus";
 import { useSettings } from "@/hooks/api/useSettings";
 import { useWorkflowIdeation } from "@/hooks/useWorkflowIdeation";
+import { api } from "@/lib/api";
 import {
   AIModel,
   WorkflowIdeationDeliverable,
@@ -57,6 +58,12 @@ export default function NewWorkflowPage() {
   const [selectedDeliverableId, setSelectedDeliverableId] = useState<
     string | null
   >(null);
+  const [mockupImages, setMockupImages] = useState<string[]>([]);
+  const [isGeneratingMockups, setIsGeneratingMockups] = useState(false);
+  const [mockupError, setMockupError] = useState<string | null>(null);
+  const [isStreamingAssistant, setIsStreamingAssistant] = useState(false);
+  const streamBufferRef = useRef("");
+  const streamingIndexRef = useRef<number | null>(null);
 
   // Hooks
   const aiGeneration = useAIGeneration();
@@ -149,6 +156,22 @@ export default function NewWorkflowPage() {
     (deliverable) => deliverable.id === selectedDeliverableId,
   );
 
+  useEffect(() => {
+    setMockupImages([]);
+    setMockupError(null);
+  }, [selectedDeliverableId]);
+
+  useEffect(() => {
+    if (!selectedDeliverable) {
+      return;
+    }
+    if (mockupImages.length > 0 || isGeneratingMockups) {
+      return;
+    }
+    void handleGenerateMockups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDeliverable, mockupImages.length, isGeneratingMockups]);
+
   const handleGenerateFromChat = async () => {
     if (!selectedDeliverable) {
       return;
@@ -162,26 +185,122 @@ export default function NewWorkflowPage() {
       return;
     }
 
+    const isFollowup = Boolean(selectedDeliverable);
     const nextMessages: WorkflowIdeationMessage[] = [
       ...chatMessages,
       { role: "user", content: chatInput.trim() },
     ];
-    setChatMessages(nextMessages);
+    const assistantIndex = nextMessages.length;
+    setChatMessages([
+      ...nextMessages,
+      { role: "assistant", content: "" },
+    ]);
     setChatInput("");
-    setChatDeliverables([]);
-    setSelectedDeliverableId(null);
+    if (!isFollowup) {
+      setChatDeliverables([]);
+      setSelectedDeliverableId(null);
+    }
 
-    const result = await ideation.ideate(
+    streamBufferRef.current = "";
+    streamingIndexRef.current = assistantIndex;
+    setIsStreamingAssistant(true);
+
+    const extractStreamingMessage = (buffer: string) => {
+      const marker = "MESSAGE:";
+      const start = buffer.indexOf(marker);
+      if (start === -1) {
+        return "";
+      }
+      const after = buffer.slice(start + marker.length);
+      const newlineIndex = after.indexOf("\n");
+      const message =
+        newlineIndex === -1 ? after : after.slice(0, newlineIndex);
+      return message.replace(/^\s+/, "");
+    };
+
+    await ideation.ideateStream(
       nextMessages,
       resolvedModel,
+      {
+        mode: isFollowup ? "followup" : "ideation",
+        selectedDeliverable: selectedDeliverable
+          ? {
+              title: selectedDeliverable.title,
+              description: selectedDeliverable.description,
+              deliverable_type: selectedDeliverable.deliverable_type,
+              build_description: selectedDeliverable.build_description,
+            }
+          : undefined,
+      },
+      {
+        onDelta: (text) => {
+          streamBufferRef.current += text;
+          const message = extractStreamingMessage(streamBufferRef.current);
+          if (!message) return;
+          setChatMessages((prev) => {
+            const next = [...prev];
+            const index = streamingIndexRef.current;
+            if (index === null || !next[index]) return prev;
+            next[index] = {
+              ...next[index],
+              content: message,
+            };
+            return next;
+          });
+        },
+        onComplete: (result) => {
+          if (result?.assistant_message) {
+            setChatMessages((prev) => {
+              const next = [...prev];
+              const index = streamingIndexRef.current;
+              if (index === null || !next[index]) return prev;
+              next[index] = {
+                ...next[index],
+                content: result.assistant_message,
+              };
+              return next;
+            });
+          }
+          if (result && !isFollowup) {
+            setChatDeliverables(result.deliverables || []);
+          }
+          setIsStreamingAssistant(false);
+          streamingIndexRef.current = null;
+        },
+        onError: (message) => {
+          setError(message);
+          setIsStreamingAssistant(false);
+          streamingIndexRef.current = null;
+        },
+      },
     );
+  };
 
-    if (result) {
-      setChatMessages([
-        ...nextMessages,
-        { role: "assistant", content: result.assistant_message },
-      ]);
-      setChatDeliverables(result.deliverables || []);
+  const handleGenerateMockups = async () => {
+    if (!selectedDeliverable || isGeneratingMockups) {
+      return;
+    }
+
+    setIsGeneratingMockups(true);
+    setMockupError(null);
+    setMockupImages([]);
+
+    try {
+      const response = await api.generateDeliverableMockups({
+        deliverable: {
+          title: selectedDeliverable.title,
+          description: selectedDeliverable.description,
+          deliverable_type: selectedDeliverable.deliverable_type,
+          build_description: selectedDeliverable.build_description,
+        },
+        count: 4,
+      });
+
+      setMockupImages(response.images.map((image) => image.url));
+    } catch (err: any) {
+      setMockupError(err.message || "Failed to generate mockups");
+    } finally {
+      setIsGeneratingMockups(false);
     }
   };
 
@@ -401,13 +520,148 @@ export default function NewWorkflowPage() {
                 </div>
               ))}
 
-              {ideation.isIdeating && (
+              {ideation.isIdeating && !isStreamingAssistant && (
                 <div className="flex justify-start">
                   <div className="max-w-[80%] rounded-lg px-4 py-3 text-sm bg-white dark:bg-secondary text-gray-900 dark:text-foreground border border-gray-200 dark:border-border">
                     <div className="flex items-center gap-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600 dark:border-purple-400"></div>
                       <span>Thinking through options...</span>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {selectedDeliverable && (
+                <div className="rounded-lg border border-emerald-200/70 dark:border-emerald-900/60 bg-emerald-50/70 dark:bg-emerald-950/40 p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                        Selected Deliverable
+                      </div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-foreground mt-1">
+                        {selectedDeliverable.title}
+                      </div>
+                      <div className="text-xs text-gray-600 dark:text-muted-foreground mt-1">
+                        {selectedDeliverable.description}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDeliverableId(null)}
+                      className="text-xs text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-200"
+                    >
+                      Change
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleGenerateMockups}
+                    disabled={isGeneratingMockups}
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isGeneratingMockups
+                      ? "Generating mockups..."
+                      : mockupImages.length > 0
+                        ? "Regenerate mockups"
+                        : "Generate mockups"}
+                  </button>
+
+                  {mockupError && (
+                    <div className="text-xs text-red-600 dark:text-red-400">
+                      {mockupError}
+                    </div>
+                  )}
+
+                  {mockupImages.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400 font-semibold">
+                        Deliverable Mockups
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {mockupImages.map((url, index) => (
+                          <div
+                            key={`${url}-${index}`}
+                            className="relative aspect-[4/3] rounded-md overflow-hidden bg-muted/30 border border-emerald-200/60 dark:border-emerald-900/60"
+                          >
+                            <Image
+                              src={url}
+                              alt={`Deliverable mockup ${index + 1}`}
+                              fill
+                              sizes="(min-width: 768px) 35vw, 100vw"
+                              className="object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {chatDeliverables.length > 0 && (
+                <div className="pt-2 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-foreground">
+                      Suggested Deliverables
+                    </h3>
+                    <span className="text-[10px] text-gray-500 dark:text-muted-foreground">
+                      {chatDeliverables.length} options
+                    </span>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {chatDeliverables.map((deliverable) => {
+                      const isSelected =
+                        deliverable.id === selectedDeliverableId;
+                      return (
+                        <button
+                          key={deliverable.id}
+                          type="button"
+                          onClick={() => setSelectedDeliverableId(deliverable.id)}
+                          className={`text-left rounded-lg border p-3 transition-all ${
+                            isSelected
+                              ? "border-emerald-500 ring-2 ring-emerald-200 dark:ring-emerald-900/40"
+                              : "border-gray-200 dark:border-border hover:border-emerald-300"
+                          }`}
+                        >
+                          <div className="relative aspect-[4/3] rounded-md overflow-hidden bg-muted/30 border border-gray-200 dark:border-border">
+                            {deliverable.image_url ? (
+                              <Image
+                                src={deliverable.image_url}
+                                alt={deliverable.title}
+                                fill
+                                sizes="(min-width: 768px) 45vw, 100vw"
+                                className="object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-xs text-gray-500 dark:text-muted-foreground">
+                                Image unavailable
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-3 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <h4 className="text-sm font-semibold text-gray-900 dark:text-foreground">
+                                {deliverable.title}
+                              </h4>
+                              {isSelected && (
+                                <span className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400 font-semibold">
+                                  Selected
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-600 dark:text-muted-foreground">
+                              {deliverable.description}
+                            </p>
+                            <span className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-muted-foreground">
+                              {deliverable.deliverable_type}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -456,71 +710,6 @@ export default function NewWorkflowPage() {
             </div>
           </div>
 
-          {chatDeliverables.length > 0 && (
-            <div className="mt-8">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-foreground">
-                  Suggested Deliverables
-                </h3>
-                <span className="text-xs text-gray-500 dark:text-muted-foreground">
-                  {chatDeliverables.length} options
-                </span>
-              </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {chatDeliverables.map((deliverable) => {
-                  const isSelected =
-                    deliverable.id === selectedDeliverableId;
-                  return (
-                    <button
-                      key={deliverable.id}
-                      type="button"
-                      onClick={() => setSelectedDeliverableId(deliverable.id)}
-                      className={`text-left rounded-lg border p-3 transition-all ${
-                        isSelected
-                          ? "border-emerald-500 ring-2 ring-emerald-200 dark:ring-emerald-900/40"
-                          : "border-gray-200 dark:border-border hover:border-emerald-300"
-                      }`}
-                    >
-                      <div className="relative aspect-[4/3] rounded-md overflow-hidden bg-muted/30 border border-gray-200 dark:border-border">
-                        {deliverable.image_url ? (
-                          <Image
-                            src={deliverable.image_url}
-                            alt={deliverable.title}
-                            fill
-                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                            className="object-cover"
-                            unoptimized
-                          />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center text-xs text-gray-500 dark:text-muted-foreground">
-                            Image unavailable
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-3 space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <h4 className="text-sm font-semibold text-gray-900 dark:text-foreground">
-                            {deliverable.title}
-                          </h4>
-                          {isSelected && (
-                            <span className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400 font-semibold">
-                              Selected
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-600 dark:text-muted-foreground">
-                          {deliverable.description}
-                        </p>
-                        <span className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-muted-foreground">
-                          {deliverable.deliverable_type}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     );

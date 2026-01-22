@@ -22,6 +22,18 @@ export function registerWorkflowRoutes(): void {
     return await workflowAIController.ideateWorkflow(tenantId!, body);
   });
 
+  // Ideate workflow deliverables via chat (streamed)
+  router.register('POST', '/admin/workflows/ideate/stream', async (_params, body, _query, tenantId, context) => {
+    logger.info('[Router] Matched /admin/workflows/ideate/stream route');
+    return await workflowAIController.ideateWorkflowStream(tenantId!, body, context);
+  });
+
+  // Generate deliverable mockups
+  router.register('POST', '/admin/workflows/ideate/mockups', async (_params, body, _query, tenantId) => {
+    logger.info('[Router] Matched /admin/workflows/ideate/mockups route');
+    return await workflowAIController.generateIdeationMockups(tenantId!, body);
+  });
+
   // List workflows
   router.register('GET', '/admin/workflows', async (_params, _body, query, tenantId) => {
     logger.info('[Router] Matched /admin/workflows GET route');
