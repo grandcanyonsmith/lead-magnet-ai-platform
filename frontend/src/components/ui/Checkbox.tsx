@@ -38,7 +38,6 @@ export function Checkbox({
         disabled={disabled}
         id={id}
         aria-required={required ? "true" : undefined}
-        type="button"
         className={cn(
           "flex h-4 w-4 items-center justify-center rounded border border-input bg-background text-primary-foreground shadow-sm transition",
           checked && "border-primary bg-primary",

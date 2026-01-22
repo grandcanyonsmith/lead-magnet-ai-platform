@@ -92,13 +92,14 @@ Return ONLY valid JSON using this schema:
       messageCount: messages.length,
     });
 
-    const completion = await openai.responses.create({
+    const completionParams: any = {
       model,
       instructions: IDEATION_SYSTEM_PROMPT,
       input: prompt,
       reasoning: { effort: "high" },
       service_tier: "priority",
-    });
+    };
+    const completion = await openai.responses.create(completionParams);
 
     const outputText = String((completion as any)?.output_text || "");
     const parsed = this.parseIdeationResult(outputText);

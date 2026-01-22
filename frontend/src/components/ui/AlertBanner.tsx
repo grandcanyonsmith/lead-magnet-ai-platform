@@ -43,7 +43,7 @@ const variantStyles: Record<
 };
 
 interface AlertBannerProps
-  extends HTMLAttributes<HTMLDivElement> {
+  extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
   variant?: AlertVariant;
   icon?: ReactNode;
   title?: ReactNode;

@@ -24,6 +24,7 @@ export interface SelectProps {
   required?: boolean
   name?: string
   id?: string
+  title?: string
   children?: React.ReactNode
   "aria-label"?: string
   "aria-describedby"?: string
@@ -73,6 +74,7 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
       required,
       name,
       id,
+      title,
       "aria-label": ariaLabel,
       "aria-describedby": ariaDescribedBy,
       children,
@@ -95,6 +97,7 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
           {name && <input type="hidden" name={name} value={selectedValue} />}
           <Listbox.Button
             id={id}
+            title={title}
             aria-label={ariaLabel}
             aria-describedby={ariaDescribedBy}
             aria-required={required ? "true" : undefined}
