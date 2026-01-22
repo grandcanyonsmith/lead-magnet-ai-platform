@@ -232,7 +232,7 @@ export function Breadcrumbs({ className, listClassName }: BreadcrumbsProps = {})
   return (
     <nav
       className={cn(
-        "flex min-w-0 items-center overflow-x-auto scrollbar-hide",
+        "flex min-w-0 items-center overflow-visible",
         className,
       )}
       aria-label="Breadcrumb"

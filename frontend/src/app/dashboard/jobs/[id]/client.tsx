@@ -381,16 +381,10 @@ export default function JobDetailClient() {
     const workflowMenuItems = workflowOptions.map((workflowItem) => {
       const workflowLabel =
         workflowItem.workflow_name || workflowItem.workflow_id;
-      const workflowDescription =
-        workflowItem.workflow_name &&
-        workflowItem.workflow_name !== workflowItem.workflow_id
-          ? workflowItem.workflow_id
-          : null;
       return {
         id: workflowItem.workflow_id,
         label: workflowLabel,
         href: `/dashboard/jobs?workflow_id=${workflowItem.workflow_id}`,
-        description: workflowDescription,
         isActive: workflowItem.workflow_id === job.workflow_id,
       };
     });
@@ -403,10 +397,6 @@ export default function JobDetailClient() {
         id: job.workflow_id,
         label: leadMagnetLabel,
         href: `/dashboard/jobs?workflow_id=${job.workflow_id}`,
-        description:
-          leadMagnetLabel && leadMagnetLabel !== job.workflow_id
-            ? job.workflow_id
-            : null,
         isActive: true,
       });
     }
