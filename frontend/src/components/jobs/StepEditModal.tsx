@@ -1,9 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { FiX, FiSave, FiAlertCircle } from "react-icons/fi";
+import { AlertBanner } from "@/components/ui/AlertBanner";
+import { PanelHeader } from "@/components/ui/PanelHeader";
 import { useAIModels } from "@/hooks/api/useWorkflows";
 import { WorkflowStep, AIModel, ToolType, ToolChoice } from "@/types";
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  Transition,
+  TransitionChild,
+} from "@headlessui/react";
+import { Select } from "@/components/ui/Select";
+import { Checkbox } from "@/components/ui/Checkbox";
 
 interface StepEditModalProps {
   step: WorkflowStep | null;
@@ -123,58 +134,67 @@ export function StepEditModal({
     return toolStrings.includes(tool);
   };
 
-  if (!isOpen || !step) {
+  if (!step) {
     return null;
   }
 
   const isProcessing = jobStatus === "processing";
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-          onClick={onClose}
-        />
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-50" onClose={onClose}>
+        <TransitionChild
+          as={Fragment}
+          enter="ease-out duration-200"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-150"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-black/50 transition-opacity" />
+        </TransitionChild>
 
-        {/* Modal */}
-        <div className="relative z-50 w-full max-w-2xl bg-white dark:bg-card rounded-lg shadow-xl">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Edit Step
-            </h3>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center p-4">
+            <TransitionChild
+              as={Fragment}
+              enter="ease-out duration-200"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-150"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
             >
-              <FiX className="w-5 h-5" />
-            </button>
-          </div>
+              <DialogPanel className="relative z-50 w-full max-w-2xl bg-white dark:bg-card rounded-lg shadow-xl">
+                {/* Header */}
+                <PanelHeader className="px-6 py-4 border-gray-200 dark:border-gray-700 bg-white dark:bg-card">
+                  <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Edit Step
+                  </DialogTitle>
+                  <button
+                    onClick={onClose}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                  >
+                    <FiX className="w-5 h-5" />
+                  </button>
+                </PanelHeader>
 
           {/* Warning for processing jobs */}
           {isProcessing && (
-            <div className="mx-6 mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900/40 rounded-lg flex items-start gap-2">
-              <FiAlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-yellow-800 dark:text-yellow-200">
-                <p className="font-medium">Job is currently processing</p>
-                <p className="mt-1">
-                  Changes will affect future jobs using this workflow template,
-                  not the current execution.
-                </p>
-              </div>
-            </div>
+            <AlertBanner
+              variant="warning"
+              className="mx-6 mt-4"
+              icon={<FiAlertCircle className="w-5 h-5" />}
+              title="Job is currently processing"
+              description="Changes will affect future jobs using this workflow template, not the current execution."
+            />
           )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-lg">
-                <p className="text-sm text-red-800 dark:text-red-200">
-                  {error}
-                </p>
-              </div>
+              <AlertBanner variant="error" className="p-3" description={error} />
             )}
 
             {/* Step Name */}
@@ -232,13 +252,14 @@ export function StepEditModal({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 AI Model <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 value={formData.model}
-                onChange={(e) =>
-                  setFormData({ ...formData, model: e.target.value as AIModel })
+                onChange={(nextValue) =>
+                  setFormData({ ...formData, model: nextValue as AIModel })
                 }
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 disabled={modelsLoading || !!modelsError}
+                placeholder={modelsLoading ? "Loading models..." : undefined}
               >
                 {modelsLoading ? (
                   <option>Loading models...</option>
@@ -253,7 +274,7 @@ export function StepEditModal({
                 ) : (
                   <option value="gpt-5.2">GPT-5.2 (Default)</option>
                 )}
-              </select>
+              </Select>
             </div>
 
             {/* Reasoning Effort (GPT-5 family) */}
@@ -261,21 +282,22 @@ export function StepEditModal({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Reasoning Effort
               </label>
-              <select
+              <Select
                 value={(formData as any).reasoning_effort || ""}
-                onChange={(e) =>
+                onChange={(nextValue) =>
                   setFormData({
                     ...formData,
-                    reasoning_effort: e.target.value || undefined,
+                    reasoning_effort: nextValue || undefined,
                   } as any)
                 }
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Default"
               >
                 <option value="">Default</option>
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
-              </select>
+              </Select>
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Optional. Controls how much reasoning the model uses (mainly for
                 GPT-5 models).
@@ -293,11 +315,9 @@ export function StepEditModal({
                     key={tool}
                     className="flex items-center gap-2 p-2 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={isToolSelected(tool)}
                       onChange={() => handleToolToggle(tool)}
-                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                     />
                     <span className="text-sm text-gray-700 dark:text-gray-200">
                       {tool}
@@ -312,12 +332,12 @@ export function StepEditModal({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Tool Choice
               </label>
-              <select
+              <Select
                 value={formData.tool_choice || "required"}
-                onChange={(e) =>
+                onChange={(nextValue) =>
                   setFormData({
                     ...formData,
-                    tool_choice: e.target.value as ToolChoice,
+                    tool_choice: nextValue as ToolChoice,
                   })
                 }
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -327,7 +347,7 @@ export function StepEditModal({
                     {choice}
                   </option>
                 ))}
-              </select>
+              </Select>
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Controls how the AI uses the selected tools
               </p>
@@ -367,19 +387,17 @@ export function StepEditModal({
                         key={otherIndex}
                         className="flex items-center space-x-2 cursor-pointer"
                       >
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={isSelected}
-                          onChange={(e) => {
+                          onChange={(checked) => {
                             const currentDeps = formData.depends_on || [];
-                            const newDeps = e.target.checked
+                            const newDeps = checked
                               ? [...currentDeps, otherIndex]
                               : currentDeps.filter(
                                   (dep: number) => dep !== otherIndex,
                                 );
                             setFormData({ ...formData, depends_on: newDeps });
                           }}
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                         />
                         <span className="text-sm text-gray-900 dark:text-gray-200">
                           Step {otherIndex + 1}: {otherStep.step_name}
@@ -419,8 +437,11 @@ export function StepEditModal({
               </button>
             </div>
           </form>
+              </DialogPanel>
+            </TransitionChild>
+          </div>
         </div>
-      </div>
-    </div>
+      </Dialog>
+    </Transition>
   );
 }

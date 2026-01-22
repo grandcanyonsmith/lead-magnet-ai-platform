@@ -11,9 +11,12 @@ import { toast } from "react-hot-toast";
 import { useRegenerateWebhookToken } from "@/hooks/api/useSettings";
 import { WebhookTester } from "./WebhookTester";
 import { CloudflareIntegration } from "./CloudflareIntegration";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
+import { CardHeaderIntro } from "@/components/ui/CardHeaderIntro";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { InlineCode } from "@/components/ui/InlineCode";
+import { SectionLabel } from "@/components/ui/SectionLabel";
 import {
   ServerStackIcon,
   GlobeAltIcon,
@@ -102,19 +105,14 @@ export function DeliverySettings({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <ServerStackIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            <CardTitle className="text-lg">
-              Receive Leads via Webhook
-            </CardTitle>
-          </div>
-          <CardDescription className="ml-12">
-            Configure endpoints to receive form submissions and trigger automation.
-          </CardDescription>
-        </CardHeader>
+        <CardHeaderIntro
+          icon={
+            <ServerStackIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
+          }
+          iconWrapperClassName="bg-green-50 dark:bg-green-900/20"
+          title="Receive Leads via Webhook"
+          description="Configure endpoints to receive form submissions and trigger automation."
+        />
 
         <CardContent className="p-8 space-y-8">
           <div>
@@ -159,16 +157,14 @@ export function DeliverySettings({
               />
             </div>
             <p className="mt-2 text-sm text-gray-500 dark:text-muted-foreground">
-              POST requests to this URL with <code className="text-gray-700 dark:text-foreground bg-gray-100 dark:bg-secondary px-1 rounded">workflow_id</code> and{" "}
-              <code className="text-gray-700 dark:text-foreground bg-gray-100 dark:bg-secondary px-1 rounded">form_data</code> will trigger workflow execution.
+              POST requests to this URL with <InlineCode>workflow_id</InlineCode>{" "}
+              and <InlineCode>form_data</InlineCode> will trigger workflow execution.
             </p>
 
             {settings.webhook_url && (
               <div className="mt-6 border border-gray-200 dark:border-border rounded-lg overflow-hidden">
                 <div className="bg-gray-50 dark:bg-secondary px-4 py-2 border-b border-gray-200 dark:border-border flex justify-between items-center">
-                  <span className="text-xs font-medium text-gray-500 dark:text-muted-foreground uppercase tracking-wider">
-                    Example Usage
-                  </span>
+                  <SectionLabel as="span">Example Usage</SectionLabel>
                 </div>
                 <div className="bg-gray-900 dark:bg-gray-950 p-4 overflow-x-auto">
                   <pre className="text-xs text-blue-300 dark:text-blue-400 font-mono">
@@ -197,19 +193,14 @@ export function DeliverySettings({
       </Card>
 
       <Card>
-        <CardHeader className="border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <GlobeAltIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <CardTitle className="text-lg">
-              Integrations & Domain
-            </CardTitle>
-          </div>
-          <CardDescription className="ml-12">
-            Set up external integrations and domain settings.
-          </CardDescription>
-        </CardHeader>
+        <CardHeaderIntro
+          icon={
+            <GlobeAltIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          }
+          iconWrapperClassName="bg-blue-50 dark:bg-blue-900/20"
+          title="Integrations & Domain"
+          description="Set up external integrations and domain settings."
+        />
 
         <CardContent className="p-8 space-y-6">
           <div className="grid grid-cols-1 gap-6">
@@ -246,9 +237,9 @@ export function DeliverySettings({
                       <li>
                         <div>Set <strong>Value</strong> to:</div>
                         <div className="flex items-center gap-2 mt-1.5">
-                          <code className="bg-white dark:bg-gray-900 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 text-xs font-mono select-all break-all">
+                          <InlineCode className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs select-all break-all">
                             {currentHost || "loading..."}
-                          </code>
+                          </InlineCode>
                           <Button 
                             variant="ghost" 
                             size="sm" 

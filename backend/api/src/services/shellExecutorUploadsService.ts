@@ -71,8 +71,12 @@ const normalizePrefix = (value: string): string => {
 
 const sanitizeSubdir = (value?: string): string => {
   if (!value) return "";
-  const cleaned = value.trim().replace(/^\/+/, "").replace(/\/+$/, "");
+  let cleaned = value.trim().replace(/^\/+/, "").replace(/\/+$/, "");
   if (!cleaned || cleaned.includes("..")) return "";
+  if (cleaned === "work") return "";
+  if (cleaned.startsWith("work/")) {
+    cleaned = cleaned.slice("work/".length);
+  }
   return cleaned;
 };
 

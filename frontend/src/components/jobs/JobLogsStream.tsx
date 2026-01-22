@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { jobLogsClient, type LogEntry } from "@/lib/api/jobLogs.client";
 import { FiTerminal, FiX, FiCopy, FiTrash2, FiPlay, FiPause } from "react-icons/fi";
+import { PanelHeader } from "@/components/ui/PanelHeader";
 import toast from "react-hot-toast";
 
 interface JobLogsStreamProps {
@@ -105,7 +106,7 @@ export function JobLogsStream({
   return (
     <div className="mt-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-900/80">
+      <PanelHeader>
         <div className="flex items-center gap-3">
           <div
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border ${
@@ -167,7 +168,7 @@ export function JobLogsStream({
             </button>
           )}
         </div>
-      </div>
+      </PanelHeader>
 
       {/* Logs */}
       <div

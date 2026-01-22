@@ -162,7 +162,7 @@ export default function JobDetailClient() {
             failed_at: job.failed_at,
           }
         : null,
-    [job?.job_id, job?.output_url, job?.completed_at, job?.failed_at],
+    [job],
   );
 
   const artifactGalleryItems = useMemo(() => {
@@ -468,6 +468,9 @@ export default function JobDetailClient() {
     workflowOptionsLoading,
     workflowJobsLoading,
   ]);
+
+  const workflowSelector = breadcrumbItems?.[0] ?? null;
+  const runSelector = breadcrumbItems?.[1] ?? null;
 
   React.useEffect(() => {
     setBreadcrumbItems(breadcrumbItems);
@@ -831,6 +834,8 @@ export default function JobDetailClient() {
           previousJobHref={previousJobHref}
           nextJobHref={nextJobHref}
           adjacentJobsLoading={workflowJobsLoading}
+          workflowSelector={workflowSelector}
+          runSelector={runSelector}
         />
         <div id="job-edit-subheader" className="w-full" />
 

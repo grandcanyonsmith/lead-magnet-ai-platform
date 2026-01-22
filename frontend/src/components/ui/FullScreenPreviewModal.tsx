@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useState } from "react";
-import React from "react";
+import React, { Fragment, useEffect, useCallback, useState } from "react";
 import {
   XMarkIcon,
   ChevronLeftIcon,
@@ -14,6 +13,13 @@ import {
 } from "@heroicons/react/24/outline";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { toast } from "react-hot-toast";
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  Transition,
+  TransitionChild,
+} from "@headlessui/react";
 
 interface FullScreenPreviewModalProps {
   isOpen: boolean;
@@ -77,15 +83,13 @@ export const FullScreenPreviewModal = React.memo(
       (e: KeyboardEvent) => {
         if (!isOpen) return;
 
-        if (e.key === "Escape") {
-          onClose();
-        } else if (e.key === "ArrowRight" && hasNext && onNext) {
+        if (e.key === "ArrowRight" && hasNext && onNext) {
           onNext();
         } else if (e.key === "ArrowLeft" && hasPrevious && onPrevious) {
           onPrevious();
         }
       },
-      [isOpen, onClose, hasNext, onNext, hasPrevious, onPrevious],
+      [isOpen, hasNext, onNext, hasPrevious, onPrevious],
     );
 
     useEffect(() => {
@@ -115,8 +119,6 @@ export const FullScreenPreviewModal = React.memo(
     const handleZoomIn = () => setZoom((z) => Math.min(z + 0.25, 3));
     const handleZoomOut = () => setZoom((z) => Math.max(z - 0.25, 0.5));
 
-    if (!isOpen) return null;
-
     const fileNameLower = (fileName || "").toLowerCase();
     const isHtml = isHtmlPreview(contentType, fileNameLower);
     const isMarkdown =
@@ -126,13 +128,22 @@ export const FullScreenPreviewModal = React.memo(
     const isImage = contentType?.startsWith("image/");
 
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm"
-        onClick={onClose}
-        role="dialog"
-        aria-modal="true"
-        aria-label={fileName ? `Preview: ${fileName}` : "Full screen preview"}
-      >
+      <Transition appear show={isOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={onClose}>
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out duration-200"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-150"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/95 backdrop-blur-sm" />
+          </TransitionChild>
+
+          <div className="fixed inset-0">
+            <DialogPanel className="relative flex h-full w-full flex-col overflow-hidden">
         {/* Navigation Buttons */}
         {hasPrevious && (
           <button
@@ -168,9 +179,9 @@ export const FullScreenPreviewModal = React.memo(
           {/* Header */}
           <div className="flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent px-6 py-4">
             <div className="flex flex-col min-w-0">
-              <h2 className="text-lg font-semibold text-white truncate max-w-xl">
+              <DialogTitle className="text-lg font-semibold text-white truncate max-w-xl">
                 {fileName || "Preview"}
-              </h2>
+              </DialogTitle>
               {contentType && (
                 <p className="text-xs text-white/60 font-mono">{contentType}</p>
               )}
@@ -287,7 +298,10 @@ export const FullScreenPreviewModal = React.memo(
             </div>
           </div>
         </div>
-      </div>
+            </DialogPanel>
+          </div>
+        </Dialog>
+      </Transition>
     );
   },
 );

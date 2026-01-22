@@ -14,6 +14,7 @@ import type {
 import { StepHeader } from "./StepHeader";
 import { StepInputOutput } from "./StepInputOutput";
 import { StepProgressBar } from "./StepProgressBar";
+import { LiveOutputRenderer } from "./LiveOutputRenderer";
 import { ImagePreview } from "./ImagePreview";
 import { getStepStatus } from "./utils";
 import { Artifact } from "@/types/artifact";
@@ -196,7 +197,7 @@ export function ExecutionSteps({
   onResubmit,
   resubmitting,
 }: ExecutionStepsProps) {
-  const liveOutputRef = useRef<HTMLPreElement>(null);
+  const liveOutputRef = useRef<HTMLDivElement>(null);
   const [autoScrollLiveOutput, setAutoScrollLiveOutput] = useState(true);
 
   // Sort steps by step_order once (must be before early return)
@@ -242,10 +243,6 @@ export function ExecutionSteps({
   const liveOutputText =
     typeof liveStep?.output_text === "string" ? liveStep.output_text : "";
   const hasLiveOutput = liveOutputText.length > 0;
-  const liveOutputDisplay = useMemo(
-    () => formatLiveOutputText(liveOutputText),
-    [liveOutputText],
-  );
   const shouldShowLivePanel =
     jobStatus === "processing" ||
     hasLiveOutput ||
@@ -323,17 +320,19 @@ export function ExecutionSteps({
         {liveUpdatedAt && <span>Updated {liveUpdatedAt}</span>}
       </div>
       <div className="mt-3 rounded-lg border border-slate-800/80 bg-[#0d1117] shadow-inner ring-1 ring-white/5">
-        <pre
+        <LiveOutputRenderer
           ref={liveOutputRef}
-          className="max-h-64 overflow-y-auto p-4 font-mono text-sm leading-6 text-slate-100 whitespace-pre-wrap break-words scrollbar-hide-until-hover antialiased selection:bg-slate-700 selection:text-white"
-          aria-live="polite"
-        >
-          {hasLiveOutput
-            ? liveOutputDisplay
-            : jobStatus === "processing"
-              ? "Waiting for live output..."
-              : "No live output available for this job."}
-        </pre>
+          value={
+            hasLiveOutput
+              ? liveOutputText
+              : jobStatus === "processing"
+                ? "Waiting for live output..."
+                : "No live output available for this job."
+          }
+          className="max-h-64 overflow-y-auto p-4 font-mono text-sm leading-6 text-slate-100 scrollbar-hide-until-hover antialiased selection:bg-slate-700 selection:text-white"
+          textClassName="m-0 whitespace-pre-wrap break-words"
+          ariaLive="polite"
+        />
       </div>
       {liveStep?.error && (
         <p className="mt-3 text-xs text-red-600">{liveStep.error}</p>

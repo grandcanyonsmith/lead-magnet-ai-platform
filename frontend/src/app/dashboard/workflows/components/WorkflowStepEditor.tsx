@@ -32,6 +32,8 @@ import {
 } from "@/types/workflow";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { CollapsibleSection } from "@/components/workflows/edit/CollapsibleSection";
+import { Select } from "@/components/ui/Select";
+import { Checkbox } from "@/components/ui/Checkbox";
 
 import AIAssist from "./step-editor/AIAssist";
 import WebhookConfig from "./step-editor/WebhookConfig";
@@ -806,16 +808,14 @@ export default function WorkflowStepEditor({
                     <span>AI Model</span>
                     <span className={FIELD_REQUIRED}>*</span>
                   </label>
-                  <select
+                  <Select
                     id={`ai-model-${index}`}
                     value={localStep.model}
-                    onChange={(e) =>
-                      handleChange("model", e.target.value as AIModel)
+                    onChange={(nextValue) =>
+                      handleChange("model", nextValue as AIModel)
                     }
                     className={SELECT_CONTROL}
-                    required
-                    aria-label="AI model"
-                    aria-required="true"
+                    placeholder="Select model"
                     disabled={modelsLoading || !!modelsError}
                   >
                     {modelsLoading ? (
@@ -831,7 +831,7 @@ export default function WorkflowStepEditor({
                     ) : (
                       <option value="gpt-5.2">GPT-5.2 (Default)</option>
                     )}
-                  </select>
+                  </Select>
                 </div>
 
                 <CollapsibleSection
@@ -850,14 +850,14 @@ export default function WorkflowStepEditor({
                         <span>Reasoning Depth</span>
                         <span className={FIELD_OPTIONAL}>(Optional)</span>
                       </label>
-                      <select
+                      <Select
                         id={`reasoning-effort-${index}`}
                         value={localStep.reasoning_effort || ""}
-                        onChange={(e) =>
-                          handleChange("reasoning_effort", e.target.value || undefined)
+                        onChange={(nextValue) =>
+                          handleChange("reasoning_effort", nextValue || undefined)
                         }
                         className={SELECT_CONTROL}
-                        aria-label="Reasoning effort"
+                        placeholder="Standard (Auto)"
                       >
                         <option value="">Standard (Auto)</option>
                         <option value="none">None - Fastest</option>
@@ -865,7 +865,7 @@ export default function WorkflowStepEditor({
                         <option value="medium">Medium - Balanced</option>
                         <option value="high">High - Thorough</option>
                         <option value="xhigh">Extra High - Maximum</option>
-                      </select>
+                      </Select>
                     </div>
 
                     <div className="md:col-span-2 space-y-1.5">
@@ -1030,11 +1030,10 @@ export default function WorkflowStepEditor({
                                 {tool.description}
                               </p>
                             </button>
-                            <input
-                              type="checkbox"
+                            <Checkbox
                               checked={selected}
                               onChange={() => handleToolToggle(tool.value)}
-                              className="mt-1 h-4 w-4 rounded border-input text-primary focus:ring-2 focus:ring-primary/20"
+                              className="mt-1"
                             />
                           </div>
                         </div>
@@ -1077,13 +1076,13 @@ export default function WorkflowStepEditor({
                     <span>Tool Choice</span>
                     <span className={FIELD_OPTIONAL}>(Optional)</span>
                   </label>
-                  <select
+                  <Select
                     id={`tool-choice-${index}`}
                     value={localStep.tool_choice || "required"}
-                    onChange={(e) =>
+                    onChange={(nextValue) =>
                       handleChange(
                         "tool_choice",
-                        e.target.value as "auto" | "required" | "none",
+                        nextValue as "auto" | "required" | "none",
                       )
                     }
                     className={SELECT_CONTROL}
@@ -1093,7 +1092,7 @@ export default function WorkflowStepEditor({
                         {option.label} - {option.description}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   <p className={HELP_TEXT}>
                     Determines whether the model must use tools, can choose to use them,
                     or should not use them.
@@ -1235,20 +1234,20 @@ export default function WorkflowStepEditor({
                           <span>Strict</span>
                           <span className={FIELD_OPTIONAL}>(Optional)</span>
                         </label>
-                        <select
+                        <Select
                           id={`output-schema-strict-${index}`}
                           value={String(localStep.output_format.strict !== false)}
-                          onChange={(e) =>
+                          onChange={(nextValue) =>
                             handleChange("output_format", {
                               ...localStep.output_format,
-                              strict: e.target.value === "true",
+                              strict: nextValue === "true",
                             } as any)
                           }
                           className={SELECT_CONTROL}
                         >
                           <option value="true">true (recommended)</option>
                           <option value="false">false</option>
-                        </select>
+                        </Select>
                         <p className={HELP_TEXT}>
                           When true, the model must adhere to the schema (subset of JSON
                           Schema supported).
@@ -1347,20 +1346,20 @@ export default function WorkflowStepEditor({
                     <span>Output Verbosity</span>
                     <span className={FIELD_OPTIONAL}>(Optional)</span>
                   </label>
-                  <select
+                  <Select
                     id={`text-verbosity-${index}`}
                     value={localStep.text_verbosity || ""}
-                    onChange={(e) =>
-                      handleChange("text_verbosity", e.target.value || undefined)
+                    onChange={(nextValue) =>
+                      handleChange("text_verbosity", nextValue || undefined)
                     }
                     className={SELECT_CONTROL}
-                    aria-label="Text verbosity"
+                    placeholder="Default"
                   >
                     <option value="">Default</option>
                     <option value="low">Low - Concise</option>
                     <option value="medium">Medium - Balanced</option>
                     <option value="high">High - Detailed</option>
-                  </select>
+                  </Select>
                   <p className={HELP_TEXT}>
                     Adjusts how detailed and verbose the AI&apos;s output will be.
                   </p>
@@ -1496,17 +1495,16 @@ export default function WorkflowStepEditor({
                               {otherStep.step_name}
                             </div>
                           </div>
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={isSelected}
-                            onChange={(e) => {
+                            onChange={(checked) => {
                               const currentDeps = localStep.depends_on || [];
-                              const newDeps = e.target.checked
+                              const newDeps = checked
                                 ? [...currentDeps, otherIndex]
                                 : currentDeps.filter((dep: number) => dep !== otherIndex);
                               handleChange("depends_on", newDeps);
                             }}
-                            className="hidden"
+                            className="sr-only"
                           />
                           {isSelected && (
                             <div className="absolute top-0 right-0 -mt-1 -mr-1 w-3 h-3 bg-primary rounded-full ring-2 ring-background" />

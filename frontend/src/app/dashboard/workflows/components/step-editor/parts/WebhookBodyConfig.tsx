@@ -1,5 +1,7 @@
 import React from "react";
 import { WorkflowStep } from "@/types/workflow";
+import { Select } from "@/components/ui/Select";
+import { Checkbox } from "@/components/ui/Checkbox";
 
 interface WebhookBodyConfigProps {
   step: WorkflowStep;
@@ -58,14 +60,12 @@ export function WebhookBodyConfig({
             <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
               Raw body
             </span>
-            <select
+            <Select
               value=""
-              onChange={(e) => {
-                const token = e.target.value;
+              onChange={(token) => {
                 if (!token) return;
                 const current = String(step.webhook_body || "");
                 onChange("webhook_body", current + token);
-                e.currentTarget.value = "";
               }}
               className="text-xs border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white transition-all hover:border-gray-400 dark:hover:border-gray-500"
               aria-label="Insert variable"
@@ -105,7 +105,7 @@ export function WebhookBodyConfig({
                   </optgroup>
                 );
               })}
-            </select>
+            </Select>
           </div>
           <textarea
             value={String(step.webhook_body || "")}
@@ -135,12 +135,11 @@ export function WebhookBodyConfig({
 
           <div className="space-y-3">
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={
                   step.webhook_data_selection?.include_submission !== false
                 }
-                onChange={(e) => {
+                onChange={(checked) => {
                   const dataSelection = step.webhook_data_selection || {
                     include_submission: true,
                     exclude_step_indices: [],
@@ -148,10 +147,9 @@ export function WebhookBodyConfig({
                   };
                   onChange("webhook_data_selection", {
                     ...dataSelection,
-                    include_submission: e.target.checked,
+                    include_submission: checked,
                   });
                 }}
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
               />
               <span className="text-sm text-gray-900 dark:text-gray-100">
                 Include submission data
@@ -159,12 +157,11 @@ export function WebhookBodyConfig({
             </label>
 
             <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={
                   step.webhook_data_selection?.include_job_info !== false
                 }
-                onChange={(e) => {
+                onChange={(checked) => {
                   const dataSelection = step.webhook_data_selection || {
                     include_submission: true,
                     exclude_step_indices: [],
@@ -172,10 +169,9 @@ export function WebhookBodyConfig({
                   };
                   onChange("webhook_data_selection", {
                     ...dataSelection,
-                    include_job_info: e.target.checked,
+                    include_job_info: checked,
                   });
                 }}
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
               />
               <span className="text-sm text-gray-900 dark:text-gray-100">
                 Include job information
@@ -202,10 +198,9 @@ export function WebhookBodyConfig({
                         key={otherIndex}
                         className="flex items-center space-x-2 cursor-pointer"
                       >
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={isExcluded}
-                          onChange={(e) => {
+                          onChange={(checked) => {
                             const dataSelection =
                               step.webhook_data_selection || {
                                 include_submission: true,
@@ -214,7 +209,7 @@ export function WebhookBodyConfig({
                               };
                             const currentExcluded =
                               dataSelection.exclude_step_indices || [];
-                            const newExcluded = e.target.checked
+                            const newExcluded = checked
                               ? [...currentExcluded, otherIndex]
                               : currentExcluded.filter(
                                   (idx: number) => idx !== otherIndex,
@@ -224,7 +219,6 @@ export function WebhookBodyConfig({
                               exclude_step_indices: newExcluded,
                             });
                           }}
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                         />
                         <span className="text-sm text-gray-900 dark:text-gray-100">
                           Exclude:{" "}

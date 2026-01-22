@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
 import { api } from "@/lib/api";
@@ -16,6 +16,14 @@ import {
   FiCheck,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  Transition,
+  TransitionChild,
+} from "@headlessui/react";
+import { Select } from "@/components/ui/Select";
 
 interface User {
   user_id: string;
@@ -392,55 +400,87 @@ export default function AgencyUsersPage() {
       </div>
 
       {/* Edit Role Modal */}
-      {editingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full mx-auto shadow-xl">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
-              Edit User Role
-            </h2>
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">
-                <strong>User:</strong> {editingUser.name || editingUser.email}
-              </p>
-              <p className="text-sm text-gray-600">
-                <strong>Current Role:</strong> {editingUser.role}
-              </p>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                New Role
-              </label>
-              <select
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value)}
-                className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="USER">USER</option>
-                <option value="ADMIN">ADMIN</option>
-                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-              </select>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleSaveRole}
-                disabled={isSaving || newRole === editingUser.role}
-                className="flex-1 bg-primary-600 text-white px-4 py-2.5 sm:py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target font-medium"
-              >
-                {isSaving ? "Saving..." : "Save"}
-              </button>
-              <button
-                onClick={() => {
-                  setEditingUser(null);
-                  setNewRole("");
-                }}
-                className="flex-1 bg-gray-200 text-gray-700 px-4 py-2.5 sm:py-2 rounded-lg hover:bg-gray-300 transition-colors touch-target font-medium"
-              >
-                Cancel
-              </button>
-            </div>
+      <Transition appear show={Boolean(editingUser)} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={() => {
+            setEditingUser(null);
+            setNewRole("");
+          }}
+        >
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out duration-200"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-150"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/50" />
+          </TransitionChild>
+
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <TransitionChild
+              as={Fragment}
+              enter="ease-out duration-200"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-150"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <DialogPanel className="bg-white rounded-lg p-4 sm:p-6 max-w-md w-full mx-auto shadow-xl">
+                <DialogTitle className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
+                  Edit User Role
+                </DialogTitle>
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-2">
+                    <strong>User:</strong>{" "}
+                    {editingUser?.name || editingUser?.email}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <strong>Current Role:</strong> {editingUser?.role}
+                  </p>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    New Role
+                  </label>
+                  <Select
+                    value={newRole}
+                    onChange={(nextValue) => setNewRole(nextValue)}
+                    className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="USER">USER</option>
+                    <option value="ADMIN">ADMIN</option>
+                    <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                  </Select>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={handleSaveRole}
+                    disabled={isSaving || newRole === editingUser?.role}
+                    className="flex-1 bg-primary-600 text-white px-4 py-2.5 sm:py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors touch-target font-medium"
+                  >
+                    {isSaving ? "Saving..." : "Save"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingUser(null);
+                      setNewRole("");
+                    }}
+                    className="flex-1 bg-gray-200 text-gray-700 px-4 py-2.5 sm:py-2 rounded-lg hover:bg-gray-300 transition-colors touch-target font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </DialogPanel>
+            </TransitionChild>
           </div>
-        </div>
-      )}
+        </Dialog>
+      </Transition>
     </div>
   );
 }

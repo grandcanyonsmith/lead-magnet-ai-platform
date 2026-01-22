@@ -33,6 +33,7 @@ const MOBILE_BREAKPOINT_PX = 640;
 const MOBILE_WORD_LIMIT = 3;
 const DESKTOP_WORD_LIMIT = 5;
 const SEARCH_THRESHOLD = 7;
+const EMPTY_MENU_ITEMS: BreadcrumbMenuItem[] = [];
 
 const truncateWords = (value: string, maxWords: number) => {
   const trimmed = value.trim();
@@ -81,7 +82,7 @@ function BreadcrumbDropdown({
   isCompact,
 }: BreadcrumbDropdownProps) {
   const [query, setQuery] = useState("");
-  const menuItems = item.menuItems ?? [];
+  const menuItems = item.menuItems ?? EMPTY_MENU_ITEMS;
   const normalizedQuery = query.trim().toLowerCase();
   const showSearch = menuItems.length >= SEARCH_THRESHOLD;
   const filteredItems = useMemo(() => {

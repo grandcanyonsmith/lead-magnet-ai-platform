@@ -14,6 +14,7 @@ import {
 } from "react-icons/fi";
 import type { WebhookLog } from "@/lib/api/webhookLogs.client";
 import toast from "react-hot-toast";
+import { Select } from "@/components/ui/Select";
 
 const formatRelativeTime = (dateString: string) => {
   const date = new Date(dateString);
@@ -201,25 +202,25 @@ export default function WebhookLogsPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Filter by Status
             </label>
-            <select
+            <Select
               value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as "all" | "success" | "error")
+              onChange={(nextValue) =>
+                setStatusFilter(nextValue as "all" | "success" | "error")
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
               <option value="all">All Statuses</option>
               <option value="success">Success</option>
               <option value="error">Error</option>
-            </select>
+            </Select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Filter by Endpoint
             </label>
-            <select
+            <Select
               value={endpointFilter}
-              onChange={(e) => setEndpointFilter(e.target.value)}
+              onChange={(nextValue) => setEndpointFilter(nextValue)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             >
               <option value="all">All Endpoints</option>
@@ -228,7 +229,7 @@ export default function WebhookLogsPage() {
                   {endpoint}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
       </div>

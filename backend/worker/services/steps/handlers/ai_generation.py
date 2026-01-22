@@ -126,13 +126,13 @@ class AIStepHandler(AbstractStepHandler):
             )
             
             if not has_required_tool:
-                # Add file_search as default for deep research models if no required tool is present
+                # Add web_search_preview as default for deep research models if no required tool is present
                 logger.info(
                     f"[AIStepHandler] Deep research model '{step_model}' requires at least one of "
-                    "web_search_preview, mcp, or file_search. Adding file_search as default.",
+                    "web_search_preview, mcp, or file_search. Adding web_search_preview as default.",
                     extra={'step_model': step_model, 'step_tools': step_tools_raw}
                 )
-                step_tools.append({"type": "file_search"})
+                step_tools.append({"type": "web_search_preview"})
         
         step_tool_choice = step.get('tool_choice')
         if step_tool_choice not in ('auto', 'required', 'none'):

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import clsx from "clsx";
 import {
   FiChevronRight,
@@ -240,12 +241,14 @@ function UrlImageThumb({ url }: { url: string }) {
 
   return (
     <div className="h-8 w-8 rounded-md border border-gray-200 dark:border-gray-700/60 bg-gray-50 dark:bg-gray-900/50 overflow-hidden">
-      <img
+      <Image
         src={url}
         alt="Image preview"
-        loading="lazy"
+        width={32}
+        height={32}
         className="h-full w-full object-cover"
         onError={() => setError(true)}
+        unoptimized
       />
     </div>
   );

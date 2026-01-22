@@ -18,6 +18,11 @@ import {
   isShellExecutorLogsPayload,
   type ShellExecutorLogsPayload,
 } from "@/components/artifacts/ShellExecutorLogsPreview";
+import {
+  CodeExecutorLogsPreview,
+  isCodeExecutorLogsPayload,
+  type CodeExecutorLogsPayload,
+} from "@/components/artifacts/CodeExecutorLogsPreview";
 
 interface PreviewRendererProps {
   contentType?: string;
@@ -150,18 +155,57 @@ function extractJsonFromCodeBlock(value: string): string {
   return trimmed;
 }
 
+function parseNestedJsonString(value: string, maxDepth = 2): unknown | null {
+  let current: unknown = value;
+  let parsedAtLeastOnce = false;
+
+  for (let depth = 0; depth < maxDepth; depth += 1) {
+    if (typeof current !== "string") break;
+    const trimmed = extractJsonFromCodeBlock(current).trim();
+    if (!trimmed) break;
+
+    try {
+      current = JSON.parse(trimmed);
+      parsedAtLeastOnce = true;
+    } catch {
+      break;
+    }
+  }
+
+  return parsedAtLeastOnce ? current : null;
+}
+
+function formatExecutorLogsContent(value: string): string {
+  const parsed = parseNestedJsonString(value);
+  if (parsed === null) return value;
+  if (typeof parsed === "string") return parsed;
+  try {
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return value;
+  }
+}
+
 function tryParseShellExecutorLogsPayload(
   value: unknown,
 ): ShellExecutorLogsPayload | null {
   if (!value) return null;
   if (isShellExecutorLogsPayload(value)) return value;
   if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(extractJsonFromCodeBlock(value));
-      return isShellExecutorLogsPayload(parsed) ? parsed : null;
-    } catch {
-      return null;
-    }
+    const parsed = parseNestedJsonString(value);
+    return parsed && isShellExecutorLogsPayload(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function tryParseCodeExecutorLogsPayload(
+  value: unknown,
+): CodeExecutorLogsPayload | null {
+  if (!value) return null;
+  if (isCodeExecutorLogsPayload(value)) return value;
+  if (typeof value === "string") {
+    const parsed = parseNestedJsonString(value);
+    return parsed && isCodeExecutorLogsPayload(parsed) ? parsed : null;
   }
   return null;
 }
@@ -804,6 +848,24 @@ export function PreviewRenderer({
     }
 
     if (effectiveContentType === "application/json") {
+      const codeExecutorLogsPayload =
+        tryParseCodeExecutorLogsPayload(jsonContent) ||
+        tryParseCodeExecutorLogsPayload(jsonRaw);
+      if (codeExecutorLogsPayload) {
+        if (isCompactPreview) {
+          return (
+            <CompactPreviewFrame>
+              <CodeExecutorLogsPreview
+                payload={codeExecutorLogsPayload}
+                variant="compact"
+              />
+            </CompactPreviewFrame>
+          );
+        }
+
+        return <CodeExecutorLogsPreview payload={codeExecutorLogsPayload} />;
+      }
+
       const shellExecutorLogsPayload =
         tryParseShellExecutorLogsPayload(jsonContent) ||
         tryParseShellExecutorLogsPayload(jsonRaw);
@@ -824,9 +886,10 @@ export function PreviewRenderer({
       }
 
       if (isExecutorLogsFileName(fileName) && typeof jsonRaw === "string") {
+      const formattedLogs = formatExecutorLogsContent(jsonRaw);
         return (
           <div className="h-full w-full overflow-y-auto rounded-md bg-[#0d1117] p-3 font-mono text-[11px] text-slate-100">
-            <pre className="whitespace-pre-wrap break-words">{jsonRaw}</pre>
+          <pre className="whitespace-pre-wrap break-words">{formattedLogs}</pre>
           </div>
         );
       }
@@ -920,6 +983,24 @@ export function PreviewRenderer({
     }
 
     if (isMarkdownLike) {
+      const codeExecutorLogsPayload =
+        tryParseCodeExecutorLogsPayload(parsedMarkdownJson) ||
+        tryParseCodeExecutorLogsPayload(markdownContent);
+      if (codeExecutorLogsPayload) {
+        if (isCompactPreview) {
+          return (
+            <CompactPreviewFrame>
+              <CodeExecutorLogsPreview
+                payload={codeExecutorLogsPayload}
+                variant="compact"
+              />
+            </CompactPreviewFrame>
+          );
+        }
+
+        return <CodeExecutorLogsPreview payload={codeExecutorLogsPayload} />;
+      }
+
       const shellExecutorLogsPayload =
         tryParseShellExecutorLogsPayload(parsedMarkdownJson) ||
         tryParseShellExecutorLogsPayload(markdownContent);
@@ -940,9 +1021,10 @@ export function PreviewRenderer({
       }
 
       if (isExecutorLogsFileName(fileName) && markdownContent) {
+      const formattedLogs = formatExecutorLogsContent(markdownContent);
         return (
           <div className="h-full w-full overflow-y-auto rounded-md bg-[#0d1117] p-3 font-mono text-[11px] text-slate-100">
-            <pre className="whitespace-pre-wrap break-words">{markdownContent}</pre>
+          <pre className="whitespace-pre-wrap break-words">{formattedLogs}</pre>
           </div>
         );
       }

@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import axios from "axios";
 import { logger } from "@/utils/logger";
+import { Select } from "@/components/ui/Select";
+import { Checkbox } from "@/components/ui/Checkbox";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -341,31 +343,29 @@ export default function PublicFormPage() {
 
       case "select":
         return (
-          <select
+          <Select
             id={field.field_id}
             value={value}
-            onChange={(e) => handleChange(field.field_id, e.target.value)}
+            onChange={(nextValue) => handleChange(field.field_id, nextValue)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            required={field.required}
+            placeholder="Select an option..."
           >
-            <option value="">Select an option...</option>
             {field.options?.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
             ))}
-          </select>
+          </Select>
         );
 
       case "checkbox":
         return (
           <div className="flex items-center">
-            <input
-              type="checkbox"
+            <Checkbox
               id={field.field_id}
               checked={value || false}
-              onChange={(e) => handleChange(field.field_id, e.target.checked)}
-              className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+              onChange={(checked) => handleChange(field.field_id, checked)}
+              className="border-gray-300"
               required={field.required}
             />
             <label

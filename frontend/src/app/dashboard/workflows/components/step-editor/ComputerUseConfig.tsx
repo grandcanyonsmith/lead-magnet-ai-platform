@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Select } from "@/components/ui/Select";
 
 interface ComputerUseConfigProps {
   config: {
@@ -112,16 +113,16 @@ export default function ComputerUseConfig({
         <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
           Environment
         </label>
-        <select
+        <Select
           value={config.environment}
-          onChange={(e) => onChange("environment", e.target.value)}
+          onChange={(nextValue) => onChange("environment", nextValue)}
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
         >
           <option value="browser">Browser</option>
           <option value="mac">macOS</option>
           <option value="windows">Windows</option>
           <option value="ubuntu">Ubuntu</option>
-        </select>
+        </Select>
       </div>
     </div>
   );

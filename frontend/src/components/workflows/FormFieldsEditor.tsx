@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { FiEye, FiPlus, FiTrash2 } from "react-icons/fi";
 import { FormFieldsData } from "@/hooks/useWorkflowForm";
+import { Select } from "@/components/ui/Select";
+import { Checkbox } from "@/components/ui/Checkbox";
 
 interface FormFieldsEditorProps {
   formFieldsData: FormFieldsData;
@@ -109,11 +111,13 @@ export function FormFieldsEditor({
                           disabled
                         />
                       ) : field.field_type === "select" && field.options ? (
-                        <select
+                        <Select
+                          value=""
+                          onChange={() => {}}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                           disabled
+                          placeholder={`Select ${field.label}`}
                         >
-                          <option value="">Select {field.label}</option>
                           {field.options.map(
                             (option: string, optIndex: number) => (
                               <option key={optIndex} value={option}>
@@ -121,7 +125,7 @@ export function FormFieldsEditor({
                               </option>
                             ),
                           )}
-                        </select>
+                        </Select>
                       ) : (
                         <input
                           type={
@@ -195,10 +199,10 @@ export function FormFieldsEditor({
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Type
                     </label>
-                    <select
+                    <Select
                       value={field.field_type || "text"}
-                      onChange={(e) =>
-                        onFieldChange(index, "field_type", e.target.value)
+                      onChange={(nextValue) =>
+                        onFieldChange(index, "field_type", nextValue)
                       }
                       className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                     >
@@ -208,7 +212,7 @@ export function FormFieldsEditor({
                       <option value="textarea">Textarea</option>
                       <option value="select">Select</option>
                       <option value="number">Number</option>
-                    </select>
+                    </Select>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
@@ -227,14 +231,12 @@ export function FormFieldsEditor({
                     />
                   </div>
                   <div className="flex items-center">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
+                    <label className="flex items-center gap-2">
+                      <Checkbox
                         checked={field.required || false}
-                        onChange={(e) =>
-                          onFieldChange(index, "required", e.target.checked)
+                        onChange={(checked) =>
+                          onFieldChange(index, "required", checked)
                         }
-                        className="mr-2"
                       />
                       <span className="text-xs font-medium text-gray-600">
                         Required

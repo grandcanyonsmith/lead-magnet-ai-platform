@@ -52,7 +52,7 @@ export function JobTrackingStats({
     if (jobId) {
       loadStats();
     }
-  }, [jobId]);
+  }, [jobId, onStatsLoaded, onStatsLoadingChange]);
 
   if (loading) {
     return <LoadingState />;

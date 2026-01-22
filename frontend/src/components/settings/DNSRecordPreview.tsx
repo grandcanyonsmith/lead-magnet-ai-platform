@@ -4,6 +4,7 @@
  */
 
 import { Card } from "@/components/ui/Card";
+import { InlineCode } from "@/components/ui/InlineCode";
 import { FiArrowRight, FiCheck, FiAlertCircle } from "react-icons/fi";
 
 interface DNSRecord {
@@ -49,16 +50,16 @@ export function DNSRecordPreview({
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <code className="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                  <InlineCode className="bg-gray-100 dark:bg-gray-700 px-2 py-1 text-xs">
                     {record.name}
-                  </code>
+                  </InlineCode>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     {record.type}
                   </span>
                   <FiArrowRight className="w-3 h-3 text-gray-400 shrink-0" />
-                  <code className="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded truncate max-w-[200px]">
+                  <InlineCode className="bg-gray-100 dark:bg-gray-700 px-2 py-1 text-xs truncate max-w-[200px]">
                     {record.target}
-                  </code>
+                  </InlineCode>
                 </div>
                 {record.exists && (
                   <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">

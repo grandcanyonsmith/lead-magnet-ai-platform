@@ -6,6 +6,9 @@ import { api } from "@/lib/api";
 import { useSettings } from "@/hooks/api/useSettings";
 import { buildPublicFormUrl } from "@/utils/url";
 import { FiArrowLeft, FiSave } from "react-icons/fi";
+import { Select } from "@/components/ui/Select";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Switch } from "@/components/ui/Switch";
 
 type FormField = {
   field_id: string;
@@ -321,10 +324,10 @@ export default function EditFormClient() {
                     <label className="block text-xs font-medium text-gray-700 mb-1">
                       Field Type
                     </label>
-                    <select
+                    <Select
                       value={field.field_type}
-                      onChange={(e) =>
-                        handleFieldChange(index, "field_type", e.target.value)
+                      onChange={(nextValue) =>
+                        handleFieldChange(index, "field_type", nextValue)
                       }
                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
@@ -334,7 +337,7 @@ export default function EditFormClient() {
                       <option value="textarea">Textarea</option>
                       <option value="select">Select</option>
                       <option value="number">Number</option>
-                    </select>
+                    </Select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -389,14 +392,12 @@ export default function EditFormClient() {
                   </div>
                 )}
                 <div className="flex justify-between items-center">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
+                  <label className="flex items-center gap-2">
+                    <Checkbox
                       checked={field.required}
-                      onChange={(e) =>
-                        handleFieldChange(index, "required", e.target.checked)
+                      onChange={(checked) =>
+                        handleFieldChange(index, "required", checked)
                       }
-                      className="mr-2"
                     />
                     <span className="text-xs text-gray-700">Required</span>
                   </label>
@@ -420,14 +421,12 @@ export default function EditFormClient() {
 
         <div className="border-t pt-6 space-y-4">
           <div>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
+            <label className="flex items-center gap-2">
+              <Switch
                 checked={formFormData.rate_limit_enabled}
-                onChange={(e) =>
-                  handleFormChange("rate_limit_enabled", e.target.checked)
+                onChange={(checked) =>
+                  handleFormChange("rate_limit_enabled", checked)
                 }
-                className="mr-2"
               />
               <span className="text-sm font-medium text-gray-700">
                 Enable Rate Limiting
@@ -455,14 +454,12 @@ export default function EditFormClient() {
             </div>
           )}
           <div>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
+            <label className="flex items-center gap-2">
+              <Switch
                 checked={formFormData.captcha_enabled}
-                onChange={(e) =>
-                  handleFormChange("captcha_enabled", e.target.checked)
+                onChange={(checked) =>
+                  handleFormChange("captcha_enabled", checked)
                 }
-                className="mr-2"
               />
               <span className="text-sm font-medium text-gray-700">
                 Enable CAPTCHA

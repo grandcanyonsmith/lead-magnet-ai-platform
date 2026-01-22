@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { createPortal } from "react-dom";
+import { Tab } from "@headlessui/react";
 import { cn } from "@/lib/utils";
 
 export type SecondaryNavigationItem = {
@@ -41,59 +42,58 @@ export function SecondaryNavigation({
   ariaLabel = "Secondary navigation",
   uppercase = true,
 }: SecondaryNavigationProps) {
-  const navContent = (
-    <div
-      className={cn(baseContainerClass, className)}
-      role="tablist"
-      aria-label={ariaLabel}
-    >
-      {items.map((item) => {
-        const isActive = item.id === activeId;
-        const badgeText = getBadgeText(item.badge);
-        const tabClassName = cn(
-          baseTabClass,
-          uppercase && "uppercase tracking-wide",
-          isActive
-            ? "bg-foreground/10 text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground",
-        );
-        const badgeClassName = cn(
-          "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-          item.badgeClassName ?? "bg-muted text-muted-foreground",
-        );
+  const selectedIndex = Math.max(
+    0,
+    items.findIndex((item) => item.id === activeId),
+  );
+  const handleChange = (index: number) => {
+    const item = items[index];
+    if (!item) return;
+    onSelect?.(item.id);
+  };
 
-        if (item.href) {
+  const navContent = (
+    <Tab.Group selectedIndex={selectedIndex} onChange={handleChange}>
+      <Tab.List className={cn(baseContainerClass, className)} aria-label={ariaLabel}>
+        {items.map((item) => {
+          const badgeText = getBadgeText(item.badge);
+          const badgeClassName = cn(
+            "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+            item.badgeClassName ?? "bg-muted text-muted-foreground",
+          );
+
+          const tabClassName = ({ selected }: { selected: boolean }) =>
+            cn(
+              baseTabClass,
+              uppercase && "uppercase tracking-wide",
+              selected
+                ? "bg-foreground/10 text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            );
+
+          if (item.href) {
+            return (
+              <Tab
+                key={item.id}
+                as={Link}
+                href={item.href}
+                className={tabClassName}
+              >
+                <span>{item.label}</span>
+                {badgeText && <span className={badgeClassName}>{badgeText}</span>}
+              </Tab>
+            );
+          }
+
           return (
-            <Link
-              key={item.id}
-              href={item.href}
-              role="tab"
-              aria-selected={isActive}
-              aria-current={isActive ? "page" : undefined}
-              className={tabClassName}
-              onClick={() => onSelect?.(item.id)}
-            >
+            <Tab key={item.id} as="button" className={tabClassName}>
               <span>{item.label}</span>
               {badgeText && <span className={badgeClassName}>{badgeText}</span>}
-            </Link>
+            </Tab>
           );
-        }
-
-        return (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={isActive}
-            className={tabClassName}
-            onClick={() => onSelect?.(item.id)}
-          >
-            <span>{item.label}</span>
-            {badgeText && <span className={badgeClassName}>{badgeText}</span>}
-          </button>
-        );
-      })}
-    </div>
+        })}
+      </Tab.List>
+    </Tab.Group>
   );
 
   if (portalTargetId) {

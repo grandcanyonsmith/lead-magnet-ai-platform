@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
+import { Tab } from "@headlessui/react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -54,6 +55,7 @@ export function SubHeaderTabs({
   moreLabel = "More",
 }: SubHeaderTabsProps) {
   const [isCompact, setIsCompact] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
 
   const effectiveMobileMax = mobileMaxVisible ?? tabs.length;
   const effectiveCompactMax = compactMaxVisible ?? effectiveMobileMax;
@@ -73,7 +75,15 @@ export function SubHeaderTabs({
     return () => mediaQuery.removeEventListener("change", update);
   }, [compactBreakpointPx, overflowEnabled]);
 
-  const normalizeVisibleIds = (current: string[]) => {
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsSmallScreen(mediaQuery.matches);
+    update();
+    mediaQuery.addEventListener("change", update);
+    return () => mediaQuery.removeEventListener("change", update);
+  }, []);
+
+  const normalizeVisibleIds = useCallback((current: string[]) => {
     const unique = current.filter((id, idx) => current.indexOf(id) === idx);
     const existing = unique.filter((id) => tabs.some((tab) => tab.id === id));
     const next = [...existing];
@@ -87,26 +97,26 @@ export function SubHeaderTabs({
       next.push(...missing.slice(0, visibleCount - next.length));
     }
     return next;
-  };
+  }, [tabs, visibleCount]);
 
-  const swapIntoVisible = (current: string[], id: string) => {
+  const swapIntoVisible = useCallback((current: string[], id: string) => {
     if (current.includes(id)) return current;
     if (current.length === 0) return [id];
     const swapIndex = Math.max(current.length - 2, 0);
     const next = [...current];
     next[swapIndex] = id;
     return next;
-  };
+  }, []);
 
   useEffect(() => {
     if (!overflowEnabled) return;
     setVisibleIds((prev) => normalizeVisibleIds(prev));
-  }, [overflowEnabled, tabs, visibleCount]);
+  }, [overflowEnabled, normalizeVisibleIds]);
 
   useEffect(() => {
     if (!overflowEnabled) return;
     setVisibleIds((prev) => swapIntoVisible(normalizeVisibleIds(prev), activeId));
-  }, [activeId, overflowEnabled, tabs, visibleCount]);
+  }, [activeId, overflowEnabled, normalizeVisibleIds, swapIntoVisible]);
 
   const mobileVisibleIds = overflowEnabled
     ? visibleIds.slice(0, visibleCount)
@@ -128,146 +138,138 @@ export function SubHeaderTabs({
     onSelect?.(id);
   };
 
+  const tabsForSelection =
+    overflowEnabled && isSmallScreen ? mobileTabs : tabs;
+  const selectedIndex = Math.max(
+    0,
+    tabsForSelection.findIndex((tab) => tab.id === activeId),
+  );
+
+  const handleTabChange = (index: number) => {
+    const nextTab = tabsForSelection[index];
+    if (!nextTab) return;
+    handleTabClick(nextTab.id);
+  };
+
   const renderTab = (tab: SubHeaderTab) => {
-    const isActive = tab.id === activeId;
     const badgeText = getBadgeText(tab.badge);
-    const classes = cn(
-      tabClass,
-      isActive
-        ? "text-foreground after:scale-x-100"
-        : "hover:text-foreground hover:-translate-y-0.5 hover:after:scale-x-100",
-    );
-
-    if (tab.href) {
-      return (
-        <Link
-          key={tab.id}
-          href={tab.href}
-          role="tab"
-          aria-current={isActive ? "page" : undefined}
-          aria-selected={isActive}
-          className={classes}
-          onClick={() => handleTabClick(tab.id)}
-        >
-          <span>{tab.label}</span>
-          {badgeText && (
-            <span
-              className={cn(
-                "whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground sm:text-[11px]",
-                isActive && "bg-primary/10 text-primary-700 dark:text-primary-300",
-              )}
-            >
-              {badgeText}
-            </span>
-          )}
-        </Link>
+    const tabClassName = ({ selected }: { selected: boolean }) =>
+      cn(
+        tabClass,
+        selected
+          ? "text-foreground after:scale-x-100"
+          : "hover:text-foreground hover:-translate-y-0.5 hover:after:scale-x-100",
       );
-    }
-
-    return (
-      <button
-        key={tab.id}
-        type="button"
-        role="tab"
-        aria-selected={isActive}
-        className={classes}
-        onClick={() => handleTabClick(tab.id)}
-      >
+    const renderContent = ({ selected }: { selected: boolean }) => (
+      <>
         <span>{tab.label}</span>
         {badgeText && (
           <span
             className={cn(
               "whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground sm:text-[11px]",
-              isActive && "bg-primary/10 text-primary-700 dark:text-primary-300",
+              selected && "bg-primary/10 text-primary-700 dark:text-primary-300",
             )}
           >
             {badgeText}
           </span>
         )}
-      </button>
+      </>
+    );
+
+    if (tab.href) {
+      return (
+        <Tab key={tab.id} as={Link} href={tab.href} className={tabClassName}>
+          {renderContent}
+        </Tab>
+      );
+    }
+
+    return (
+      <Tab key={tab.id} as="button" className={tabClassName}>
+        {renderContent}
+      </Tab>
     );
   };
 
   const navContent = (
     <div className={cn("border-b border-border/60 bg-muted", className)}>
       <div className="px-4 sm:px-6 lg:px-12">
-        <nav
-          role="tablist"
-          aria-label="Section navigation"
-          className="flex w-full items-center py-2"
-        >
-          {overflowEnabled ? (
-            <>
-              <div className="flex w-full items-center gap-3 sm:hidden">
-                <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto scrollbar-hide">
-                  {mobileTabs.map(renderTab)}
+        <Tab.Group selectedIndex={selectedIndex} onChange={handleTabChange}>
+          <Tab.List className="flex w-full items-center py-2" aria-label="Section navigation">
+            {overflowEnabled ? (
+              isSmallScreen ? (
+                <div className="flex w-full items-center gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto scrollbar-hide">
+                    {mobileTabs.map(renderTab)}
+                  </div>
+                  {overflowTabs.length > 0 && (
+                    <>
+                      <span className="h-5 w-px bg-border/60" aria-hidden="true" />
+                      <div className="relative shrink-0">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="inline-flex items-center gap-1 pb-2 text-xs font-semibold text-muted-foreground transition-all duration-150 ease-out hover:text-foreground hover:-translate-y-0.5">
+                            <span>{moreLabel}</span>
+                            <ChevronDown className="h-3 w-3" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            side="bottom"
+                            className="w-44 z-[70]"
+                          >
+                            {overflowTabs.map((tab) => {
+                              const badgeText = getBadgeText(tab.badge);
+                              return (
+                                <DropdownMenuItem key={tab.id} className="transition-colors">
+                                  {tab.href ? (
+                                    <Link
+                                      href={tab.href}
+                                      className="flex w-full items-center justify-between gap-2"
+                                      onClick={() => handleTabClick(tab.id)}
+                                    >
+                                      <span>{tab.label}</span>
+                                      {badgeText && (
+                                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                          {badgeText}
+                                        </span>
+                                      )}
+                                    </Link>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className="flex w-full items-center justify-between gap-2 text-left"
+                                      onClick={() => handleTabClick(tab.id)}
+                                    >
+                                      <span>{tab.label}</span>
+                                      {badgeText && (
+                                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                          {badgeText}
+                                        </span>
+                                      )}
+                                    </button>
+                                  )}
+                                </DropdownMenuItem>
+                              );
+                            })}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </>
+                  )}
                 </div>
-                {overflowTabs.length > 0 && (
-                  <>
-                    <span className="h-5 w-px bg-border/60" aria-hidden="true" />
-                    <div className="relative shrink-0">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger className="inline-flex items-center gap-1 pb-2 text-xs font-semibold text-muted-foreground transition-all duration-150 ease-out hover:text-foreground hover:-translate-y-0.5">
-                          <span>{moreLabel}</span>
-                          <ChevronDown className="h-3 w-3" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          side="bottom"
-                          className="w-44 z-[70]"
-                        >
-                          {overflowTabs.map((tab) => {
-                            const badgeText = getBadgeText(tab.badge);
-                            return (
-                              <DropdownMenuItem key={tab.id} className="transition-colors">
-                                {tab.href ? (
-                                  <Link
-                                    href={tab.href}
-                                    className="flex w-full items-center justify-between gap-2"
-                                    onClick={() => handleTabClick(tab.id)}
-                                  >
-                                    <span>{tab.label}</span>
-                                    {badgeText && (
-                                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                                        {badgeText}
-                                      </span>
-                                    )}
-                                  </Link>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    className="flex w-full items-center justify-between gap-2 text-left"
-                                    onClick={() => handleTabClick(tab.id)}
-                                  >
-                                    <span>{tab.label}</span>
-                                    {badgeText && (
-                                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                                        {badgeText}
-                                      </span>
-                                    )}
-                                  </button>
-                                )}
-                              </DropdownMenuItem>
-                            );
-                          })}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="hidden sm:block sm:w-full sm:overflow-x-auto scrollbar-hide">
-                <div className="inline-flex items-center gap-6">
-                  {tabs.map(renderTab)}
+              ) : (
+                <div className="w-full overflow-x-auto scrollbar-hide">
+                  <div className="inline-flex items-center gap-6">
+                    {tabs.map(renderTab)}
+                  </div>
                 </div>
+              )
+            ) : (
+              <div className="inline-flex items-center gap-6 overflow-x-auto scrollbar-hide">
+                {tabs.map(renderTab)}
               </div>
-            </>
-          ) : (
-            <div className="inline-flex items-center gap-6 overflow-x-auto scrollbar-hide">
-              {tabs.map(renderTab)}
-            </div>
-          )}
-        </nav>
+            )}
+          </Tab.List>
+        </Tab.Group>
       </div>
     </div>
   );

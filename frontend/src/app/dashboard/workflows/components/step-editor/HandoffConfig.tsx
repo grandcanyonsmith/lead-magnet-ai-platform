@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { Workflow, WorkflowStep } from "@/types/workflow";
+import { Select } from "@/components/ui/Select";
+import { Checkbox } from "@/components/ui/Checkbox";
 
 interface HandoffConfigProps {
   step: WorkflowStep;
@@ -84,10 +86,10 @@ export default function HandoffConfig({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Target Lead Magnet <span className="text-red-500">*</span>
           </label>
-          <select
+          <Select
             value={step.handoff_workflow_id || ""}
-            onChange={(e) => {
-              const nextId = e.target.value;
+            onChange={(nextValue) => {
+              const nextId = nextValue;
               onChange("handoff_workflow_id", nextId);
               // Set reasonable defaults the first time this is enabled
               if (nextId && step.handoff_payload_mode === undefined) {
@@ -108,6 +110,11 @@ export default function HandoffConfig({
             }}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
             disabled={loading}
+            placeholder={
+              loading
+                ? "Loading lead magnets…"
+                : "Select a lead magnet to send data to"
+            }
           >
             <option value="">
               {loading
@@ -119,7 +126,7 @@ export default function HandoffConfig({
                 {w.workflow_name || w.workflow_id}
               </option>
             ))}
-          </select>
+          </Select>
           {error && (
             <p className="mt-1 text-xs text-red-600 dark:text-red-400">
               {error}
@@ -131,12 +138,12 @@ export default function HandoffConfig({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Payload Mode
           </label>
-          <select
+          <Select
             value={step.handoff_payload_mode || "previous_step_output"}
-            onChange={(e) =>
+            onChange={(nextValue) =>
               onChange(
                 "handoff_payload_mode",
-                e.target.value as WorkflowStep["handoff_payload_mode"],
+                nextValue as WorkflowStep["handoff_payload_mode"],
               )
             }
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
@@ -145,7 +152,7 @@ export default function HandoffConfig({
             <option value="previous_step_output">Previous step output</option>
             <option value="full_context">Full context</option>
             <option value="submission_only">Submission data only</option>
-          </select>
+          </Select>
         </div>
 
         <div>
@@ -165,32 +172,29 @@ export default function HandoffConfig({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={bypassRequiredInputs}
-            onChange={(e) =>
-              onChange("handoff_bypass_required_inputs", e.target.checked)
+            onChange={(checked) =>
+              onChange("handoff_bypass_required_inputs", checked)
             }
             disabled={!handoffEnabled}
           />
           Bypass required inputs
         </label>
         <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={includeSubmissionData}
-            onChange={(e) =>
-              onChange("handoff_include_submission_data", e.target.checked)
+            onChange={(checked) =>
+              onChange("handoff_include_submission_data", checked)
             }
             disabled={!handoffEnabled}
           />
           Include original submission data
         </label>
         <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={includeContext}
-            onChange={(e) => onChange("handoff_include_context", e.target.checked)}
+            onChange={(checked) => onChange("handoff_include_context", checked)}
             disabled={!handoffEnabled}
           />
           Include formatted context (can be large)

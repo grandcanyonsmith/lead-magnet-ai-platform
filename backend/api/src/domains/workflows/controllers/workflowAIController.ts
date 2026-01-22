@@ -657,6 +657,8 @@ export class WorkflowAIController {
             step_description: step.step_description,
             model: step.model,
             tools: step.tools,
+            depends_on: step.depends_on,
+            step_order: step.step_order,
           })),
         },
         currentStep: body.currentStep,

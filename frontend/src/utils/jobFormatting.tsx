@@ -90,21 +90,125 @@ export function formatDurationMs(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+const PYTHON_INLINE_KEYWORDS = [
+  "from",
+  "import",
+  "def",
+  "class",
+  "for",
+  "if",
+  "with",
+  "try",
+  "except",
+  "elif",
+  "else",
+  "finally",
+  "while",
+  "return",
+  "print",
+  "assert",
+  "raise",
+  "pass",
+];
+
+const PYTHON_HEREDOC_REGEX =
+  /(.*\bpython(?:\d+(?:\.\d+)?)?\b[^\n]*?<<\s*['"]?([A-Za-z0-9_]+)['"]?)(.*)/i;
+
+const PYTHON_KEYWORD_REGEX = new RegExp(
+  `\\s+(${PYTHON_INLINE_KEYWORDS.join("|")})\\b`,
+  "g",
+);
+
+const formatShellPromptLines = (value: string): string => {
+  const promptMatches = value.match(/\$\s/g);
+  if (!promptMatches || promptMatches.length === 0) {
+    return value;
+  }
+  const hasShellMarker = /shell execution/i.test(value);
+  if (!hasShellMarker && promptMatches.length < 2) {
+    return value;
+  }
+  return value.replace(/\s\$\s/g, "\n$ ");
+};
+
+const formatInlinePythonScript = (value: string): string => {
+  let working = value.trim();
+  if (!working) return "";
+  working = working.replace(/;\s*/g, ";\n");
+  working = working.replace(PYTHON_KEYWORD_REGEX, "\n$1");
+  const lines = working
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return lines.join("\n");
+};
+
+const splitInlineHeredoc = (
+  rest: string,
+  marker: string,
+): { script: string; closingMarker: string | null; trailing: string | null } => {
+  const trimmed = rest.trim();
+  if (!trimmed) {
+    return { script: "", closingMarker: null, trailing: null };
+  }
+  const rawMarker = ` ${marker}`;
+  const lastIndex = trimmed.lastIndexOf(rawMarker);
+  if (lastIndex === -1) {
+    return { script: trimmed, closingMarker: null, trailing: null };
+  }
+  const afterIndex = lastIndex + rawMarker.length;
+  const afterChar = trimmed[afterIndex];
+  if (afterChar && !/\s/.test(afterChar)) {
+    return { script: trimmed, closingMarker: null, trailing: null };
+  }
+  const script = trimmed.slice(0, lastIndex).trim();
+  const trailing = trimmed.slice(afterIndex).trim();
+  return {
+    script,
+    closingMarker: marker,
+    trailing: trailing || null,
+  };
+};
+
+const formatInlinePythonHeredocs = (value: string): string => {
+  const lines = value.split("\n");
+  const formatted: string[] = [];
+
+  lines.forEach((line) => {
+    const match = line.match(PYTHON_HEREDOC_REGEX);
+    if (!match) {
+      formatted.push(line);
+      return;
+    }
+    const prefix = match[1];
+    const marker = match[2];
+    const rest = match[3] ?? "";
+    if (!rest.trim()) {
+      formatted.push(line);
+      return;
+    }
+
+    const { script, closingMarker, trailing } = splitInlineHeredoc(rest, marker);
+    formatted.push(prefix.trimEnd());
+    if (script) {
+      formatted.push(...formatInlinePythonScript(script).split("\n"));
+    }
+    if (closingMarker) {
+      formatted.push(closingMarker);
+    }
+    if (trailing) {
+      formatted.push(trailing);
+    }
+  });
+
+  return formatted.join("\n");
+};
+
 export function formatLiveOutputText(value: string): string {
   if (!value) return value;
   const normalized = value.replace(/\r\n/g, "\n");
-  if (normalized.includes("\n")) {
-    return normalized;
-  }
-  const promptMatches = normalized.match(/\$\s/g);
-  if (!promptMatches || promptMatches.length === 0) {
-    return normalized;
-  }
-  const hasShellMarker = /shell execution/i.test(normalized);
-  if (!hasShellMarker && promptMatches.length < 2) {
-    return normalized;
-  }
-  return normalized.replace(/\s\$\s/g, "\n$ ");
+  const withShellBreaks = formatShellPromptLines(normalized);
+  return formatInlinePythonHeredocs(withShellBreaks);
 }
 
 export function isJSON(str: string): boolean {

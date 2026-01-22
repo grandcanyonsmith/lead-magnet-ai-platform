@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   FiSave,
@@ -472,12 +473,15 @@ export default function NewWorkflowPage() {
                           : "border-gray-200 dark:border-border hover:border-emerald-300"
                       }`}
                     >
-                      <div className="aspect-[4/3] rounded-md overflow-hidden bg-muted/30 border border-gray-200 dark:border-border">
+                      <div className="relative aspect-[4/3] rounded-md overflow-hidden bg-muted/30 border border-gray-200 dark:border-border">
                         {deliverable.image_url ? (
-                          <img
+                          <Image
                             src={deliverable.image_url}
                             alt={deliverable.title}
-                            className="h-full w-full object-cover"
+                            fill
+                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                            className="object-cover"
+                            unoptimized
                           />
                         ) : (
                           <div className="h-full w-full flex items-center justify-center text-xs text-gray-500 dark:text-muted-foreground">
