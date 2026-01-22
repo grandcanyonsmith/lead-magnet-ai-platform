@@ -23,7 +23,7 @@ interface SubHeaderTabsProps {
   tabs: readonly SubHeaderTab[];
   activeId: string;
   onSelect?: (id: string) => void;
-  portalTargetId?: string;
+  portalTargetId?: string | null;
   className?: string;
   enableOverflowMenu?: boolean;
   mobileMaxVisible?: number;
@@ -198,12 +198,14 @@ export function SubHeaderTabs({
         >
           {overflowEnabled ? (
             <>
-              <div className="flex w-full items-center gap-3 overflow-x-auto scrollbar-hide sm:hidden">
-                {mobileTabs.map(renderTab)}
+              <div className="flex w-full items-center gap-3 sm:hidden">
+                <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto scrollbar-hide">
+                  {mobileTabs.map(renderTab)}
+                </div>
                 {overflowTabs.length > 0 && (
                   <>
                     <span className="h-5 w-px bg-border/60" aria-hidden="true" />
-                    <div className="relative">
+                    <div className="relative shrink-0">
                       <DropdownMenu>
                         <DropdownMenuTrigger className="inline-flex items-center gap-1 pb-2 text-xs font-semibold text-muted-foreground transition-all duration-150 ease-out hover:text-foreground hover:-translate-y-0.5">
                           <span>{moreLabel}</span>

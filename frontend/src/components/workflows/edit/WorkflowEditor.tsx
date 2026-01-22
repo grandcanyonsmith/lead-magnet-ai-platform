@@ -416,7 +416,7 @@ export function WorkflowEditor({
         ]}
         activeId={activeTab}
         onSelect={(id) => setActiveTab(id as "workflow" | "form" | "template")}
-        portalTargetId={portalTargetId ?? undefined}
+        portalTargetId={portalTargetId}
         enableOverflowMenu
         mobileMaxVisible={3}
         compactMaxVisible={2}

@@ -3,9 +3,10 @@
  * Displays step input and output sections with copy functionality
  */
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   FiCopy,
+  FiCheck,
   FiChevronDown,
   FiChevronUp,
   FiLoader,
@@ -122,6 +123,8 @@ export function StepInputOutput({
   const inputScrollRef = useRef<HTMLDivElement>(null);
   const outputScrollRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [copiedImageUrl, setCopiedImageUrl] = useState<string | null>(null);
 
   // Add scroll detection to show scrollbars when scrolling
   useEffect(() => {
@@ -175,6 +178,9 @@ export function StepInputOutput({
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -202,6 +208,42 @@ export function StepInputOutput({
   if (!shouldShow) {
     return null;
   }
+
+  const handleCopyImageUrl = (url: string) => {
+    onCopy(url);
+    setCopiedImageUrl(url);
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+    }
+    copyTimeoutRef.current = setTimeout(() => {
+      setCopiedImageUrl(null);
+    }, 2000);
+  };
+
+  const renderCopyButton = (url: string) => {
+    const isCopied = copiedImageUrl === url;
+    return (
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          handleCopyImageUrl(url);
+        }}
+        className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 active:text-gray-900 dark:active:text-white flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600 touch-target min-h-[44px] sm:min-h-0"
+        title={isCopied ? "Copied" : "Copy image URL"}
+        aria-label={isCopied ? "Copied image URL" : "Copy image URL"}
+      >
+        {isCopied ? (
+          <FiCheck className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+        ) : (
+          <FiCopy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+        )}
+        <span className="hidden sm:inline">
+          {isCopied ? "Copied" : "Copy"}
+        </span>
+      </button>
+    );
+  };
 
   const renderImageSection = () => {
     const stepOrder = step.step_order ?? 0;
@@ -271,15 +313,18 @@ export function StepInputOutput({
                 />
               </div>
               <div className="p-3 md:p-2 bg-gray-100 dark:bg-gray-800">
-                <a
-                  href={imageUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm md:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 break-all block touch-target py-2 md:py-1 min-h-[44px] md:min-h-0"
-                  title={imageUrl}
-                >
-                  {truncateUrl(imageUrl)}
-                </a>
+                <div className="flex items-center justify-between gap-2">
+                  <a
+                    href={imageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm md:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 break-all touch-target py-2 md:py-1 min-h-[44px] md:min-h-0 flex-1 min-w-0"
+                    title={imageUrl}
+                  >
+                    {truncateUrl(imageUrl)}
+                  </a>
+                  {renderCopyButton(imageUrl)}
+                </div>
               </div>
             </div>
           ))}
@@ -327,6 +372,7 @@ export function StepInputOutput({
                           artifact.artifact_name ||
                           truncateUrl(artifactUrl)}
                       </a>
+                    {renderCopyButton(artifactUrl)}
                     </div>
                   </div>
                 </div>
@@ -455,9 +501,6 @@ export function StepInputOutput({
               >
                 {/* Current Step Input */}
                 <StepContent formatted={formatStepInput(step)} />
-
-                {/* Display images in Input section if image generation was used */}
-                {usedImageGeneration && renderImageSection()}
               </div>
             </div>
 

@@ -21,7 +21,7 @@ export function JobEditTab({ workflow, onExit }: JobEditTabProps) {
   return (
     <WorkflowEditor
       workflowIdOverride={workflow.workflow_id}
-      portalTargetId={null}
+      portalTargetId="job-edit-subheader"
       onExit={onExit}
       onSaveSuccess={() => onExit?.()}
       loadingFullPage={false}

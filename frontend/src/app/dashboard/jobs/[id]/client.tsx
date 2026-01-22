@@ -519,6 +519,7 @@ export default function JobDetailClient() {
           onRefresh={refreshJob}
           refreshing={refreshing}
         />
+        <div id="job-edit-subheader" className="w-full" />
 
         <ResubmitModal
           isOpen={showResubmitModal}
