@@ -214,6 +214,120 @@ class AuthController {
       throw new ApiError("Failed to generate upload URL", 500);
     }
   }
+
+  /**
+   * Upload avatar directly (base64 payload)
+   * POST /me/avatar-upload
+   */
+  async uploadAvatar(
+    _params: Record<string, string>,
+    body: any,
+    _query: Record<string, string | undefined>,
+    _tenantId: string | undefined,
+    context?: RequestContext,
+  ): Promise<RouteResponse> {
+    const auth = requireUser(context);
+    const userId = auth.actingUserId;
+    const customerId = auth.customerId;
+
+    if (auth.isImpersonating) {
+      throw new ApiError("Cannot upload avatar while impersonating", 403);
+    }
+
+    if (!body?.file || typeof body.file !== "string") {
+      throw new ApiError("File is required", 400);
+    }
+
+    let base64 = body.file.trim();
+    let detectedContentType: string | undefined;
+    const dataUrlMatch = base64.match(/^data:([^;]+);base64,(.+)$/);
+    if (dataUrlMatch) {
+      detectedContentType = dataUrlMatch[1];
+      base64 = dataUrlMatch[2];
+    }
+
+    const contentType = (
+      typeof body.contentType === "string" && body.contentType.trim()
+        ? body.contentType.trim()
+        : detectedContentType || "image/jpeg"
+    ).toLowerCase();
+
+    if (!contentType.startsWith("image/")) {
+      throw new ApiError("Only image uploads are supported", 400);
+    }
+
+    const fileBuffer = Buffer.from(base64, "base64");
+    if (!fileBuffer.length) {
+      throw new ApiError("Invalid file data", 400);
+    }
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (fileBuffer.length > maxSize) {
+      throw new ApiError("File size exceeds maximum allowed size (5MB)", 400);
+    }
+
+    const ext = contentType.split("/")[1] || "jpg";
+    const rawFilename =
+      typeof body.filename === "string" && body.filename.trim()
+        ? body.filename.trim()
+        : `avatar.${ext}`;
+    const filename = rawFilename.includes(".")
+      ? rawFilename
+      : `${rawFilename}.${ext}`;
+
+    try {
+      const bucket = env.artifactsBucket;
+      if (!bucket) {
+        throw new ApiError("Storage not configured", 500);
+      }
+
+      const { s3Service } = await import("../services/s3Service");
+      const s3Key = await s3Service.uploadFile(
+        customerId,
+        fileBuffer,
+        filename,
+        `avatars/${userId}`,
+        contentType,
+      );
+
+      const cloudfrontDomain = env.cloudfrontDomain;
+      const bucketRegion =
+        bucket === "cc360-pages" ? "us-west-2" : env.awsRegion;
+      const publicUrl = cloudfrontDomain
+        ? `https://${cloudfrontDomain}/${s3Key}`
+        : `https://${bucket}.s3.${bucketRegion}.amazonaws.com/${s3Key}`;
+
+      const updatedUser = await db.update(
+        USERS_TABLE,
+        { user_id: userId },
+        {
+          profile_photo_url: publicUrl,
+          updated_at: new Date().toISOString(),
+        },
+      );
+
+      return {
+        statusCode: 200,
+        body: {
+          user: {
+            user_id: updatedUser.user_id,
+            email: updatedUser.email,
+            name: updatedUser.name,
+            role: updatedUser.role,
+            customer_id: updatedUser.customer_id,
+            profile_photo_url: updatedUser.profile_photo_url,
+          },
+          publicUrl,
+        },
+      };
+    } catch (error) {
+      logger.error("[AuthController.uploadAvatar] Error uploading avatar", {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+      });
+      throw new ApiError("Failed to upload avatar", 500);
+    }
+  }
 }
 
 export const authController = new AuthController();

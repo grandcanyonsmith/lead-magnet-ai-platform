@@ -31,6 +31,21 @@ interface FullScreenPreviewModalProps {
 
 type ViewMode = "desktop" | "tablet" | "mobile";
 
+const isHtmlPreview = (contentType?: string, fileNameLower = ""): boolean => {
+  const normalizedType = (contentType || "").toLowerCase();
+  return (
+    normalizedType.startsWith("text/html") ||
+    normalizedType === "application/xhtml+xml" ||
+    fileNameLower.endsWith(".html") ||
+    fileNameLower.endsWith(".htm")
+  );
+};
+
+const getDefaultViewMode = (contentType?: string, fileName?: string): ViewMode =>
+  isHtmlPreview(contentType, (fileName || "").toLowerCase())
+    ? "mobile"
+    : "desktop";
+
 export const FullScreenPreviewModal = React.memo(
   function FullScreenPreviewModal({
     isOpen,
@@ -44,16 +59,18 @@ export const FullScreenPreviewModal = React.memo(
     hasNext,
     hasPrevious,
   }: FullScreenPreviewModalProps) {
-    const [viewMode, setViewMode] = useState<ViewMode>("desktop");
+    const [viewMode, setViewMode] = useState<ViewMode>(() =>
+      getDefaultViewMode(contentType, fileName),
+    );
     const [zoom, setZoom] = useState(1);
 
     // Reset state when content changes
     useEffect(() => {
       if (isOpen) {
-        setViewMode("desktop");
+        setViewMode(getDefaultViewMode(contentType, fileName));
         setZoom(1);
       }
-    }, [isOpen, objectUrl]);
+    }, [isOpen, objectUrl, contentType, fileName]);
 
     // Handle keyboard navigation
     const handleKeyDown = useCallback(
@@ -101,11 +118,7 @@ export const FullScreenPreviewModal = React.memo(
     if (!isOpen) return null;
 
     const fileNameLower = (fileName || "").toLowerCase();
-    const isHtml =
-      (contentType || "").startsWith("text/html") ||
-      contentType === "application/xhtml+xml" ||
-      fileNameLower.endsWith(".html") ||
-      fileNameLower.endsWith(".htm");
+    const isHtml = isHtmlPreview(contentType, fileNameLower);
     const isMarkdown =
       (contentType || "").startsWith("text/markdown") ||
       fileNameLower.endsWith(".md") ||

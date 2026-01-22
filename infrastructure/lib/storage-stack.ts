@@ -125,7 +125,11 @@ export class StorageStack extends cdk.Stack {
       publicReadAccess: false, // We'll use bucket policy for specific paths
       cors: [
         {
-          allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.HEAD],
+          allowedMethods: [
+            s3.HttpMethods.GET,
+            s3.HttpMethods.HEAD,
+            s3.HttpMethods.PUT,
+          ],
           allowedOrigins: ['*'],
           allowedHeaders: ['*'],
           maxAge: 3600,

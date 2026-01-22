@@ -26,13 +26,17 @@ export function useWorkflowJobs(workflows: Workflow[]): UseWorkflowJobsResult {
       .join(",");
   }, [workflows]);
 
+  const workflowIdList = useMemo(() => {
+    return workflowIds ? workflowIds.split(",") : [];
+  }, [workflowIds]);
+
   const buildEmptyMap = useCallback(() => {
     const map: Record<string, any[]> = {};
-    workflows.forEach((workflow) => {
-      map[workflow.workflow_id] = [];
+    workflowIdList.forEach((workflowId) => {
+      map[workflowId] = [];
     });
     return map;
-  }, [workflows]);
+  }, [workflowIdList]);
 
   const fetchRecentJobs = useCallback(async () => {
     if (fetchInFlightRef.current) return;
@@ -59,7 +63,9 @@ export function useWorkflowJobs(workflows: Workflow[]): UseWorkflowJobsResult {
 
   useEffect(() => {
     if (!workflowIds) {
-      setWorkflowJobs({});
+      setWorkflowJobs((prev) => {
+        return Object.keys(prev).length === 0 ? prev : {};
+      });
       return;
     }
     if (lastFetchKeyRef.current === workflowIds) return;
