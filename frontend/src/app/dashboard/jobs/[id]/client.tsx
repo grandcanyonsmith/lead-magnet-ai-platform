@@ -339,6 +339,16 @@ export default function JobDetailClient() {
   const loadingOutputs = loadingArtifacts || loadingAutoUploads;
   const jobDuration = useMemo(() => getJobDuration(job), [job]);
 
+  const workflowJobsByNewest = useMemo(() => {
+    if (workflowJobs.length === 0) return [];
+    return [...workflowJobs].sort((a, b) => {
+      const aTime = new Date(a.created_at || 0).getTime();
+      const bTime = new Date(b.created_at || 0).getTime();
+      if (aTime !== bTime) return bTime - aTime;
+      return b.job_id.localeCompare(a.job_id);
+    });
+  }, [workflowJobs]);
+
   const jobQueryString = useMemo(
     () => searchParams.toString(),
     [searchParams],
@@ -356,9 +366,16 @@ export default function JobDetailClient() {
 
     const leadMagnetLabel =
       workflow?.workflow_name || job.workflow_id || "Lead magnet";
+    const jobPreview = getJobSubmissionPreview(job);
+    const submissionPreview = submission
+      ? getSubmissionPreview(submission)
+      : null;
     const submissionLabel =
-      getJobSubmissionPreview(job) ||
-      (submission ? getSubmissionPreview(submission) : null);
+      submissionPreview ||
+      (jobPreview && !jobPreview.startsWith("Submission ")
+        ? jobPreview
+        : null) ||
+      jobPreview;
     const jobLabel = submissionLabel || `Job ${job.job_id.slice(0, 8)}`;
 
     const workflowMenuItems = workflowOptions.map((workflowItem) => {
@@ -394,7 +411,7 @@ export default function JobDetailClient() {
       });
     }
 
-    const jobMenuItems = workflowJobs.map((jobItem) => {
+    const jobMenuItems = workflowJobsByNewest.map((jobItem) => {
       const label =
         getJobSubmissionPreview(jobItem) || `Job ${jobItem.job_id.slice(0, 8)}`;
       const statusLabel = getStatusLabel(jobItem.status);
@@ -456,7 +473,7 @@ export default function JobDetailClient() {
     job,
     submission,
     workflow,
-    workflowJobs,
+    workflowJobsByNewest,
     workflowOptions,
     workflowOptionsLoading,
     workflowJobsLoading,

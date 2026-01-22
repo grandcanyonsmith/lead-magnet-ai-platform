@@ -185,19 +185,66 @@ export const getStepDisplayMeta = (
 export const getSubmissionPreview = (submission: any): string | null => {
   if (!submission) return null;
 
+  if (
+    submission.submitter_name &&
+    typeof submission.submitter_name === "string" &&
+    submission.submitter_name.trim()
+  ) {
+    return submission.submitter_name.trim();
+  }
+
+  if (
+    submission.submitter_email &&
+    typeof submission.submitter_email === "string" &&
+    submission.submitter_email.trim()
+  ) {
+    return submission.submitter_email.trim();
+  }
+
   const formData = submission.form_data || submission.submission_data || {};
+
+  const getFieldValue = (fields: string[]) => {
+    for (const field of fields) {
+      const value = formData[field];
+      if (value && typeof value === "string" && value.trim()) {
+        return value.trim();
+      }
+    }
+    return null;
+  };
+
+  const firstName = getFieldValue([
+    "first_name",
+    "firstName",
+    "First_Name",
+    "FirstName",
+  ]);
+  const lastName = getFieldValue([
+    "last_name",
+    "lastName",
+    "Last_Name",
+    "LastName",
+  ]);
+  if (firstName || lastName) {
+    return [firstName, lastName].filter(Boolean).join(" ");
+  }
 
   // Try common identifier fields in order of preference
   const identifierFields = [
     "name",
     "full_name",
+    "fullName",
     "first_name",
+    "firstName",
     "email",
+    "email_address",
     "company",
     "company_name",
+    "companyName",
     "organization",
     "title",
     "job_title",
+    "jobTitle",
   ];
 
   for (const field of identifierFields) {
@@ -243,14 +290,44 @@ export const getJobSubmissionPreview = (job: any): string | null => {
     // Check form_data_preview for "name" field specifically
     // Backend now prioritizes name fields first in form_data_preview
     if (preview.form_data_preview) {
+      const getPreviewValue = (fields: string[]) => {
+        for (const field of fields) {
+          const value = preview.form_data_preview[field];
+          if (value && typeof value === "string" && value.trim()) {
+            return value.trim();
+          }
+        }
+        return null;
+      };
+
+      const previewFirstName = getPreviewValue([
+        "first_name",
+        "firstName",
+        "First_Name",
+        "FirstName",
+      ]);
+      const previewLastName = getPreviewValue([
+        "last_name",
+        "lastName",
+        "Last_Name",
+        "LastName",
+      ]);
+      if (previewFirstName || previewLastName) {
+        return [previewFirstName, previewLastName].filter(Boolean).join(" ");
+      }
+
       // Look for "name" field first (case-insensitive check)
       const nameFields = [
         "name",
         "Name",
         "full_name",
+        "fullName",
         "first_name",
+        "firstName",
         "Full_Name",
         "First_Name",
+        "FullName",
+        "FirstName",
       ];
       for (const field of nameFields) {
         const value = preview.form_data_preview[field];
@@ -302,6 +379,30 @@ export const getJobSubmissionPreview = (job: any): string | null => {
     // Then check form_data or submission_data
     const formData =
       job.submission.form_data || job.submission.submission_data || {};
+    const getSubmissionField = (fields: string[]) => {
+      for (const field of fields) {
+        const value = formData[field];
+        if (value && typeof value === "string" && value.trim()) {
+          return value.trim();
+        }
+      }
+      return null;
+    };
+    const submissionFirstName = getSubmissionField([
+      "first_name",
+      "firstName",
+      "First_Name",
+      "FirstName",
+    ]);
+    const submissionLastName = getSubmissionField([
+      "last_name",
+      "lastName",
+      "Last_Name",
+      "LastName",
+    ]);
+    if (submissionFirstName || submissionLastName) {
+      return [submissionFirstName, submissionLastName].filter(Boolean).join(" ");
+    }
     if (
       formData.name &&
       typeof formData.name === "string" &&
@@ -312,10 +413,14 @@ export const getJobSubmissionPreview = (job: any): string | null => {
     // Check other name field variations
     const nameFields = [
       "full_name",
+      "fullName",
       "first_name",
+      "firstName",
       "Name",
       "Full_Name",
       "First_Name",
+      "FullName",
+      "FirstName",
     ];
     for (const field of nameFields) {
       if (

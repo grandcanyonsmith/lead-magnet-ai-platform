@@ -105,91 +105,93 @@ function BreadcrumbDropdown({
   const menuWidthClass = isCompact ? "w-64" : "w-72 lg:w-80";
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        type="button"
-        className={cn(
-          "ml-2 inline-flex items-center text-xs sm:text-sm font-medium transition-colors",
-          isCurrent
-            ? "text-foreground"
-            : "text-muted-foreground hover:text-foreground",
-        )}
-        aria-current={isCurrent ? "page" : undefined}
-      >
-        <span
-          className={cn("inline-flex min-w-0 items-center gap-1", maxWidthClass)}
+    <div className="relative inline-flex">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          type="button"
+          className={cn(
+            "ml-2 inline-flex items-center text-xs sm:text-sm font-medium transition-colors",
+            isCurrent
+              ? "text-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+          aria-current={isCurrent ? "page" : undefined}
         >
-          <span className="truncate" title={item.label}>
-            {displayLabel}
+          <span
+            className={cn("inline-flex min-w-0 items-center gap-1", maxWidthClass)}
+          >
+            <span className="truncate" title={item.label}>
+              {displayLabel}
+            </span>
+            <ChevronDownIcon
+              className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground"
+              aria-hidden="true"
+            />
           </span>
-          <ChevronDownIcon
-            className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground"
-            aria-hidden="true"
-          />
-        </span>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        side="bottom"
-        className={cn(menuWidthClass, "z-[70]")}
-      >
-        {item.menuLabel && (
-          <DropdownMenuLabel className="px-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-            {item.menuLabel}
-          </DropdownMenuLabel>
-        )}
-        {showSearch && (
-          <div className="px-2 pb-2">
-            <div className="relative">
-              <MagnifyingGlassIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={item.menuSearchPlaceholder || "Search..."}
-                className="w-full rounded-md border border-border bg-background py-1.5 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-              />
-            </div>
-          </div>
-        )}
-        <div className="max-h-72 overflow-y-auto scrollbar-hide">
-          {filteredItems.length > 0 ? (
-            filteredItems.map((menuItem: BreadcrumbMenuItem) => (
-              <DropdownMenuItem
-                key={menuItem.id}
-                className="cursor-pointer"
-              >
-                <Link
-                  href={menuItem.href}
-                  className="flex w-full items-start gap-2"
-                >
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">
-                      {menuItem.label}
-                    </span>
-                    {menuItem.description && (
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {menuItem.description}
-                      </span>
-                    )}
-                  </div>
-                  {menuItem.isActive && (
-                    <CheckIcon
-                      className="mt-0.5 h-4 w-4 text-primary-500"
-                      aria-hidden="true"
-                    />
-                  )}
-                </Link>
-              </DropdownMenuItem>
-            ))
-          ) : (
-            <div className="px-2 py-2 text-xs text-muted-foreground">
-              {emptyLabel}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          side="bottom"
+          className={cn(menuWidthClass, "z-[70]")}
+        >
+          {item.menuLabel && (
+            <DropdownMenuLabel className="px-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+              {item.menuLabel}
+            </DropdownMenuLabel>
+          )}
+          {showSearch && (
+            <div className="px-2 pb-2">
+              <div className="relative">
+                <MagnifyingGlassIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={item.menuSearchPlaceholder || "Search..."}
+                  className="w-full rounded-md border border-border bg-background py-1.5 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
             </div>
           )}
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <div className="max-h-72 overflow-y-auto scrollbar-hide">
+            {filteredItems.length > 0 ? (
+              filteredItems.map((menuItem: BreadcrumbMenuItem) => (
+                <DropdownMenuItem
+                  key={menuItem.id}
+                  className="cursor-pointer"
+                >
+                  <Link
+                    href={menuItem.href}
+                    className="flex w-full items-start gap-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">
+                        {menuItem.label}
+                      </span>
+                      {menuItem.description && (
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {menuItem.description}
+                        </span>
+                      )}
+                    </div>
+                    {menuItem.isActive && (
+                      <CheckIcon
+                        className="mt-0.5 h-4 w-4 text-primary-500"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </Link>
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <div className="px-2 py-2 text-xs text-muted-foreground">
+                {emptyLabel}
+              </div>
+            )}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
 
@@ -198,9 +200,8 @@ export function Breadcrumbs({ className, listClassName }: BreadcrumbsProps = {})
   const { items: contextItems } = useBreadcrumbs();
   const isCompact = useCompactBreadcrumbs();
 
-  if (!pathname || pathname === "/dashboard") return null;
-
   const fallbackItems = useMemo<BreadcrumbItem[]>(() => {
+    if (!pathname || pathname === "/dashboard") return [];
     const segments = pathname.split("/").filter(Boolean);
     const dashboardIndex = segments.indexOf("dashboard");
     const displaySegments =
@@ -222,7 +223,9 @@ export function Breadcrumbs({ className, listClassName }: BreadcrumbsProps = {})
   const resolvedItems =
     contextItems && contextItems.length > 0 ? contextItems : fallbackItems;
 
-  if (resolvedItems.length === 0) return null;
+  if (!pathname || pathname === "/dashboard" || resolvedItems.length === 0) {
+    return null;
+  }
 
   const wordLimit = isCompact ? MOBILE_WORD_LIMIT : DESKTOP_WORD_LIMIT;
 
