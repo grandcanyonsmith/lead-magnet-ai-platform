@@ -4,12 +4,32 @@ import { handleError } from './utils/errors';
 import { logger } from './utils/logger';
 import { handleWorkflowGenerationJob } from '@domains/workflows/handlers/workflowGenerationHandler';
 import { handleWorkflowAIEditJob } from '@domains/workflows/handlers/workflowAIEditHandler';
-import { handleCORS } from './cors-handler';
+import { handleCORS, CORSConfig } from './cors-handler';
 import { addSecurityHeaders } from './middleware/securityHeaders';
 import { initErrorReporting } from './services/errorReportingService';
 
 // Initialize error reporting (hooks into handleError via setErrorTrackingHook)
 initErrorReporting();
+
+const PUBLIC_TRACKING_CORS_PATHS = new Set([
+  "/v1/tracking/event",
+  "/v1/tracking/recording-url",
+]);
+
+function normalizeCorsPath(path?: string): string {
+  if (!path) return "";
+  return path.startsWith("/api") ? path.slice(4) : path;
+}
+
+function getCorsConfigForPath(
+  path?: string,
+): Partial<CORSConfig> | undefined {
+  const normalizedPath = normalizeCorsPath(path);
+  if (PUBLIC_TRACKING_CORS_PATHS.has(normalizedPath)) {
+    return { allowedOrigins: ["*"] };
+  }
+  return undefined;
+}
 
 export const handler = async (
   event: APIGatewayProxyEventV2 | any,
@@ -69,7 +89,8 @@ export const handler = async (
   // Handle CORS preflight requests
   if (apiEvent.requestContext?.http?.method === 'OPTIONS') {
     const origin = apiEvent.headers?.origin || apiEvent.headers?.Origin;
-    const corsHeaders = handleCORS(origin);
+    const corsConfig = getCorsConfigForPath(apiEvent.rawPath);
+    const corsHeaders = handleCORS(origin, corsConfig);
     const securityHeaders = addSecurityHeaders({
       statusCode: 204,
       headers: corsHeaders,
@@ -102,7 +123,8 @@ export const handler = async (
 
     // Add CORS headers to all responses
     const origin = apiEvent.headers?.origin || apiEvent.headers?.Origin;
-    const corsHeaders = handleCORS(origin);
+    const corsConfig = getCorsConfigForPath(apiEvent.rawPath);
+    const corsHeaders = handleCORS(origin, corsConfig);
 
     // Add security headers
     const responseWithSecurity = addSecurityHeaders({
@@ -136,7 +158,8 @@ export const handler = async (
 
     // Add CORS headers to error responses
     const origin = apiEvent.headers?.origin || apiEvent.headers?.Origin;
-    const corsHeaders = handleCORS(origin);
+    const corsConfig = getCorsConfigForPath(apiEvent.rawPath);
+    const corsHeaders = handleCORS(origin, corsConfig);
     
     // Add security headers
     const responseWithSecurity = addSecurityHeaders({

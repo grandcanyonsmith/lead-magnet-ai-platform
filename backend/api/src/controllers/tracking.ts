@@ -251,8 +251,8 @@ class TrackingController {
     type RecordingPart = {
       event_id: string;
       created_at: string;
-      recording_url: string;
-      recording_key: string;
+      recording_url?: string;
+      recording_key?: string;
       page_url?: string;
     };
 
@@ -266,19 +266,41 @@ class TrackingController {
 
     const sessionsMap = new Map<string, RecordingSession>();
 
+    const isJsonRecordingUrl = (url: string): boolean => {
+      try {
+        const parsed = new URL(url);
+        return parsed.pathname.toLowerCase().endsWith(".json");
+      } catch {
+        return url.toLowerCase().includes(".json");
+      }
+    };
+
     for (const e of events) {
       if (e.event_type !== "recording_uploaded") continue;
       if (sessionIdFilter && e.session_id !== sessionIdFilter) continue;
-      if (!e.session_id || !e.created_at || !e.recording_url || !e.recording_key)
-        continue;
+      if (!e.session_id || !e.created_at) continue;
+
+      const recordingKey =
+        typeof e.recording_key === "string" ? e.recording_key : "";
+      const recordingUrl =
+        typeof e.recording_url === "string" ? e.recording_url : "";
+
+      if (!recordingKey && !recordingUrl) continue;
+
       // Only include rrweb JSON recordings here (exclude any video uploads, etc.)
-      if (!String(e.recording_key).toLowerCase().endsWith(".json")) continue;
+      const hasJsonKey = Boolean(
+        recordingKey && recordingKey.toLowerCase().endsWith(".json"),
+      );
+      const hasJsonUrl = Boolean(
+        recordingUrl && isJsonRecordingUrl(recordingUrl),
+      );
+      if (!hasJsonKey && !hasJsonUrl) continue;
 
       const part: RecordingPart = {
         event_id: e.event_id,
         created_at: e.created_at,
-        recording_url: e.recording_url,
-        recording_key: e.recording_key,
+        recording_url: recordingUrl || undefined,
+        recording_key: recordingKey || undefined,
         page_url: e.page_url,
       };
 

@@ -10,8 +10,30 @@ import { logger } from "../utils/logger";
 import { ApiError } from "../utils/errors";
 import { env } from "../utils/env";
 
-const s3Client = new S3Client({ region: env.awsRegion });
 const BUCKET_NAME = env.artifactsBucket;
+const s3ClientsByRegion = new Map<string, S3Client>();
+
+function getS3ClientForRegion(region: string): S3Client {
+  const existing = s3ClientsByRegion.get(region);
+  if (existing) {
+    return existing;
+  }
+  const client = new S3Client({ region });
+  s3ClientsByRegion.set(region, client);
+  return client;
+}
+
+function getBucketRegion(bucket: string): string {
+  // cc360-pages lives in us-west-2; default to env region otherwise.
+  if (bucket === "cc360-pages") {
+    return "us-west-2";
+  }
+  return env.awsRegion;
+}
+
+function getS3ClientForBucket(bucket: string): S3Client {
+  return getS3ClientForRegion(getBucketRegion(bucket));
+}
 
 if (!BUCKET_NAME) {
   logger.warn(
@@ -42,6 +64,7 @@ export class S3Service {
     if (!BUCKET_NAME) {
       throw new ApiError("S3 bucket not configured", 500);
     }
+    const s3Client = getS3ClientForBucket(BUCKET_NAME);
 
     // Sanitize filename to prevent path traversal
     const sanitizedFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -99,6 +122,7 @@ export class S3Service {
     if (!BUCKET_NAME) {
       throw new ApiError("S3 bucket not configured", 500);
     }
+    const s3Client = getS3ClientForBucket(BUCKET_NAME);
 
     try {
       const command = new GetObjectCommand({
@@ -134,6 +158,7 @@ export class S3Service {
     if (!BUCKET_NAME) {
       throw new ApiError("S3 bucket not configured", 500);
     }
+    const s3Client = getS3ClientForBucket(BUCKET_NAME);
 
     try {
       const command = new GetObjectCommand({
@@ -183,6 +208,7 @@ export class S3Service {
     if (!BUCKET_NAME) {
       throw new ApiError("S3 bucket not configured", 500);
     }
+    const s3Client = getS3ClientForBucket(BUCKET_NAME);
 
     try {
       await s3Client.send(
@@ -230,6 +256,7 @@ export class S3Service {
     expiresIn: number = 3600,
   ): Promise<string> {
     try {
+      const s3Client = getS3ClientForBucket(bucket);
       const command = new PutObjectCommand({
         Bucket: bucket,
         Key: key,
@@ -269,6 +296,7 @@ export class S3Service {
     expiresIn: number = 3600,
   ): Promise<string> {
     try {
+      const s3Client = getS3ClientForBucket(bucket);
       const command = new GetObjectCommand({
         Bucket: bucket,
         Key: key,

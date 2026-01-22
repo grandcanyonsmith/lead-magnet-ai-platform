@@ -5,6 +5,7 @@ from typing import Dict, Optional, Tuple
 
 from utils.decimal_utils import convert_decimals_to_float
 from services.prompt_overrides import resolve_prompt_override
+from services.html_sanitizer import strip_template_placeholders
 
 logger = logging.getLogger(__name__)
 
@@ -107,13 +108,15 @@ class HTMLGenerator:
             "2. **Structure**: Return a valid, standalone HTML5 document (<!DOCTYPE html>...</html>).\n"
             "3. **Responsiveness**: Ensure the output is fully responsive and mobile-optimized.\n"
             "4. **Content Integrity**: Present the CONTENT accurately. Do not summarize unless asked. Use appropriate HTML tags (h1-h6, p, ul, table, blockquote) to structure the data.\n"
-            "5. **No Hallucinations**: Do not invent new content. Only format what is provided.\n\n"
+            "5. **No Template Placeholders**: Do not include {{...}} placeholder tokens. If TEMPLATE_HTML contains placeholders, replace them with real text derived from CONTENT.\n"
+            "6. **No Hallucinations**: Do not invent new content. Only format what is provided.\n\n"
             "## Output Format\n"
             "Return ONLY the raw HTML code. Do not wrap it in Markdown code blocks. Do not add conversational text."
         )
 
+        sanitized_template_html = strip_template_placeholders(template_html)
         input_text = (
-            f"TEMPLATE_HTML (style reference):\n<<<\n{template_html}\n>>>\n\n"
+            f"TEMPLATE_HTML (style reference):\n<<<\n{sanitized_template_html}\n>>>\n\n"
             f"TEMPLATE_STYLE_GUIDANCE:\n{style_hint if style_hint else '(none)'}\n\n"
             f"{content_label}:\n<<<\n{content}\n>>>\n\n"
             f"SUBMISSION_DATA_JSON (optional personalization context):\n<<<\n{submission_json}\n>>>\n"
@@ -128,7 +131,7 @@ class HTMLGenerator:
             variables={
                 "content_label": content_label,
                 "content": content,
-                "template_html": template_html,
+                "template_html": sanitized_template_html,
                 "template_style": style_hint,
                 "submission_data_json": submission_json,
                 "input_text": input_text,
@@ -175,4 +178,8 @@ class HTMLGenerator:
             step_instructions=instructions,
         )
 
-        return output_text, usage_info, request_details, response_details
+        cleaned_output = strip_template_placeholders(output_text)
+        if isinstance(response_details, dict):
+            response_details["output_text"] = cleaned_output
+
+        return cleaned_output, usage_info, request_details, response_details

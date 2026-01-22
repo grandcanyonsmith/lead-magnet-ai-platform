@@ -37,6 +37,7 @@ export function SessionRecordings({
 
   const [loadingReplay, setLoadingReplay] = useState(false);
   const [replayError, setReplayError] = useState<string | null>(null);
+  const [replayWarning, setReplayWarning] = useState<string | null>(null);
   const [replayEvents, setReplayEvents] = useState<any[]>([]);
 
   const playerRootRef = useRef<HTMLDivElement | null>(null);
@@ -127,28 +128,71 @@ export function SessionRecordings({
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     async function loadReplayEvents() {
       if (!selectedSession) return;
       try {
         setLoadingReplay(true);
         setReplayError(null);
+        setReplayWarning(null);
         setReplayEvents([]);
 
-        const parts = selectedSession.parts || [];
-        const batches = await Promise.all(
+        const allParts = Array.isArray(selectedSession.parts)
+          ? selectedSession.parts
+          : [];
+        const parts = allParts.filter((p) => Boolean(p?.recording_url));
+        const missingParts = allParts.length - parts.length;
+
+        if (allParts.length > 0 && parts.length === 0) {
+          setReplayError(
+            "Recording parts are missing download URLs. Try refreshing the page.",
+          );
+          return;
+        }
+
+        const results = await Promise.allSettled(
           parts.map(async (p) => {
-            const res = await fetch(p.recording_url);
+            const res = await fetch(p.recording_url, {
+              cache: "no-store",
+              signal: controller.signal,
+            });
             if (!res.ok) {
               throw new Error(`Failed to fetch recording part: ${res.status}`);
             }
-            return await res.json();
+            const text = await res.text();
+            try {
+              return JSON.parse(text);
+            } catch (_error) {
+              throw new Error("Invalid recording JSON payload");
+            }
           }),
         );
 
-        const events = batches.flatMap((b) =>
-          Array.isArray(b?.events) ? b.events : [],
+        if (cancelled) return;
+
+        const succeeded = results.filter(
+          (r): r is PromiseFulfilledResult<any> => r.status === "fulfilled",
         );
+        const failed = results.filter((r) => r.status === "rejected");
+
+        if (parts.length > 0 && succeeded.length === 0) {
+          setReplayError("Failed to load replay data for this session.");
+          return;
+        }
+
+        if (missingParts > 0 || failed.length > 0) {
+          setReplayWarning(
+            `Loaded ${succeeded.length}/${parts.length} recording parts. Some data may be missing.`,
+          );
+        }
+
+        const events = succeeded.flatMap((result) => {
+          const batch = result.value;
+          if (Array.isArray(batch)) return batch;
+          if (Array.isArray(batch?.events)) return batch.events;
+          return [];
+        });
 
         // rrweb events include timestamp (ms). Sort to reconstruct the session.
         events.sort((a: any, b: any) => {
@@ -159,6 +203,9 @@ export function SessionRecordings({
 
         if (!cancelled) setReplayEvents(events);
       } catch (err: any) {
+        if (cancelled || err?.name === "AbortError") {
+          return;
+        }
         console.error(err);
         if (!cancelled) {
           setReplayError(
@@ -173,6 +220,7 @@ export function SessionRecordings({
     loadReplayEvents();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [selectedSessionId, selectedSession]);
 
@@ -277,7 +325,12 @@ export function SessionRecordings({
 
           <div className="lg:col-span-2">
             {selectedSession ? (
-              <div className="rounded-lg border border-border bg-card p-3">
+              <div className="rounded-lg border border-border bg-card p-3 space-y-3">
+                {replayWarning && !loadingReplay && !replayError && (
+                  <div className="p-3 rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400">
+                    {replayWarning}
+                  </div>
+                )}
                 {loadingReplay ? (
                   <div className="flex items-center justify-center p-8 text-muted-foreground">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-muted-foreground mr-3"></div>

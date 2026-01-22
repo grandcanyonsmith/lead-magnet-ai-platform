@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { FiEye } from "react-icons/fi";
 import { TemplateData } from "@/hooks/useWorkflowForm";
+import { stripTemplatePlaceholders } from "@/utils/templateUtils";
 
 interface TemplateEditorProps {
   templateData: TemplateData;
@@ -15,35 +16,10 @@ export function TemplateEditor({
 }: TemplateEditorProps) {
   const [showPreview, setShowPreview] = useState(false);
 
-  // Generate preview HTML with sample data
+  // Generate preview HTML with placeholders stripped
   const previewHtml = useMemo(() => {
     if (!templateData.html_content.trim()) return "";
-
-    let preview = templateData.html_content;
-
-    // Replace placeholders with sample data
-    const sampleData: Record<string, string> = {
-      TITLE: "Sample Lead Magnet Title",
-      CONTENT:
-        "This is sample content that will be replaced with your actual lead magnet content when the template is used.",
-      AUTHOR_NAME: "John Doe",
-      COMPANY_NAME: "Your Company",
-      DATE: new Date().toLocaleDateString(),
-      EMAIL: "user@example.com",
-      PHONE: "+1 (555) 123-4567",
-      CURRENT_YEAR: new Date().getFullYear().toString(),
-    };
-
-    // Replace all placeholders
-    Object.keys(sampleData).forEach((key) => {
-      const regex = new RegExp(`\\{\\{${key}\\}\\}`, "g");
-      preview = preview.replace(regex, sampleData[key]);
-    });
-
-    // Replace any remaining placeholders with generic text
-    preview = preview.replace(/\{\{([A-Z_]+)\}\}/g, "[$1]");
-
-    return preview;
+    return stripTemplatePlaceholders(templateData.html_content);
   }, [templateData.html_content]);
 
   return (
@@ -133,28 +109,6 @@ export function TemplateEditor({
           rows={20}
           required
         />
-        <p className="mt-1 text-xs text-gray-500">
-          Use{" "}
-          <code className="px-1 py-0.5 bg-gray-100 rounded">
-            &#123;&#123;PLACEHOLDER_NAME&#125;&#125;
-          </code>{" "}
-          syntax for dynamic content.
-        </p>
-        {templateData.placeholder_tags.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            <span className="text-sm font-medium text-gray-700">
-              Detected placeholders:
-            </span>
-            {templateData.placeholder_tags.map((placeholder) => (
-              <span
-                key={placeholder}
-                className="px-2 py-1 bg-primary-50 text-primary-700 rounded text-xs font-mono"
-              >
-                {`{{${placeholder}}}`}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

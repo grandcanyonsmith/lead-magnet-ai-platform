@@ -2,14 +2,16 @@
  * Template utility functions
  */
 
-export function extractPlaceholders(html: string): string[] {
-  const regex = /\{\{([A-Z_]+)\}\}/g;
-  const matches = html.matchAll(regex);
-  const placeholders = new Set<string>();
-  for (const match of matches) {
-    placeholders.add(match[1]);
+const TEMPLATE_PLACEHOLDER_REGEX = /\{\{\s*[^{}]+\s*\}\}/g;
+
+export function stripTemplatePlaceholders(html: string): string {
+  if (!html) {
+    return html;
   }
-  return Array.from(placeholders).sort();
+  if (!html.includes("{{")) {
+    return html;
+  }
+  return html.replace(TEMPLATE_PLACEHOLDER_REGEX, "");
 }
 
 export function formatHTML(html: string): string {
@@ -39,35 +41,11 @@ export function formatHTML(html: string): string {
 
 export function getPreviewHtml(
   html: string,
-  placeholders: Record<string, string> = {},
+  _placeholders: Record<string, string> = {},
 ): string {
   if (!html.trim()) return "";
 
-  let previewHtml = html;
-
-  // Default sample data
-  const sampleData: Record<string, string> = {
-    TITLE: "Sample Lead Magnet Title",
-    CONTENT:
-      "This is sample content that will be replaced with your actual lead magnet content when the template is used.",
-    AUTHOR_NAME: "John Doe",
-    COMPANY_NAME: "Your Company",
-    DATE: new Date().toLocaleDateString(),
-    EMAIL: "user@example.com",
-    PHONE: "+1 (555) 123-4567",
-    ...placeholders,
-  };
-
-  // Replace all placeholders
-  Object.keys(sampleData).forEach((key) => {
-    const regex = new RegExp(`\\{\\{${key}\\}\\}`, "g");
-    previewHtml = previewHtml.replace(regex, sampleData[key]);
-  });
-
-  // Replace any remaining placeholders with generic text
-  previewHtml = previewHtml.replace(/\{\{([A-Z_]+)\}\}/g, "[$1]");
-
-  return previewHtml;
+  return stripTemplatePlaceholders(html);
 }
 
 export function getDevicePreviewWidth(

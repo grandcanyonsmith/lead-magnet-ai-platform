@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
 import { AIModel } from "@/types";
-import { extractPlaceholders } from "@/utils/templateUtils";
 
 export interface TemplateData {
   template_name: string;
@@ -41,9 +40,6 @@ export function useTemplateEdit(
     templateDataRef.current = templateData;
   }, [templateData]);
 
-  const [detectedPlaceholders, setDetectedPlaceholders] = useState<string[]>(
-    [],
-  );
   const [showPreview, setShowPreview] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const [templateViewMode, setTemplateViewMode] = useState<
@@ -123,8 +119,6 @@ export function useTemplateEdit(
       setHistoryIndex(0);
 
       if (htmlContent) {
-        const placeholders = extractPlaceholders(htmlContent);
-        setDetectedPlaceholders(placeholders);
         if (htmlContent.trim() && !showPreview) {
           setShowPreview(true);
           setPreviewKey(1);
@@ -145,8 +139,6 @@ export function useTemplateEdit(
     setTemplateData((prev) => ({ ...prev, html_content: html }));
 
     // Update derived state as user types
-    const placeholders = extractPlaceholders(html);
-    setDetectedPlaceholders(placeholders);
     setPreviewKey((prev) => prev + 1);
     if (html.trim() && !showPreview) {
       setShowPreview(true);
@@ -167,8 +159,6 @@ export function useTemplateEdit(
       setTemplateData((prev) => ({ ...prev, html_content: item.html }));
 
       // Update derived state
-      const placeholders = extractPlaceholders(item.html);
-      setDetectedPlaceholders(placeholders);
       setPreviewKey((prev) => prev + 1);
     }
   };
@@ -181,8 +171,6 @@ export function useTemplateEdit(
       setTemplateData((prev) => ({ ...prev, html_content: item.html }));
 
       // Update derived state
-      const placeholders = extractPlaceholders(item.html);
-      setDetectedPlaceholders(placeholders);
       setPreviewKey((prev) => prev + 1);
     }
   };
@@ -195,8 +183,6 @@ export function useTemplateEdit(
       setTemplateData((prev) => ({ ...prev, html_content: item.html }));
 
       // Update derived state
-      const placeholders = extractPlaceholders(item.html);
-      setDetectedPlaceholders(placeholders);
       setPreviewKey((prev) => prev + 1);
     }
   };
@@ -241,8 +227,6 @@ export function useTemplateEdit(
         `AI: ${editPrompt.substring(0, 30)}${editPrompt.length > 30 ? "..." : ""}`,
       );
 
-      const placeholders = extractPlaceholders(newHtml);
-      setDetectedPlaceholders(placeholders);
       setPreviewKey((prev) => prev + 1);
 
       if (!showPreview) {
@@ -269,23 +253,10 @@ export function useTemplateEdit(
     }
   };
 
-  const insertPlaceholder = (placeholder: string) => {
-    const placeholderText = `{{${placeholder}}}`;
-    // Use ref to get latest state to avoid race conditions
-    const currentHtml = templateDataRef.current.html_content;
-    const newHtml = currentHtml + placeholderText;
-    setTemplateData((prev) => ({
-      ...prev,
-      html_content: newHtml,
-    }));
-    addToHistory(newHtml, `Inserted ${placeholder}`);
-  };
-
   return {
     templateLoading,
     templateData,
     setTemplateData,
-    detectedPlaceholders,
     showPreview,
     setShowPreview,
     previewKey,
@@ -301,7 +272,6 @@ export function useTemplateEdit(
     handleHtmlChange,
     commitHtmlChange,
     handleRefine,
-    insertPlaceholder,
     loadTemplate,
     handleUndo,
     handleRedo,

@@ -40,10 +40,6 @@ export function useWorkflowSubmission() {
               template_name: templateData.template_name || "Generated Template",
               template_description: templateData.template_description || "",
               html_content: templateData.html_content.trim(),
-              placeholder_tags:
-                templateData.placeholder_tags.length > 0
-                  ? templateData.placeholder_tags
-                  : undefined,
             });
             templateId = template.template_id;
             setGeneratedTemplateId(templateId);
@@ -53,10 +49,6 @@ export function useWorkflowSubmission() {
               template_name: templateData.template_name || "Generated Template",
               template_description: templateData.template_description || "",
               html_content: templateData.html_content.trim(),
-              placeholder_tags:
-                templateData.placeholder_tags.length > 0
-                  ? templateData.placeholder_tags
-                  : undefined,
             });
             templateId = generatedTemplateId;
           }

@@ -9,6 +9,7 @@ import {
 } from "./usageTrackingService";
 import { logger } from "../utils/logger";
 import { ApiError } from "../utils/errors";
+import { stripTemplatePlaceholders } from "../utils/htmlSanitizer";
 import {
   getPromptOverridesForTenant,
   resolvePromptOverride,
@@ -181,7 +182,8 @@ Return ONLY the raw HTML code. No Markdown code blocks.`;
     const cleanedHtml = stripMarkdownCodeFences(
       (completion as any).output_text,
     );
-    return { htmlContent: cleanedHtml, usageInfo };
+    const sanitizedHtml = stripTemplatePlaceholders(cleanedHtml);
+    return { htmlContent: sanitizedHtml, usageInfo };
   }
 
   /**
@@ -387,21 +389,9 @@ Return JSON format: {"name": "...", "description": "..."}`;
       const selector =
         selectors && selectors.length > 0 ? selectors.join(", ") : undefined;
 
-      // Check if user wants to remove placeholders
-      const shouldRemovePlaceholders =
-        edit_prompt.toLowerCase().includes("remove placeholder") ||
-        edit_prompt.toLowerCase().includes("no placeholder") ||
-        edit_prompt.toLowerCase().includes("dont use placeholder") ||
-        edit_prompt.toLowerCase().includes("don't use placeholder");
-
       let augmentedPrompt = edit_prompt;
-      if (shouldRemovePlaceholders) {
-        augmentedPrompt +=
-          "\n\nIMPORTANT: REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or real values.";
-      } else {
-        augmentedPrompt +=
-          "\n\nIMPORTANT: Keep all placeholder syntax {{PLACEHOLDER_NAME}} exactly as they are unless specifically asked to remove them.";
-      }
+      augmentedPrompt +=
+        "\n\nIMPORTANT: REMOVE all placeholder syntax {{PLACEHOLDER_NAME}} and replace with actual content or real values.";
 
       const result = await patchHtmlWithOpenAI({
         html: current_html,
@@ -411,7 +401,7 @@ Return JSON format: {"name": "...", "description": "..."}`;
         promptOverrides,
       });
 
-      const cleanedHtml = result.patchedHtml;
+      const cleanedHtml = stripTemplatePlaceholders(result.patchedHtml);
 
       // Placeholder extraction disabled
       const placeholderTags: string[] = [];

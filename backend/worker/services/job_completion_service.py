@@ -12,6 +12,7 @@ from db_service import DynamoDBService
 from s3_service import S3Service
 from delivery_service import DeliveryService
 from services.execution_step_manager import ExecutionStepManager
+from services.html_sanitizer import strip_template_placeholders
 from services.usage_service import UsageService
 from ai_service import AIService
 
@@ -84,6 +85,7 @@ class JobCompletionService:
         try:
             # Guarantee tracking injection for the final HTML deliverable regardless of how it was generated.
             if final_artifact_type == 'html_final' and isinstance(final_content, str) and final_content.strip():
+                final_content = strip_template_placeholders(final_content)
                 if 'Lead Magnet Tracking Script' not in final_content:
                     from services.tracking_script_generator import TrackingScriptGenerator
                     tracking_generator = TrackingScriptGenerator()
@@ -472,6 +474,8 @@ class JobCompletionService:
             model=model,
             tenant_id=job.get('tenant_id'),
         )
+
+        final_content = strip_template_placeholders(final_content)
         
         html_duration = (datetime.utcnow() - html_start_time).total_seconds() * 1000
         self.usage_service.store_usage_record(job['tenant_id'], job_id, html_usage_info)

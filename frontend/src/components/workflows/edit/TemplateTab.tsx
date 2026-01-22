@@ -1,10 +1,8 @@
 "use client";
 
 import {
-  Save,
   Eye,
   Code,
-  Copy,
   Monitor,
   Tablet,
   Smartphone,
@@ -14,8 +12,6 @@ import {
 } from "lucide-react";
 import { TemplateData } from "@/hooks/useTemplateEdit";
 import {
-  extractPlaceholders,
-  formatHTML,
   getPreviewHtml,
   getDevicePreviewWidth,
   getSelectionScript,
@@ -25,7 +21,6 @@ import { useState, useEffect, useRef } from "react";
 interface TemplateTabProps {
   templateData: TemplateData;
   templateLoading: boolean;
-  detectedPlaceholders: string[];
   templateViewMode: "split" | "editor" | "preview";
   devicePreviewSize: "mobile" | "tablet" | "desktop";
   previewKey: number;
@@ -38,7 +33,6 @@ interface TemplateTabProps {
   onHtmlChange: (html: string) => void;
   onViewModeChange: (mode: "split" | "editor" | "preview") => void;
   onDeviceSizeChange: (size: "mobile" | "tablet" | "desktop") => void;
-  onInsertPlaceholder: (placeholder: string) => void;
   onRefine: () => Promise<{ error?: string; success?: boolean }>;
   onEditPromptChange: (prompt: string) => void;
   onFormatHtml: () => void;
@@ -58,7 +52,6 @@ interface TemplateTabProps {
 export function TemplateTab({
   templateData,
   templateLoading,
-  detectedPlaceholders,
   templateViewMode,
   devicePreviewSize,
   previewKey,
@@ -71,7 +64,6 @@ export function TemplateTab({
   onHtmlChange,
   onViewModeChange,
   onDeviceSizeChange,
-  onInsertPlaceholder,
   onRefine,
   onEditPromptChange,
   onFormatHtml,
@@ -254,50 +246,14 @@ export function TemplateTab({
   <title>Lead Magnet</title>
 </head>
 <body>
-  <h1>{{TITLE}}</h1>
-  <div>{{CONTENT}}</div>
+  <h1>Lead Magnet Title</h1>
+  <div>Intro content goes here.</div>
 </body>
 </html>`}
                     rows={20}
                     required
                     style={{ minHeight: "500px" }}
                   />
-                </div>
-                <div className="border-t border-gray-200 dark:border-border px-4 py-3 bg-gray-50 dark:bg-secondary/50">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs text-gray-600 dark:text-muted-foreground">
-                        Placeholders:
-                      </span>
-                      {detectedPlaceholders.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {detectedPlaceholders.map((placeholder) => (
-                            <button
-                              key={placeholder}
-                              type="button"
-                              onClick={() => onInsertPlaceholder(placeholder)}
-                              className="px-2 py-0.5 bg-primary-100 dark:bg-primary/20 text-primary-700 dark:text-primary rounded text-xs font-mono hover:bg-primary-200 dark:hover:bg-primary/30 transition-colors flex items-center"
-                              title={`Insert {{${placeholder}}}`}
-                            >
-                              {`{{${placeholder}}}`}
-                              <Copy className="w-3 h-3 ml-1" />
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-yellow-600 dark:text-yellow-500">
-                          None detected
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-muted-foreground">
-                      Use{" "}
-                      <code className="px-1 py-0.5 bg-gray-200 dark:bg-secondary rounded text-gray-900 dark:text-foreground">
-                        &#123;&#123;NAME&#125;&#125;
-                      </code>{" "}
-                      for placeholders
-                    </div>
-                  </div>
                 </div>
               </div>
             )}

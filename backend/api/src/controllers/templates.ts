@@ -10,6 +10,7 @@ import { RouteResponse } from "../routes";
 import { templateAIService } from "../services/templateAIService";
 import { env } from "../utils/env";
 import { getPromptOverridesForTenant } from "../services/promptOverrides";
+import { stripTemplatePlaceholders } from "../utils/htmlSanitizer";
 
 const TEMPLATES_TABLE = env.templatesTable;
 
@@ -87,15 +88,14 @@ class TemplatesController {
 
     const templateId = `tmpl_${ulid()}`;
 
-    // Extract placeholder tags from HTML
-    const placeholderTags = this.extractPlaceholders(data.html_content);
-
+    const sanitizedHtml = stripTemplatePlaceholders(data.html_content);
     const template = {
       template_id: templateId,
       version: 1,
       tenant_id: tenantId,
       ...data,
-      placeholder_tags: data.placeholder_tags || placeholderTags,
+      html_content: sanitizedHtml,
+      placeholder_tags: [],
       // Ensure is_published is set (defaults to true from schema)
       is_published: data.is_published !== undefined ? data.is_published : true,
       created_at: new Date().toISOString(),
@@ -147,10 +147,9 @@ class TemplatesController {
     // Create new version
     const newVersion = existing.version + 1;
 
-    const placeholderTags = data.html_content
-      ? this.extractPlaceholders(data.html_content)
-      : existing.placeholder_tags;
-
+    const sanitizedHtml = data.html_content
+      ? stripTemplatePlaceholders(data.html_content)
+      : undefined;
     const template = {
       template_id: id,
       version: newVersion,
@@ -158,8 +157,8 @@ class TemplatesController {
       template_name: data.template_name || existing.template_name,
       template_description:
         data.template_description || existing.template_description,
-      html_content: data.html_content || existing.html_content,
-      placeholder_tags: data.placeholder_tags || placeholderTags,
+      html_content: sanitizedHtml || existing.html_content,
+      placeholder_tags: [],
       is_published:
         data.is_published !== undefined
           ? data.is_published
@@ -206,11 +205,6 @@ class TemplatesController {
       statusCode: 204,
       body: {},
     };
-  }
-
-  private extractPlaceholders(_html: string): string[] {
-    // Placeholder extraction disabled - no longer using placeholder syntax
-    return [];
   }
 
   async refineWithAI(tenantId: string, body: any): Promise<RouteResponse> {

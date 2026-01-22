@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { calculateOpenAICost } from "./costService";
 import { callResponsesWithTimeout } from "../utils/openaiHelpers";
+import { stripTemplatePlaceholders } from "../utils/htmlSanitizer";
 
 export interface UsageInfo {
   service_type: string;
@@ -157,7 +158,8 @@ Return ONLY the raw HTML code. No Markdown code blocks.`;
       cleanedHtml = cleanedHtml.replace(/^```\s*/i, "").replace(/\s*```$/i, "");
     }
 
-    return { htmlContent: cleanedHtml.trim(), usageInfo };
+    const sanitizedHtml = stripTemplatePlaceholders(cleanedHtml.trim());
+    return { htmlContent: sanitizedHtml, usageInfo };
   }
 
   /**

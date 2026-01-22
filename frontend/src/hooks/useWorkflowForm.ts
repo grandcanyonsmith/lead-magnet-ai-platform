@@ -14,7 +14,6 @@ export interface TemplateData {
   template_name: string;
   template_description: string;
   html_content: string;
-  placeholder_tags: string[];
 }
 
 export interface FormFieldsData {
@@ -36,7 +35,6 @@ const defaultTemplateData: TemplateData = {
   template_name: "",
   template_description: "",
   html_content: "",
-  placeholder_tags: [],
 };
 
 const defaultFormFieldsData: FormFieldsData = {
@@ -131,7 +129,6 @@ export function useWorkflowForm() {
         template_name?: string;
         template_description?: string;
         html_content?: string;
-        placeholder_tags?: string[];
       };
       form?: {
         form_name?: string;
@@ -155,7 +152,6 @@ export function useWorkflowForm() {
           template_name: result.template?.template_name || "",
           template_description: result.template?.template_description || "",
           html_content: result.template?.html_content || "",
-          placeholder_tags: result.template?.placeholder_tags || [],
         });
       }
 

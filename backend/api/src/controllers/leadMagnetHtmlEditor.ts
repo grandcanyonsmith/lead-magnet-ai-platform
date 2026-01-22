@@ -11,6 +11,7 @@ import { ApiError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import type { RouteResponse } from "../routes";
 import { invalidateCloudFrontPaths } from "../services/cloudfrontInvalidationService";
+import { stripTemplatePlaceholders } from "../utils/htmlSanitizer";
 
 const JOBS_TABLE = env.jobsTable;
 const ARTIFACTS_TABLE = env.artifactsTable;
@@ -338,6 +339,7 @@ class LeadMagnetHtmlEditorController {
     const currentHtml = await fetchFinalHtmlFromS3(tenantId, jobId);
     const injectedBlocks = extractInjectedBlocks(currentHtml);
     const htmlToSave = ensureInjectedBlocks(patchedHtml, injectedBlocks);
+    const sanitizedHtml = stripTemplatePlaceholders(htmlToSave);
 
     const s3Key = `${tenantId}/jobs/${jobId}/final.html`;
 
@@ -345,14 +347,14 @@ class LeadMagnetHtmlEditorController {
       new PutObjectCommand({
         Bucket: ARTIFACTS_BUCKET,
         Key: s3Key,
-        Body: htmlToSave,
+        Body: sanitizedHtml,
         ContentType: "text/html; charset=utf-8",
       }),
     );
 
     const now = new Date().toISOString();
     const artifactId = `art_${ulid()}`;
-    const fileSizeBytes = Buffer.byteLength(htmlToSave, "utf8");
+    const fileSizeBytes = Buffer.byteLength(sanitizedHtml, "utf8");
 
     const publicUrl =
       (typeof job.output_url === "string" && job.output_url.trim().length > 0

@@ -11,7 +11,6 @@ import { useTemplateEdit } from "@/hooks/useTemplateEdit";
 import { WorkflowTab } from "@/components/workflows/edit/WorkflowTab";
 import { FormTab } from "@/components/workflows/edit/FormTab";
 import { TemplateTab } from "@/components/workflows/edit/TemplateTab";
-import { extractPlaceholders } from "@/utils/templateUtils";
 import { formatHTML } from "@/utils/templateUtils";
 import { useSettings } from "@/hooks/api/useSettings";
 
@@ -114,7 +113,6 @@ export function WorkflowEditor({
   const {
     templateLoading,
     templateData,
-    detectedPlaceholders,
     templateViewMode,
     devicePreviewSize,
     previewKey,
@@ -124,7 +122,6 @@ export function WorkflowEditor({
     handleTemplateChange,
     handleHtmlChange,
     handleRefine,
-    insertPlaceholder,
     setTemplateViewMode,
     setDevicePreviewSize,
     setEditPrompt,
@@ -238,8 +235,6 @@ export function WorkflowEditor({
       // Create or update template if template content exists
       let finalTemplateId = templateId;
       if (templateData.html_content?.trim()) {
-        const placeholders = extractPlaceholders(templateData.html_content);
-
         if (templateId) {
           // Update existing template
           await api.updateTemplate(templateId, {
@@ -247,8 +242,6 @@ export function WorkflowEditor({
             template_description:
               templateData.template_description.trim() || undefined,
             html_content: templateData.html_content?.trim() || "",
-            placeholder_tags:
-              placeholders.length > 0 ? placeholders : undefined,
             is_published: templateData.is_published,
           });
           finalTemplateId = templateId;
@@ -259,8 +252,6 @@ export function WorkflowEditor({
             template_description:
               templateData.template_description.trim() || "",
             html_content: templateData.html_content?.trim() || "",
-            placeholder_tags:
-              placeholders.length > 0 ? placeholders : undefined,
             is_published: templateData.is_published,
           });
           finalTemplateId = template.template_id;
@@ -501,7 +492,6 @@ export function WorkflowEditor({
           <TemplateTab
             templateData={templateData}
             templateLoading={templateLoading}
-            detectedPlaceholders={detectedPlaceholders}
             templateViewMode={templateViewMode}
             devicePreviewSize={devicePreviewSize}
             previewKey={previewKey}
@@ -514,7 +504,6 @@ export function WorkflowEditor({
             onHtmlChange={handleHtmlChange}
             onViewModeChange={setTemplateViewMode}
             onDeviceSizeChange={setDevicePreviewSize}
-            onInsertPlaceholder={insertPlaceholder}
             onRefine={handleRefineWithError}
             onEditPromptChange={setEditPrompt}
             onFormatHtml={handleFormatHtml}

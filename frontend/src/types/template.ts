@@ -10,7 +10,6 @@ export interface Template extends BaseEntity {
   template_name: string;
   template_description: string;
   html_content: string;
-  placeholder_tags: string[];
   version: number;
 }
 
@@ -18,7 +17,6 @@ export interface TemplateCreateRequest {
   template_name: string;
   template_description: string;
   html_content: string;
-  placeholder_tags?: string[];
   is_published?: boolean;
 }
 
@@ -38,7 +36,6 @@ export interface TemplateGenerateResponse {
   template_name: string;
   template_description: string;
   html_content: string;
-  placeholder_tags: string[];
 }
 
 export interface TemplateRefineRequest {

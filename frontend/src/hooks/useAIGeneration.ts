@@ -18,7 +18,6 @@ export interface AIGenerationResult {
     template_name?: string;
     template_description?: string;
     html_content?: string;
-    placeholder_tags?: string[];
   };
   form: {
     form_name?: string;

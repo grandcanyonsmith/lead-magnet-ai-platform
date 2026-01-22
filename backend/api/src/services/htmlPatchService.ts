@@ -5,6 +5,7 @@ import { htmlPatcher, PatchOperation } from "./html/patcher";
 import { getOpenAIClient } from "./openaiService";
 import { stripMarkdownCodeFences } from "../utils/openaiHelpers";
 import { ApiError } from "../utils/errors";
+import { stripTemplatePlaceholders } from "../utils/htmlSanitizer";
 import {
   getPromptOverridesForTenant,
   resolvePromptOverride,
@@ -123,7 +124,8 @@ export async function patchHtmlWithOpenAI(
     const openai = await getOpenAIClient();
 
     // Build the instruction prompt for OpenAI
-    let instruction = "You are an expert HTML editor. Modify the HTML according to the user's request while preserving all functionality, structure, and styling.";
+    let instruction =
+      "You are an expert HTML editor. Modify the HTML according to the user's request while preserving all functionality, structure, and styling.";
     
     if (selector) {
       instruction += `\n\nFocus on the element(s) matching this CSS selector: ${selector}`;
@@ -137,7 +139,10 @@ export async function patchHtmlWithOpenAI(
       instruction += `\n\nThe page URL is: ${pageUrl}`;
     }
 
-    instruction += "\n\nReturn ONLY the complete modified HTML. Do not include explanations, markdown code blocks, or any other text. Just return the raw HTML.";
+    instruction +=
+      "\n\nIMPORTANT: Remove any {{...}} placeholder tokens from the output.";
+    instruction +=
+      "\n\nReturn ONLY the complete modified HTML. Do not include explanations, markdown code blocks, or any other text. Just return the raw HTML.";
 
     // Build the input prompt
     let inputPrompt = `Here is the HTML to modify:\n\n${html}\n\nUser's request: ${prompt}`;
@@ -190,7 +195,9 @@ export async function patchHtmlWithOpenAI(
       );
     }
 
-    const patchedHtml = stripMarkdownCodeFences((completion as any).output_text);
+    const patchedHtml = stripTemplatePlaceholders(
+      stripMarkdownCodeFences((completion as any).output_text),
+    );
 
     // Generate a brief summary
     const summary = `HTML patched using ${model} with ${reasoningEffort} reasoning effort. ${selector ? `Target selector: ${selector}. ` : ""}Original HTML length: ${html.length} chars, patched HTML length: ${patchedHtml.length} chars.`;
