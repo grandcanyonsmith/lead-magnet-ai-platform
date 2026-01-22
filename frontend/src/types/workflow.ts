@@ -256,6 +256,15 @@ export type WorkflowIdeationMessage = {
 export interface WorkflowIdeationRequest {
   messages: WorkflowIdeationMessage[];
   model?: AIModel;
+  mode?: "ideation" | "followup";
+  selected_deliverable?: WorkflowIdeationSelectedDeliverable;
+}
+
+export interface WorkflowIdeationSelectedDeliverable {
+  title: string;
+  description?: string;
+  deliverable_type?: string;
+  build_description?: string;
 }
 
 export interface WorkflowIdeationDeliverable {
@@ -272,6 +281,15 @@ export interface WorkflowIdeationDeliverable {
 export interface WorkflowIdeationResponse {
   assistant_message: string;
   deliverables: WorkflowIdeationDeliverable[];
+}
+
+export interface WorkflowIdeationMockupRequest {
+  deliverable: WorkflowIdeationSelectedDeliverable;
+  count?: number;
+}
+
+export interface WorkflowIdeationMockupResponse {
+  images: Array<{ url: string; s3_key: string }>;
 }
 
 export interface WorkflowGenerationResult {

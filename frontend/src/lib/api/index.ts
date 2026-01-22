@@ -259,6 +259,20 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.workflows.ideateWorkflow(request);
   }
 
+  async generateDeliverableMockups(
+    request: Parameters<WorkflowsClient["generateDeliverableMockups"]>[0],
+  ) {
+    return this.workflows.generateDeliverableMockups(request);
+  }
+
+  async streamIdeation(
+    request: Parameters<WorkflowsClient["streamIdeation"]>[0],
+    callbacks: Parameters<WorkflowsClient["streamIdeation"]>[1],
+    signal?: Parameters<WorkflowsClient["streamIdeation"]>[2],
+  ) {
+    return this.workflows.streamIdeation(request, callbacks, signal);
+  }
+
   async getWorkflowGenerationStatus(jobId: string) {
     return this.workflows.getWorkflowGenerationStatus(jobId);
   }

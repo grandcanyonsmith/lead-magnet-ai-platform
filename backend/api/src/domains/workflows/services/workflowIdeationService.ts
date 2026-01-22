@@ -14,6 +14,15 @@ export type WorkflowIdeationMessage = {
 export interface WorkflowIdeationRequest {
   messages: WorkflowIdeationMessage[];
   model?: string;
+  mode?: "ideation" | "followup";
+  selected_deliverable?: WorkflowIdeationSelectedDeliverable;
+}
+
+export interface WorkflowIdeationSelectedDeliverable {
+  title: string;
+  description?: string;
+  deliverable_type?: string;
+  build_description?: string;
 }
 
 export interface WorkflowIdeationDeliverable {
@@ -32,9 +41,19 @@ export interface WorkflowIdeationResponse {
   deliverables: WorkflowIdeationDeliverable[];
 }
 
+export interface WorkflowIdeationMockupRequest {
+  deliverable: WorkflowIdeationSelectedDeliverable;
+  count?: number;
+}
+
+export interface WorkflowIdeationMockupResponse {
+  images: Array<{ url: string; s3_key: string }>;
+}
+
 const DEFAULT_MODEL = "gpt-5.2";
 const DEFAULT_IMAGE_MODEL = "gpt-image-1.5";
 const MAX_DELIVERABLES = 5;
+const DEFAULT_MOCKUP_COUNT = 4;
 
 const IDEATION_SYSTEM_PROMPT = `You are a Lead Magnet Strategist helping a user decide what to build.
 Your job is to propose a small set of high-value deliverables based on the conversation so far.
@@ -44,7 +63,21 @@ Guidelines:
 - Each option should be feasible, specific, and high-conversion.
 - Provide image prompts for cover-style visuals (no text in image).
 - Provide a build_description that can be used directly to generate a workflow.
-- Be concise and actionable.`;
+- Be concise and actionable.
+
+Output format:
+1) A single line starting with "MESSAGE:" followed by the assistant_message text.
+2) A JSON object that matches the required schema.`;
+
+const FOLLOWUP_SYSTEM_PROMPT = `You are a Lead Magnet Strategist.
+The user has already selected a deliverable. Answer their questions, clarify scope, and help refine the deliverable.
+Do NOT propose new deliverables unless the user explicitly asks for more options.
+If no new options are requested, return an empty deliverables array.
+Be concise, helpful, and actionable.
+
+Output format:
+1) A single line starting with "MESSAGE:" followed by the assistant_message text.
+2) A JSON object that matches the required schema.`;
 
 class WorkflowIdeationService {
   async ideateWorkflow(
@@ -67,11 +100,17 @@ class WorkflowIdeationService {
       typeof payload.model === "string" && payload.model.trim()
         ? payload.model.trim()
         : DEFAULT_MODEL;
+    const mode = payload.mode === "followup" ? "followup" : "ideation";
 
     const conversation = this.buildConversationTranscript(messages);
-    const prompt = `${conversation}
+    const deliverableContext =
+      mode === "followup" && payload.selected_deliverable
+        ? `\n\nSelected deliverable:\nTitle: ${payload.selected_deliverable.title}\nType: ${payload.selected_deliverable.deliverable_type || "n/a"}\nDescription: ${payload.selected_deliverable.description || "n/a"}\nBuild description: ${payload.selected_deliverable.build_description || "n/a"}`
+        : "";
+    const prompt = `${conversation}${deliverableContext}
 
-Return ONLY valid JSON using this schema:
+Remember: output a "MESSAGE:" line before the JSON.
+Return JSON using this schema:
 {
   "assistant_message": "A short, friendly response to the user.",
   "deliverables": [
@@ -94,7 +133,7 @@ Return ONLY valid JSON using this schema:
 
     const completionParams: any = {
       model,
-      instructions: IDEATION_SYSTEM_PROMPT,
+      instructions: mode === "followup" ? FOLLOWUP_SYSTEM_PROMPT : IDEATION_SYSTEM_PROMPT,
       input: prompt,
       reasoning: { effort: "high" },
       service_tier: "priority",
@@ -103,8 +142,113 @@ Return ONLY valid JSON using this schema:
 
     const outputText = String((completion as any)?.output_text || "");
     const parsed = this.parseIdeationResult(outputText);
-    const normalized = this.normalizeDeliverables(parsed.deliverables);
+    const normalized = this.normalizeDeliverables(
+      Array.isArray(parsed.deliverables) ? parsed.deliverables : [],
+    );
+    const shouldAttachImages = normalized.length > 0;
 
+    const deliverables = shouldAttachImages
+      ? await Promise.all(
+          normalized.map((deliverable, index) =>
+            this.attachImage(openai, tenantId, deliverable, index),
+          ),
+        )
+      : normalized;
+
+    return {
+      assistant_message:
+        parsed.assistant_message ||
+        (mode === "followup"
+          ? "Got it. What would you like to refine or explore about this deliverable?"
+          : "Here are a few strong options to consider."),
+      deliverables,
+    };
+  }
+
+  async ideateWorkflowStream(
+    tenantId: string,
+    payload: WorkflowIdeationRequest,
+    handlers?: { onDelta?: (text: string) => void },
+  ): Promise<WorkflowIdeationResponse> {
+    if (!payload || !Array.isArray(payload.messages)) {
+      throw new ApiError("messages array is required", 400);
+    }
+
+    const messages = payload.messages
+      .filter((message) => message?.content?.trim())
+      .slice(-20);
+
+    if (messages.length === 0) {
+      throw new ApiError("At least one message is required", 400);
+    }
+
+    const model =
+      typeof payload.model === "string" && payload.model.trim()
+        ? payload.model.trim()
+        : DEFAULT_MODEL;
+    const mode = payload.mode === "followup" ? "followup" : "ideation";
+
+    const conversation = this.buildConversationTranscript(messages);
+    const deliverableContext =
+      mode === "followup" && payload.selected_deliverable
+        ? `\n\nSelected deliverable:\nTitle: ${payload.selected_deliverable.title}\nType: ${payload.selected_deliverable.deliverable_type || "n/a"}\nDescription: ${payload.selected_deliverable.description || "n/a"}\nBuild description: ${payload.selected_deliverable.build_description || "n/a"}`
+        : "";
+    const prompt = `${conversation}${deliverableContext}
+
+Remember: output a "MESSAGE:" line before the JSON.
+Return JSON using this schema:
+{
+  "assistant_message": "A short, friendly response to the user.",
+  "deliverables": [
+    {
+      "title": "Short deliverable title",
+      "description": "1-2 sentence summary",
+      "deliverable_type": "report|checklist|template|guide|calculator|framework|dashboard",
+      "build_description": "A detailed description that can be used directly to generate the workflow, including audience, scope, sections, and outputs.",
+      "image_prompt": "A concise visual prompt for a cover image. No text in the image."
+    }
+  ]
+}`;
+
+    const openai = await getOpenAIClient();
+    logger.info("[Workflow Ideation] Starting streamed ideation", {
+      tenantId,
+      model,
+      messageCount: messages.length,
+    });
+
+    const stream = await (openai as any).responses.create({
+      model,
+      instructions: mode === "followup" ? FOLLOWUP_SYSTEM_PROMPT : IDEATION_SYSTEM_PROMPT,
+      input: prompt,
+      reasoning: { effort: "high" },
+      service_tier: "priority",
+      stream: true,
+    });
+
+    let outputText = "";
+    for await (const event of stream as any) {
+      const eventType = String((event as any)?.type || "");
+      if (!eventType.includes("output_text")) {
+        continue;
+      }
+      const delta =
+        typeof (event as any)?.delta === "string"
+          ? (event as any).delta
+          : typeof (event as any)?.text === "string"
+            ? (event as any).text
+            : undefined;
+      if (!delta) {
+        continue;
+      }
+      outputText += delta;
+      handlers?.onDelta?.(delta);
+    }
+
+    const parsed = this.parseIdeationResult(outputText);
+    const normalized = this.normalizeDeliverables(
+      Array.isArray(parsed.deliverables) ? parsed.deliverables : [],
+    );
     const deliverables = await Promise.all(
       normalized.map((deliverable, index) =>
         this.attachImage(openai, tenantId, deliverable, index),
@@ -113,7 +257,10 @@ Return ONLY valid JSON using this schema:
 
     return {
       assistant_message:
-        parsed.assistant_message || "Here are a few strong options to consider.",
+        parsed.assistant_message ||
+        (mode === "followup"
+          ? "Got it. What would you like to refine or explore about this deliverable?"
+          : "Here are a few strong options to consider."),
       deliverables,
     };
   }
@@ -145,8 +292,8 @@ Return ONLY valid JSON using this schema:
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
-    if (!parsed || !Array.isArray(parsed.deliverables)) {
-      throw new ApiError("AI response missing deliverables", 500);
+    if (!parsed) {
+      throw new ApiError("AI response was empty", 500);
     }
 
     return parsed;
@@ -270,6 +417,106 @@ Return ONLY valid JSON using this schema:
     }
 
     throw new Error("Images API returned no image data");
+  }
+
+  async generateDeliverableMockups(
+    tenantId: string,
+    payload: WorkflowIdeationMockupRequest,
+  ): Promise<WorkflowIdeationMockupResponse> {
+    if (!payload?.deliverable?.title?.trim()) {
+      throw new ApiError("deliverable.title is required", 400);
+    }
+
+    const countRaw =
+      typeof payload.count === "number" && Number.isFinite(payload.count)
+        ? Math.floor(payload.count)
+        : DEFAULT_MOCKUP_COUNT;
+    const count = Math.min(Math.max(countRaw, 1), 6);
+
+    const deliverable = payload.deliverable;
+    const prompt = `Create a clean, modern mockup preview of the deliverable "${deliverable.title}". 
+Show realistic interior pages/assets (layouts, charts, checklists, diagrams) without any readable text.
+Style: premium, professional, minimal, neutral background, high contrast, studio lighting. 
+Deliverable type: ${deliverable.deliverable_type || "n/a"}.
+Context: ${deliverable.description || deliverable.build_description || "High-value lead magnet content."}`;
+
+    const openai = await getOpenAIClient();
+    const buffers = await this.generateImageBuffers(openai, prompt, count, {
+      quality: "high",
+      input_fidelity: "high",
+    });
+
+    const uploads = await Promise.all(
+      buffers.map(async (buffer, index) => {
+        const filename = `${deliverable.title.replace(/[^a-zA-Z0-9._-]/g, "_")}_mockup_${index + 1}.png`;
+        const s3Key = await s3Service.uploadFile(
+          tenantId,
+          buffer,
+          filename,
+          "ideation-mockups",
+          "image/png",
+        );
+        const url = await s3Service.getFileUrl(s3Key);
+        return { url, s3_key: s3Key };
+      }),
+    );
+
+    return { images: uploads };
+  }
+
+  private async generateImageBuffers(
+    openai: OpenAI,
+    prompt: string,
+    count: number,
+    options?: { quality?: "low" | "medium" | "high"; input_fidelity?: "low" | "high" },
+  ): Promise<Buffer[]> {
+    const params: any = {
+      model: DEFAULT_IMAGE_MODEL,
+      prompt,
+      n: count,
+      size: "1024x1024",
+      quality: options?.quality || "high",
+      input_fidelity: options?.input_fidelity || "high",
+    };
+
+    let response;
+    try {
+      response = await openai.images.generate(params);
+    } catch (error: any) {
+      const message = String(error?.message || "");
+      if (message.includes("Unknown parameter: 'response_format'")) {
+        delete params.response_format;
+        response = await openai.images.generate(params);
+      } else {
+        throw error;
+      }
+    }
+
+    const dataItems: any[] = Array.isArray(response?.data) ? response.data : [];
+    if (dataItems.length === 0) {
+      throw new Error("Images API returned no image data");
+    }
+
+    const buffers = await Promise.all(
+      dataItems.map(async (dataItem) => {
+        if (dataItem?.b64_json) {
+          return Buffer.from(dataItem.b64_json, "base64");
+        }
+        if (dataItem?.url) {
+          const fetchResponse = await fetch(dataItem.url);
+          if (!fetchResponse.ok) {
+            throw new Error(
+              `Failed to download image: ${fetchResponse.status} ${fetchResponse.statusText}`,
+            );
+          }
+          const arrayBuffer = await fetchResponse.arrayBuffer();
+          return Buffer.from(arrayBuffer);
+        }
+        throw new Error("Images API returned no image data");
+      }),
+    );
+
+    return buffers;
   }
 }
 

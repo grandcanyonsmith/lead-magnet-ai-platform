@@ -11,6 +11,8 @@ import {
   WorkflowGenerationResponse,
   WorkflowIdeationRequest,
   WorkflowIdeationResponse,
+  WorkflowIdeationMockupRequest,
+  WorkflowIdeationMockupResponse,
   WorkflowRefineInstructionsRequest,
   WorkflowRefineInstructionsResponse,
   WorkflowVersionListResponse,
@@ -121,6 +123,18 @@ export interface ApiClient {
   ideateWorkflow(
     request: WorkflowIdeationRequest,
   ): Promise<WorkflowIdeationResponse>;
+  generateDeliverableMockups(
+    request: WorkflowIdeationMockupRequest,
+  ): Promise<WorkflowIdeationMockupResponse>;
+  streamIdeation(
+    request: WorkflowIdeationRequest,
+    callbacks: {
+      onDelta: (text: string) => void;
+      onComplete: (result?: WorkflowIdeationResponse) => void;
+      onError: (error: string) => void;
+    },
+    signal?: AbortSignal,
+  ): Promise<void>;
   getWorkflowGenerationStatus(
     jobId: string,
   ): Promise<WorkflowGenerationResponse>;

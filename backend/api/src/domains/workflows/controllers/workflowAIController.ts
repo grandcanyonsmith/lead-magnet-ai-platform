@@ -52,6 +52,73 @@ export class WorkflowAIController {
   }
 
   /**
+   * Stream workflow ideation response.
+   */
+  async ideateWorkflowStream(
+    tenantId: string,
+    body: any,
+    context?: RequestContext,
+  ): Promise<RouteResponse> {
+    const res = (context as any)?.res;
+    if (!res) {
+      return await this.ideateWorkflow(tenantId, body);
+    }
+
+    res.writeHead(200, {
+      "Content-Type": "application/x-ndjson",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    });
+    if (typeof res.flushHeaders === "function") {
+      res.flushHeaders();
+    }
+
+    try {
+      const result = await workflowIdeationService.ideateWorkflowStream(
+        tenantId,
+        body,
+        {
+          onDelta: (text) => {
+            res.write(JSON.stringify({ type: "delta", text }) + "\n");
+          },
+        },
+      );
+
+      res.write(JSON.stringify({ type: "done", result }) + "\n");
+    } catch (error: any) {
+      res.write(
+        JSON.stringify({
+          type: "error",
+          message: error?.message || "Failed to stream ideation",
+        }) + "\n",
+      );
+    } finally {
+      if (!res.writableEnded) {
+        res.end();
+      }
+    }
+
+    return { statusCode: 200, body: { handled: true } };
+  }
+
+  /**
+   * Generate mockup images for a selected deliverable.
+   */
+  async generateIdeationMockups(
+    tenantId: string,
+    body: any,
+  ): Promise<RouteResponse> {
+    const result = await workflowIdeationService.generateDeliverableMockups(
+      tenantId,
+      body,
+    );
+    return {
+      statusCode: 200,
+      body: result,
+    };
+  }
+
+  /**
    * Test a single workflow step.
    */
   async testStep(tenantId: string, body: any, context?: any): Promise<RouteResponse> {

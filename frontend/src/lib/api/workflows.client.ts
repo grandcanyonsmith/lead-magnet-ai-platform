@@ -12,6 +12,8 @@ import {
   WorkflowGenerationResponse,
   WorkflowIdeationRequest,
   WorkflowIdeationResponse,
+  WorkflowIdeationMockupRequest,
+  WorkflowIdeationMockupResponse,
   WorkflowRefineInstructionsRequest,
   WorkflowRefineInstructionsResponse,
   WorkflowVersionListResponse,
@@ -108,7 +110,113 @@ export class WorkflowsClient extends BaseApiClient {
     return this.post<WorkflowIdeationResponse>("/admin/workflows/ideate", {
       messages: request.messages,
       model: request.model || "gpt-5.2",
+      mode: request.mode,
+      selected_deliverable: request.selected_deliverable,
     });
+  }
+
+  async generateDeliverableMockups(
+    request: WorkflowIdeationMockupRequest,
+  ): Promise<WorkflowIdeationMockupResponse> {
+    return this.post<WorkflowIdeationMockupResponse>(
+      "/admin/workflows/ideate/mockups",
+      request,
+    );
+  }
+
+  async streamIdeation(
+    request: WorkflowIdeationRequest,
+    callbacks: {
+      onDelta: (text: string) => void;
+      onComplete: (result?: WorkflowIdeationResponse) => void;
+      onError: (error: string) => void;
+    },
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const token = this.tokenProvider.getToken();
+    const url = `${this.client.defaults.baseURL}/admin/workflows/ideate/stream`;
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          messages: request.messages,
+          model: request.model || "gpt-5.2",
+          mode: request.mode,
+          selected_deliverable: request.selected_deliverable,
+        }),
+        signal,
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const json = await response.json();
+        callbacks.onComplete(json);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        callbacks.onError(`Failed to start ideation: ${response.status} ${errorText}`);
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        callbacks.onError("Response body is not readable");
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const event = JSON.parse(line);
+            if (event.type === "delta" && typeof event.text === "string") {
+              callbacks.onDelta(event.text);
+            } else if (event.type === "done") {
+              callbacks.onComplete(event.result);
+            } else if (event.type === "error") {
+              callbacks.onError(event.message || "Streaming error");
+              return;
+            }
+          } catch (e) {
+            console.error("Failed to parse NDJSON line:", line);
+          }
+        }
+      }
+
+      if (buffer.trim()) {
+        try {
+          const event = JSON.parse(buffer);
+          if (event?.type === "delta" && typeof event.text === "string") {
+            callbacks.onDelta(event.text);
+          } else if (event?.type === "done") {
+            callbacks.onComplete(event.result);
+          }
+        } catch {
+          // ignore trailing partial
+        }
+      }
+
+      callbacks.onComplete();
+    } catch (e: any) {
+      callbacks.onError(e.message || "Failed to stream ideation");
+    }
   }
 
   async getWorkflowGenerationStatus(
