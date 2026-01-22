@@ -89,6 +89,7 @@ export interface Job extends BaseEntity {
   job_id: string;
   tenant_id: string;
   workflow_id: string;
+  workflow_version?: number;
   status: Status;
   created_at: string;
   started_at?: string;

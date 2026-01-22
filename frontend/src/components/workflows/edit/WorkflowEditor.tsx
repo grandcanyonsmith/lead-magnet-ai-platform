@@ -16,7 +16,7 @@ import { useSettings } from "@/hooks/api/useSettings";
 
 // UI Components
 import { Tabs, TabsContent } from "@/components/ui/Tabs";
-import { SubHeaderTabs } from "@/components/ui/SubHeaderTabs";
+import { SecondaryNavigation } from "@/components/ui/SecondaryNavigation";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
@@ -357,7 +357,6 @@ export function WorkflowEditor({
               <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl">
                 Edit Lead Magnet
               </h1>
-              <Badge variant="secondary">v{workflowVersion}</Badge>
             </div>
             <p className="hidden sm:block text-sm text-muted-foreground">
               Configure your workflow logic, intake form, and output design.
@@ -365,6 +364,9 @@ export function WorkflowEditor({
           </div>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+          <Badge variant="secondary" className="w-fit">
+            Version v{workflowVersion}
+          </Badge>
           <Button
             variant="outline"
             onClick={handleExit}
@@ -408,8 +410,8 @@ export function WorkflowEditor({
       )}
 
       {/* Tabs */}
-      <SubHeaderTabs
-        tabs={[
+      <SecondaryNavigation
+        items={[
           { id: "workflow", label: "Settings" },
           { id: "form", label: "Form" },
           ...(hasTemplateTab ? [{ id: "template", label: "Design" }] : []),
@@ -417,10 +419,7 @@ export function WorkflowEditor({
         activeId={activeTab}
         onSelect={(id) => setActiveTab(id as "workflow" | "form" | "template")}
         portalTargetId={portalTargetId}
-        enableOverflowMenu
-        mobileMaxVisible={3}
-        compactMaxVisible={2}
-        compactBreakpointPx={420}
+        ariaLabel="Workflow sections"
       />
       <Tabs
         value={activeTab}

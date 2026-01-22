@@ -28,6 +28,12 @@ export function PageHeader({
     "space-y-1 max-w-2xl",
     actionsInlineOnMobile && "min-w-0 flex-1",
   );
+  const actionsContainerClassName = cn(
+    "flex flex-wrap gap-3 shrink-0",
+    actionsInlineOnMobile
+      ? "items-center"
+      : "w-full flex-col items-stretch sm:w-auto sm:flex-row sm:items-center sm:justify-end",
+  );
 
   return (
     <div
@@ -47,11 +53,7 @@ export function PageHeader({
             </p>
           )}
         </div>
-        {children && (
-          <div className="flex items-center gap-3 shrink-0">
-            {children}
-          </div>
-        )}
+        {children && <div className={actionsContainerClassName}>{children}</div>}
       </div>
       {bottomContent}
     </div>

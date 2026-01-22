@@ -15,6 +15,7 @@ import { logger } from "@/utils/logger";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { DashboardTopBar } from "@/components/dashboard/DashboardTopBar";
 import { JobDetailLayout } from "@/components/dashboard/JobDetailLayout";
+import { BreadcrumbsProvider } from "@/contexts/BreadcrumbsContext";
 
 export default function DashboardLayout({
   children,
@@ -142,62 +143,64 @@ export default function DashboardLayout({
       onTourComplete={handleTourComplete}
       onTourSkip={handleTourSkip}
     >
-      <div
-        id="dashboard-scroll-container"
-        className="min-h-screen h-screen bg-muted/30 text-foreground font-sans scrollbar-hide overflow-x-hidden overflow-y-auto"
-      >
-        <DashboardTopBar
-          isSidebarOpen={sidebarOpen}
-          onToggleSidebar={() => setSidebarOpen((open) => !open)}
-          onSearchClick={() => setSearchOpen(true)}
-          user={user}
-          role={role}
-          signOut={signOut}
-        />
-        <div id="dashboard-subheader" className="sticky top-0 z-30" />
+      <BreadcrumbsProvider>
+        <div
+          id="dashboard-scroll-container"
+          className="min-h-screen h-screen bg-muted/30 text-foreground font-sans scrollbar-hide overflow-x-hidden overflow-y-auto"
+        >
+          <DashboardTopBar
+            isSidebarOpen={sidebarOpen}
+            onToggleSidebar={() => setSidebarOpen((open) => !open)}
+            onSearchClick={() => setSearchOpen(true)}
+            user={user}
+            role={role}
+            signOut={signOut}
+          />
+          <div id="dashboard-subheader" className="sticky top-0 z-30" />
 
-        <Sidebar
-          isOpen={sidebarOpen}
-          setIsOpen={setSidebarOpen}
-          onSearchClick={() => setSearchOpen(true)}
-        />
+          <Sidebar
+            isOpen={sidebarOpen}
+            setIsOpen={setSidebarOpen}
+            onSearchClick={() => setSearchOpen(true)}
+          />
 
-        {/* Main content */}
-        <div className="flex-1 min-w-0 w-full transition-all duration-300">
-          {/* Page content */}
-          <main
-            className={
-              isEditorRoute
-                ? "p-0 bg-[#0c0d10] min-h-screen"
-                : "py-6 sm:py-8 lg:py-10 bg-muted/30 min-h-[calc(100vh-3.5rem-3.0625rem)] sm:min-h-[calc(100vh-4rem-3.0625rem)] flex flex-col"
-            }
-          >
-            {isEditorRoute ? (
-              <div className="w-full">{children}</div>
-            ) : isJobDetailRoute ? (
-              <JobDetailLayout>{children}</JobDetailLayout>
-            ) : (
-              <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-12 flex flex-col min-h-full">
-                {children}
-              </div>
-            )}
-          </main>
+          {/* Main content */}
+          <div className="flex-1 min-w-0 w-full transition-all duration-300">
+            {/* Page content */}
+            <main
+              className={
+                isEditorRoute
+                  ? "p-0 bg-[#0c0d10] min-h-screen"
+                  : "py-6 sm:py-8 lg:py-10 bg-muted/30 min-h-[calc(100vh-3.5rem-3.0625rem)] sm:min-h-[calc(100vh-4rem-3.0625rem)] flex flex-col"
+              }
+            >
+              {isEditorRoute ? (
+                <div className="w-full">{children}</div>
+              ) : isJobDetailRoute ? (
+                <JobDetailLayout>{children}</JobDetailLayout>
+              ) : (
+                <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-12 flex flex-col min-h-full">
+                  {children}
+                </div>
+              )}
+            </main>
+          </div>
         </div>
-      </div>
 
-      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+        <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
 
-      <ShortcutsHelpModal
-        isOpen={shortcutsHelpOpen}
-        onClose={() => setShortcutsHelpOpen(false)}
-      />
-
-      {settings && (
-        <OnboardingChecklist
-          settings={settings}
-          onStartTour={handleStartTour}
+        <ShortcutsHelpModal
+          isOpen={shortcutsHelpOpen}
+          onClose={() => setShortcutsHelpOpen(false)}
         />
-      )}
+
+        {settings && (
+          <OnboardingChecklist
+            settings={settings}
+            onStartTour={handleStartTour}
+          />
+        )}
+      </BreadcrumbsProvider>
     </TourProvider>
   );
 }

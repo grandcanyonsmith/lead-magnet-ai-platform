@@ -124,6 +124,27 @@ const getStepImageFiles = (
   return filesToShow;
 };
 
+const formatLivePreviewText = (value: string, maxLength = 160): string => {
+  if (!value) return "";
+  const formatted = formatLiveOutputText(value);
+  const singleLine = formatted.replace(/\s+/g, " ").trim();
+  if (!singleLine) return "";
+  if (singleLine.length <= maxLength) return singleLine;
+  return `${singleLine.slice(0, maxLength - 3)}...`;
+};
+
+const formatLiveUpdatedAt = (value?: string | null): string | null => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toLocaleTimeString([], {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+};
+
 interface ExecutionStepsProps {
   jobId?: string;
   variant?: "compact" | "expanded";
@@ -249,14 +270,7 @@ export function ExecutionSteps({
   const liveStepStatus = liveStep?.status
     ? liveStep.status.replace(/_/g, " ")
     : null;
-  const liveUpdatedAt = liveStep?.updated_at
-    ? new Date(liveStep.updated_at).toLocaleTimeString([], {
-        hour12: false,
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      })
-    : null;
+  const liveUpdatedAt = formatLiveUpdatedAt(liveStep?.updated_at);
 
   const liveOutputPanel = shouldShowLivePanel ? (
     <SectionCard
@@ -468,6 +482,12 @@ export function ExecutionSteps({
                 liveStep && liveStep.step_order === stepOrder
                   ? liveStep.updated_at
                   : undefined;
+              const liveUpdatedAtLabel = formatLiveUpdatedAt(liveUpdatedAtForStep);
+              const livePreview =
+                typeof liveOutputForStep === "string"
+                  ? formatLivePreviewText(liveOutputForStep)
+                  : "";
+              const showLivePreview = Boolean(livePreview || liveUpdatedAtLabel);
 
               const detailsHref =
                 jobId && step.step_order !== undefined
@@ -522,11 +542,30 @@ export function ExecutionSteps({
                     />
                     {variant === "compact" ? (
                       <div className="border-t border-border/60 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                        {step.step_type !== "workflow_step" && (
-                          <span className="inline-flex items-center gap-2">
-                            {step.step_type.replace(/_/g, " ")}
-                          </span>
-                        )}
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          {step.step_type !== "workflow_step" && (
+                            <span className="inline-flex items-center gap-2">
+                              {step.step_type.replace(/_/g, " ")}
+                            </span>
+                          )}
+                          {showLivePreview && (
+                            <span className="flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
+                              {liveUpdatedAtLabel && (
+                                <span className="shrink-0">
+                                  Updated {liveUpdatedAtLabel}
+                                </span>
+                              )}
+                              {livePreview && (
+                                <span
+                                  className="min-w-0 truncate font-mono"
+                                  title={livePreview}
+                                >
+                                  {livePreview}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
                         {detailsHref && (
                           <Link
                             href={detailsHref}

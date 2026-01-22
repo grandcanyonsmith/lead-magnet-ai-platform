@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { StatPill } from "@/components/ui/StatPill";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { formatTrackingDuration } from "@/utils/tracking";
 import {
   FiActivity,
   FiUsers,
@@ -17,9 +18,15 @@ import {
 
 interface JobTrackingStatsProps {
   jobId: string;
+  onStatsLoaded?: (stats: TrackingStats | null) => void;
+  onStatsLoadingChange?: (loading: boolean) => void;
 }
 
-export function JobTrackingStats({ jobId }: JobTrackingStatsProps) {
+export function JobTrackingStats({
+  jobId,
+  onStatsLoaded,
+  onStatsLoadingChange,
+}: JobTrackingStatsProps) {
   const [stats, setStats] = useState<TrackingStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,13 +35,17 @@ export function JobTrackingStats({ jobId }: JobTrackingStatsProps) {
     async function loadStats() {
       try {
         setLoading(true);
+        onStatsLoadingChange?.(true);
         setError(null);
         const data = await getJobStats(jobId);
         setStats(data);
+        onStatsLoaded?.(data);
       } catch (err: any) {
         setError(err.message || "Failed to load tracking stats");
+        onStatsLoaded?.(null);
       } finally {
         setLoading(false);
+        onStatsLoadingChange?.(false);
       }
     }
 
@@ -61,24 +72,6 @@ export function JobTrackingStats({ jobId }: JobTrackingStatsProps) {
     );
   }
 
-  const formatDuration = (seconds: number): string => {
-    if (seconds < 60) {
-      return `${seconds}s`;
-    }
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    if (minutes < 60) {
-      return remainingSeconds > 0
-        ? `${minutes}m ${remainingSeconds}s`
-        : `${minutes}m`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0
-      ? `${hours}h ${remainingMinutes}m`
-      : `${hours}h`;
-  };
-
   const statCards = [
     {
       label: "Total Clicks",
@@ -97,7 +90,7 @@ export function JobTrackingStats({ jobId }: JobTrackingStatsProps) {
     },
     {
       label: "Avg Session Duration",
-      value: formatDuration(stats.average_session_duration_seconds),
+      value: formatTrackingDuration(stats.average_session_duration_seconds),
       icon: <FiClock className="h-4 w-4 text-muted-foreground" />,
     },
     {

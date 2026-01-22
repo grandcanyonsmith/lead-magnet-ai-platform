@@ -14,7 +14,12 @@ import { usePreviewModal } from "@/hooks/usePreviewModal";
 import { api } from "@/lib/api";
 import { buildArtifactGalleryItems } from "@/utils/jobs/artifacts";
 import { summarizeStepProgress } from "@/utils/jobs/steps";
-import { formatDuration } from "@/utils/date";
+import { formatDuration, formatRelativeTime } from "@/utils/date";
+import {
+  getJobSubmissionPreview,
+  getStatusLabel,
+  getSubmissionPreview,
+} from "@/utils/jobs/listHelpers";
 
 import { JobHeader } from "@/components/jobs/JobHeader";
 import { ResubmitModal } from "@/components/jobs/ResubmitModal";
@@ -30,8 +35,11 @@ import {
 } from "@/components/jobs/detail/JobTabs";
 
 import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
+import type { TrackingStats } from "@/lib/api/tracking.client";
 import type { ArtifactGalleryItem, Job, JobDurationInfo, JobStepSummary } from "@/types/job";
 import type { WorkflowStep } from "@/types";
+import type { Workflow } from "@/types/workflow";
+import { useBreadcrumbs } from "@/contexts/BreadcrumbsContext";
 import type {
   ImageGenerationSettings,
   ImageGenerationToolConfig,
@@ -50,6 +58,8 @@ type QuickUpdateStepInput = {
 
 export default function JobDetailClient() {
   const router = useRouter();
+  const { setItems: setBreadcrumbItems, clearItems: clearBreadcrumbItems } =
+    useBreadcrumbs();
 
   const [showResubmitModal, setShowResubmitModal] = useState(false);
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
@@ -59,6 +69,16 @@ export default function JobDetailClient() {
     null,
   );
   const [trackingSessionsLoading, setTrackingSessionsLoading] = useState(false);
+  const [trackingStats, setTrackingStats] = useState<TrackingStats | null>(null);
+  const [trackingStatsLoading, setTrackingStatsLoading] = useState(false);
+  const [totalWorkflowRuns, setTotalWorkflowRuns] = useState<number | null>(null);
+  const [loadingTotalWorkflowRuns, setLoadingTotalWorkflowRuns] = useState(false);
+  const [versionRunCount, setVersionRunCount] = useState<number | null>(null);
+  const [loadingVersionRunCount, setLoadingVersionRunCount] = useState(false);
+  const [workflowJobs, setWorkflowJobs] = useState<Job[]>([]);
+  const [workflowJobsLoading, setWorkflowJobsLoading] = useState(false);
+  const [workflowOptions, setWorkflowOptions] = useState<Workflow[]>([]);
+  const [workflowOptionsLoading, setWorkflowOptionsLoading] = useState(false);
   const [stepIndexForRerun, setStepIndexForRerun] = useState<number | null>(
     null,
   );
@@ -165,6 +185,110 @@ export default function JobDetailClient() {
     () => summarizeStepProgress(mergedSteps),
     [mergedSteps],
   );
+  const workflowStepCount = Array.isArray(workflow?.steps)
+    ? workflow.steps.length
+    : null;
+  const workflowVersion =
+    typeof workflow?.version === "number" && Number.isFinite(workflow.version)
+      ? workflow.version
+      : typeof workflow?.template_version === "number" &&
+          Number.isFinite(workflow.template_version)
+        ? workflow.template_version
+        : null;
+  const activeWorkflowVersion =
+    typeof workflowVersion === "number"
+      ? workflowVersion
+      : typeof job?.workflow_version === "number" &&
+          Number.isFinite(job.workflow_version)
+        ? job.workflow_version
+        : null;
+
+  React.useEffect(() => {
+    let isActive = true;
+    setWorkflowOptionsLoading(true);
+    api
+      .getWorkflows()
+      .then((data) => {
+        if (!isActive) return;
+        setWorkflowOptions(Array.isArray(data.workflows) ? data.workflows : []);
+      })
+      .catch((error) => {
+        if (!isActive) return;
+        console.error("Failed to load lead magnets:", error);
+        setWorkflowOptions([]);
+      })
+      .finally(() => {
+        if (!isActive) return;
+        setWorkflowOptionsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    let isActive = true;
+    const workflowId = job?.workflow_id;
+    if (!workflowId) {
+      setTotalWorkflowRuns(null);
+      setLoadingTotalWorkflowRuns(false);
+      setVersionRunCount(null);
+      setLoadingVersionRunCount(false);
+      setWorkflowJobs([]);
+      setWorkflowJobsLoading(false);
+      return;
+    }
+
+    setLoadingTotalWorkflowRuns(true);
+    setLoadingVersionRunCount(true);
+    setWorkflowJobsLoading(true);
+    api
+      .getJobs({ workflow_id: workflowId, all: true })
+      .then((data) => {
+        if (!isActive) return;
+        const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+        const sortedJobs = [...jobs].sort((a, b) => {
+          const aTime = new Date(a.created_at || 0).getTime();
+          const bTime = new Date(b.created_at || 0).getTime();
+          if (aTime !== bTime) return aTime - bTime;
+          return a.job_id.localeCompare(b.job_id);
+        });
+        setWorkflowJobs(sortedJobs);
+        const total =
+          typeof data.total === "number"
+            ? data.total
+            : typeof data.count === "number"
+              ? data.count
+              : jobs.length;
+        setTotalWorkflowRuns(total);
+        if (typeof activeWorkflowVersion === "number") {
+          const versionCount = jobs.filter(
+            (jobItem) => jobItem.workflow_version === activeWorkflowVersion,
+          ).length;
+          setVersionRunCount(versionCount);
+        } else {
+          setVersionRunCount(null);
+        }
+      })
+      .catch((error) => {
+        if (!isActive) return;
+        console.error("Failed to load workflow run count:", error);
+        setTotalWorkflowRuns(null);
+        setVersionRunCount(null);
+        setWorkflowJobs([]);
+      })
+      .finally(() => {
+        if (!isActive) return;
+        setLoadingTotalWorkflowRuns(false);
+        setLoadingVersionRunCount(false);
+        setWorkflowJobsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [job?.workflow_id, activeWorkflowVersion]);
 
   const totalCost = useMemo(() => {
     if (!shouldLoadExecutionSteps) {
@@ -214,6 +338,173 @@ export default function JobDetailClient() {
 
   const loadingOutputs = loadingArtifacts || loadingAutoUploads;
   const jobDuration = useMemo(() => getJobDuration(job), [job]);
+
+  const jobQueryString = useMemo(
+    () => searchParams.toString(),
+    [searchParams],
+  );
+  const buildJobHref = useMemo(
+    () => (targetJobId: string) =>
+      jobQueryString
+        ? `/dashboard/jobs/${targetJobId}?${jobQueryString}`
+        : `/dashboard/jobs/${targetJobId}`,
+    [jobQueryString],
+  );
+
+  const breadcrumbItems = useMemo(() => {
+    if (!job) return null;
+
+    const leadMagnetLabel =
+      workflow?.workflow_name || job.workflow_id || "Lead magnet";
+    const submissionLabel =
+      getJobSubmissionPreview(job) ||
+      (submission ? getSubmissionPreview(submission) : null);
+    const jobLabel = submissionLabel || `Job ${job.job_id.slice(0, 8)}`;
+
+    const workflowMenuItems = workflowOptions.map((workflowItem) => {
+      const workflowLabel =
+        workflowItem.workflow_name || workflowItem.workflow_id;
+      const workflowDescription =
+        workflowItem.workflow_name &&
+        workflowItem.workflow_name !== workflowItem.workflow_id
+          ? workflowItem.workflow_id
+          : null;
+      return {
+        id: workflowItem.workflow_id,
+        label: workflowLabel,
+        href: `/dashboard/jobs?workflow_id=${workflowItem.workflow_id}`,
+        description: workflowDescription,
+        isActive: workflowItem.workflow_id === job.workflow_id,
+      };
+    });
+
+    if (
+      job.workflow_id &&
+      !workflowMenuItems.some((item) => item.id === job.workflow_id)
+    ) {
+      workflowMenuItems.unshift({
+        id: job.workflow_id,
+        label: leadMagnetLabel,
+        href: `/dashboard/jobs?workflow_id=${job.workflow_id}`,
+        description:
+          leadMagnetLabel && leadMagnetLabel !== job.workflow_id
+            ? job.workflow_id
+            : null,
+        isActive: true,
+      });
+    }
+
+    const jobMenuItems = workflowJobs.map((jobItem) => {
+      const label =
+        getJobSubmissionPreview(jobItem) || `Job ${jobItem.job_id.slice(0, 8)}`;
+      const statusLabel = getStatusLabel(jobItem.status);
+      const timeLabel = jobItem.created_at
+        ? formatRelativeTime(jobItem.created_at)
+        : null;
+      const description = [statusLabel, timeLabel].filter(Boolean).join(" · ");
+      return {
+        id: jobItem.job_id,
+        label,
+        href: buildJobHref(jobItem.job_id),
+        description,
+        isActive: jobItem.job_id === job.job_id,
+      };
+    });
+
+    if (!jobMenuItems.some((item) => item.id === job.job_id)) {
+      const currentStatus = getStatusLabel(job.status);
+      const currentTime = job.created_at
+        ? formatRelativeTime(job.created_at)
+        : null;
+      jobMenuItems.unshift({
+        id: job.job_id,
+        label: jobLabel,
+        href: buildJobHref(job.job_id),
+        description: [currentStatus, currentTime].filter(Boolean).join(" · "),
+        isActive: true,
+      });
+    }
+
+    return [
+      {
+        id: "lead-magnet",
+        label: leadMagnetLabel,
+        href: job.workflow_id
+          ? `/dashboard/jobs?workflow_id=${job.workflow_id}`
+          : "/dashboard/jobs",
+        menuItems: workflowMenuItems,
+        menuLabel: "Lead magnets",
+        menuSearchPlaceholder: "Find lead magnet...",
+        menuEmptyLabel: workflowOptionsLoading
+          ? "Loading lead magnets..."
+          : "No lead magnets found.",
+      },
+      {
+        id: "job",
+        label: jobLabel,
+        href: buildJobHref(job.job_id),
+        menuItems: jobMenuItems,
+        menuLabel: "Jobs",
+        menuSearchPlaceholder: "Find job...",
+        menuEmptyLabel: workflowJobsLoading
+          ? "Loading jobs..."
+          : "No jobs found.",
+      },
+    ];
+  }, [
+    buildJobHref,
+    job,
+    submission,
+    workflow,
+    workflowJobs,
+    workflowOptions,
+    workflowOptionsLoading,
+    workflowJobsLoading,
+  ]);
+
+  React.useEffect(() => {
+    setBreadcrumbItems(breadcrumbItems);
+  }, [breadcrumbItems, setBreadcrumbItems]);
+
+  React.useEffect(() => {
+    return () => {
+      clearBreadcrumbItems();
+    };
+  }, [clearBreadcrumbItems]);
+
+  const jobSequenceNumber = useMemo(() => {
+    if (!job?.job_id || workflowJobs.length === 0) {
+      return null;
+    }
+    const currentIndex = workflowJobs.findIndex(
+      (jobItem) => jobItem.job_id === job.job_id,
+    );
+    return currentIndex >= 0 ? currentIndex + 1 : null;
+  }, [job?.job_id, workflowJobs]);
+
+  const { previousJobHref, nextJobHref } = useMemo(() => {
+    if (!job?.job_id || workflowJobs.length === 0) {
+      return { previousJobHref: null, nextJobHref: null };
+    }
+    const currentIndex = workflowJobs.findIndex(
+      (jobItem) => jobItem.job_id === job.job_id,
+    );
+    if (currentIndex === -1) {
+      return { previousJobHref: null, nextJobHref: null };
+    }
+    const previousJob =
+      currentIndex > 0 ? workflowJobs[currentIndex - 1] : null;
+    const nextJob =
+      currentIndex < workflowJobs.length - 1
+        ? workflowJobs[currentIndex + 1]
+        : null;
+    return {
+      previousJobHref: previousJob?.job_id
+        ? buildJobHref(previousJob.job_id)
+        : null,
+      nextJobHref: nextJob?.job_id ? buildJobHref(nextJob.job_id) : null,
+    };
+  }, [buildJobHref, job?.job_id, workflowJobs]);
 
   const previewObjectUrl =
     previewItem?.artifact?.object_url ||
@@ -510,14 +801,29 @@ export default function JobDetailClient() {
           onResubmit={handleResubmitClick}
           job={job}
           workflow={workflow}
+          activeTab={activeTab}
           editHref={editTabHref}
           artifactCount={artifactGalleryItems.length}
           stepsSummary={stepsSummary}
           jobDuration={jobDuration}
           totalCost={totalCost}
           loadingArtifacts={loadingOutputs}
+          workflowVersion={workflowVersion}
+          totalRuns={totalWorkflowRuns}
+          loadingTotalRuns={loadingTotalWorkflowRuns}
+          jobSequenceNumber={jobSequenceNumber}
+          loadingJobSequence={workflowJobsLoading}
+          versionRunCount={versionRunCount}
+          loadingVersionRunCount={loadingVersionRunCount}
+          workflowStepCount={workflowStepCount}
+          trackingStats={trackingStats}
+          trackingStatsLoading={trackingStatsLoading}
+          trackingSessionCount={trackingSessionCount}
           onRefresh={refreshJob}
           refreshing={refreshing}
+          previousJobHref={previousJobHref}
+          nextJobHref={nextJobHref}
+          adjacentJobsLoading={workflowJobsLoading}
         />
         <div id="job-edit-subheader" className="w-full" />
 
@@ -606,6 +912,8 @@ export default function JobDetailClient() {
             trackingSessionsLoading={trackingSessionsLoading}
             onTrackingSessionsLoaded={setTrackingSessionCount}
             onTrackingSessionsLoadingChange={setTrackingSessionsLoading}
+            onTrackingStatsLoaded={setTrackingStats}
+            onTrackingStatsLoadingChange={setTrackingStatsLoading}
             onEditExit={handleEditExit}
           />
         </div>

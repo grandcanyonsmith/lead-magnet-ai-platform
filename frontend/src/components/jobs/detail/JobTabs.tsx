@@ -11,6 +11,7 @@ import type {
 import type { Workflow } from "@/types/workflow";
 import type { Form, FormSubmission } from "@/types/form";
 import type { Artifact } from "@/types/artifact";
+import type { TrackingStats } from "@/lib/api/tracking.client";
 
 type TabGroupId = "general" | "workflow" | "insights" | "advanced";
 
@@ -194,6 +195,8 @@ interface JobTabsProps {
   trackingSessionsLoading?: boolean;
   onTrackingSessionsLoaded?: (count: number) => void;
   onTrackingSessionsLoadingChange?: (loading: boolean) => void;
+  onTrackingStatsLoaded?: (stats: TrackingStats | null) => void;
+  onTrackingStatsLoadingChange?: (loading: boolean) => void;
   onEditExit?: () => void;
 }
 
@@ -230,6 +233,8 @@ export function JobTabs({
   trackingSessionsLoading,
   onTrackingSessionsLoaded,
   onTrackingSessionsLoadingChange,
+  onTrackingStatsLoaded,
+  onTrackingStatsLoadingChange,
   onEditExit,
 }: JobTabsProps) {
   const stepsBadge = stepsSummary.total;
@@ -318,6 +323,8 @@ export function JobTabs({
             jobId={job.job_id}
             onSessionsLoaded={onTrackingSessionsLoaded}
             onSessionsLoadingChange={onTrackingSessionsLoadingChange}
+            onStatsLoaded={onTrackingStatsLoaded}
+            onStatsLoadingChange={onTrackingStatsLoadingChange}
           />
         )}
         {activeTab === "technical" && (

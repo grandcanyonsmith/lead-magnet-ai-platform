@@ -68,8 +68,11 @@ export function DashboardTopBar({
               </svg>
             </div>
 
-            <div className="hidden min-w-0 md:flex">
-              <Breadcrumbs className="ml-2 min-w-0" listClassName="min-w-0" />
+            <div className="flex min-w-0 flex-1">
+              <Breadcrumbs
+                className="ml-2 min-w-0 flex-1"
+                listClassName="min-w-0"
+              />
             </div>
           </div>
 

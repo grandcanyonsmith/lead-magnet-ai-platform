@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import {
   ArrowPathIcon,
   ArrowUturnLeftIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   PencilSquareIcon,
   EllipsisVerticalIcon,
 } from "@heroicons/react/24/outline";
@@ -13,7 +15,10 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import type { Status } from "@/types/common";
 import type { Job, JobDurationInfo, JobStepSummary } from "@/types/job";
 import type { Workflow } from "@/types/workflow";
-import { buildJobHeaderStats } from "@/utils/jobs/headerStats";
+import {
+  buildJobHeaderStats,
+  type JobHeaderStatsContext,
+} from "@/utils/jobs/headerStats";
 import { JobHeaderStats } from "@/components/jobs/JobHeaderStats";
 
 interface JobHeaderProps {
@@ -22,14 +27,29 @@ interface JobHeaderProps {
   onResubmit: () => void;
   job?: Job | null;
   workflow?: Workflow | null;
+  activeTab?: JobHeaderStatsContext;
   editHref?: string;
   artifactCount?: number | null;
   stepsSummary?: JobStepSummary | null;
   jobDuration?: JobDurationInfo | null;
   totalCost?: number | null;
   loadingArtifacts?: boolean;
+  workflowVersion?: number | null;
+  totalRuns?: number | null;
+  loadingTotalRuns?: boolean;
+  jobSequenceNumber?: number | null;
+  loadingJobSequence?: boolean;
+  versionRunCount?: number | null;
+  loadingVersionRunCount?: boolean;
+  workflowStepCount?: number | null;
+  trackingStats?: import("@/lib/api/tracking.client").TrackingStats | null;
+  trackingStatsLoading?: boolean;
+  trackingSessionCount?: number | null;
   refreshing?: boolean;
   onRefresh?: () => void;
+  previousJobHref?: string | null;
+  nextJobHref?: string | null;
+  adjacentJobsLoading?: boolean;
 }
 
 const STATUS_BORDER_CLASS: Record<Status, string> = {
@@ -45,14 +65,29 @@ export function JobHeader({
   onResubmit,
   job,
   workflow,
+  activeTab,
   editHref,
   artifactCount,
   stepsSummary,
   jobDuration,
   totalCost,
   loadingArtifacts,
+  workflowVersion,
+  totalRuns,
+  loadingTotalRuns,
+  jobSequenceNumber,
+  loadingJobSequence,
+  versionRunCount,
+  loadingVersionRunCount,
+  workflowStepCount,
+  trackingStats,
+  trackingStatsLoading,
+  trackingSessionCount,
   refreshing,
   onRefresh,
+  previousJobHref,
+  nextJobHref,
+  adjacentJobsLoading,
 }: JobHeaderProps) {
   const router = useRouter();
 
@@ -78,6 +113,18 @@ export function JobHeader({
     jobDuration,
     totalCost,
     loadingArtifacts,
+    workflowVersion,
+    totalRuns,
+    loadingTotalRuns,
+    jobSequenceNumber,
+    loadingJobSequence,
+    versionRunCount,
+    loadingVersionRunCount,
+    workflowStepCount,
+    trackingStats,
+    trackingStatsLoading,
+    trackingSessionCount,
+    context: activeTab,
   });
 
   const getMenuItemClass = (active: boolean, disabled?: boolean) => {
@@ -92,11 +139,17 @@ export function JobHeader({
   };
 
   const hasActions = Boolean(workflow?.workflow_id || onRefresh || onResubmit);
+  const isNavDisabled = adjacentJobsLoading === true;
   const resolvedEditHref =
     editHref ||
     (workflow?.workflow_id
       ? `/dashboard/workflows/${workflow.workflow_id}/edit`
       : "");
+
+  const handleJobNavigate = (href?: string | null) => {
+    if (!href || isNavDisabled) return;
+    router.push(href);
+  };
 
   return (
     <div className="mb-6 sm:mb-7 space-y-3 sm:space-y-4">
@@ -135,6 +188,29 @@ export function JobHeader({
           />
         }
       >
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Previous job"
+            title={isNavDisabled ? "Loading jobs..." : "Previous job"}
+            onClick={() => handleJobNavigate(previousJobHref)}
+            disabled={isNavDisabled || !previousJobHref}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronLeftIcon className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next job"
+            title={isNavDisabled ? "Loading jobs..." : "Next job"}
+            onClick={() => handleJobNavigate(nextJobHref)}
+            disabled={isNavDisabled || !nextJobHref}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ChevronRightIcon className="h-5 w-5" />
+          </button>
+        </div>
+
         {hasActions && (
           <Menu as="div" className="relative inline-block text-left ml-auto">
             <Menu.Button

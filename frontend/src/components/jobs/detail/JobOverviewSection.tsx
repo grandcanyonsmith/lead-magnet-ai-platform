@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { OutputCard } from "@/components/jobs/detail/OutputCard";
-import { OutputGroupTabs } from "@/components/jobs/detail/OutputGroupTabs";
+import { SecondaryNavigation } from "@/components/ui/SecondaryNavigation";
 import type { ArtifactGalleryItem } from "@/types/job";
 import {
   buildOutputGroups,
@@ -36,9 +36,9 @@ export function JobOverviewSection({
     fallbackGroup;
   const isHtmlGroup = activeGroup.key === "html";
   const isLogsGroup = activeGroup.key === "logs";
-  const outputsListClassName = isHtmlGroup
+  const outputsRowClassName = isHtmlGroup
     ? "grid gap-4"
-    : "grid grid-flow-col auto-cols-[16rem] grid-rows-2 gap-3 overflow-x-auto pb-2 pl-3 pr-1 sm:-mx-1 sm:px-1 snap-x snap-mandatory scrollbar-hide";
+    : "flex gap-3 overflow-x-auto pb-2 pl-3 pr-1 sm:-mx-1 sm:px-1 snap-x snap-mandatory scrollbar-hide";
   const outputCardClassName = isHtmlGroup
     ? "group flex w-full flex-col text-left"
     : "group flex w-64 flex-shrink-0 snap-start flex-col text-left";
@@ -48,6 +48,16 @@ export function JobOverviewSection({
   const outputsAriaLabel = isLogsGroup
     ? "Logs"
     : `${activeGroup.label} outputs`;
+  const outputRows = isHtmlGroup
+    ? [activeGroup.items]
+    : activeGroup.items.reduce<ArtifactGalleryItem[][]>(
+        (rows, item, index) => {
+          rows[index % 2].push(item);
+          return rows;
+        },
+        [[], []],
+      );
+  const visibleRows = isHtmlGroup ? outputRows : outputRows.filter((row) => row.length);
   const emptyStateLabel = isLogsGroup
     ? "logs"
     : `${activeGroup.label.toLowerCase()} outputs`;
@@ -72,43 +82,58 @@ export function JobOverviewSection({
           ) : (
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <OutputGroupTabs
-                  groups={outputGroups}
-                  activeKey={activeOutputGroup}
-                  onChange={setActiveOutputGroup}
+                <SecondaryNavigation
+                  items={outputGroups.map((group) => ({
+                    id: group.key,
+                    label: group.label,
+                    badge: group.count,
+                    badgeClassName: group.badgeClassName,
+                  }))}
+                  activeId={activeOutputGroup}
+                  onSelect={(id) => setActiveOutputGroup(id as OutputGroupKey)}
+                  ariaLabel="Output types"
                 />
               </div>
 
               {activeGroup.items.length > 0 ? (
-                <div
-                  className={outputsListClassName}
-                  role="list"
-                  aria-label={outputsAriaLabel}
-                >
-                  {activeGroup.items.map((item) => {
-                    const preview = getOutputPreviewMeta(item);
-                    const showDescription = shouldShowOutputDescription(
-                      activeGroup.key,
-                      item.description,
-                    );
-                    const displayLabel = getOutputLabel(item, activeGroup.key);
-                    const outputUrl = getOutputUrl(item);
-                    return (
-                      <OutputCard
-                        key={item.id}
-                        item={item}
-                        groupKey={activeGroup.key}
-                        preview={preview}
-                        displayLabel={displayLabel}
-                        description={item.description}
-                        showDescription={showDescription}
-                        outputUrl={outputUrl || undefined}
-                        onPreview={onPreview}
-                        className={outputCardClassName}
-                        previewClassName={previewSizeClass}
-                      />
-                    );
-                  })}
+                <div className={isHtmlGroup ? undefined : "space-y-3"}>
+                  {visibleRows.map((row, rowIndex) => (
+                    <div
+                      key={`outputs-row-${rowIndex}`}
+                      className={outputsRowClassName}
+                      role="list"
+                      aria-label={
+                        isHtmlGroup
+                          ? outputsAriaLabel
+                          : `${outputsAriaLabel} row ${rowIndex + 1}`
+                      }
+                    >
+                      {row.map((item) => {
+                        const preview = getOutputPreviewMeta(item);
+                        const showDescription = shouldShowOutputDescription(
+                          activeGroup.key,
+                          item.description,
+                        );
+                        const displayLabel = getOutputLabel(item, activeGroup.key);
+                        const outputUrl = getOutputUrl(item);
+                        return (
+                          <OutputCard
+                            key={item.id}
+                            item={item}
+                            groupKey={activeGroup.key}
+                            preview={preview}
+                            displayLabel={displayLabel}
+                            description={item.description}
+                            showDescription={showDescription}
+                            outputUrl={outputUrl || undefined}
+                            onPreview={onPreview}
+                            className={outputCardClassName}
+                            previewClassName={previewSizeClass}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="rounded-xl border border-dashed border-border/70 bg-muted/30 px-4 py-6 text-center text-xs text-muted-foreground">
