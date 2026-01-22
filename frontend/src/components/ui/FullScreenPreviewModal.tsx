@@ -120,11 +120,15 @@ export const FullScreenPreviewModal = React.memo(
     const handleZoomOut = () => setZoom((z) => Math.max(z - 0.25, 0.5));
 
     const fileNameLower = (fileName || "").toLowerCase();
+    const contentTypeLower = (contentType || "").toLowerCase();
     const isHtml = isHtmlPreview(contentType, fileNameLower);
+    const isJson =
+      contentTypeLower.includes("application/json") || fileNameLower.endsWith(".json");
     const isMarkdown =
-      (contentType || "").startsWith("text/markdown") ||
+      contentTypeLower.startsWith("text/markdown") ||
       fileNameLower.endsWith(".md") ||
-      fileNameLower.endsWith(".markdown");
+      fileNameLower.endsWith(".markdown") ||
+      isJson;
     const isImage = contentType?.startsWith("image/");
 
     return (

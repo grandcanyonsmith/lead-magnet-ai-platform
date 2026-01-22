@@ -144,7 +144,7 @@ Return a JSON object:
       "instructions": string,
       "tools": string[],
       "tool_choice": "auto" | "required" | "none",
-      "depends_on": number[]
+      "depends_on": number[] (0-based indices)
     }
   ],
   "changes_summary": string (Clear, professional summary of what was improved)

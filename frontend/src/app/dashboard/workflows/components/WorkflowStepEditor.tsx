@@ -941,6 +941,7 @@ export default function WorkflowStepEditor({
                       onChange(index, proposed);
                     }}
                     collapsible={false}
+                    allSteps={allSteps}
                   />
                 </CollapsibleSection>
               </div>

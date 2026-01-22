@@ -16,6 +16,7 @@ type PythonSegment = { type: "text" | "python"; content: string };
 
 const PYTHON_HEREDOC_START =
   /^\$\s+python(?:\d+(?:\.\d+)?)?(?:\s|$).*<<\s*['"]?([A-Za-z0-9_]+)['"]?/i;
+const PYTHON_DASH_C = /^\$?\s*python(?:\d+(?:\.\d+)?)?\s+-c\s+/i;
 
 const CODE_MARKER = /^\[Code interpreter\](.*)$/i;
 const CODE_LOGS_MARKER = /^\[Code interpreter logs\]\s*$/i;
@@ -28,6 +29,33 @@ const normalizeEscapes = (value: string) =>
     .replace(/\\t/g, "\t")
     .replace(/\\"/g, '"')
     .replace(/\\'/g, "'");
+
+const extractPythonDashC = (line: string): string | null => {
+  const match = line.match(PYTHON_DASH_C);
+  if (!match) return null;
+  const rest = line.slice(match[0].length).trimStart();
+  const quote = rest[0];
+  if (quote !== '"' && quote !== "'") return null;
+  let code = "";
+  let escaped = false;
+  for (let i = 1; i < rest.length; i += 1) {
+    const ch = rest[i];
+    if (escaped) {
+      code += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (ch === quote) {
+      return normalizeEscapes(code);
+    }
+    code += ch;
+  }
+  return null;
+};
 
 const extractJsonCandidate = (value: string): string | null => {
   const trimmed = value.trim();
@@ -100,6 +128,13 @@ function splitPythonSegments(formatted: string): PythonSegment[] {
           pythonEndMarker = marker;
           continue;
         }
+      }
+      const inlineCode = extractPythonDashC(line);
+      if (inlineCode) {
+        textBuffer.push(line);
+        flushText();
+        segments.push({ type: "python", content: inlineCode });
+        continue;
       }
       textBuffer.push(line);
       continue;
