@@ -7,7 +7,7 @@ import {
   FiLoader,
   FiFile,
 } from "react-icons/fi";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { api } from "@/lib/api";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { Artifact } from "@/types/artifact";
@@ -18,6 +18,7 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { JsonViewer } from "@/components/ui/JsonViewer";
 
 interface TechnicalDetailsProps {
   job: any;
@@ -36,6 +37,17 @@ export function TechnicalDetails({
   const [loadingArtifacts, setLoadingArtifacts] = useState(false);
   const [copyingAll, setCopyingAll] = useState(false);
   const { settings } = useSettings();
+  const hasRawJson = Array.isArray(job) ? job.length > 0 : Boolean(job);
+  const { rawJsonString, rawJsonError } = useMemo(() => {
+    if (!hasRawJson) {
+      return { rawJsonString: "", rawJsonError: false };
+    }
+    try {
+      return { rawJsonString: JSON.stringify(job, null, 2), rawJsonError: false };
+    } catch {
+      return { rawJsonString: "", rawJsonError: true };
+    }
+  }, [job, hasRawJson]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -134,6 +146,16 @@ export function TechnicalDetails({
       setTimeout(() => setCopied(false), 2000);
     } finally {
       setCopyingAll(false);
+    }
+  };
+
+  const handleCopyRawJson = async () => {
+    if (!rawJsonString) return;
+    try {
+      await navigator.clipboard.writeText(rawJsonString);
+      toast.success("Execution JSON copied");
+    } catch {
+      toast.error("Unable to copy JSON");
     }
   };
 
@@ -395,6 +417,42 @@ export function TechnicalDetails({
             </div>
           </SectionCard>
         )}
+
+        <SectionCard
+          title="Raw execution JSON"
+          description="Full payload captured for this run."
+          padding="sm"
+          actions={
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleCopyRawJson}
+              disabled={!rawJsonString}
+              title={rawJsonString ? "Copy execution JSON" : "No JSON data to copy"}
+            >
+              <FiCopy className="w-4 h-4" />
+              Copy JSON
+            </Button>
+          }
+        >
+          {rawJsonError ? (
+            <div className="rounded-lg border border-dashed border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+              Unable to render raw JSON for this run.
+            </div>
+          ) : hasRawJson ? (
+            <JsonViewer
+              value={job}
+              raw={rawJsonString}
+              defaultMode="tree"
+              defaultExpandedDepth={2}
+            />
+          ) : (
+            <div className="rounded-lg border border-dashed border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+              No raw JSON data is available for this run.
+            </div>
+          )}
+        </SectionCard>
 
         {copied && (
           <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-[60]">

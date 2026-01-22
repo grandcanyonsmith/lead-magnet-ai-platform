@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { FiSave, FiZap, FiPlus, FiLayout } from "react-icons/fi";
+import {
+  FiSave,
+  FiZap,
+  FiPlus,
+  FiLayout,
+  FiMessageSquare,
+} from "react-icons/fi";
 import WorkflowStepEditor from "../components/WorkflowStepEditor";
 import { WorkflowBasicFields } from "@/components/workflows/WorkflowBasicFields";
 import { TemplateEditor } from "@/components/workflows/TemplateEditor";
@@ -14,21 +20,41 @@ import { useWorkflowValidation } from "@/hooks/useWorkflowValidation";
 import { useWorkflowSubmission } from "@/hooks/useWorkflowSubmission";
 import { useWorkflowGenerationStatus } from "@/hooks/useWorkflowGenerationStatus";
 import { useSettings } from "@/hooks/api/useSettings";
+import { useWorkflowIdeation } from "@/hooks/useWorkflowIdeation";
+import {
+  WorkflowIdeationDeliverable,
+  WorkflowIdeationMessage,
+} from "@/types";
 
 export default function NewWorkflowPage() {
   const router = useRouter();
-  const [step, setStep] = useState<"choice" | "prompt" | "form" | "creating">(
-    "choice",
-  );
+  const [step, setStep] = useState<
+    "choice" | "prompt" | "chat" | "form" | "creating"
+  >("choice");
   const [prompt, setPrompt] = useState("");
   const [generatedTemplateId, setGeneratedTemplateId] = useState<string | null>(
     null,
   );
   const [error, setError] = useState<string | null>(null);
   const [generationJobId, setGenerationJobId] = useState<string | null>(null);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<WorkflowIdeationMessage[]>([
+    {
+      role: "assistant",
+      content:
+        "Tell me what you want to build. I will suggest a few lead magnet ideas with visuals.",
+    },
+  ]);
+  const [chatDeliverables, setChatDeliverables] = useState<
+    WorkflowIdeationDeliverable[]
+  >([]);
+  const [selectedDeliverableId, setSelectedDeliverableId] = useState<
+    string | null
+  >(null);
 
   // Hooks
   const aiGeneration = useAIGeneration();
+  const ideation = useWorkflowIdeation();
   const workflowForm = useWorkflowForm();
   const { settings } = useSettings();
   const workflowSteps = useWorkflowSteps({
@@ -80,8 +106,8 @@ export default function NewWorkflowPage() {
     }
   }, [aiGeneration.error, submission.error]);
 
-  const handleGenerateWithAI = async () => {
-    if (!prompt.trim()) {
+  const startGeneration = async (description: string) => {
+    if (!description.trim()) {
       setError("Please describe what you want to build a lead magnet for");
       return;
     }
@@ -89,7 +115,7 @@ export default function NewWorkflowPage() {
     setError(null);
     setStep("creating");
     const result = await aiGeneration.generateWorkflow(
-      prompt.trim(),
+      description.trim(),
       settings?.default_ai_model || "gpt-5.2",
     );
 
@@ -103,6 +129,50 @@ export default function NewWorkflowPage() {
         setTimeout(() => {
           // Status will be cleared by hook
         }, 5000);
+    }
+  };
+
+  const handleGenerateWithAI = async () => {
+    await startGeneration(prompt);
+  };
+
+  const selectedDeliverable = chatDeliverables.find(
+    (deliverable) => deliverable.id === selectedDeliverableId,
+  );
+
+  const handleGenerateFromChat = async () => {
+    if (!selectedDeliverable) {
+      return;
+    }
+    setPrompt(selectedDeliverable.build_description);
+    await startGeneration(selectedDeliverable.build_description);
+  };
+
+  const handleSendChatMessage = async () => {
+    if (!chatInput.trim()) {
+      return;
+    }
+
+    const nextMessages: WorkflowIdeationMessage[] = [
+      ...chatMessages,
+      { role: "user", content: chatInput.trim() },
+    ];
+    setChatMessages(nextMessages);
+    setChatInput("");
+    setChatDeliverables([]);
+    setSelectedDeliverableId(null);
+
+    const result = await ideation.ideate(
+      nextMessages,
+      settings?.default_ai_model || "gpt-5.2",
+    );
+
+    if (result) {
+      setChatMessages([
+        ...nextMessages,
+        { role: "assistant", content: result.assistant_message },
+      ]);
+      setChatDeliverables(result.deliverables || []);
     }
   };
 
@@ -164,7 +234,7 @@ export default function NewWorkflowPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Generate with AI Card */}
           <button
             onClick={() => setStep("prompt")}
@@ -182,6 +252,26 @@ export default function NewWorkflowPage() {
             </p>
             <span className="text-purple-600 dark:text-purple-400 font-medium group-hover:underline">
               Start with AI &rarr;
+            </span>
+          </button>
+
+          {/* Chat with AI Card */}
+          <button
+            onClick={() => setStep("chat")}
+            className="group relative flex flex-col items-center p-8 bg-white dark:bg-card rounded-xl shadow-sm border-2 border-transparent hover:border-emerald-500 dark:hover:border-emerald-400 transition-all duration-200 hover:shadow-md text-left"
+          >
+            <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-200">
+              <FiMessageSquare className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-foreground mb-3">
+              Chat with AI
+            </h3>
+            <p className="text-gray-600 dark:text-muted-foreground text-center mb-6">
+              Have a conversation, get visual deliverable options, and choose
+              what to build.
+            </p>
+            <span className="text-emerald-600 dark:text-emerald-400 font-medium group-hover:underline">
+              Start chat &rarr;
             </span>
           </button>
 
@@ -249,6 +339,176 @@ export default function NewWorkflowPage() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Chat Step
+  if (step === "chat") {
+    return (
+      <div>
+        <div className="mb-6">
+          <button
+            onClick={() => setStep("choice")}
+            className="text-sm text-gray-500 hover:text-gray-700 dark:text-muted-foreground dark:hover:text-foreground mb-2 flex items-center"
+          >
+            ← Back to options
+          </button>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">
+            Chat to Ideate
+          </h1>
+          <p className="text-gray-600 dark:text-muted-foreground">
+            Tell us what you want to build. We will suggest deliverables with
+            visuals and let you pick one to build.
+          </p>
+        </div>
+
+        {ideation.error && (
+          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg">
+            {ideation.error}
+          </div>
+        )}
+
+        <div className="bg-white dark:bg-card rounded-lg shadow p-6 border border-gray-200 dark:border-border">
+          <div className="space-y-6">
+            <div className="rounded-lg border border-gray-200 dark:border-border bg-muted/10 p-4 max-h-[360px] overflow-y-auto space-y-4">
+              {chatMessages.map((message, index) => (
+                <div
+                  key={`${message.role}-${index}`}
+                  className={`flex ${
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-lg px-4 py-3 text-sm whitespace-pre-wrap ${
+                      message.role === "user"
+                        ? "bg-primary-600 dark:bg-primary text-white"
+                        : "bg-white dark:bg-secondary text-gray-900 dark:text-foreground border border-gray-200 dark:border-border"
+                    }`}
+                  >
+                    {message.content}
+                  </div>
+                </div>
+              ))}
+
+              {ideation.isIdeating && (
+                <div className="flex justify-start">
+                  <div className="max-w-[80%] rounded-lg px-4 py-3 text-sm bg-white dark:bg-secondary text-gray-900 dark:text-foreground border border-gray-200 dark:border-border">
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600 dark:border-purple-400"></div>
+                      <span>Thinking through options...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <textarea
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg bg-white dark:bg-secondary text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 disabled:bg-gray-100 dark:disabled:bg-secondary disabled:cursor-not-allowed"
+                placeholder="Describe the lead magnet you want to build..."
+                rows={4}
+                disabled={ideation.isIdeating}
+              />
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSendChatMessage}
+                  disabled={ideation.isIdeating || !chatInput.trim()}
+                  className="flex items-center justify-center px-5 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {ideation.isIdeating ? "Sending..." : "Send"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleGenerateFromChat}
+                  disabled={
+                    ideation.isIdeating ||
+                    aiGeneration.isGenerating ||
+                    !selectedDeliverable
+                  }
+                  className="flex items-center justify-center px-5 py-2 bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-500 dark:to-blue-500 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 dark:hover:from-purple-600 dark:hover:to-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FiZap className="w-4 h-4 mr-2" />
+                  Agree &amp; Build
+                </button>
+
+                {selectedDeliverable && (
+                  <span className="text-sm text-gray-600 dark:text-muted-foreground">
+                    Selected: {selectedDeliverable.title}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {chatDeliverables.length > 0 && (
+            <div className="mt-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-foreground">
+                  Suggested Deliverables
+                </h3>
+                <span className="text-xs text-gray-500 dark:text-muted-foreground">
+                  {chatDeliverables.length} options
+                </span>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {chatDeliverables.map((deliverable) => {
+                  const isSelected =
+                    deliverable.id === selectedDeliverableId;
+                  return (
+                    <button
+                      key={deliverable.id}
+                      type="button"
+                      onClick={() => setSelectedDeliverableId(deliverable.id)}
+                      className={`text-left rounded-lg border p-3 transition-all ${
+                        isSelected
+                          ? "border-emerald-500 ring-2 ring-emerald-200 dark:ring-emerald-900/40"
+                          : "border-gray-200 dark:border-border hover:border-emerald-300"
+                      }`}
+                    >
+                      <div className="aspect-[4/3] rounded-md overflow-hidden bg-muted/30 border border-gray-200 dark:border-border">
+                        {deliverable.image_url ? (
+                          <img
+                            src={deliverable.image_url}
+                            alt={deliverable.title}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-xs text-gray-500 dark:text-muted-foreground">
+                            Image unavailable
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-foreground">
+                            {deliverable.title}
+                          </h4>
+                          {isSelected && (
+                            <span className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400 font-semibold">
+                              Selected
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-muted-foreground">
+                          {deliverable.description}
+                        </p>
+                        <span className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-muted-foreground">
+                          {deliverable.deliverable_type}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

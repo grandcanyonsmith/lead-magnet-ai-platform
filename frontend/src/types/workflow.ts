@@ -248,6 +248,32 @@ export interface WorkflowGenerationResponse {
   error_message?: string;
 }
 
+export type WorkflowIdeationMessage = {
+  role: "user" | "assistant" | "system";
+  content: string;
+};
+
+export interface WorkflowIdeationRequest {
+  messages: WorkflowIdeationMessage[];
+  model?: AIModel;
+}
+
+export interface WorkflowIdeationDeliverable {
+  id: string;
+  title: string;
+  description: string;
+  deliverable_type: string;
+  build_description: string;
+  image_prompt: string;
+  image_url?: string | null;
+  image_s3_key?: string | null;
+}
+
+export interface WorkflowIdeationResponse {
+  assistant_message: string;
+  deliverables: WorkflowIdeationDeliverable[];
+}
+
 export interface WorkflowGenerationResult {
   workflow: {
     workflow_name?: string;

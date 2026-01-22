@@ -10,6 +10,8 @@ import {
   WorkflowUpdateRequest,
   WorkflowGenerationRequest,
   WorkflowGenerationResponse,
+  WorkflowIdeationRequest,
+  WorkflowIdeationResponse,
   WorkflowRefineInstructionsRequest,
   WorkflowRefineInstructionsResponse,
   WorkflowVersionListResponse,
@@ -98,6 +100,15 @@ export class WorkflowsClient extends BaseApiClient {
         webhook_url: request.webhook_url,
       },
     );
+  }
+
+  async ideateWorkflow(
+    request: WorkflowIdeationRequest,
+  ): Promise<WorkflowIdeationResponse> {
+    return this.post<WorkflowIdeationResponse>("/admin/workflows/ideate", {
+      messages: request.messages,
+      model: request.model || "gpt-5.2",
+    });
   }
 
   async getWorkflowGenerationStatus(

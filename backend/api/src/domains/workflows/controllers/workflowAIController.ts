@@ -9,6 +9,7 @@ import { workflowGenerationJobService } from '@domains/workflows/services/workfl
 import { workflowAIEditJobService } from '@domains/workflows/services/workflowAIEditJobService';
 import { ulid } from 'ulid';
 import { getPromptOverridesFromSettings } from '@services/promptOverrides';
+import { workflowIdeationService } from '@domains/workflows/services/workflowIdeationService';
 
 /**
  * Controller for AI-powered workflow operations.
@@ -35,6 +36,17 @@ export class WorkflowAIController {
       body: {
         models
       }
+    };
+  }
+
+  /**
+   * Ideate deliverables for a lead magnet via chat history.
+   */
+  async ideateWorkflow(tenantId: string, body: any): Promise<RouteResponse> {
+    const result = await workflowIdeationService.ideateWorkflow(tenantId, body);
+    return {
+      statusCode: 200,
+      body: result,
     };
   }
 

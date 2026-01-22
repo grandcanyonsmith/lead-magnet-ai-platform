@@ -202,6 +202,12 @@ export function PreviewRenderer({
   const containerRef = useRef<HTMLDivElement>(null);
   const isCompactPreview = previewVariant === "compact" && !isFullScreen;
   const compactHtmlScale = 0.5;
+  const htmlViewModeClassName =
+    viewMode === "tablet"
+      ? "w-full max-w-[768px] mx-auto"
+      : viewMode === "mobile"
+        ? "w-full max-w-[375px] mx-auto"
+        : "w-full";
 
   const hasLoadError = imageError || htmlError || markdownError || jsonError;
   const objectUrlKey = useMemo(
@@ -768,13 +774,15 @@ export function PreviewRenderer({
                   </div>
                 </div>
               ) : (
-                <iframe
-                  srcDoc={htmlContent}
-                  className="w-full h-full border-0"
-                  title={fileName || "HTML Preview"}
-                  sandbox="allow-scripts allow-popups"
-                  referrerPolicy="no-referrer"
-                />
+                <div className={`h-full ${htmlViewModeClassName}`}>
+                  <iframe
+                    srcDoc={htmlContent}
+                    className="w-full h-full border-0"
+                    title={fileName || "HTML Preview"}
+                    sandbox="allow-scripts allow-popups"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
               )
             ) : (
               <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
