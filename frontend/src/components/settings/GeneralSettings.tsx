@@ -20,6 +20,7 @@ import { CardHeaderIntro } from "@/components/ui/CardHeaderIntro";
 import { BuildingOfficeIcon } from "@heroicons/react/24/outline";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useAIModels } from "@/hooks/api/useWorkflows";
 
 import { AvatarUpload } from "./AvatarUpload";
 
@@ -30,10 +31,6 @@ interface GeneralSettingsProps {
   onToolSecretsChange: (value: string) => void;
   errors?: Record<string, string>;
 }
-
-const AI_MODEL_OPTIONS = [
-  { value: "gpt-5.2", label: "GPT-5.2" },
-];
 
 const TOOL_CHOICE_OPTIONS = [
   { value: "required", label: "Required" },
@@ -81,6 +78,33 @@ export function GeneralSettings({
   const { user } = useAuth();
   const [tenantUsers, setTenantUsers] = useState<TenantUserOption[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const {
+    models: aiModels,
+    loading: aiModelsLoading,
+    error: aiModelsError,
+  } = useAIModels();
+
+  const aiModelOptions = useMemo(() => {
+    const options = aiModels.map((model) => ({
+      value: model.id,
+      label: model.name,
+    }));
+    const currentModel = settings.default_ai_model || DEFAULT_AI_MODEL;
+    const hasCurrent = options.some((option) => option.value === currentModel);
+    const withCurrent = hasCurrent
+      ? options
+      : [{ value: currentModel, label: currentModel }, ...options];
+    return withCurrent.length > 0
+      ? withCurrent
+      : [{ value: DEFAULT_AI_MODEL, label: "GPT-5.2" }];
+  }, [aiModels, settings.default_ai_model]);
+
+  const aiModelHelpText = useMemo(() => {
+    if (aiModelsLoading) return "Loading available models...";
+    if (aiModelsError)
+      return "Unable to load models. Showing current selection.";
+    return "Default AI model used for generating lead magnets";
+  }, [aiModelsLoading, aiModelsError]);
 
   useEffect(() => {
     let isMounted = true;
@@ -201,8 +225,8 @@ export function GeneralSettings({
             type="text"
             value={settings.default_ai_model || DEFAULT_AI_MODEL}
             onChange={(value) => onChange("default_ai_model", value)}
-            options={AI_MODEL_OPTIONS}
-            helpText="Default AI model used for generating lead magnets"
+            options={aiModelOptions}
+            helpText={aiModelHelpText}
           />
 
           <FormField

@@ -44,7 +44,6 @@ import ImageGenerationConfig from "./step-editor/ImageGenerationConfig";
 import StepTester from "./step-editor/StepTester";
 import StepEditorNav from "./step-editor/StepEditorNav";
 import StepEditorSection from "./step-editor/StepEditorSection";
-import StepSummary from "./step-editor/StepSummary";
 
 interface WorkflowStepEditorProps {
   step: WorkflowStep;
@@ -167,12 +166,7 @@ const OUTPUT_TYPE_OPTIONS = [
 
 type StepEditorSectionId =
   | "basics"
-  | "instructions"
-  | "tools"
-  | "output"
-  | "integrations"
-  | "dependencies"
-  | "test";
+  | "integrations";
 
 const STEP_EDITOR_SECTIONS: Array<{
   id: StepEditorSectionId;
@@ -187,40 +181,10 @@ const STEP_EDITOR_SECTIONS: Array<{
     icon: FiSettings,
   },
   {
-    id: "instructions",
-    label: "Instructions",
-    description: "What this step should do",
-    icon: FiFileText,
-  },
-  {
-    id: "tools",
-    label: "Tools",
-    description: "Capabilities and usage",
-    icon: FiBox,
-  },
-  {
-    id: "output",
-    label: "Output",
-    description: "Format and limits",
-    icon: FiMessageSquare,
-  },
-  {
     id: "integrations",
     label: "Integrations",
     description: "Webhooks and handoff",
     icon: FiGlobe,
-  },
-  {
-    id: "dependencies",
-    label: "Dependencies",
-    description: "Step order control",
-    icon: FiLink,
-  },
-  {
-    id: "test",
-    label: "Test",
-    description: "Run this step",
-    icon: FiZap,
   },
 ];
 
@@ -282,12 +246,14 @@ export default function WorkflowStepEditor({
   const [activeSection, setActiveSection] = useState<StepEditorSectionId>("basics");
   const [isFocusMode, setIsFocusMode] = useState(false);
   const previousSectionRef = useRef<StepEditorSectionId>("basics");
+  const activeSectionMeta = STEP_EDITOR_SECTIONS.find(
+    (section) => section.id === activeSection,
+  );
+  const ActiveSectionIcon = activeSectionMeta?.icon;
 
   const [isWebhookCollapsed, setIsWebhookCollapsed] = useState(true);
   const [isHandoffCollapsed, setIsHandoffCollapsed] = useState(true);
-  const [isAdvancedAICollapsed, setIsAdvancedAICollapsed] = useState(true);
   const [isAssistCollapsed, setIsAssistCollapsed] = useState(true);
-  const [isToolUsageCollapsed, setIsToolUsageCollapsed] = useState(true);
   const [isShellSettingsCollapsed, setIsShellSettingsCollapsed] = useState(true);
   const [isOutputSchemaCollapsed, setIsOutputSchemaCollapsed] = useState(true);
   const [isDependenciesCollapsed, setIsDependenciesCollapsed] = useState(true);
@@ -304,7 +270,7 @@ export default function WorkflowStepEditor({
   const handleToggleFocusMode = () => {
     if (!isFocusMode) {
       previousSectionRef.current = activeSection;
-      setActiveSection("instructions");
+      setActiveSection("basics");
       setIsFocusMode(true);
       return;
     }
@@ -699,6 +665,7 @@ export default function WorkflowStepEditor({
     handleChange("tools", updatedTools);
   };
 
+  // Render the step editor with error boundary
   return (
     <ErrorBoundary
       fallback={
@@ -712,22 +679,33 @@ export default function WorkflowStepEditor({
         </div>
       }
     >
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/5">
-        <div className="flex items-start justify-between pb-4 mb-4 border-b border-border/60">
+      <div className="rounded-2xl border border-border/60 bg-background p-6 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/5">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-5 border-b border-border/60">
           <div
-            className="flex items-center gap-3"
+            className="flex items-center gap-4"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <span className="text-sm">⋮⋮</span>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary font-semibold shadow-inner">
+              {index + 1}
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-foreground select-none">
-                Step {index + 1}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {localStep.step_name || "Untitled step"}
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-lg font-semibold text-foreground select-none">
+                  {localStep.step_name || "Untitled step"}
+                </h3>
+                <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-[11px] text-muted-foreground">
+                  Step {index + 1}
+                </span>
+                {isFocusMode && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
+                    <FiMaximize2 className="h-3 w-3" aria-hidden />
+                    Focus
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Drag in the flowchart to reorder or edit below.
               </p>
             </div>
           </div>
@@ -735,7 +713,7 @@ export default function WorkflowStepEditor({
             <button
               type="button"
               onClick={handleToggleFocusMode}
-              className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors ${
+              className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors shadow-sm ${
                 isFocusMode
                   ? "border-primary/30 bg-primary/10 text-primary"
                   : "border-border bg-background/70 text-muted-foreground hover:text-foreground"
@@ -774,23 +752,47 @@ export default function WorkflowStepEditor({
           </div>
         </div>
 
-        <div className="space-y-4">
-          <StepSummary step={localStep} isFocusMode={isFocusMode} />
-          <StepEditorNav
-            sections={STEP_EDITOR_SECTIONS}
-            activeSection={activeSection}
-            onChange={setActiveSection}
-            isCompact={isFocusMode}
-          />
+        <div className="mt-6">
+          <StepTester step={localStep} index={index} />
         </div>
 
-        <div className="mt-6 space-y-8">
+        <div className="mt-6 flex flex-col gap-6">
+          <div className="rounded-2xl border border-border/60 bg-background/90 shadow-sm">
+            <div className="p-6 space-y-8">
           {activeSection === "basics" && (
             <StepEditorSection
               title="Step basics"
               description="Name, description, and model defaults"
               icon={FiSettings}
+              showHeader={false}
             >
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  {ActiveSectionIcon && (
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-inner">
+                      <ActiveSectionIcon className="h-5 w-5" aria-hidden />
+                    </span>
+                  )}
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Active section
+                    </p>
+                    <h4 className="text-lg font-semibold text-foreground">
+                      {activeSectionMeta?.label ?? "Basics"}
+                    </h4>
+                    {activeSectionMeta?.description && (
+                      <p className="text-sm text-muted-foreground">
+                        {activeSectionMeta.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {!isFocusMode && (
+                  <span className="text-xs text-muted-foreground">
+                    Step {index + 1}
+                  </span>
+                )}
+              </div>
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <label className={FIELD_LABEL} htmlFor={`step-name-${index}`}>
@@ -832,6 +834,39 @@ export default function WorkflowStepEditor({
                 </div>
               </div>
 
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h5 className="text-sm font-semibold text-foreground">
+                    Instructions
+                  </h5>
+                  <button
+                    type="button"
+                    onClick={() => setIsInstructionsExpanded(true)}
+                    className="inline-flex items-center gap-2 rounded-md border border-border/60 px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted"
+                    title="Expand instructions"
+                  >
+                    <FiMaximize2 className="h-3.5 w-3.5" />
+                    Expand
+                  </button>
+                </div>
+                <textarea
+                  id={`instructions-${index}`}
+                  value={localStep.instructions}
+                  onChange={(e) => handleChange("instructions", e.target.value)}
+                  className={`w-full resize-y rounded-lg border border-input bg-background px-5 py-4 font-mono text-[13px] leading-7 text-foreground shadow-sm transition-all hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/40 ${
+                    isFocusMode ? "min-h-[55vh]" : "min-h-[320px]"
+                  }`}
+                  placeholder="Enter detailed instructions for what this step should do..."
+                  rows={12}
+                  required
+                  aria-label="Step instructions"
+                  aria-required="true"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use clear steps and include any formatting or data requirements.
+                </p>
+              </div>
+
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <label className={FIELD_LABEL} htmlFor={`ai-model-${index}`}>
@@ -864,13 +899,10 @@ export default function WorkflowStepEditor({
                   </Select>
                 </div>
 
-                <CollapsibleSection
-                  title="Advanced AI settings"
-                  isCollapsed={isAdvancedAICollapsed}
-                  onToggle={() =>
-                    setIsAdvancedAICollapsed(!isAdvancedAICollapsed)
-                  }
-                >
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold text-foreground">
+                    Advanced AI settings
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1.5">
                       <label
@@ -906,55 +938,147 @@ export default function WorkflowStepEditor({
                         <span>Service Tier</span>
                         <span className={FIELD_OPTIONAL}>(Optional)</span>
                       </label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                        {SERVICE_TIER_OPTIONS.map((option) => {
-                          const currentTier = localStep.service_tier || "auto";
-                          const isSelected = currentTier === option.value;
-                          const Icon = option.icon;
-                          return (
-                            <div
-                              key={option.value}
-                              onClick={() =>
-                                handleChange("service_tier", option.value)
-                              }
-                              className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg border cursor-pointer transition-all text-center h-full ${
-                                isSelected
-                                  ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/10"
-                                  : "border-border/40 hover:border-border hover:bg-muted/20 bg-background"
-                              }`}
-                            >
-                              <div
-                                className={`p-1.5 rounded-md ${
-                                  isSelected
-                                    ? "bg-primary/10 text-primary"
-                                    : "bg-muted text-muted-foreground"
-                                }`}
-                              >
-                                <Icon className="w-4 h-4" />
-                              </div>
-                              <div className="min-w-0 w-full">
-                                <div
-                                  className={`text-sm font-medium leading-none mb-1 ${
-                                    isSelected ? "text-primary" : "text-foreground"
-                                  }`}
-                                >
-                                  {option.label}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground truncate w-full">
-                                  {option.description}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <Select
+                        id={`service-tier-${index}`}
+                        value={localStep.service_tier || "auto"}
+                        onChange={(nextValue) =>
+                          handleChange("service_tier", nextValue as ServiceTier)
+                        }
+                        className={SELECT_CONTROL}
+                        placeholder="Project Default"
+                      >
+                        {SERVICE_TIER_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                            {option.description ? ` — ${option.description}` : ""}
+                          </option>
+                        ))}
+                      </Select>
                       <p className={HELP_TEXT}>
                         Controls cost/latency for this step. Use Priority for fastest
                         responses.
                       </p>
                     </div>
                   </div>
-                </CollapsibleSection>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold text-foreground">
+                    Output settings
+                  </div>
+                  <div className="space-y-1.5">
+                    <label
+                      className={FIELD_LABEL}
+                      htmlFor={`output-format-${index}`}
+                    >
+                      <span>Output Type</span>
+                      <span className={FIELD_OPTIONAL}>(Optional)</span>
+                    </label>
+                    <Select
+                      id={`output-format-${index}`}
+                      value={localStep.output_format?.type || "text"}
+                      onChange={(nextValue) => {
+                        const t = nextValue as
+                          | "text"
+                          | "json_object"
+                          | "json_schema";
+                        if (t === "text") {
+                          handleChange("output_format", undefined);
+                          return;
+                        }
+                        if (t === "json_object") {
+                          handleChange("output_format", { type: "json_object" });
+                          return;
+                        }
+                        if (t === "json_schema") {
+                          const existing = localStep.output_format;
+                          const defaultSchema = {
+                            type: "object",
+                            properties: {},
+                            additionalProperties: true,
+                          };
+                          const next =
+                            existing && existing.type === "json_schema"
+                              ? existing
+                              : {
+                                  type: "json_schema",
+                                  name: `step_${index + 1}_output`,
+                                  strict: true,
+                                  schema: defaultSchema,
+                                };
+                          handleChange("output_format", next as any);
+                        }
+                      }}
+                      className={SELECT_CONTROL}
+                    >
+                      {OUTPUT_TYPE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label} - {option.description}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                    <div className="space-y-1">
+                      <label
+                        className={FIELD_LABEL}
+                        htmlFor={`text-verbosity-${index}`}
+                      >
+                        <span>Output Verbosity</span>
+                        <span className={FIELD_OPTIONAL}>(Optional)</span>
+                      </label>
+                      <Select
+                        id={`text-verbosity-${index}`}
+                        value={localStep.text_verbosity || ""}
+                        onChange={(nextValue) =>
+                          handleChange("text_verbosity", nextValue || undefined)
+                        }
+                        className={SELECT_CONTROL}
+                        placeholder="Default"
+                      >
+                        <option value="">Default</option>
+                        <option value="low">Low - Concise</option>
+                        <option value="medium">Medium - Balanced</option>
+                        <option value="high">High - Detailed</option>
+                      </Select>
+                      <p className={HELP_TEXT}>
+                        Adjusts how detailed and verbose the AI&apos;s output will
+                        be.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label
+                        className={FIELD_LABEL}
+                        htmlFor={`max-output-tokens-${index}`}
+                      >
+                        <span>Max Output Tokens</span>
+                        <span className={FIELD_OPTIONAL}>(Optional)</span>
+                      </label>
+                      <input
+                        id={`max-output-tokens-${index}`}
+                        type="number"
+                        min="1"
+                        step="100"
+                        value={localStep.max_output_tokens || ""}
+                        onChange={(e) =>
+                          handleChange(
+                            "max_output_tokens",
+                            e.target.value ? parseInt(e.target.value, 10) : undefined,
+                          )
+                        }
+                        className={CONTROL_BASE}
+                        placeholder="e.g., 4000"
+                        aria-label="Max output tokens"
+                      />
+                      <p className={HELP_TEXT}>
+                        Maximum number of tokens the AI can generate. Leave empty for
+                        no limit.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 <CollapsibleSection
                   title="AI Assist (Beta)"
@@ -974,588 +1098,302 @@ export default function WorkflowStepEditor({
                     allSteps={allSteps}
                   />
                 </CollapsibleSection>
-              </div>
-            </StepEditorSection>
-          )}
 
-          {activeSection === "instructions" && (
-            <StepEditorSection
-              title="Instructions"
-              description="Detailed guidance for the AI model"
-              icon={FiFileText}
-              actions={
-                <button
-                  type="button"
-                  onClick={() => setIsInstructionsExpanded(true)}
-                  className="inline-flex items-center gap-2 rounded-md border border-border/60 px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted"
-                  title="Expand instructions"
-                >
-                  <FiMaximize2 className="h-3.5 w-3.5" />
-                  Expand
-                </button>
-              }
-            >
-              <textarea
-                id={`instructions-${index}`}
-                value={localStep.instructions}
-                onChange={(e) => handleChange("instructions", e.target.value)}
-                className={`w-full resize-y rounded-lg border border-input bg-background px-5 py-4 font-mono text-[13px] leading-7 text-foreground shadow-sm transition-all hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary/40 ${
-                  isFocusMode ? "min-h-[55vh]" : "min-h-[320px]"
-                }`}
-                placeholder="Enter detailed instructions for what this step should do..."
-                rows={12}
-                required
-                aria-label="Step instructions"
-                aria-required="true"
-              />
-              <p className="text-xs text-muted-foreground">
-                Use clear steps and include any formatting or data requirements.
-              </p>
-            </StepEditorSection>
-          )}
-
-          {activeSection === "tools" && (
-            <StepEditorSection
-              title="Tools"
-              description="Select capabilities and configure how tools run"
-              icon={FiBox}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {AVAILABLE_TOOLS.map((tool) => {
-                  const selected = isToolSelected(tool.value);
-                  const Icon = tool.icon;
-                  return (
-                    <div
-                      key={tool.value}
-                      className={`rounded-xl border p-4 transition-all ${
-                        selected
-                          ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/10"
-                          : "border-border/40 bg-background hover:border-primary/30 hover:bg-muted/30 hover:shadow-sm"
-                      }`}
-                    >
-                      <div className="flex items-start gap-4">
+                <div className="space-y-3">
+                  <div className="text-sm font-semibold text-foreground">Tools</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {AVAILABLE_TOOLS.map((tool) => {
+                      const selected = isToolSelected(tool.value);
+                      const Icon = tool.icon;
+                      return (
                         <div
-                          className={`shrink-0 p-2.5 rounded-lg transition-colors ${
+                          key={tool.value}
+                          className={`rounded-xl border p-4 transition-all ${
                             selected
-                              ? "bg-primary/10 text-primary"
-                              : "bg-muted/50 text-muted-foreground"
+                              ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/10"
+                              : "border-border/40 bg-background hover:border-primary/30 hover:bg-muted/30 hover:shadow-sm"
                           }`}
                         >
-                          <Icon className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-3">
-                            <button
-                              type="button"
-                              onClick={() => handleToolToggle(tool.value)}
-                              className="text-left"
+                          <div className="flex items-start gap-4">
+                            <div
+                              className={`shrink-0 p-2.5 rounded-lg transition-colors ${
+                                selected
+                                  ? "bg-primary/10 text-primary"
+                                  : "bg-muted/50 text-muted-foreground"
+                              }`}
                             >
-                              <div
-                                className={`text-sm font-semibold ${
-                                  selected ? "text-primary" : "text-foreground"
-                                }`}
-                              >
-                                {tool.label}
+                              <Icon className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToolToggle(tool.value)}
+                                  className="text-left"
+                                >
+                                  <div
+                                    className={`text-sm font-semibold ${
+                                      selected ? "text-primary" : "text-foreground"
+                                    }`}
+                                  >
+                                    {tool.label}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground leading-relaxed">
+                                    {tool.description}
+                                  </p>
+                                </button>
+                                <Checkbox
+                                  checked={selected}
+                                  onChange={() => handleToolToggle(tool.value)}
+                                  className="mt-1"
+                                />
                               </div>
-                              <p className="text-xs text-muted-foreground leading-relaxed">
-                                {tool.description}
-                              </p>
-                            </button>
-                            <Checkbox
-                              checked={selected}
-                              onChange={() => handleToolToggle(tool.value)}
-                              className="mt-1"
-                            />
+                            </div>
                           </div>
-                        </div>
-                      </div>
 
-                      {selected && tool.value === "computer_use_preview" && (
-                        <div className="mt-3 border-t border-border/40 pt-3">
-                          <ComputerUseConfig
-                            config={computerUseConfig}
-                            onChange={handleComputerUseConfigChange}
-                            index={index}
-                            variant="inline"
-                          />
-                        </div>
-                      )}
+                          {selected && tool.value === "computer_use_preview" && (
+                            <div className="mt-3 border-t border-border/40 pt-3">
+                              <ComputerUseConfig
+                                config={computerUseConfig}
+                                onChange={handleComputerUseConfigChange}
+                                index={index}
+                                variant="inline"
+                              />
+                            </div>
+                          )}
 
-                      {selected && tool.value === "image_generation" && (
-                        <div className="mt-3 border-t border-border/40 pt-3">
-                          <ImageGenerationConfig
-                            config={imageGenerationConfig}
-                            onChange={(field, value) =>
-                              handleImageGenerationConfigChange(field, value)
-                            }
-                            variant="inline"
-                          />
+                          {selected && tool.value === "image_generation" && (
+                            <div className="mt-3 border-t border-border/40 pt-3">
+                              <ImageGenerationConfig
+                                config={imageGenerationConfig}
+                                onChange={(field, value) =>
+                                  handleImageGenerationConfigChange(field, value)
+                                }
+                                variant="inline"
+                              />
+                            </div>
+                          )}
                         </div>
-                      )}
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-4 space-y-2">
+                    <div className="text-sm font-semibold text-foreground">
+                      Tool usage
                     </div>
-                  );
-                })}
-              </div>
-
-              <CollapsibleSection
-                title="Tool usage"
-                isCollapsed={isToolUsageCollapsed}
-                onToggle={() => setIsToolUsageCollapsed(!isToolUsageCollapsed)}
-              >
-                <div className="space-y-1.5">
-                  <label className={FIELD_LABEL} htmlFor={`tool-choice-${index}`}>
-                    <span>Tool Choice</span>
-                    <span className={FIELD_OPTIONAL}>(Optional)</span>
-                  </label>
-                  <Select
-                    id={`tool-choice-${index}`}
-                    value={localStep.tool_choice || "required"}
-                    onChange={(nextValue) =>
-                      handleChange(
-                        "tool_choice",
-                        nextValue as "auto" | "required" | "none",
-                      )
-                    }
-                    className={SELECT_CONTROL}
-                  >
-                    {TOOL_CHOICE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label} - {option.description}
-                      </option>
-                    ))}
-                  </Select>
-                  <p className={HELP_TEXT}>
-                    Determines whether the model must use tools, can choose to use them,
-                    or should not use them.
-                  </p>
-                </div>
-              </CollapsibleSection>
-
-              {isToolSelected("shell") && (
-                <CollapsibleSection
-                  title="Shell runtime"
-                  isCollapsed={isShellSettingsCollapsed}
-                  onToggle={() =>
-                    setIsShellSettingsCollapsed(!isShellSettingsCollapsed)
-                  }
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label
-                        className={FIELD_LABEL}
-                        htmlFor={`shell-max-iterations-${index}`}
-                      >
-                        <span>Max iterations</span>
+                      <label className={FIELD_LABEL} htmlFor={`tool-choice-${index}`}>
+                        <span>Tool Choice</span>
                         <span className={FIELD_OPTIONAL}>(Optional)</span>
                       </label>
-                      <input
-                        id={`shell-max-iterations-${index}`}
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={localStep.shell_settings?.max_iterations ?? ""}
-                        onChange={(e) =>
-                          handleShellSettingChange("max_iterations", e.target.value)
-                        }
-                        className={CONTROL_BASE}
-                        placeholder="Default"
-                      />
-                      <p className={HELP_TEXT}>
-                        Upper bound for shell tool loop cycles (leave blank for
-                        server default).
-                      </p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label
-                        className={FIELD_LABEL}
-                        htmlFor={`shell-max-duration-${index}`}
-                      >
-                        <span>Max duration (seconds)</span>
-                        <span className={FIELD_OPTIONAL}>(Optional)</span>
-                      </label>
-                      <input
-                        id={`shell-max-duration-${index}`}
-                        type="number"
-                        min={30}
-                        max={840}
-                        value={localStep.shell_settings?.max_duration_seconds ?? ""}
-                        onChange={(e) =>
-                          handleShellSettingChange(
-                            "max_duration_seconds",
-                            e.target.value,
+                      <Select
+                        id={`tool-choice-${index}`}
+                        value={localStep.tool_choice || "required"}
+                        onChange={(nextValue) =>
+                          handleChange(
+                            "tool_choice",
+                            nextValue as "auto" | "required" | "none",
                           )
                         }
-                        className={CONTROL_BASE}
-                        placeholder="Default"
-                      />
-                      <p className={HELP_TEXT}>
-                        Total time budget for the shell loop. Must stay under
-                        executor limits.
-                      </p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label
-                        className={FIELD_LABEL}
-                        htmlFor={`shell-command-timeout-${index}`}
+                        className={SELECT_CONTROL}
                       >
-                        <span>Command timeout (ms)</span>
-                        <span className={FIELD_OPTIONAL}>(Optional)</span>
-                      </label>
-                      <input
-                        id={`shell-command-timeout-${index}`}
-                        type="number"
-                        min={1000}
-                        max={900000}
-                        value={localStep.shell_settings?.command_timeout_ms ?? ""}
-                        onChange={(e) =>
-                          handleShellSettingChange(
-                            "command_timeout_ms",
-                            e.target.value,
-                          )
-                        }
-                        className={CONTROL_BASE}
-                        placeholder="Default"
-                      />
+                        {TOOL_CHOICE_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label} - {option.description}
+                          </option>
+                        ))}
+                      </Select>
                       <p className={HELP_TEXT}>
-                        Maximum time per shell command before it is terminated.
-                      </p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label
-                        className={FIELD_LABEL}
-                        htmlFor={`shell-command-output-${index}`}
-                      >
-                        <span>Command output limit (chars)</span>
-                        <span className={FIELD_OPTIONAL}>(Optional)</span>
-                      </label>
-                      <input
-                        id={`shell-command-output-${index}`}
-                        type="number"
-                        min={256}
-                        max={10000000}
-                        value={
-                          localStep.shell_settings?.command_max_output_length ?? ""
-                        }
-                        onChange={(e) =>
-                          handleShellSettingChange(
-                            "command_max_output_length",
-                            e.target.value,
-                          )
-                        }
-                        className={CONTROL_BASE}
-                        placeholder="Default"
-                      />
-                      <p className={HELP_TEXT}>
-                        Cap stdout/stderr to avoid huge tool outputs.
+                        Determines whether the model must use tools, can choose to use
+                        them, or should not use them.
                       </p>
                     </div>
                   </div>
-                </CollapsibleSection>
-              )}
-            </StepEditorSection>
-          )}
 
-          {activeSection === "output" && (
-            <StepEditorSection
-              title="Output settings"
-              description="Control format, structure, and limits"
-              icon={FiMessageSquare}
-            >
-              <div className="space-y-1.5">
-                <label className={FIELD_LABEL} htmlFor={`output-format-${index}`}>
-                  <span>Output Type</span>
-                  <span className={FIELD_OPTIONAL}>(Optional)</span>
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {OUTPUT_TYPE_OPTIONS.map((option) => {
-                    const isSelected =
-                      (localStep.output_format?.type || "text") === option.value;
-                    const Icon = option.icon;
-                    return (
-                      <div
-                        key={option.value}
-                        onClick={() => {
-                          const t = option.value;
-                          if (t === "text") {
-                            handleChange("output_format", undefined);
-                            return;
-                          }
-                          if (t === "json_object") {
-                            handleChange("output_format", { type: "json_object" });
-                            return;
-                          }
-                          if (t === "json_schema") {
-                            const existing = localStep.output_format;
-                            const defaultSchema = {
-                              type: "object",
-                              properties: {},
-                              additionalProperties: true,
-                            };
-                            const next =
-                              existing && existing.type === "json_schema"
-                                ? existing
-                                : {
-                                    type: "json_schema",
-                                    name: `step_${index + 1}_output`,
-                                    strict: true,
-                                    schema: defaultSchema,
-                                  };
-                            handleChange("output_format", next as any);
-                          }
-                        }}
-                        className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${
-                          isSelected
-                            ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/10"
-                            : "border-border/40 hover:border-primary/20 hover:bg-muted/30 bg-background"
-                        }`}
-                      >
-                        <div
-                          className={`p-2 rounded-lg transition-colors ${
-                            isSelected
-                              ? "bg-primary/10 text-primary"
-                              : "bg-muted/50 text-muted-foreground"
-                          }`}
-                        >
-                          <Icon className="w-5 h-5" />
-                        </div>
-                        <div className="text-center">
-                          <div
-                            className={`text-sm font-semibold mb-0.5 ${
-                              isSelected ? "text-primary" : "text-foreground"
-                            }`}
+                  {isToolSelected("shell") && (
+                    <CollapsibleSection
+                      title="Shell runtime"
+                      isCollapsed={isShellSettingsCollapsed}
+                      onToggle={() =>
+                        setIsShellSettingsCollapsed(!isShellSettingsCollapsed)
+                      }
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label
+                            className={FIELD_LABEL}
+                            htmlFor={`shell-max-iterations-${index}`}
                           >
-                            {option.label}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">
-                            {option.description}
-                          </div>
+                            <span>Max iterations</span>
+                            <span className={FIELD_OPTIONAL}>(Optional)</span>
+                          </label>
+                          <input
+                            id={`shell-max-iterations-${index}`}
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={localStep.shell_settings?.max_iterations ?? ""}
+                            onChange={(e) =>
+                              handleShellSettingChange("max_iterations", e.target.value)
+                            }
+                            className={CONTROL_BASE}
+                            placeholder="Default"
+                          />
+                          <p className={HELP_TEXT}>
+                            Upper bound for shell tool loop cycles (leave blank for
+                            server default).
+                          </p>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label
+                            className={FIELD_LABEL}
+                            htmlFor={`shell-timeout-${index}`}
+                          >
+                            <span>Command timeout (seconds)</span>
+                            <span className={FIELD_OPTIONAL}>(Optional)</span>
+                          </label>
+                          <input
+                            id={`shell-timeout-${index}`}
+                            type="number"
+                            min={1}
+                            max={1200}
+                            value={localStep.shell_settings?.command_timeout ?? ""}
+                            onChange={(e) =>
+                              handleShellSettingChange("command_timeout", e.target.value)
+                            }
+                            className={CONTROL_BASE}
+                            placeholder="Default"
+                          />
+                          <p className={HELP_TEXT}>
+                            Max time per command (seconds).
+                          </p>
+                        </div>
+
+                        <div className="space-y-1.5 md:col-span-2">
+                          <label
+                            className={FIELD_LABEL}
+                            htmlFor={`shell-command-output-${index}`}
+                          >
+                            <span>Command output limit (chars)</span>
+                            <span className={FIELD_OPTIONAL}>(Optional)</span>
+                          </label>
+                          <input
+                            id={`shell-command-output-${index}`}
+                            type="number"
+                            min={256}
+                            max={10000000}
+                            value={
+                              localStep.shell_settings?.command_max_output_length ?? ""
+                            }
+                            onChange={(e) =>
+                              handleShellSettingChange(
+                                "command_max_output_length",
+                                e.target.value,
+                              )
+                            }
+                            className={CONTROL_BASE}
+                            placeholder="Default"
+                          />
+                          <p className={HELP_TEXT}>
+                            Cap stdout/stderr to avoid huge tool outputs.
+                          </p>
                         </div>
                       </div>
-                    );
-                  })}
+                    </CollapsibleSection>
+                  )}
                 </div>
-              </div>
 
-              {localStep.output_format?.type === "json_schema" && (
                 <div className="space-y-3">
+                  <div className="text-sm font-semibold text-foreground">
+                    Dependencies
+                  </div>
                   <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                    <span className="font-semibold text-foreground">Schema:</span>{" "}
-                    {localStep.output_format.name || `step_${index + 1}_output`} •{" "}
-                    {localStep.output_format.strict === false ? "Flexible" : "Strict"}
+                    {(localStep.depends_on || []).length > 0
+                      ? `Depends on: ${(localStep.depends_on || [])
+                          .map((dep) => allSteps[dep]?.step_name || `Step ${dep + 1}`)
+                          .join(", ")}`
+                      : "No dependencies configured"}
                   </div>
 
                   <CollapsibleSection
-                    title="Edit JSON schema"
-                    isCollapsed={isOutputSchemaCollapsed}
-                    onToggle={() =>
-                      setIsOutputSchemaCollapsed(!isOutputSchemaCollapsed)
-                    }
+                    title="Manage dependencies"
+                    isCollapsed={isDependenciesCollapsed}
+                    onToggle={() => setIsDependenciesCollapsed(!isDependenciesCollapsed)}
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-                      <div className="space-y-1">
-                        <label
-                          className={FIELD_LABEL}
-                          htmlFor={`output-schema-name-${index}`}
-                        >
-                          <span>Schema Name</span>
-                          <span className={FIELD_REQUIRED}>*</span>
-                        </label>
-                        <input
-                          id={`output-schema-name-${index}`}
-                          type="text"
-                          value={localStep.output_format.name || ""}
-                          onChange={(e) =>
-                            handleChange("output_format", {
-                              ...localStep.output_format,
-                              name: e.target.value,
-                            } as any)
-                          }
-                          className={CONTROL_BASE}
-                          placeholder="e.g., step_output"
-                        />
-                        <p className={HELP_TEXT}>
-                          Used by OpenAI to label the structured output format (max 64
-                          chars).
-                        </p>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label
-                          className={FIELD_LABEL}
-                          htmlFor={`output-schema-strict-${index}`}
-                        >
-                          <span>Strict</span>
-                          <span className={FIELD_OPTIONAL}>(Optional)</span>
-                        </label>
-                        <Select
-                          id={`output-schema-strict-${index}`}
-                          value={String(localStep.output_format.strict !== false)}
-                          onChange={(nextValue) =>
-                            handleChange("output_format", {
-                              ...localStep.output_format,
-                              strict: nextValue === "true",
-                            } as any)
-                          }
-                          className={SELECT_CONTROL}
-                        >
-                          <option value="true">true (recommended)</option>
-                          <option value="false">false</option>
-                        </Select>
-                        <p className={HELP_TEXT}>
-                          When true, the model must adhere to the schema (subset of JSON
-                          Schema supported).
-                        </p>
-                      </div>
-
-                      <div className="space-y-1 md:col-span-2">
-                        <label
-                          className={FIELD_LABEL}
-                          htmlFor={`output-schema-description-${index}`}
-                        >
-                          <span>Description</span>
-                          <span className={FIELD_OPTIONAL}>(Optional)</span>
-                        </label>
-                        <input
-                          id={`output-schema-description-${index}`}
-                          type="text"
-                          value={localStep.output_format.description || ""}
-                          onChange={(e) =>
-                            handleChange("output_format", {
-                              ...localStep.output_format,
-                              description: e.target.value || undefined,
-                            } as any)
-                          }
-                          className={CONTROL_BASE}
-                          placeholder="What the output represents"
-                        />
-                      </div>
-
-                      <div className="space-y-1 md:col-span-2">
-                        <label
-                          className={FIELD_LABEL}
-                          htmlFor={`output-schema-json-${index}`}
-                        >
-                          <span>JSON Schema</span>
-                          <span className={FIELD_REQUIRED}>*</span>
-                        </label>
-                        <div className="relative rounded-lg overflow-hidden border border-input shadow-sm">
-                          <div className="absolute top-0 right-0 p-2 pointer-events-none">
-                            <span className="text-[10px] font-mono text-muted-foreground bg-background/80 backdrop-blur px-1.5 py-0.5 rounded border border-border/50">
-                              JSON
-                            </span>
-                          </div>
-                          <textarea
-                            id={`output-schema-json-${index}`}
-                            className="w-full min-h-[240px] bg-slate-950 text-slate-50 p-4 font-mono text-xs leading-relaxed resize-y focus:outline-none"
-                            value={outputSchemaJson}
-                            onChange={(e) => {
-                              const next = e.target.value;
-                              setOutputSchemaJson(next);
-                              try {
-                                const parsed = JSON.parse(next || "{}");
-                                if (
-                                  !parsed ||
-                                  typeof parsed !== "object" ||
-                                  Array.isArray(parsed)
-                                ) {
-                                  setOutputSchemaError("Schema must be a JSON object");
-                                  return;
-                                }
-                                setOutputSchemaError(null);
-                                handleChange("output_format", {
-                                  ...localStep.output_format,
-                                  schema: parsed,
-                                } as any);
-                              } catch (err: any) {
-                                setOutputSchemaError(
-                                  "Invalid JSON (will apply once it parses)",
-                                );
-                              }
-                            }}
-                            placeholder='{\n  "type": "object",\n  "properties": {\n    "example": { "type": "string" }\n  },\n  "required": ["example"]\n}'
-                            rows={10}
-                            spellCheck={false}
-                          />
-                        </div>
-                        {outputSchemaError && (
-                          <p className="mt-2 text-xs text-destructive font-medium flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-                            {outputSchemaError}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {allSteps.length > 0 ? (
+                        allSteps.map((otherStep, otherIndex) => {
+                          if (otherIndex === index) return null;
+                          const isSelected = (localStep.depends_on || []).includes(
+                            otherIndex,
+                          );
+                          return (
+                            <label
+                              key={otherIndex}
+                              className={`relative flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                                isSelected
+                                  ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/10"
+                                  : "border-border/40 hover:border-primary/20 hover:bg-muted/30 bg-background"
+                              }`}
+                            >
+                              <div
+                                className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium border ${
+                                  isSelected
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-muted text-muted-foreground border-border"
+                                }`}
+                              >
+                                {otherIndex + 1}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div
+                                  className={`text-sm font-medium truncate ${
+                                    isSelected ? "text-primary" : "text-foreground"
+                                  }`}
+                                >
+                                  {otherStep.step_name}
+                                </div>
+                              </div>
+                              <Checkbox
+                                checked={isSelected}
+                                onChange={(checked) => {
+                                  const currentDeps = localStep.depends_on || [];
+                                  const newDeps = checked
+                                    ? [...currentDeps, otherIndex]
+                                    : currentDeps.filter((dep: number) => dep !== otherIndex);
+                                  handleChange("depends_on", newDeps);
+                                }}
+                                className="sr-only"
+                              />
+                              {isSelected && (
+                                <div className="absolute top-0 right-0 -mt-1 -mr-1 w-3 h-3 bg-primary rounded-full ring-2 ring-background" />
+                              )}
+                            </label>
+                          );
+                        })
+                      ) : (
+                        <div className="col-span-full text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border/60">
+                          <p className="text-sm">
+                            No other steps available to depend on
                           </p>
-                        )}
-                        <p className={HELP_TEXT}>
-                          Paste a valid JSON Schema object. Invalid JSON won&apos;t be applied
-                          until it parses.
-                        </p>
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </CollapsibleSection>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-                <div className="space-y-1">
-                  <label className={FIELD_LABEL} htmlFor={`text-verbosity-${index}`}>
-                    <span>Output Verbosity</span>
-                    <span className={FIELD_OPTIONAL}>(Optional)</span>
-                  </label>
-                  <Select
-                    id={`text-verbosity-${index}`}
-                    value={localStep.text_verbosity || ""}
-                    onChange={(nextValue) =>
-                      handleChange("text_verbosity", nextValue || undefined)
-                    }
-                    className={SELECT_CONTROL}
-                    placeholder="Default"
-                  >
-                    <option value="">Default</option>
-                    <option value="low">Low - Concise</option>
-                    <option value="medium">Medium - Balanced</option>
-                    <option value="high">High - Detailed</option>
-                  </Select>
-                  <p className={HELP_TEXT}>
-                    Adjusts how detailed and verbose the AI&apos;s output will be.
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <label className={FIELD_LABEL} htmlFor={`max-output-tokens-${index}`}>
-                    <span>Max Output Tokens</span>
-                    <span className={FIELD_OPTIONAL}>(Optional)</span>
-                  </label>
-                  <input
-                    id={`max-output-tokens-${index}`}
-                    type="number"
-                    min="1"
-                    step="100"
-                    value={localStep.max_output_tokens || ""}
-                    onChange={(e) =>
-                      handleChange(
-                        "max_output_tokens",
-                        e.target.value ? parseInt(e.target.value, 10) : undefined,
-                      )
-                    }
-                    className={CONTROL_BASE}
-                    placeholder="e.g., 4000"
-                    aria-label="Max output tokens"
-                  />
-                  <p className={HELP_TEXT}>
-                    Maximum number of tokens the AI can generate. Leave empty for no
-                    limit.
-                  </p>
                 </div>
               </div>
             </StepEditorSection>
           )}
+
 
           {activeSection === "integrations" && (
             <StepEditorSection
               title="Integrations"
               description="Send data to APIs or another workflow"
               icon={FiGlobe}
+              showHeader={false}
             >
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                 <span className="rounded-full border border-border/60 bg-muted/30 px-2 py-1">
@@ -1598,97 +1436,18 @@ export default function WorkflowStepEditor({
             </StepEditorSection>
           )}
 
-          {activeSection === "dependencies" && (
-            <StepEditorSection
-              title="Dependencies"
-              description="Control which steps must complete first"
-              icon={FiLink}
-            >
-              <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                {(localStep.depends_on || []).length > 0
-                  ? `Depends on: ${(localStep.depends_on || [])
-                      .map((dep) => allSteps[dep]?.step_name || `Step ${dep + 1}`)
-                      .join(", ")}`
-                  : "No dependencies configured"}
-              </div>
 
-              <CollapsibleSection
-                title="Manage dependencies"
-                isCollapsed={isDependenciesCollapsed}
-                onToggle={() => setIsDependenciesCollapsed(!isDependenciesCollapsed)}
-              >
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {allSteps.length > 0 ? (
-                    allSteps.map((otherStep, otherIndex) => {
-                      if (otherIndex === index) return null;
-                      const isSelected = (localStep.depends_on || []).includes(
-                        otherIndex,
-                      );
-                      return (
-                        <label
-                          key={otherIndex}
-                          className={`relative flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                            isSelected
-                              ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/10"
-                              : "border-border/40 hover:border-primary/20 hover:bg-muted/30 bg-background"
-                          }`}
-                        >
-                          <div
-                            className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium border ${
-                              isSelected
-                                ? "bg-primary text-primary-foreground border-primary"
-                                : "bg-muted text-muted-foreground border-border"
-                            }`}
-                          >
-                            {otherIndex + 1}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div
-                              className={`text-sm font-medium truncate ${
-                                isSelected ? "text-primary" : "text-foreground"
-                              }`}
-                            >
-                              {otherStep.step_name}
-                            </div>
-                          </div>
-                          <Checkbox
-                            checked={isSelected}
-                            onChange={(checked) => {
-                              const currentDeps = localStep.depends_on || [];
-                              const newDeps = checked
-                                ? [...currentDeps, otherIndex]
-                                : currentDeps.filter((dep: number) => dep !== otherIndex);
-                              handleChange("depends_on", newDeps);
-                            }}
-                            className="sr-only"
-                          />
-                          {isSelected && (
-                            <div className="absolute top-0 right-0 -mt-1 -mr-1 w-3 h-3 bg-primary rounded-full ring-2 ring-background" />
-                          )}
-                        </label>
-                      );
-                    })
-                  ) : (
-                    <div className="col-span-full text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border/60">
-                      <p className="text-sm">
-                        No other steps available to depend on
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CollapsibleSection>
-            </StepEditorSection>
-          )}
-
-          {activeSection === "test" && (
-            <StepEditorSection
-              title="Test this step"
-              description="Run the step in isolation with sample inputs"
-              icon={FiZap}
-            >
-              <StepTester step={localStep} index={index} />
-            </StepEditorSection>
-          )}
+            </div>
+          </div>
+          <div>
+            <StepEditorNav
+              sections={STEP_EDITOR_SECTIONS}
+              activeSection={activeSection}
+              onChange={setActiveSection}
+              isCompact={isFocusMode}
+              layout="horizontal"
+            />
+          </div>
         </div>
 
         {/* Expanded Instructions Modal */}

@@ -7,13 +7,11 @@ import {
   FiImage,
   FiCheckCircle,
   FiAlertCircle,
-  FiLayout,
   FiMaximize2,
   FiMinimize2,
   FiCopy,
   FiExternalLink,
   FiDownload,
-  FiSidebar,
   FiTrash2,
   FiPlay,
   FiPause,
@@ -39,6 +37,44 @@ interface LogEntry {
 }
 
 const OUTPUT_DELTA_PREFIX = "__OUTPUT_DELTA__";
+const TOOL_LABELS: Record<string, string> = {
+  web_search: "Web Search",
+  image_generation: "Image Generation",
+  computer_use_preview: "Computer Use",
+  file_search: "File Search",
+  code_interpreter: "Code Interpreter",
+  shell: "Shell",
+};
+
+const formatModelLabel = (model?: string) => {
+  if (!model) return "Auto";
+  return model
+    .replace("gpt-", "GPT-")
+    .replace("turbo", "Turbo")
+    .replace("computer-use-preview", "Computer Use");
+};
+
+const titleCase = (value: string) =>
+  value
+    .split(/[_-]/g)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const formatReasoning = (value?: string) => {
+  if (!value) return "Default";
+  if (value === "xhigh") return "Extra High";
+  return titleCase(value);
+};
+
+const formatServiceTier = (value?: string) => {
+  if (!value || value === "auto") return "Auto";
+  return titleCase(value);
+};
+
+const formatVerbosity = (value?: string) => {
+  if (!value) return "Default";
+  return titleCase(value);
+};
 
 // -----------------------------------------------------------------------------
 // Log Line Component
@@ -119,7 +155,7 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
   const [error, setError] = useState<string | null>(null);
   
   // UI State
-  const [viewMode, setViewMode] = useState<'split' | 'terminal' | 'preview'>('split');
+  const viewMode: 'split' | 'terminal' | 'preview' = 'split';
   const [autoScroll, setAutoScroll] = useState(true);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -357,6 +393,32 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
   const hasScreenshot = Boolean(screenshotUrl || screenshotBase64);
   const currentScreenshotSrc = screenshotUrl || (screenshotBase64 ? `data:image/jpeg;base64,${screenshotBase64}` : '');
 
+  const previewMeta = useMemo(() => {
+    const modelLabel = formatModelLabel(requestBody?.model);
+    const toolTypes = Array.isArray(requestBody?.tools)
+      ? requestBody.tools
+          .map((tool: any) => {
+            if (typeof tool === "string") return tool;
+            if (tool && typeof tool === "object" && typeof tool.type === "string") {
+              return tool.type;
+            }
+            return null;
+          })
+          .filter(Boolean)
+      : [];
+    const uniqueTools = Array.from(new Set(toolTypes as string[]));
+    const toolLabels = uniqueTools.map(
+      (tool) => TOOL_LABELS[tool] || titleCase(tool),
+    );
+    return {
+      modelLabel,
+      toolsLabel: toolLabels.length > 0 ? toolLabels.join(", ") : "No tools",
+      reasoningLabel: formatReasoning(requestBody?.reasoning_effort),
+      serviceLabel: formatServiceTier(requestBody?.service_tier),
+      verbosityLabel: formatVerbosity(requestBody?.text_verbosity),
+    };
+  }, [requestBody]);
+
   // Styling for maximized state
   const containerClasses = isMaximized
     ? "fixed inset-4 z-50 flex flex-col bg-white dark:bg-gray-950 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 animate-in fade-in zoom-in duration-200"
@@ -367,76 +429,55 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
       <div className={containerClasses}>
         {/* Header */}
         <PanelHeader className="backdrop-blur-sm select-none">
-          <div className="flex items-center gap-4">
-            <div className={`
-              flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border
-              ${status === 'streaming' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800' : ''}
-              ${status === 'completed' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' : ''}
-              ${status === 'error' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800' : ''}
-              ${status === 'connecting' ? 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' : ''}
-            `}>
-              {status === 'streaming' && (
-                <>
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                  </span>
-                  Running
-                </>
-              )}
-              {status === 'completed' && <><FiCheckCircle /> Completed</>}
-              {status === 'error' && <><FiAlertCircle /> Error</>}
-              {status === 'connecting' && <span>Connecting...</span>}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-4">
+              <div className={`
+                flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border
+                ${status === 'streaming' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800' : ''}
+                ${status === 'completed' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' : ''}
+                ${status === 'error' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800' : ''}
+                ${status === 'connecting' ? 'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' : ''}
+              `}>
+                {status === 'streaming' && (
+                  <>
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                    </span>
+                    Running
+                  </>
+                )}
+                {status === 'completed' && <><FiCheckCircle /> Completed</>}
+                {status === 'error' && <><FiAlertCircle /> Error</>}
+                {status === 'connecting' && <span>Connecting...</span>}
+              </div>
+              
+              <div className="h-4 w-px bg-gray-300 dark:bg-gray-700 mx-1" />
+              
+              <div className="text-sm text-gray-500 dark:text-gray-400 font-mono">
+                {logs.length} events
+              </div>
             </div>
-            
-            <div className="h-4 w-px bg-gray-300 dark:bg-gray-700 mx-1" />
-            
-            <div className="text-sm text-gray-500 dark:text-gray-400 font-mono">
-              {logs.length} events
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+              <span className="rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 bg-white/70 dark:bg-gray-900/60">
+                Model: {previewMeta.modelLabel}
+              </span>
+              <span className="rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 bg-white/70 dark:bg-gray-900/60">
+                Tools: {previewMeta.toolsLabel}
+              </span>
+              <span className="rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 bg-white/70 dark:bg-gray-900/60">
+                Reasoning: {previewMeta.reasoningLabel}
+              </span>
+              <span className="rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 bg-white/70 dark:bg-gray-900/60">
+                Service: {previewMeta.serviceLabel}
+              </span>
+              <span className="rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 bg-white/70 dark:bg-gray-900/60">
+                Verbosity: {previewMeta.verbosityLabel}
+              </span>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            {/* View Switcher */}
-            <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-               <button 
-                 onClick={() => setViewMode('split')}
-                 className={`px-3 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 ${
-                   viewMode === 'split' 
-                     ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm ring-1 ring-black/5' 
-                     : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                 }`}
-                 title="Split View"
-               >
-                 <FiLayout className="w-3.5 h-3.5" />
-                 Split
-               </button>
-               <button 
-                 onClick={() => setViewMode('terminal')}
-                 className={`px-3 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 ${
-                   viewMode === 'terminal'
-                     ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm ring-1 ring-black/5' 
-                     : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                 }`}
-                 title="Terminal Only"
-               >
-                 <FiSidebar className="w-3.5 h-3.5" />
-                 Console
-               </button>
-               <button 
-                 onClick={() => setViewMode('preview')}
-                 className={`px-3 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 ${
-                   viewMode === 'preview'
-                     ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm ring-1 ring-black/5' 
-                     : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                 }`}
-                 title="Preview Only"
-               >
-                 <FiImage className="w-3.5 h-3.5" />
-                 Preview
-               </button>
-            </div>
-
             <div className="flex items-center gap-2 border-l border-gray-200 dark:border-gray-700 pl-4">
                <button
                  onClick={() => setIsMaximized(!isMaximized)}

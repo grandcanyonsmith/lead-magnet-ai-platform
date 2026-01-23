@@ -10,7 +10,7 @@ import {
   FiList,
   FiType,
   FiLink,
-  FiPaperclip,
+  FiUpload,
 } from "react-icons/fi";
 
 export function getFieldTypeIcon(fieldType: string) {
@@ -26,7 +26,7 @@ export function getFieldTypeIcon(fieldType: string) {
     case "url":
       return <FiLink className="w-4 h-4" />;
     case "file":
-      return <FiPaperclip className="w-4 h-4" />;
+      return <FiUpload className="w-4 h-4" />;
     case "textarea":
       return <FiType className="w-4 h-4" />;
     default:
