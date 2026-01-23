@@ -11,7 +11,7 @@ type StepEditorNavItem<T extends string = string> = {
 };
 
 interface StepEditorNavProps<T extends string = string> {
-  sections: StepEditorNavItem<T>[];
+  sections: readonly StepEditorNavItem<T>[];
   activeSection: T;
   onChange: (sectionId: T) => void;
   isCompact?: boolean;

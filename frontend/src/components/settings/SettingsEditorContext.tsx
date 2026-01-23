@@ -26,6 +26,7 @@ import type {
   SettingsUpdateRequest,
 } from "@/types/settings";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { resolveImageSettingsDefaults } from "@/utils/imageSettings";
 
 type SettingsSection =
   | "general"
@@ -45,7 +46,7 @@ type SettingsEditorContextValue = {
   refetch: () => void;
 
   errors: Record<string, string>;
-  setField: (field: keyof Settings, value: string) => void;
+  setField: (field: keyof Settings, value: Settings[keyof Settings]) => void;
   promptOverridesJson: string;
   setPromptOverridesJson: (value: string) => void;
   toolSecretsJson: string;
@@ -277,6 +278,9 @@ export function SettingsEditorProvider({
         default_tool_choice: settings.default_tool_choice || DEFAULT_TOOL_CHOICE,
         default_service_tier: settings.default_service_tier || DEFAULT_SERVICE_TIER,
         default_text_verbosity: settings.default_text_verbosity || DEFAULT_TEXT_VERBOSITY,
+        default_image_settings: resolveImageSettingsDefaults(
+          settings.default_image_settings,
+        ),
         default_workflow_improvement_user_id: normalizeReviewUserId(
           settings.default_workflow_improvement_user_id,
         ),
@@ -325,6 +329,9 @@ export function SettingsEditorProvider({
         default_tool_choice: settings.default_tool_choice || DEFAULT_TOOL_CHOICE,
         default_service_tier: settings.default_service_tier || DEFAULT_SERVICE_TIER,
         default_text_verbosity: settings.default_text_verbosity || DEFAULT_TEXT_VERBOSITY,
+        default_image_settings: resolveImageSettingsDefaults(
+          settings.default_image_settings,
+        ),
         default_workflow_improvement_user_id: normalizeReviewUserId(
           settings.default_workflow_improvement_user_id,
         ),
@@ -370,6 +377,12 @@ export function SettingsEditorProvider({
 
     const formDomain = normalizeDomain(formData.custom_domain);
     const compareDomain = normalizeDomain(compareTo.custom_domain);
+    const formImageSettings = resolveImageSettingsDefaults(
+      formData.default_image_settings,
+    );
+    const compareImageSettings = resolveImageSettingsDefaults(
+      compareTo.default_image_settings,
+    );
 
     return (
       formData.organization_name !== (compareTo.organization_name || "") ||
@@ -383,6 +396,7 @@ export function SettingsEditorProvider({
         (compareTo.default_service_tier || DEFAULT_SERVICE_TIER) ||
       formData.default_text_verbosity !==
         (compareTo.default_text_verbosity || DEFAULT_TEXT_VERBOSITY) ||
+      JSON.stringify(formImageSettings) !== JSON.stringify(compareImageSettings) ||
       formData.default_workflow_improvement_user_id !==
         normalizeReviewUserId(
           compareTo.default_workflow_improvement_user_id as string | undefined,
@@ -424,7 +438,7 @@ export function SettingsEditorProvider({
   });
 
   const setField = useCallback(
-    (field: keyof Settings, value: string) => {
+    (field: keyof Settings, value: Settings[keyof Settings]) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
       if (errors[field]) {
         setErrors((prev) => {
@@ -479,6 +493,9 @@ export function SettingsEditorProvider({
             default_service_tier: settings.default_service_tier || DEFAULT_SERVICE_TIER,
             default_text_verbosity:
               settings.default_text_verbosity || DEFAULT_TEXT_VERBOSITY,
+            default_image_settings: resolveImageSettingsDefaults(
+              settings.default_image_settings,
+            ),
             default_workflow_improvement_user_id: normalizeReviewUserId(
               settings.default_workflow_improvement_user_id,
             ),
@@ -559,6 +576,10 @@ export function SettingsEditorProvider({
       return false;
     }
 
+    const normalizedImageSettings = resolveImageSettingsDefaults(
+      formData.default_image_settings,
+    );
+
     const payload: SettingsUpdateRequest = {
       organization_name: formData.organization_name?.trim() || undefined,
       contact_email: formData.contact_email?.trim() || undefined,
@@ -567,6 +588,7 @@ export function SettingsEditorProvider({
       default_tool_choice: formData.default_tool_choice,
       default_service_tier: formData.default_service_tier || DEFAULT_SERVICE_TIER,
       default_text_verbosity: formData.default_text_verbosity || undefined,
+      default_image_settings: normalizedImageSettings,
       default_workflow_improvement_user_id: normalizedReviewUserId,
       default_workflow_improvement_service_tier:
         formData.default_workflow_improvement_service_tier ||
@@ -602,6 +624,7 @@ export function SettingsEditorProvider({
       default_tool_choice: payload.default_tool_choice || DEFAULT_TOOL_CHOICE,
       default_service_tier: payload.default_service_tier || DEFAULT_SERVICE_TIER,
       default_text_verbosity: payload.default_text_verbosity || DEFAULT_TEXT_VERBOSITY,
+      default_image_settings: normalizedImageSettings,
       default_workflow_improvement_user_id:
         payload.default_workflow_improvement_user_id || "",
       default_workflow_improvement_service_tier:

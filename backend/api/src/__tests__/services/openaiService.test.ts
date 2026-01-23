@@ -14,7 +14,8 @@ const originalEnv = process.env;
 jest.mock("openai");
 
 // Mock Secrets Manager
-const secretsManagerMock = mockClient(SecretsManagerClient);
+// Cast to any to avoid aws-sdk-client-mock type mismatches across SDK versions.
+const secretsManagerMock = mockClient(SecretsManagerClient as any) as any;
 
 describe("OpenAI Service", () => {
   beforeEach(() => {

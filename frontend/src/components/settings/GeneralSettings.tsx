@@ -21,12 +21,17 @@ import { BuildingOfficeIcon } from "@heroicons/react/24/outline";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useAIModels } from "@/hooks/api/useWorkflows";
+import ImageGenerationConfig from "@/app/dashboard/workflows/components/step-editor/ImageGenerationConfig";
+import {
+  resolveImageSettingsDefaults,
+  type ResolvedImageSettings,
+} from "@/utils/imageSettings";
 
 import { AvatarUpload } from "./AvatarUpload";
 
 interface GeneralSettingsProps {
   settings: Settings;
-  onChange: (field: keyof Settings, value: string) => void;
+  onChange: (field: keyof Settings, value: Settings[keyof Settings]) => void;
   toolSecretsJson: string;
   onToolSecretsChange: (value: string) => void;
   errors?: Record<string, string>;
@@ -106,6 +111,11 @@ export function GeneralSettings({
     return "Default AI model used for generating lead magnets";
   }, [aiModelsLoading, aiModelsError]);
 
+  const imageDefaults = useMemo(
+    () => resolveImageSettingsDefaults(settings.default_image_settings),
+    [settings.default_image_settings],
+  );
+
   useEffect(() => {
     let isMounted = true;
 
@@ -167,6 +177,27 @@ export function GeneralSettings({
       return true;
     });
   }, [tenantUsers, user]);
+
+  const handleImageDefaultsChange = <K extends keyof ResolvedImageSettings>(
+    field: K,
+    value: ResolvedImageSettings[K],
+  ) => {
+    const next: ResolvedImageSettings = { ...imageDefaults, [field]: value };
+    if (field === "format") {
+      const format = value as ResolvedImageSettings["format"];
+      if (format !== "jpeg" && format !== "webp") {
+        next.compression = undefined;
+      }
+    }
+    if (field === "compression") {
+      if (typeof value === "number" && Number.isFinite(value)) {
+        next.compression = Math.min(100, Math.max(0, value));
+      } else {
+        next.compression = undefined;
+      }
+    }
+    onChange("default_image_settings", next);
+  };
 
   return (
     <Card>
@@ -257,6 +288,22 @@ export function GeneralSettings({
             onChange={(value) => onChange("default_text_verbosity", value)}
             options={OUTPUT_VERBOSITY_OPTIONS}
             helpText="Default output verbosity for new AI steps (override per-step if needed)"
+          />
+        </div>
+
+        <div className="space-y-3 border-t border-gray-100 dark:border-border pt-6">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground">
+              Default Image Settings
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              Used when you add image generation to new steps.
+            </p>
+          </div>
+          <ImageGenerationConfig
+            config={imageDefaults}
+            onChange={handleImageDefaultsChange}
+            variant="inline"
           />
         </div>
 

@@ -740,11 +740,12 @@ Please generate the updated workflow configuration with all necessary changes.`;
         throw new Error(`Step ${index + 1} is missing required fields (step_name or instructions)`);
       }
 
-      if (!AVAILABLE_MODELS.includes(step.model)) {
-        logger.warn(
-          `[WorkflowAI] Invalid model ${step.model}, defaulting to gpt-5.2`,
-        );
+      if (!step.model) {
         step.model = 'gpt-5.2';
+      } else if (!AVAILABLE_MODELS.includes(step.model)) {
+        logger.warn(
+          `[WorkflowAI] Model ${step.model} not in curated list; using as-is`,
+        );
       }
 
       if (step.tools && Array.isArray(step.tools)) {

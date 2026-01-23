@@ -26,7 +26,7 @@ import { useState, useEffect } from "react";
 
 interface DeliverySettingsProps {
   settings: Settings;
-  onChange: (field: keyof Settings, value: string) => void;
+  onChange: (field: keyof Settings, value: Settings[keyof Settings]) => void;
   onSettingsUpdate: (updatedSettings: Settings) => void;
   errors?: Record<string, string>;
 }

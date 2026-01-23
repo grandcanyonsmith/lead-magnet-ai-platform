@@ -101,6 +101,12 @@ class SettingsController {
         default_tool_choice: "required",
         default_service_tier: "auto",
         default_text_verbosity: "",
+        default_image_settings: {
+          model: "gpt-image-1.5",
+          size: "auto",
+          quality: "auto",
+          background: "auto",
+        },
         default_workflow_improvement_user_id: "",
         default_workflow_improvement_service_tier: "priority",
         default_workflow_improvement_reasoning_effort: "high",
@@ -154,6 +160,14 @@ class SettingsController {
             !Array.isArray(settings.tool_secrets)
               ? settings.tool_secrets
               : {},
+          default_image_settings: {
+            ...defaultSettings.default_image_settings,
+            ...(settings.default_image_settings &&
+            typeof settings.default_image_settings === "object" &&
+            !Array.isArray(settings.default_image_settings)
+              ? settings.default_image_settings
+              : {}),
+          },
           onboarding_checklist: {
             ...defaultSettings.onboarding_checklist,
             ...(settings.onboarding_checklist &&
@@ -214,6 +228,25 @@ class SettingsController {
           Array.isArray(settings.tool_secrets)
         ) {
           updates.tool_secrets = merged.tool_secrets;
+        }
+        const existingImageDefaults =
+          settings.default_image_settings &&
+          typeof settings.default_image_settings === "object" &&
+          !Array.isArray(settings.default_image_settings)
+            ? settings.default_image_settings
+            : null;
+        if (!existingImageDefaults) {
+          updates.default_image_settings = merged.default_image_settings;
+        } else {
+          const hasAllImageKeys = [
+            "model",
+            "size",
+            "quality",
+            "background",
+          ].every((key) => (existingImageDefaults as any)[key] !== undefined);
+          if (!hasAllImageKeys) {
+            updates.default_image_settings = merged.default_image_settings;
+          }
         }
 
         if (!Array.isArray(settings.folders)) {
@@ -620,7 +653,10 @@ class SettingsController {
         existingProfile?.research_report &&
         !data.force
       ) {
-        return { profile: existingProfile };
+        return {
+          statusCode: 200,
+          body: { profile: existingProfile },
+        };
       }
 
       const resolvedModel =
@@ -711,7 +747,10 @@ class SettingsController {
         },
       );
 
-      return { profile: completedProfile };
+      return {
+        statusCode: 200,
+        body: { profile: completedProfile },
+      };
     } catch (error) {
       logger.error("[SettingsController.generateIcpResearch] Failed", {
         error: error instanceof Error ? error.message : String(error),

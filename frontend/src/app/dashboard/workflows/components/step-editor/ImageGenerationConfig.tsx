@@ -2,22 +2,13 @@
 
 import React from "react";
 import { Select } from "@/components/ui/Select";
-
-type ImageGenerationConfigState = {
-  model: string;
-  size: "1024x1024" | "1024x1536" | "1536x1024" | "auto";
-  quality: "low" | "medium" | "high" | "auto";
-  format?: "png" | "jpeg" | "webp";
-  compression?: number;
-  background: "transparent" | "opaque" | "auto";
-  input_fidelity?: "low" | "high";
-};
+import { ImageGenerationConfigState } from "./types";
 
 interface ImageGenerationConfigProps {
   config: ImageGenerationConfigState;
   onChange: <K extends keyof ImageGenerationConfigState>(
     field: K,
-    value: ImageGenerationConfigState[K],
+    value: ImageGenerationConfigState[K]
   ) => void;
   variant?: "panel" | "inline";
 }
@@ -158,5 +149,3 @@ export default function ImageGenerationConfig({
     </div>
   );
 }
-
-

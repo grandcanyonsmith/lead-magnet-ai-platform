@@ -22,6 +22,7 @@ export function useWorkflowStepAI(workflowId?: string) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [proposal, setProposal] = useState<AIStepProposal | null>(null);
+  const [streamedText, setStreamedText] = useState<string>("");
 
   const generateStep = async (
     userPrompt: string,
@@ -37,6 +38,7 @@ export function useWorkflowStepAI(workflowId?: string) {
     setIsGenerating(true);
     setError(null);
     setProposal(null);
+    setStreamedText("");
 
     try {
       logger.debug("Generating step", {
@@ -49,12 +51,40 @@ export function useWorkflowStepAI(workflowId?: string) {
         },
       });
 
-      const result = await api.generateStepWithAI(workflowId, {
-        userPrompt,
-        action: suggestedAction,
-        currentStep,
-        currentStepIndex,
-      });
+      let streamError: string | null = null;
+      let streamResult: AIStepGenerationResult | undefined;
+
+      const streamResponse = await api.streamGenerateStepWithAI(
+        workflowId,
+        {
+          userPrompt,
+          action: suggestedAction,
+          currentStep,
+          currentStepIndex,
+        },
+        {
+          onDelta: (text) => {
+            setStreamedText((prev) => prev + text);
+          },
+          onComplete: (result) => {
+            streamResult = result as AIStepGenerationResult | undefined;
+          },
+          onError: (streamingError) => {
+            streamError = streamingError || "Failed to stream step generation";
+          },
+        },
+      );
+
+      if (streamError) {
+        throw new Error(streamError);
+      }
+
+      const result = (streamResult || streamResponse?.result) as
+        | AIStepGenerationResult
+        | undefined;
+      if (!result) {
+        throw new Error("No response from AI");
+      }
 
       logger.debug("Generation successful", {
         context: "useWorkflowStepAI",
@@ -86,11 +116,13 @@ export function useWorkflowStepAI(workflowId?: string) {
   const acceptProposal = () => {
     const currentProposal = proposal;
     setProposal(null);
+    setStreamedText("");
     return currentProposal;
   };
 
   const rejectProposal = () => {
     setProposal(null);
+    setStreamedText("");
   };
 
   const retry = async (
@@ -111,6 +143,7 @@ export function useWorkflowStepAI(workflowId?: string) {
     isGenerating,
     error,
     proposal,
+    streamedText,
     generateStep,
     acceptProposal,
     rejectProposal,
