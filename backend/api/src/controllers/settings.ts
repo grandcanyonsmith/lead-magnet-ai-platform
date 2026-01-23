@@ -592,7 +592,7 @@ class SettingsController {
     _params: Record<string, string>,
     body: unknown,
     _query: Record<string, string | undefined>,
-    _tenantId: string,
+    _tenantId: string | undefined,
     context: RequestContext,
   ): Promise<RouteResponse> {
     try {
