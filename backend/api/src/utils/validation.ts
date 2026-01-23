@@ -20,6 +20,15 @@ const promptOverrideSchema = z
 
 const promptOverridesSchema = z.record(promptOverrideSchema).optional();
 
+const shellSettingsSchema = z
+  .object({
+    max_iterations: z.number().int().min(1).max(100).optional(),
+    max_duration_seconds: z.number().int().min(30).max(840).optional(),
+    command_timeout_ms: z.number().int().min(1000).max(900000).optional(),
+    command_max_output_length: z.number().int().min(256).max(10_000_000).optional(),
+  })
+  .optional();
+
 // Workflow step schema
 export const workflowStepSchema = z
   .object({
@@ -87,6 +96,7 @@ export const workflowStepSchema = z
       .enum(["auto", "required", "none"])
       .optional()
       .default("auto"), // How model should use tools
+    shell_settings: shellSettingsSchema,
     // Webhook step fields
     webhook_url: z.preprocess(
       (val) =>
@@ -451,6 +461,22 @@ export const updateSettingsSchema = z.object({
       .transform((val) => new URL(val).href)
       .optional(),
   ),
+  icp_profiles: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        icp: z.string().optional(),
+        pain: z.string().optional(),
+        outcome: z.string().optional(),
+        offer: z.string().optional(),
+        constraints: z.string().optional(),
+        examples: z.string().optional(),
+        created_at: z.string().optional(),
+        updated_at: z.string().optional(),
+      }),
+    )
+    .optional(),
   prompt_overrides: promptOverridesSchema,
   // Onboarding fields
   onboarding_survey_completed: z.boolean().optional(),

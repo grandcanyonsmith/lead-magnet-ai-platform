@@ -45,6 +45,7 @@ export interface WorkflowStep {
   depends_on?: number[];
   tools?: (string | ToolConfig)[];
   tool_choice?: "auto" | "required" | "none";
+  shell_settings?: ShellSettings;
   // Webhook step fields
   webhook_url?: string;
   webhook_headers?: Record<string, string>;
@@ -61,6 +62,13 @@ export interface WorkflowStep {
   handoff_bypass_required_inputs?: boolean;
   handoff_include_submission_data?: boolean;
   handoff_include_context?: boolean;
+}
+
+export interface ShellSettings {
+  max_iterations?: number;
+  max_duration_seconds?: number;
+  command_timeout_ms?: number;
+  command_max_output_length?: number;
 }
 
 export interface ToolConfig {

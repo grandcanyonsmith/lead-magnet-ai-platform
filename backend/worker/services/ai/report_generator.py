@@ -5,6 +5,7 @@ CUA loops, Shell loops, and standard OpenAI API interactions.
 """
 
 import time
+import os
 from datetime import datetime
 from typing import Optional, Dict, Tuple, List, Any
 
@@ -50,6 +51,36 @@ class ReportGenerator:
         self._current_step_name = step_name
         self._current_step_instructions = step_instructions
 
+    @staticmethod
+    def _coerce_positive_int(value: Any) -> Optional[int]:
+        try:
+            parsed = int(value)
+        except Exception:
+            return None
+        return parsed if parsed > 0 else None
+
+    @staticmethod
+    def _read_positive_int_env(name: str, default: int) -> int:
+        value = (os.environ.get(name) or "").strip()
+        if not value:
+            return default
+        try:
+            parsed = int(value)
+        except Exception:
+            return default
+        return parsed if parsed > 0 else default
+
+    @staticmethod
+    def _read_optional_positive_int_env(name: str) -> Optional[int]:
+        value = (os.environ.get(name) or "").strip()
+        if not value:
+            return None
+        try:
+            parsed = int(value)
+        except Exception:
+            return None
+        return parsed if parsed > 0 else None
+
     def generate_report(
         self,
         model: str,
@@ -67,6 +98,7 @@ class ReportGenerator:
         step_index: Optional[int] = None,
         text_verbosity: Optional[str] = None,
         max_output_tokens: Optional[int] = None,
+        shell_settings: Optional[Dict[str, Any]] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Generate a report using OpenAI with configurable tools.
@@ -286,6 +318,35 @@ class ReportGenerator:
             })
 
             try:
+                shell_settings = shell_settings if isinstance(shell_settings, dict) else {}
+                max_iterations = (
+                    self._coerce_positive_int(shell_settings.get("max_iterations"))
+                    or self._read_positive_int_env("SHELL_LOOP_MAX_ITERATIONS", 25)
+                )
+                max_duration_seconds = (
+                    self._coerce_positive_int(shell_settings.get("max_duration_seconds"))
+                    or self._read_positive_int_env("SHELL_LOOP_MAX_DURATION_SECONDS", 14 * 60)
+                )
+                default_command_timeout_ms = (
+                    self._coerce_positive_int(shell_settings.get("command_timeout_ms"))
+                    or self._read_optional_positive_int_env("SHELL_EXECUTOR_DEFAULT_TIMEOUT_MS")
+                )
+                default_command_max_output_length = (
+                    self._coerce_positive_int(shell_settings.get("command_max_output_length"))
+                    or self._read_positive_int_env("SHELL_EXECUTOR_DEFAULT_MAX_OUTPUT_LENGTH", 4096)
+                )
+
+                logger.info("[ReportGenerator] Shell loop settings", extra={
+                    "job_id": job_id,
+                    "tenant_id": tenant_id,
+                    "step_index": step_index,
+                    "max_iterations": max_iterations,
+                    "max_duration_seconds": max_duration_seconds,
+                    "default_command_timeout_ms": default_command_timeout_ms,
+                    "default_command_max_output_length": default_command_max_output_length,
+                    "shell_settings_provided": bool(shell_settings),
+                })
+
                 step_order = (step_index + 1) if isinstance(step_index, int) else None
                 live_step_enabled = (
                     self.db_service is not None
@@ -346,8 +407,10 @@ class ReportGenerator:
                     max_output_tokens=max_output_tokens,
                     service_tier=service_tier,
                     output_format=output_format,
-                    max_iterations=25,
-                    max_duration_seconds=14 * 60,
+                    max_iterations=max_iterations,
+                    max_duration_seconds=max_duration_seconds,
+                    default_command_timeout_ms=default_command_timeout_ms,
+                    default_command_max_output_length=default_command_max_output_length,
                     tenant_id=tenant_id,
                     job_id=job_id,
                     step_index=step_index,

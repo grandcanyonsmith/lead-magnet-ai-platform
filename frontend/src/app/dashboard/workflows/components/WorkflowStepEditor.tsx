@@ -29,6 +29,7 @@ import {
   AIModel,
   ComputerUseToolConfig,
   ImageGenerationToolConfig,
+  ShellSettings,
 } from "@/types/workflow";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { CollapsibleSection } from "@/components/workflows/edit/CollapsibleSection";
@@ -287,6 +288,7 @@ export default function WorkflowStepEditor({
   const [isAdvancedAICollapsed, setIsAdvancedAICollapsed] = useState(true);
   const [isAssistCollapsed, setIsAssistCollapsed] = useState(true);
   const [isToolUsageCollapsed, setIsToolUsageCollapsed] = useState(true);
+  const [isShellSettingsCollapsed, setIsShellSettingsCollapsed] = useState(true);
   const [isOutputSchemaCollapsed, setIsOutputSchemaCollapsed] = useState(true);
   const [isDependenciesCollapsed, setIsDependenciesCollapsed] = useState(true);
   const [isInstructionsExpanded, setIsInstructionsExpanded] = useState(false);
@@ -488,6 +490,34 @@ export default function WorkflowStepEditor({
   const handleChange = (field: keyof WorkflowStep, value: any) => {
     setLocalStep((prev) => {
       const updated = { ...prev, [field]: value };
+      onChange(index, updated);
+      return updated;
+    });
+  };
+
+  const handleShellSettingChange = (
+    field: keyof ShellSettings,
+    value: string,
+  ) => {
+    const trimmed = value.trim();
+    const parsed = trimmed === "" ? undefined : Number(trimmed);
+    const normalized =
+      parsed !== undefined && Number.isFinite(parsed) && parsed > 0
+        ? Math.floor(parsed)
+        : undefined;
+
+    setLocalStep((prev) => {
+      const nextSettings = { ...(prev.shell_settings || {}) };
+      if (normalized === undefined) {
+        delete nextSettings[field];
+      } else {
+        nextSettings[field] = normalized;
+      }
+      const hasSettings = Object.keys(nextSettings).length > 0;
+      const updated = {
+        ...prev,
+        shell_settings: hasSettings ? nextSettings : undefined,
+      };
       onChange(index, updated);
       return updated;
     });
@@ -1100,6 +1130,131 @@ export default function WorkflowStepEditor({
                   </p>
                 </div>
               </CollapsibleSection>
+
+              {isToolSelected("shell") && (
+                <CollapsibleSection
+                  title="Shell runtime"
+                  isCollapsed={isShellSettingsCollapsed}
+                  onToggle={() =>
+                    setIsShellSettingsCollapsed(!isShellSettingsCollapsed)
+                  }
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label
+                        className={FIELD_LABEL}
+                        htmlFor={`shell-max-iterations-${index}`}
+                      >
+                        <span>Max iterations</span>
+                        <span className={FIELD_OPTIONAL}>(Optional)</span>
+                      </label>
+                      <input
+                        id={`shell-max-iterations-${index}`}
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={localStep.shell_settings?.max_iterations ?? ""}
+                        onChange={(e) =>
+                          handleShellSettingChange("max_iterations", e.target.value)
+                        }
+                        className={CONTROL_BASE}
+                        placeholder="Default"
+                      />
+                      <p className={HELP_TEXT}>
+                        Upper bound for shell tool loop cycles (leave blank for
+                        server default).
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label
+                        className={FIELD_LABEL}
+                        htmlFor={`shell-max-duration-${index}`}
+                      >
+                        <span>Max duration (seconds)</span>
+                        <span className={FIELD_OPTIONAL}>(Optional)</span>
+                      </label>
+                      <input
+                        id={`shell-max-duration-${index}`}
+                        type="number"
+                        min={30}
+                        max={840}
+                        value={localStep.shell_settings?.max_duration_seconds ?? ""}
+                        onChange={(e) =>
+                          handleShellSettingChange(
+                            "max_duration_seconds",
+                            e.target.value,
+                          )
+                        }
+                        className={CONTROL_BASE}
+                        placeholder="Default"
+                      />
+                      <p className={HELP_TEXT}>
+                        Total time budget for the shell loop. Must stay under
+                        executor limits.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label
+                        className={FIELD_LABEL}
+                        htmlFor={`shell-command-timeout-${index}`}
+                      >
+                        <span>Command timeout (ms)</span>
+                        <span className={FIELD_OPTIONAL}>(Optional)</span>
+                      </label>
+                      <input
+                        id={`shell-command-timeout-${index}`}
+                        type="number"
+                        min={1000}
+                        max={900000}
+                        value={localStep.shell_settings?.command_timeout_ms ?? ""}
+                        onChange={(e) =>
+                          handleShellSettingChange(
+                            "command_timeout_ms",
+                            e.target.value,
+                          )
+                        }
+                        className={CONTROL_BASE}
+                        placeholder="Default"
+                      />
+                      <p className={HELP_TEXT}>
+                        Maximum time per shell command before it is terminated.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label
+                        className={FIELD_LABEL}
+                        htmlFor={`shell-command-output-${index}`}
+                      >
+                        <span>Command output limit (chars)</span>
+                        <span className={FIELD_OPTIONAL}>(Optional)</span>
+                      </label>
+                      <input
+                        id={`shell-command-output-${index}`}
+                        type="number"
+                        min={256}
+                        max={10000000}
+                        value={
+                          localStep.shell_settings?.command_max_output_length ?? ""
+                        }
+                        onChange={(e) =>
+                          handleShellSettingChange(
+                            "command_max_output_length",
+                            e.target.value,
+                          )
+                        }
+                        className={CONTROL_BASE}
+                        placeholder="Default"
+                      />
+                      <p className={HELP_TEXT}>
+                        Cap stdout/stderr to avoid huge tool outputs.
+                      </p>
+                    </div>
+                  </div>
+                </CollapsibleSection>
+              )}
             </StepEditorSection>
           )}
 

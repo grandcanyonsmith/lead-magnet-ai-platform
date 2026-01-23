@@ -53,6 +53,25 @@ Effect:
   - No task IAM role (`TaskRoleArn` removed)
   - Read-only root filesystem + **EFS-backed `/workspace`**
 
+## Shell loop runtime defaults
+These control how long shell tool loops are allowed to run and how much output is returned.
+
+Defaults (worker-side env vars):
+- `SHELL_LOOP_MAX_ITERATIONS` (default: `25`)
+- `SHELL_LOOP_MAX_DURATION_SECONDS` (default: `840`, ~14 minutes)
+- `SHELL_EXECUTOR_DEFAULT_TIMEOUT_MS` (default: **unset** → executor default `900000ms`)
+- `SHELL_EXECUTOR_DEFAULT_MAX_OUTPUT_LENGTH` (default: `4096`)
+
+Per-step overrides (workflow step field `shell_settings`):
+- `max_iterations`
+- `max_duration_seconds`
+- `command_timeout_ms`
+- `command_max_output_length`
+
+Notes:
+- API validation caps values to safe ranges (e.g., duration under 15 minutes, command timeout ≤ 900000ms).
+- Use per-step overrides for long or heavy shell tasks; otherwise rely on global defaults.
+
 ## Workflow pattern: “previous-step artifact → S3 upload”
 Some workflows need to take an existing artifact from a previous step and upload it into an external S3 bucket (e.g. `cc360-pages`) and then pass the resulting object URL into the next step.
 

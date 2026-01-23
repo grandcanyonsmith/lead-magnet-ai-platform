@@ -73,7 +73,7 @@ class S3ContextService:
         return {"bucket": bucket, "region": region}
 
     def _get_allowed_s3_upload_buckets(self) -> List[str]:
-        raw = (os.environ.get("SHELL_S3_UPLOAD_ALLOWED_BUCKETS") or "coursecreator360-rich-snippet-booster").strip()
+        raw = (os.environ.get("SHELL_S3_UPLOAD_ALLOWED_BUCKETS") or "cc360-pages").strip()
         return [b.strip() for b in raw.split(",") if b and b.strip()]
 
     def _shell_manifest_enabled(self) -> bool:

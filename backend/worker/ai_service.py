@@ -70,6 +70,7 @@ class AIService:
         step_index: Optional[int] = None,
         text_verbosity: Optional[str] = None,
         max_output_tokens: Optional[int] = None,
+        shell_settings: Optional[Dict[str, Any]] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """Delegate report generation to ReportGenerator."""
         return self.report_generator.generate_report(
@@ -88,6 +89,7 @@ class AIService:
             step_index=step_index,
             text_verbosity=text_verbosity,
             max_output_tokens=max_output_tokens,
+            shell_settings=shell_settings,
         )
     
     def generate_html_from_submission(

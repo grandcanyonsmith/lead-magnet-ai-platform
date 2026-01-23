@@ -48,8 +48,22 @@ export interface Settings extends BaseEntity {
   company_size?: string;
   brand_messaging_guidelines?: string;
   icp_document_url?: string;
+  icp_profiles?: ICPProfile[];
   prompt_overrides?: PromptOverrides;
   [key: string]: unknown;
+}
+
+export interface ICPProfile {
+  id: string;
+  name: string;
+  icp?: string;
+  pain?: string;
+  outcome?: string;
+  offer?: string;
+  constraints?: string;
+  examples?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface PromptOverride {
@@ -94,6 +108,7 @@ export interface SettingsUpdateRequest {
   company_size?: string;
   brand_messaging_guidelines?: string;
   icp_document_url?: string;
+  icp_profiles?: ICPProfile[];
   prompt_overrides?: PromptOverrides;
   [key: string]: unknown;
 }
@@ -121,4 +136,5 @@ export interface SettingsFormData {
   company_size: string;
   brand_messaging_guidelines: string;
   icp_document_url: string;
+  icp_profiles?: ICPProfile[];
 }

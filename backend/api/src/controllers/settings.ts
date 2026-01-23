@@ -115,6 +115,7 @@ class SettingsController {
           view_generated_lead_magnets: false,
         },
         folders: [] as any[],
+        icp_profiles: [] as any[],
       };
 
       // If settings don't exist, create default settings
@@ -153,6 +154,9 @@ class SettingsController {
               : {}),
           },
           folders: Array.isArray(settings.folders) ? settings.folders : [],
+          icp_profiles: Array.isArray(settings.icp_profiles)
+            ? settings.icp_profiles
+            : [],
         };
 
         const updates: Record<string, any> = {};
@@ -198,6 +202,9 @@ class SettingsController {
 
         if (!Array.isArray(settings.folders)) {
           updates.folders = merged.folders;
+        }
+        if (!Array.isArray(settings.icp_profiles)) {
+          updates.icp_profiles = merged.icp_profiles;
         }
 
         if (!settings.created_at) {
