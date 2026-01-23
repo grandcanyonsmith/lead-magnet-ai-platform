@@ -3,6 +3,7 @@ import logging
 from typing import Dict, Any, AsyncGenerator
 
 from services.shell_executor_service import ShellExecutorService
+from services.tool_secrets import append_tool_secrets, get_tool_secrets
 from services.tools.execution import ShellLoopService
 from services.openai_client import OpenAIClient
 
@@ -34,6 +35,14 @@ class StreamingShellHandler:
         max_iterations = event.get('max_iterations', 50)
         max_duration = event.get('max_duration_seconds', 900)
 
+        tool_secrets = get_tool_secrets(None, tenant_id)
+        should_inject_tool_secrets = bool(tool_secrets)
+        effective_instructions = (
+            append_tool_secrets(instructions, tool_secrets)
+            if should_inject_tool_secrets
+            else instructions
+        )
+
         # Initialize OpenAI Client (handles auth via env vars)
         openai_client = OpenAIClient()
 
@@ -55,7 +64,7 @@ class StreamingShellHandler:
 
             initial_params = openai_client.build_api_params(
                 model=model,
-                instructions=instructions,
+                instructions=effective_instructions,
                 input_text=input_text,
                 tools=tools,
                 tool_choice=tool_choice,
@@ -78,7 +87,7 @@ class StreamingShellHandler:
             async for event_obj in self.shell_loop.run_shell_loop_stream(
                 openai_client=openai_client,
                 model=model,
-                instructions=instructions,
+                instructions=effective_instructions,
                 input_text=input_text,
                 tools=tools,
                 tool_choice=tool_choice,
@@ -88,6 +97,7 @@ class StreamingShellHandler:
                 max_output_tokens=max_output_tokens,
                 max_iterations=max_iterations,
                 max_duration_seconds=max_duration,
+                tool_secrets_env=tool_secrets if should_inject_tool_secrets else None,
                 tenant_id=tenant_id,
                 job_id=job_id
             ):

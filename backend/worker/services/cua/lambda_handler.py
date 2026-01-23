@@ -11,6 +11,7 @@ from services.cua.environment_factory import (
 from services.cua.screenshot_service import S3ScreenshotService
 from s3_service import S3Service
 from services.openai_client import OpenAIClient
+from services.tool_secrets import append_tool_secrets, get_tool_secrets
 import dataclasses
 
 # Setup logging
@@ -39,6 +40,7 @@ class StreamingHandler:
         model = event.get('model', 'computer-use-preview')
         requested_model = model
         instructions = event.get('instructions', '')
+        raw_instructions = instructions
         input_text = event.get('input_text', '')
         tools = event.get('tools', [])
         if not isinstance(tools, list):
@@ -85,7 +87,7 @@ class StreamingHandler:
             )
 
         aws_shell_forced = False
-        if _is_aws_task(f"{instructions}\n{input_text}"):
+        if _is_aws_task(f"{raw_instructions}\n{input_text}"):
             has_shell = any(
                 (isinstance(t, str) and t == "shell")
                 or (isinstance(t, dict) and t.get("type") == "shell")
@@ -118,6 +120,14 @@ class StreamingHandler:
                     "AWS/S3 task detected: forcing shell tool and disabling code_interpreter."
                 ),
             }) + "\n"
+
+        tool_secrets = get_tool_secrets(None, tenant_id)
+        should_inject_tool_secrets = bool(tool_secrets)
+        instructions = (
+            append_tool_secrets(instructions, tool_secrets)
+            if should_inject_tool_secrets
+            else instructions
+        )
 
         # Validate model compatibility: computer_use_preview tool requires computer-use-preview model
         has_computer_use = any(
@@ -211,7 +221,11 @@ class StreamingHandler:
                 tenant_id=tenant_id,
                 job_id=job_id,
                 params=params,
-                shell_env_overrides=aws_env_overrides or None,
+                shell_env_overrides=(
+                    {**tool_secrets, **aws_env_overrides}
+                    if (tool_secrets or aws_env_overrides)
+                    else None
+                ),
             ):
                 # Convert dataclass to dict and yield as JSON line
                 data = dataclasses.asdict(event_obj)

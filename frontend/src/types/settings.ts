@@ -17,6 +17,7 @@ export interface OnboardingSurveyResponses {
 
 export interface Settings extends BaseEntity {
   tenant_id: string;
+  tool_secrets?: Record<string, string>;
   onboarding_survey_completed?: boolean;
   onboarding_survey_responses?: OnboardingSurveyResponses;
   onboarding_checklist?: OnboardingChecklist;
@@ -135,6 +136,7 @@ export interface SettingsUpdateRequest {
   icp_document_url?: string;
   icp_profiles?: ICPProfile[];
   prompt_overrides?: PromptOverrides;
+  tool_secrets?: Record<string, string>;
   [key: string]: unknown;
 }
 

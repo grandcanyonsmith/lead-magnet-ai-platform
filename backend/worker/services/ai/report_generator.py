@@ -17,6 +17,11 @@ from services.tools.execution import ShellLoopService
 from services.ai.image_generator import ImageGenerator
 from services.image_handler import ImageHandler
 from services.prompt_overrides import get_prompt_overrides
+from services.tool_secrets import (
+    append_tool_secrets,
+    get_tool_secrets,
+    redact_tool_secrets_text,
+)
 from utils.decimal_utils import convert_decimals_to_float
 from cost_service import calculate_openai_cost
 
@@ -146,6 +151,18 @@ class ReportGenerator:
         
         # Check if computer_use_preview is in tools (requires truncation="auto")
         has_computer_use = ToolValidator.has_computer_use(validated_tools)
+        has_shell = any(
+            isinstance(t, dict) and t.get("type") == "shell"
+            for t in (validated_tools or [])
+        )
+
+        tool_secrets = get_tool_secrets(self.db_service, tenant_id)
+        should_inject_tool_secrets = bool(tool_secrets) and (has_shell or has_computer_use)
+        effective_instructions = (
+            append_tool_secrets(instructions, tool_secrets)
+            if should_inject_tool_secrets
+            else instructions
+        )
 
         requested_code_interpreter = any(
             (isinstance(t, dict) and t.get("type") == "code_interpreter")
@@ -248,7 +265,7 @@ class ReportGenerator:
                 # Build API parameters for CUA loop
                 params = self.openai_client.build_api_params(
                     model=model,
-                    instructions=instructions,
+                    instructions=effective_instructions,
                     input_text=input_text,
                     tools=validated_tools,
                     tool_choice=normalized_tool_choice,
@@ -268,7 +285,7 @@ class ReportGenerator:
                 final_report, screenshot_urls, cua_usage_info = self.cua_loop_service.run_cua_loop(
                     openai_client=self.openai_client,
                     model=model,
-                    instructions=instructions,
+                    instructions=effective_instructions,
                     input_text=input_text,
                     tools=validated_tools,
                     tool_choice=normalized_tool_choice,
@@ -298,8 +315,8 @@ class ReportGenerator:
                 # Build request details
                 request_details = {
                     'model': model,
-                    'instructions': instructions,
-                    'input': input_text,
+                    'instructions': redact_tool_secrets_text(effective_instructions),
+                    'input': redact_tool_secrets_text(input_text),
                     'previous_context': previous_context,
                     'context': context,
                     'tools': validated_tools,
@@ -334,11 +351,6 @@ class ReportGenerator:
                 raise
 
         # Shell tool loop (developer-executed tool; OpenAI will return shell_call items until we respond)
-        has_shell = any(
-            isinstance(t, dict) and t.get("type") == "shell"
-            for t in (validated_tools or [])
-        )
-
         if has_shell:
             logger.info("[ReportGenerator] Using shell tool loop", extra={
                 "model": model,
@@ -422,7 +434,7 @@ class ReportGenerator:
                 # Build initial API params (first request)
                 params = self.openai_client.build_api_params(
                     model=model,
-                    instructions=instructions,
+                    instructions=effective_instructions,
                     input_text=input_text,
                     tools=validated_tools,
                     tool_choice=normalized_tool_choice,
@@ -442,7 +454,7 @@ class ReportGenerator:
                 final_response = self.shell_loop_service.run_shell_loop(
                     openai_client=self.openai_client,
                     model=model,
-                    instructions=instructions,
+                    instructions=effective_instructions,
                     input_text=input_text,
                     tools=validated_tools or [],
                     tool_choice=normalized_tool_choice,
@@ -456,6 +468,7 @@ class ReportGenerator:
                     max_duration_seconds=max_duration_seconds,
                     default_command_timeout_ms=default_command_timeout_ms,
                     default_command_max_output_length=default_command_max_output_length,
+                    tool_secrets_env=tool_secrets if should_inject_tool_secrets else None,
                     tenant_id=tenant_id,
                     job_id=job_id,
                     step_index=step_index,
@@ -467,7 +480,7 @@ class ReportGenerator:
                 content, usage_info, request_details, response_details = self.openai_client.process_api_response(
                     response=final_response,
                     model=model,
-                    instructions=instructions,
+                    instructions=effective_instructions,
                     input_text=input_text,
                     previous_context=previous_context,
                     context=context,

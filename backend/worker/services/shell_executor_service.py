@@ -128,17 +128,40 @@ class ShellExecutorService:
         merged_env = _build_shell_env(env)
 
         # ------------------------------------------------------------------
-        # Local dev mode: execute commands on the local machine.
+        # Local dev mode: do NOT execute commands on the local machine.
+        # Always require the AWS shell executor.
         # ------------------------------------------------------------------
         if (os.environ.get("IS_LOCAL") or "").strip().lower() == "true":
-            return self._run_shell_job_local(
-                commands=commands,
-                timeout_ms=timeout_ms,
-                max_output_length=max_output_length,
-                workspace_id=workspace_id,
-                reset_workspace=reset_workspace,
-                env=merged_env,
-            )
+            if not self._function_name:
+                error_msg = "Local shell execution is disabled; configure SHELL_EXECUTOR_FUNCTION_NAME"
+                logger.error("[ShellExecutorService] Local execution disabled", extra={
+                    "job_id": "local-disabled",
+                    "commands_count": len(commands),
+                })
+                output_items = [
+                    {
+                        "stdout": "",
+                        "stderr": error_msg,
+                        "outcome": {"type": "error", "message": error_msg},
+                    }
+                    for _ in commands
+                ]
+                result: Dict[str, Any] = {
+                    "version": CONTRACT_VERSION,
+                    "job_id": "local-disabled",
+                    "commands": commands,
+                    "output": output_items,
+                    "meta": {
+                        "runner": "shell-executor-local-disabled",
+                        "duration_ms": 0,
+                    },
+                }
+                if max_output_length is not None:
+                    try:
+                        result["max_output_length"] = int(max_output_length)
+                    except Exception:
+                        pass
+                return result
 
         job_id = uuid.uuid4().hex
 

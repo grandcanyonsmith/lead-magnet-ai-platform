@@ -5,6 +5,7 @@ Handles construction of API parameters for OpenAI Responses API calls.
 import logging
 from typing import Dict, List, Optional, Any
 from services.tools import ToolBuilder
+from services.tool_secrets import redact_tool_secrets_text, redact_tool_secrets_value
 from utils import image_utils
 from utils.decimal_utils import convert_decimals_to_float
 
@@ -256,13 +257,15 @@ class OpenAIRequestBuilder:
             try:
                 # Create a safe copy of params for logging (without api key which isn't here anyway)
                 # Convert Decimals to ensure JSON serialization works
+                safe_input = redact_tool_secrets_value(params.get("input"))
+                safe_instructions = redact_tool_secrets_text(params.get("instructions"))
                 debug_payload = convert_decimals_to_float({
                     "model": params.get("model"),
                     "tool_choice": params.get("tool_choice"),
                     "tools": cleaned_tools,
-                    # Truncate input/instructions for readability
-                    "input_preview": str(params.get("input"))[:200] + "..." if params.get("input") else None,
-                    "instructions_preview": str(params.get("instructions"))[:200] + "..." if params.get("instructions") else None,
+                    # Truncate input/instructions for readability (secrets redacted)
+                    "input_preview": str(safe_input)[:200] + "..." if safe_input else None,
+                    "instructions_preview": str(safe_instructions)[:200] + "..." if safe_instructions else None,
                 })
                 logger.info(f"[OpenAI Request Builder] Final API Payload: {json.dumps(debug_payload)}")
             except Exception:

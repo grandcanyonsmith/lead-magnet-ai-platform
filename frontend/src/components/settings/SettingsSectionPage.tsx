@@ -33,6 +33,8 @@ export function SettingsSectionPage({ section }: { section: SettingsSection }) {
     setField,
     promptOverridesJson,
     setPromptOverridesJson,
+    toolSecretsJson,
+    setToolSecretsJson,
     saving,
     save,
     hasUnsavedChanges,
@@ -76,6 +78,8 @@ export function SettingsSectionPage({ section }: { section: SettingsSection }) {
         <GeneralSettings
           settings={currentSettings}
           onChange={setField}
+          toolSecretsJson={toolSecretsJson}
+          onToolSecretsChange={setToolSecretsJson}
           errors={errors}
         />
       )}

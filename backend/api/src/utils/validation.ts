@@ -20,6 +20,10 @@ const promptOverrideSchema = z
 
 const promptOverridesSchema = z.record(promptOverrideSchema).optional();
 
+const toolSecretsSchema = z
+  .record(z.string(), z.string())
+  .optional();
+
 const shellSettingsSchema = z
   .object({
     max_iterations: z.number().int().min(1).max(100).optional(),
@@ -507,6 +511,7 @@ export const updateSettingsSchema = z.object({
     )
     .optional(),
   prompt_overrides: promptOverridesSchema,
+  tool_secrets: toolSecretsSchema,
   // Onboarding fields
   onboarding_survey_completed: z.boolean().optional(),
   onboarding_survey_responses: z.record(z.any()).optional(),

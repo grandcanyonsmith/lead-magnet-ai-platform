@@ -105,6 +105,7 @@ class SettingsController {
         default_workflow_improvement_service_tier: "priority",
         default_workflow_improvement_reasoning_effort: "high",
         prompt_overrides: {} as Record<string, any>,
+        tool_secrets: {} as Record<string, string>,
         api_usage_limit: 1000000,
         api_usage_current: 0,
         billing_tier: "free",
@@ -146,6 +147,12 @@ class SettingsController {
             typeof settings.prompt_overrides === "object" &&
             !Array.isArray(settings.prompt_overrides)
               ? settings.prompt_overrides
+              : {},
+          tool_secrets:
+            settings.tool_secrets &&
+            typeof settings.tool_secrets === "object" &&
+            !Array.isArray(settings.tool_secrets)
+              ? settings.tool_secrets
               : {},
           onboarding_checklist: {
             ...defaultSettings.onboarding_checklist,
@@ -199,6 +206,14 @@ class SettingsController {
           Array.isArray(settings.prompt_overrides)
         ) {
           updates.prompt_overrides = merged.prompt_overrides;
+        }
+
+        if (
+          !settings.tool_secrets ||
+          typeof settings.tool_secrets !== "object" ||
+          Array.isArray(settings.tool_secrets)
+        ) {
+          updates.tool_secrets = merged.tool_secrets;
         }
 
         if (!Array.isArray(settings.folders)) {
@@ -359,7 +374,14 @@ class SettingsController {
             validationError instanceof Error
               ? validationError.message
               : String(validationError),
-          body,
+          body: body && typeof body === "object"
+            ? {
+                ...body,
+                ...(body.tool_secrets
+                  ? { tool_secrets: "[REDACTED]" }
+                  : {}),
+              }
+            : body,
         });
         throw new ValidationError(
           validationError instanceof Error
@@ -373,6 +395,17 @@ class SettingsController {
                 : String(validationError),
           },
         );
+      }
+
+      if (data?.tool_secrets && typeof data.tool_secrets === "object") {
+        const cleaned: Record<string, string> = {};
+        Object.entries(data.tool_secrets).forEach(([key, value]) => {
+          const name = String(key || "").trim();
+          const val = value == null ? "" : String(value).trim();
+          if (!name || !val) return;
+          cleaned[name] = val;
+        });
+        data.tool_secrets = cleaned;
       }
 
       // Get existing settings
