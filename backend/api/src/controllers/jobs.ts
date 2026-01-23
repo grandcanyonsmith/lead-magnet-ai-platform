@@ -107,6 +107,50 @@ class JobsController {
     };
   }
 
+  async getAutoUploadContent(
+    tenantId: string,
+    jobId: string,
+    query: Record<string, any>,
+  ): Promise<RouteResponse> {
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+
+    if (!job) {
+      throw new ApiError("Job not found", 404);
+    }
+
+    if (job.tenant_id !== tenantId) {
+      throw new ApiError(
+        "You don't have permission to access this lead magnet",
+        403,
+      );
+    }
+
+    const key =
+      typeof query?.key === "string" && query.key.trim() ? query.key.trim() : "";
+
+    if (!key) {
+      throw new ApiError("Auto upload key is required", 400);
+    }
+
+    const result = await shellExecutorUploadsService.getJobUploadContent({
+      tenantId: job.tenant_id,
+      jobId: job.job_id,
+      key,
+    });
+
+    const contentType = result.contentType.includes("charset")
+      ? result.contentType
+      : `${result.contentType}; charset=utf-8`;
+
+    return {
+      statusCode: 200,
+      body: result.content,
+      headers: {
+        "Content-Type": contentType,
+      },
+    };
+  }
+
 
   /**
    * Get the final document for a job by serving the final artifact content.

@@ -32,6 +32,8 @@ export function OutputPreview({ groupKey, preview, className }: OutputPreviewPro
       objectUrl={preview.objectUrl}
       fileName={preview.fileName}
       artifactId={preview.artifactId}
+      jobId={preview.jobId}
+      autoUploadKey={preview.autoUploadKey}
       previewVariant={previewVariant}
       className={previewClassName}
       viewMode={viewMode}

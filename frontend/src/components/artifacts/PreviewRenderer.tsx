@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import {
@@ -30,6 +30,8 @@ interface PreviewRendererProps {
   fileName?: string;
   className?: string;
   artifactId?: string;
+  jobId?: string;
+  autoUploadKey?: string;
   isFullScreen?: boolean;
   previewVariant?: "default" | "compact";
   viewMode?: "desktop" | "tablet" | "mobile";
@@ -57,6 +59,12 @@ function detectContentTypeFromExtension(fileName?: string): string | null {
     svg: "image/svg+xml",
   };
   return typeMap[ext || ""] || null;
+}
+
+function normalizeContentType(value?: string | null): string | null {
+  if (!value) return null;
+  const base = value.split(";")[0]?.trim().toLowerCase();
+  return base || null;
 }
 
 function normalizePreviewUrl(url?: string | null): string | null {
@@ -469,16 +477,13 @@ export function PreviewRenderer({
   fileName,
   className = "",
   artifactId,
+  jobId,
+  autoUploadKey,
   isFullScreen = false,
   previewVariant = "default",
   viewMode,
   onViewModeChange,
 }: PreviewRendererProps) {
-  // #region agent log
-  const renderId = useRef(0);
-  renderId.current += 1;
-  fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:477',message:'Component render',data:{renderId:renderId.current,contentType,fileName,artifactId,isFullScreen,previewVariant},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isInView, setIsInView] = useState(false);
@@ -492,11 +497,6 @@ export function PreviewRenderer({
   const [jsonViewMode, setJsonViewMode] = useState<"markdown" | "json">(
     "markdown",
   );
-  // #region agent log
-  useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:490',message:'jsonViewMode changed',data:{jsonViewMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-  }, [jsonViewMode]);
-  // #endregion
   const [stableObjectUrl, setStableObjectUrl] = useState(objectUrl);
   const containerRef = useRef<HTMLDivElement>(null);
   const isCompactPreview = previewVariant === "compact" && !isFullScreen;
@@ -538,21 +538,73 @@ export function PreviewRenderer({
   }, [objectUrl, objectUrlKey, stableObjectUrl, stableObjectUrlKey, hasLoadError]);
 
   // Determine effective content type with fallback to file extension
+  const normalizedContentType = normalizeContentType(contentType);
+  const extensionContentType = detectContentTypeFromExtension(fileName);
   const effectiveContentType =
-    contentType ||
-    detectContentTypeFromExtension(fileName) ||
+    (normalizedContentType &&
+    normalizedContentType !== "application/octet-stream"
+      ? normalizedContentType
+      : extensionContentType || normalizedContentType) ||
     "application/octet-stream";
   const isMarkdownLike =
     effectiveContentType === "text/markdown" ||
     effectiveContentType === "text/plain";
 
   useEffect(() => {
+    if (!isInView) return;
+    const hasS3Url = Boolean(previewObjectUrl?.includes("amazonaws.com"));
+    const shouldLog = Boolean(autoUploadKey) || hasS3Url;
+    if (!shouldLog) return;
+    const previewUrlHost = (() => {
+      if (!previewObjectUrl) return null;
+      try {
+        return new URL(previewObjectUrl).host;
+      } catch {
+        return null;
+      }
+    })();
+  }, [
+    isInView,
+    artifactId,
+    jobId,
+    autoUploadKey,
+    previewObjectUrl,
+    contentType,
+    effectiveContentType,
+    isMarkdownLike,
+    fileName,
+  ]);
+
+  const fetchTextContent = useCallback(async (): Promise<string> => {
+    const source = artifactId
+      ? "artifact"
+      : jobId && autoUploadKey
+        ? "auto-upload"
+        : previewObjectUrl
+          ? "url"
+          : "none";
+    const hasAutoUploadContentMethod =
+      typeof (api as any)?.jobs?.getJobAutoUploadContent === "function";
+    if (artifactId) {
+      return await api.artifacts.getArtifactContent(artifactId);
+    }
+    if (jobId && autoUploadKey) {
+      return await api.jobs.getJobAutoUploadContent(jobId, autoUploadKey);
+    }
+    if (previewObjectUrl) {
+      const res = await fetch(previewObjectUrl);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      return await res.text();
+    }
+    throw new Error("No artifact ID or URL provided");
+  }, [artifactId, autoUploadKey, jobId, previewObjectUrl]);
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:464',message:'IntersectionObserver triggered',data:{isIntersecting:entry.isIntersecting,intersectionRatio:entry.intersectionRatio},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
           setIsInView(true);
           // Once in view, we can disconnect to prevent re-triggering
           observer.disconnect();
@@ -570,7 +622,7 @@ export function PreviewRenderer({
 
   // Reset error state when preview source changes (switching to different artifact)
   useEffect(() => {
-    if (previewObjectUrl || artifactId) {
+    if (previewObjectUrl || artifactId || (jobId && autoUploadKey)) {
       setImageLoaded(false);
       setImageError(false);
       setMarkdownError(false);
@@ -582,7 +634,7 @@ export function PreviewRenderer({
       setJsonRaw(null);
       setJsonViewMode("markdown");
     }
-  }, [previewObjectUrl, artifactId]);
+  }, [previewObjectUrl, artifactId, jobId, autoUploadKey]);
 
   // Fetch markdown content when in view
   useEffect(() => {
@@ -594,21 +646,18 @@ export function PreviewRenderer({
     ) {
       // Use API endpoint if artifactId is available, otherwise fall back to direct URL
       const fetchMarkdown = async () => {
+        const markdownSource = artifactId
+          ? "artifact"
+          : jobId && autoUploadKey
+            ? "auto-upload"
+            : previewObjectUrl
+              ? "url"
+              : "none";
+        const normalizedPreviewUrl = normalizePreviewUrl(previewObjectUrl);
+        let responseStatus: number | null = null;
+        let responseOk: boolean | null = null;
         try {
-          let text: string;
-          if (artifactId) {
-            // Use API endpoint to proxy from S3 (avoids presigned URL expiration)
-            text = await api.artifacts.getArtifactContent(artifactId);
-          } else if (previewObjectUrl) {
-            // Fallback to direct URL fetch
-            const res = await fetch(previewObjectUrl);
-            if (!res.ok) {
-              throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-            }
-            text = await res.text();
-          } else {
-            throw new Error("No artifact ID or URL provided");
-          }
+          const text = await fetchTextContent();
           setMarkdownContent(text);
           setMarkdownError(false); // Clear any previous error on success
         } catch (err: any) {
@@ -638,6 +687,7 @@ export function PreviewRenderer({
     artifactId,
     markdownContent,
     markdownError,
+    fetchTextContent,
   ]);
 
   // Fetch HTML content when in view
@@ -651,21 +701,18 @@ export function PreviewRenderer({
     ) {
       // Use API endpoint if artifactId is available, otherwise fall back to direct URL
       const fetchHtml = async () => {
+        const htmlSource = artifactId
+          ? "artifact"
+          : jobId && autoUploadKey
+            ? "auto-upload"
+            : previewObjectUrl
+              ? "url"
+              : "none";
+        const normalizedPreviewUrl = normalizePreviewUrl(previewObjectUrl);
+        let responseStatus: number | null = null;
+        let responseOk: boolean | null = null;
         try {
-          let text: string;
-          if (artifactId) {
-            // Use API endpoint to proxy from S3 (avoids presigned URL expiration and CORS issues)
-            text = await api.artifacts.getArtifactContent(artifactId);
-          } else if (previewObjectUrl) {
-            // Fallback to direct URL fetch
-            const res = await fetch(previewObjectUrl);
-            if (!res.ok) {
-              throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-            }
-            text = await res.text();
-          } else {
-            throw new Error("No artifact ID or URL provided");
-          }
+          const text = await fetchTextContent();
           // Extract HTML from markdown code blocks if present
           let extractedHtml = extractHtmlFromCodeBlocks(text);
 
@@ -712,6 +759,7 @@ export function PreviewRenderer({
     artifactId,
     htmlContent,
     htmlError,
+    fetchTextContent,
   ]);
 
   // Fetch JSON content when in view
@@ -722,38 +770,18 @@ export function PreviewRenderer({
       !jsonContent &&
       !jsonError
     ) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:705',message:'JSON fetch starting',data:{isInView,effectiveContentType,hasJsonContent:!!jsonContent,hasJsonRaw:!!jsonRaw,jsonError},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       const fetchJson = async () => {
         try {
-          let text: string;
-          if (artifactId) {
-            text = await api.artifacts.getArtifactContent(artifactId);
-          } else if (previewObjectUrl) {
-            const res = await fetch(previewObjectUrl);
-            if (!res.ok) {
-              throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-            }
-            text = await res.text();
-          } else {
-            throw new Error("No artifact ID or URL provided");
-          }
+          const text = await fetchTextContent();
 
           try {
             const parsed = JSON.parse(text);
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:730',message:'JSON parsed successfully, setting state',data:{textLength:text.length,parsedType:typeof parsed,isArray:Array.isArray(parsed)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-            // #endregion
             setJsonContent(parsed);
             setJsonRaw(text);
             setJsonError(false);
           } catch (e) {
             // Failed to parse JSON
             console.error("Failed to parse JSON artifact:", e);
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:738',message:'JSON parse failed',data:{textLength:text.length,error:String(e)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-            // #endregion
             setJsonRaw(text);
             setJsonError(true);
           }
@@ -793,6 +821,7 @@ export function PreviewRenderer({
     jsonContent,
     jsonRaw,
     jsonError,
+    fetchTextContent,
   ]);
 
   // Attempt to parse markdown content as JSON if it looks like one
@@ -1070,10 +1099,6 @@ export function PreviewRenderer({
   };
 
   const renderPreview = () => {
-    // #region agent log
-    const renderPath = effectiveContentType.startsWith("image/") ? "image" : effectiveContentType === "application/json" ? "json" : effectiveContentType.startsWith("text/html") ? "html" : isMarkdownLike ? "markdown" : "other";
-    fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:1071',message:'renderPreview called',data:{renderPath,effectiveContentType,isInView,hasJsonContent:!!jsonContent,hasJsonRaw:!!jsonRaw,jsonViewMode,resolvedJsonViewMode,hasJsonMarkdown:!!jsonMarkdown,hasJsonMarkdownPreview:!!jsonMarkdownPreview,hasHtmlContent:!!htmlContent,hasMarkdownContent:!!markdownContent,isCompactPreview,isFullScreen},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     if (effectiveContentType.startsWith("image/")) {
       if (isFullScreen) {
         // Full-screen mode: use regular img tag for better scaling
@@ -1372,9 +1397,6 @@ export function PreviewRenderer({
       }
 
       if (resolvedJsonViewMode === "markdown" && jsonMarkdown) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/6252ee0a-6d2b-46d2-91c8-d377550bcc04',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PreviewRenderer.tsx:1347',message:'Rendering markdown preview',data:{resolvedJsonViewMode,hasJsonMarkdown:!!jsonMarkdown,jsonMarkdownLength:jsonMarkdown?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
         return renderJsonMarkdownPreview(jsonMarkdown);
       }
 

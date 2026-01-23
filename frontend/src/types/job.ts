@@ -174,6 +174,7 @@ export interface ArtifactGalleryItem {
   artifact?: Artifact;
   url?: string;
   jobId?: string;
+  autoUploadKey?: string;
   stepOrder?: number;
   stepName?: string;
   stepType?: string;

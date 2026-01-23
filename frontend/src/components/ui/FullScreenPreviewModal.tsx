@@ -28,6 +28,8 @@ interface FullScreenPreviewModalProps {
   objectUrl?: string;
   fileName?: string;
   artifactId?: string;
+  jobId?: string;
+  autoUploadKey?: string;
   // Navigation
   onNext?: () => void;
   onPrevious?: () => void;
@@ -60,6 +62,8 @@ export const FullScreenPreviewModal = React.memo(
     objectUrl,
     fileName,
     artifactId,
+    jobId,
+    autoUploadKey,
     onNext,
     onPrevious,
     hasNext,
@@ -234,6 +238,8 @@ export const FullScreenPreviewModal = React.memo(
                       : "w-full h-auto min-h-full bg-white rounded-lg p-6 sm:p-12 shadow-xl text-gray-900 mb-20"
                 }
                 artifactId={artifactId}
+                jobId={jobId}
+                autoUploadKey={autoUploadKey}
                 isFullScreen={true}
                 viewMode={isHtml || isMarkdown ? viewMode : undefined}
                 onViewModeChange={

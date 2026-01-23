@@ -1,10 +1,12 @@
 import {
   GetBucketLocationCommand,
+  GetObjectCommand,
   ListObjectsV2Command,
   S3Client,
 } from "@aws-sdk/client-s3";
 import { env } from "../utils/env";
 import { logger } from "../utils/logger";
+import { ApiError } from "../utils/errors";
 
 export interface ShellExecutorUploadItem {
   key: string;
@@ -19,6 +21,12 @@ export interface ShellExecutorUploadsResponse {
   prefix: string | null;
   items: ShellExecutorUploadItem[];
   count: number;
+}
+
+export interface ShellExecutorUploadContent {
+  key: string;
+  content: string;
+  contentType: string;
 }
 
 const s3Client = new S3Client({ region: env.awsRegion });
@@ -79,6 +87,20 @@ const sanitizeSubdir = (value?: string): string => {
   }
   return cleaned;
 };
+
+const inferTextContentTypeFromKey = (key: string): string => {
+  const lower = key.toLowerCase();
+  if (lower.endsWith(".md") || lower.endsWith(".markdown")) {
+    return "text/markdown";
+  }
+  if (lower.endsWith(".html") || lower.endsWith(".htm")) {
+    return "text/html";
+  }
+  return "text/plain";
+};
+
+const normalizeObjectKey = (value: string): string =>
+  value.trim().replace(/^\/+/, "");
 
 const applyTemplate = (template: string, data: Record<string, string>) =>
   template.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key: string) => data[key] || "");
@@ -169,6 +191,47 @@ export class ShellExecutorUploadsService {
       prefix,
       items,
       count: items.length,
+    };
+  }
+
+  async getJobUploadContent(params: {
+    tenantId: string;
+    jobId: string;
+    key: string;
+  }): Promise<ShellExecutorUploadContent> {
+    const bucket = env.shellExecutorUploadBucket || null;
+    if (!bucket) {
+      throw new ApiError("Shell executor upload bucket not configured", 500);
+    }
+
+    const basePrefix = resolveUploadPrefix(params.tenantId, params.jobId);
+    if (!basePrefix) {
+      throw new ApiError("Job upload prefix is not configured", 404);
+    }
+
+    const normalizedKey = normalizeObjectKey(params.key || "");
+    if (!normalizedKey || !normalizedKey.startsWith(basePrefix)) {
+      throw new ApiError("Invalid auto upload key", 404);
+    }
+
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: normalizedKey,
+      }),
+    );
+
+    if (!response.Body) {
+      throw new ApiError("Auto upload file is empty", 500);
+    }
+
+    const content = await response.Body.transformToString();
+    const contentType = inferTextContentTypeFromKey(normalizedKey);
+
+    return {
+      key: normalizedKey,
+      content,
+      contentType,
     };
   }
 }

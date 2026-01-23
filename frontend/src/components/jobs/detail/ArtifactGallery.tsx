@@ -219,6 +219,8 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
               fileName={fileName}
               className="h-full w-full object-cover"
               artifactId={item.artifact?.artifact_id}
+              jobId={item.jobId || item.artifact?.job_id}
+              autoUploadKey={item.autoUploadKey}
             />
             <div
               className="absolute inset-0 cursor-pointer z-10"

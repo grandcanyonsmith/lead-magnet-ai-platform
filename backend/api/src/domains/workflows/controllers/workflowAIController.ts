@@ -79,12 +79,32 @@ export class WorkflowAIController {
         body,
         {
           onDelta: (text) => {
-            res.write(JSON.stringify({ type: "delta", text }) + "\n");
+            try {
+              res.write(JSON.stringify({ type: "delta", text }) + "\n");
+            } catch (e) {
+              logger.error("[Workflow Ideation] Failed to serialize delta", {
+                error: String(e),
+              });
+            }
           },
         },
       );
 
-      res.write(JSON.stringify({ type: "done", result }) + "\n");
+      // Ensure result is serializable before sending
+      try {
+        const serialized = JSON.stringify({ type: "done", result });
+        res.write(serialized + "\n");
+      } catch (e) {
+        logger.error("[Workflow Ideation] Failed to serialize result", {
+          error: String(e),
+        });
+        res.write(
+          JSON.stringify({
+            type: "error",
+            message: "Failed to serialize ideation result",
+          }) + "\n",
+        );
+      }
     } catch (error: any) {
       res.write(
         JSON.stringify({
