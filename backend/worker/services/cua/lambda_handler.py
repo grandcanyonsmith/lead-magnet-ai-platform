@@ -41,10 +41,12 @@ class StreamingHandler:
         instructions = event.get('instructions', '')
         input_text = event.get('input_text', '')
         tools = event.get('tools', [])
+        if not isinstance(tools, list):
+            tools = [tools] if tools else []
         tool_choice = event.get('tool_choice', 'auto')
         params = event.get('params', {})
-        max_iterations = event.get('max_iterations', 50)
-        max_duration = event.get('max_duration_seconds', 300)
+        max_iterations = event.get('max_iterations', 100)
+        max_duration = event.get('max_duration_seconds', 900)
         aws_credentials = event.get("aws_credentials") if isinstance(event, dict) else None
 
         aws_env_overrides: Dict[str, str] = {}

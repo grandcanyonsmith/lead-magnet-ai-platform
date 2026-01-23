@@ -20,6 +20,7 @@ from services.cua.types import (
 )
 from services.cua.environment import Environment
 from services.shell_executor_service import ShellExecutorService
+from services.tools import ToolBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -215,6 +216,39 @@ class CUAgent:
         has_shell_tool = any(
             (t == "shell") or (isinstance(t, dict) and t.get("type") == "shell")
             for t in (tools or [])
+        )
+        has_code_interpreter_tool = any(
+            (t == "code_interpreter")
+            or (isinstance(t, dict) and t.get("type") == "code_interpreter")
+            for t in (tools or [])
+        )
+
+        if has_code_interpreter_tool and has_computer_use_tool:
+            openai_container_label = (
+                "OpenAI container: not used (code_interpreter incompatible with computer_use_preview)"
+            )
+        elif has_code_interpreter_tool:
+            openai_container_label = (
+                f"OpenAI container: code_interpreter ({ToolBuilder.DEFAULT_CODE_INTERPRETER_MEMORY_LIMIT} enforced)"
+            )
+        else:
+            openai_container_label = "OpenAI container: not used"
+
+        yield LogEvent(
+            type='log',
+            timestamp=time.time(),
+            level='info',
+            message=f"Runtime context: {openai_container_label}",
+        )
+        yield LogEvent(
+            type='log',
+            timestamp=time.time(),
+            level='info',
+            message=(
+                "CUA runtime: "
+                f"max_iterations={max_iterations}, "
+                f"max_duration_seconds={max_duration_seconds}"
+            ),
         )
 
         # #region agent log

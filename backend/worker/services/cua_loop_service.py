@@ -41,8 +41,8 @@ class CUALoopService:
         tools: List[Dict],
         tool_choice: str,
         params: Dict,
-        max_iterations: int = 50,
-        max_duration_seconds: int = 300,
+        max_iterations: int = 100,
+        max_duration_seconds: int = 900,
         tenant_id: Optional[str] = None,
         job_id: Optional[str] = None,
     ) -> Tuple[str, List[str], Dict]:

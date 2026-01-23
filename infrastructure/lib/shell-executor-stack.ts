@@ -115,7 +115,8 @@ export class ShellExecutorStack extends cdk.Stack {
           'shell-executor' // Exclude the old runner code if it exists there
         ]
       }),
-      memorySize: 1024,
+      // AWS Lambda max memory is 10,240 MB (10 GB).
+      memorySize: 10240,
       timeout: cdk.Duration.minutes(15), // Max allowed by Lambda
       vpc: this.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },

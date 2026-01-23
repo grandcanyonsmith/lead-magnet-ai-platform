@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Optional, Dict, Tuple, List, Any
 
 from core.logger import get_logger
-from services.tools import ToolValidator
+from services.tools import ToolBuilder, ToolValidator
 from services.openai_client import OpenAIClient
 from services.cua_loop_service import CUALoopService
 from services.tools.execution import ShellLoopService
@@ -146,6 +146,22 @@ class ReportGenerator:
         
         # Check if computer_use_preview is in tools (requires truncation="auto")
         has_computer_use = ToolValidator.has_computer_use(validated_tools)
+
+        requested_code_interpreter = any(
+            (isinstance(t, dict) and t.get("type") == "code_interpreter")
+            or t == "code_interpreter"
+            for t in (validated_tools or [])
+        )
+        if requested_code_interpreter and has_computer_use:
+            openai_container_label = (
+                "OpenAI container: not used (code_interpreter incompatible with computer_use_preview)"
+            )
+        elif requested_code_interpreter:
+            openai_container_label = (
+                f"OpenAI container: code_interpreter ({ToolBuilder.DEFAULT_CODE_INTERPRETER_MEMORY_LIMIT} enforced)"
+            )
+        else:
+            openai_container_label = "OpenAI container: not used"
         
         logger.info(f"[ReportGenerator] Generating report", extra={
             'job_id': job_id,
@@ -164,6 +180,14 @@ class ReportGenerator:
             'context_length': len(context),
             'previous_context_length': len(previous_context),
             'previous_image_urls_count': len(previous_image_urls) if previous_image_urls else 0
+        })
+
+        logger.info(f"[ReportGenerator] Runtime context: {openai_container_label}", extra={
+            'job_id': job_id,
+            'tenant_id': tenant_id,
+            'step_index': step_index,
+            'has_computer_use': has_computer_use,
+            'has_code_interpreter': requested_code_interpreter,
         })
         
         # Build input text
@@ -215,6 +239,10 @@ class ReportGenerator:
                 'model': model,
                 'has_computer_use': has_computer_use
             })
+            logger.info(
+                "[ReportGenerator] CUA runtime: max_iterations=100, max_duration_seconds=900",
+                extra={'job_id': job_id, 'tenant_id': tenant_id, 'step_index': step_index},
+            )
             
             try:
                 # Build API parameters for CUA loop
@@ -245,8 +273,8 @@ class ReportGenerator:
                     tools=validated_tools,
                     tool_choice=normalized_tool_choice,
                     params=params,
-                    max_iterations=50,
-                    max_duration_seconds=600,
+                    max_iterations=100,
+                    max_duration_seconds=900,
                     tenant_id=tenant_id,
                     job_id=job_id
                 )
@@ -336,7 +364,23 @@ class ReportGenerator:
                     or self._read_positive_int_env("SHELL_EXECUTOR_DEFAULT_MAX_OUTPUT_LENGTH", 4096)
                 )
 
-                logger.info("[ReportGenerator] Shell loop settings", extra={
+                timeout_label = (
+                    f"{default_command_timeout_ms}ms"
+                    if default_command_timeout_ms
+                    else "executor default"
+                )
+                max_output_label = (
+                    str(default_command_max_output_length)
+                    if default_command_max_output_length
+                    else "4096"
+                )
+                logger.info(
+                    "[ReportGenerator] Shell runtime: "
+                    f"max_iterations={max_iterations}, "
+                    f"max_duration_seconds={max_duration_seconds}, "
+                    f"command_timeout_ms={timeout_label}, "
+                    f"max_output_length={max_output_label}",
+                    extra={
                     "job_id": job_id,
                     "tenant_id": tenant_id,
                     "step_index": step_index,
@@ -345,7 +389,8 @@ class ReportGenerator:
                     "default_command_timeout_ms": default_command_timeout_ms,
                     "default_command_max_output_length": default_command_max_output_length,
                     "shell_settings_provided": bool(shell_settings),
-                })
+                    },
+                )
 
                 step_order = (step_index + 1) if isinstance(step_index, int) else None
                 live_step_enabled = (
