@@ -1,9 +1,16 @@
 "use client";
 
-import { Fragment, useState, useEffect, useRef, useCallback, useMemo } from "react";
+import {
+  Fragment,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  type ComponentType,
+} from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import type { IconType } from "react-icons";
 import {
   FiAlertCircle,
   FiCheck,
@@ -47,6 +54,8 @@ import { useSettings } from "@/hooks/api/useSettings";
 import { JsonViewer } from "@/components/ui/JsonViewer";
 import { LogViewer } from "./components/LogViewer";
 import type { AccumulatedContext, SidebarTab, StepResult } from "./types";
+
+type IconType = ComponentType<{ className?: string }>;
 
 export default function PlaygroundPage() {
   const router = useRouter();

@@ -24,7 +24,7 @@ interface StepTesterProps {
 }
 
 export default function StepTester({ step, index }: StepTesterProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const [testInput, setTestInput] = useState("{}");
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);

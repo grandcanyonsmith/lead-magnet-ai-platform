@@ -160,6 +160,32 @@ export interface ApiClient {
     step: any;
   }>;
 
+  streamGenerateStepWithAI(
+    workflowId: string,
+    request: {
+      userPrompt: string;
+      action?: "update" | "add";
+      currentStep?: any;
+      currentStepIndex?: number;
+    },
+    callbacks: {
+      onDelta: (text: string) => void;
+      onComplete: (result?: {
+        action: "update" | "add";
+        step_index?: number;
+        step: any;
+      }) => void;
+      onError: (error: string) => void;
+    },
+    signal?: AbortSignal,
+  ): Promise<{
+    result?: {
+      action: "update" | "add";
+      step_index?: number;
+      step: any;
+    };
+  }>;
+
   editWorkflowWithAI(
     workflowId: string,
     request: {

@@ -8,6 +8,7 @@ import type {
   ReasoningEffort,
   ServiceTier,
 } from "@/types/workflow";
+import { useSettings } from "@/hooks/api/useSettings";
 import { StepMetaBadges } from "@/components/jobs/StepMetaBadges";
 import {
   ContextPanel,
@@ -37,6 +38,10 @@ import {
   SERVICE_TIER_SPEED,
   type Tool,
 } from "@/utils/stepMeta";
+import {
+  resolveImageSettingsDefaults,
+  type ResolvedImageSettings,
+} from "@/utils/imageSettings";
 
 type StepMetaUpdate = {
   model?: AIModel | null;
@@ -46,13 +51,6 @@ type StepMetaUpdate = {
 };
 
 const EMPTY_TOOL_LIST: Tool[] = [];
-
-const DEFAULT_IMAGE_SETTINGS = {
-  model: "gpt-image-1.5",
-  size: "auto",
-  quality: "auto",
-  background: "auto",
-} as const;
 
 const SHELL_COMPATIBLE_MODELS: AIModel[] = [
   "gpt-5.2",
@@ -77,18 +75,25 @@ const getNumberValue = (value: unknown): number | null => {
   return null;
 };
 
-const hasImageOverrides = (config: Record<string, unknown>): boolean => {
-  const model = getStringValue(config.model);
-  if (model && model !== DEFAULT_IMAGE_SETTINGS.model) return true;
-  const size = getStringValue(config.size);
-  if (size && size !== DEFAULT_IMAGE_SETTINGS.size) return true;
-  const quality = getStringValue(config.quality);
-  if (quality && quality !== DEFAULT_IMAGE_SETTINGS.quality) return true;
-  const background = getStringValue(config.background);
-  if (background && background !== DEFAULT_IMAGE_SETTINGS.background) return true;
-  if (getStringValue(config.format)) return true;
-  if (config.compression !== undefined && config.compression !== null) return true;
-  if (getStringValue(config.input_fidelity)) return true;
+const isImageSettingsDifferent = (
+  current: ResolvedImageSettings,
+  defaults: ResolvedImageSettings,
+): boolean => {
+  if (current.model !== defaults.model) return true;
+  if (current.size !== defaults.size) return true;
+  if (current.quality !== defaults.quality) return true;
+  if (current.background !== defaults.background) return true;
+  const format = current.format || null;
+  const defaultFormat = defaults.format || null;
+  if (format !== defaultFormat) return true;
+  const compression =
+    typeof current.compression === "number" ? current.compression : null;
+  const defaultCompression =
+    typeof defaults.compression === "number" ? defaults.compression : null;
+  if (compression !== defaultCompression) return true;
+  const fidelity = current.input_fidelity || null;
+  const defaultFidelity = defaults.input_fidelity || null;
+  if (fidelity !== defaultFidelity) return true;
   return false;
 };
 
@@ -135,6 +140,11 @@ export function StepMetaRow({
   jobStatus,
 }: StepMetaRowProps) {
   const isInProgress = status === "in_progress";
+  const { settings } = useSettings();
+  const defaultImageSettings = useMemo(
+    () => resolveImageSettingsDefaults(settings?.default_image_settings),
+    [settings?.default_image_settings],
+  );
   const [openPanel, setOpenPanel] = useState<MetaPanel | null>(null);
   const [editPanel, setEditPanel] = useState<EditablePanel | null>(null);
   const [draftModel, setDraftModel] = useState<AIModel>(DEFAULT_AI_MODEL);
@@ -142,12 +152,7 @@ export function StepMetaRow({
   const [draftReasoningEffort, setDraftReasoningEffort] =
     useState<ReasoningEffortOption>("auto");
   const [draftImageSettings, setDraftImageSettings] =
-    useState<ImageGenerationSettings>({
-      model: DEFAULT_IMAGE_SETTINGS.model,
-      size: DEFAULT_IMAGE_SETTINGS.size,
-      quality: DEFAULT_IMAGE_SETTINGS.quality,
-      background: DEFAULT_IMAGE_SETTINGS.background,
-    });
+    useState<ImageGenerationSettings>(() => ({ ...defaultImageSettings }));
   const showContext = openPanel === "context";
   const showImageSettings = openPanel === "image";
   const showModelDetails = openPanel === "model";
@@ -364,11 +369,11 @@ export function StepMetaRow({
     }
     if (editPanel === "image") {
       update.image_generation = {
-        model: draftImageSettings.model || DEFAULT_IMAGE_SETTINGS.model,
-        size: draftImageSettings.size || DEFAULT_IMAGE_SETTINGS.size,
-        quality: draftImageSettings.quality || DEFAULT_IMAGE_SETTINGS.quality,
+        model: draftImageSettings.model || defaultImageSettings.model,
+        size: draftImageSettings.size || defaultImageSettings.size,
+        quality: draftImageSettings.quality || defaultImageSettings.quality,
         background:
-          draftImageSettings.background || DEFAULT_IMAGE_SETTINGS.background,
+          draftImageSettings.background || defaultImageSettings.background,
         format: draftImageSettings.format || undefined,
         compression:
           typeof draftImageSettings.compression === "number"
@@ -427,62 +432,89 @@ export function StepMetaRow({
       </button>
     );
   };
-  const imageSettings = {
-    model:
-      (getStringValue(imageToolConfig?.model) as ImageGenerationSettings["model"]) ||
-      DEFAULT_IMAGE_SETTINGS.model,
-    size:
-      (getStringValue(imageToolConfig?.size) as ImageGenerationSettings["size"]) ||
-      DEFAULT_IMAGE_SETTINGS.size,
-    quality:
+  const resolveImageSettings = (
+    config: Record<string, unknown> | null,
+  ): ResolvedImageSettings => {
+    const model =
+      (getStringValue(config?.model) as ImageGenerationSettings["model"]) ||
+      defaultImageSettings.model;
+    const size =
+      (getStringValue(config?.size) as ImageGenerationSettings["size"]) ||
+      defaultImageSettings.size;
+    const quality =
       (getStringValue(
-        imageToolConfig?.quality,
-      ) as ImageGenerationSettings["quality"]) || DEFAULT_IMAGE_SETTINGS.quality,
-    background:
+        config?.quality,
+      ) as ImageGenerationSettings["quality"]) || defaultImageSettings.quality;
+    const background =
       (getStringValue(
-        imageToolConfig?.background,
+        config?.background,
       ) as ImageGenerationSettings["background"]) ||
-      DEFAULT_IMAGE_SETTINGS.background,
-    format:
+      defaultImageSettings.background;
+    const format =
       (getStringValue(
-        imageToolConfig?.format,
-      ) as ImageGenerationSettings["format"]) || undefined,
-    compression: getNumberValue(imageToolConfig?.compression) ?? undefined,
-    input_fidelity:
+        config?.format,
+      ) as ImageGenerationSettings["format"]) || defaultImageSettings.format;
+    const supportsCompression = format === "jpeg" || format === "webp";
+    const compressionValue = getNumberValue(config?.compression);
+    const compression = supportsCompression
+      ? compressionValue ?? defaultImageSettings.compression
+      : undefined;
+    const inputFidelity =
       (getStringValue(
-        imageToolConfig?.input_fidelity,
-      ) as ImageGenerationSettings["input_fidelity"]) || undefined,
+        config?.input_fidelity,
+      ) as ImageGenerationSettings["input_fidelity"]) ||
+      defaultImageSettings.input_fidelity;
+    return {
+      model,
+      size,
+      quality,
+      format,
+      compression,
+      background,
+      input_fidelity: inputFidelity,
+    };
   };
-  const imageHasOverrides = imageToolConfig
-    ? hasImageOverrides(imageToolConfig)
+  const imageSettings = resolveImageSettings(imageToolConfig);
+  const imageHasOverrides = hasImageGenerationTool
+    ? isImageSettingsDifferent(imageSettings, defaultImageSettings)
     : false;
   const imageSettingsSource = imageHasOverrides ? "Custom" : "Defaults";
+  const formatDefault = defaultImageSettings.format || null;
+  const formatCurrent = imageSettings.format || null;
+  const compressionDefault =
+    typeof defaultImageSettings.compression === "number"
+      ? defaultImageSettings.compression
+      : null;
+  const compressionCurrent =
+    typeof imageSettings.compression === "number" ? imageSettings.compression : null;
+  const fidelityDefault = defaultImageSettings.input_fidelity || null;
+  const fidelityCurrent = imageSettings.input_fidelity || null;
   const imageSettingsRows: ImageSettingRow[] = [
     {
       label: "Model",
       value: imageSettings.model,
-      highlighted: imageSettings.model !== DEFAULT_IMAGE_SETTINGS.model,
+      highlighted: imageSettings.model !== defaultImageSettings.model,
     },
     {
       label: "Size",
       value: imageSettings.size,
-      highlighted: imageSettings.size !== DEFAULT_IMAGE_SETTINGS.size,
+      highlighted: imageSettings.size !== defaultImageSettings.size,
     },
     {
       label: "Quality",
       value: imageSettings.quality,
-      highlighted: imageSettings.quality !== DEFAULT_IMAGE_SETTINGS.quality,
+      highlighted: imageSettings.quality !== defaultImageSettings.quality,
     },
     {
       label: "Background",
       value: imageSettings.background,
-      highlighted: imageSettings.background !== DEFAULT_IMAGE_SETTINGS.background,
+      highlighted: imageSettings.background !== defaultImageSettings.background,
     },
     {
       label: "Format",
       value: imageSettings.format || "Not set",
-      muted: !imageSettings.format,
-      highlighted: Boolean(imageSettings.format),
+      muted: !formatCurrent,
+      highlighted: formatCurrent !== formatDefault,
     },
     {
       label: "Compression",
@@ -491,26 +523,26 @@ export function StepMetaRow({
           ? String(imageSettings.compression)
           : "Not set",
       muted: typeof imageSettings.compression !== "number",
-      highlighted: typeof imageSettings.compression === "number",
+      highlighted: compressionCurrent !== compressionDefault,
     },
     {
       label: "Input fidelity",
       value: imageSettings.input_fidelity || "Not set",
-      muted: !imageSettings.input_fidelity,
-      highlighted: Boolean(imageSettings.input_fidelity),
+      muted: !fidelityCurrent,
+      highlighted: fidelityCurrent !== fidelityDefault,
     },
   ];
   const normalizeImageSettings = (settings: ImageGenerationSettings) => ({
-    model: settings.model || DEFAULT_IMAGE_SETTINGS.model,
-    size: settings.size || DEFAULT_IMAGE_SETTINGS.size,
-    quality: settings.quality || DEFAULT_IMAGE_SETTINGS.quality,
-    background: settings.background || DEFAULT_IMAGE_SETTINGS.background,
-    format: settings.format || null,
+    model: settings.model || defaultImageSettings.model,
+    size: settings.size || defaultImageSettings.size,
+    quality: settings.quality || defaultImageSettings.quality,
+    background: settings.background || defaultImageSettings.background,
+    format: settings.format ?? formatDefault,
     compression:
       typeof settings.compression === "number"
         ? settings.compression
-        : null,
-    input_fidelity: settings.input_fidelity || null,
+        : compressionDefault,
+    input_fidelity: settings.input_fidelity ?? fidelityDefault,
   });
   const isImageSettingsDirty =
     JSON.stringify(normalizeImageSettings(draftImageSettings)) !==

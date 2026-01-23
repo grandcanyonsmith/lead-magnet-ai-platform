@@ -446,6 +446,117 @@ export class WorkflowsClient extends BaseApiClient {
     return this.post(`/admin/workflows/${workflowId}/ai-step`, request);
   }
 
+  async streamGenerateStepWithAI(
+    workflowId: string,
+    request: {
+      userPrompt: string;
+      action?: "update" | "add";
+      currentStep?: any;
+      currentStepIndex?: number;
+    },
+    callbacks: {
+      onDelta: (text: string) => void;
+      onComplete: (result?: {
+        action: "update" | "add";
+        step_index?: number;
+        step: any;
+      }) => void;
+      onError: (error: string) => void;
+    },
+    signal?: AbortSignal,
+  ): Promise<{
+    result?: {
+      action: "update" | "add";
+      step_index?: number;
+      step: any;
+    };
+  }> {
+    const token = this.tokenProvider.getToken();
+    const url = `${this.client.defaults.baseURL}/admin/workflows/${workflowId}/ai-step/stream`;
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(request),
+        signal,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        callbacks.onError(`Failed to start streaming: ${response.status} ${errorText}`);
+        return {};
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        callbacks.onError("Response body is not readable");
+        return {};
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let finalResult: {
+        action: "update" | "add";
+        step_index?: number;
+        step: any;
+      } | undefined;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const event = JSON.parse(line);
+            if (event.type === "delta" && typeof event.text === "string") {
+              callbacks.onDelta(event.text);
+            } else if (event.type === "done") {
+              finalResult = event.result;
+              callbacks.onComplete(event.result);
+            } else if (event.type === "error") {
+              callbacks.onError(event.message || "Streaming error");
+              return {};
+            }
+          } catch (e) {
+            console.error("Failed to parse NDJSON line:", line);
+          }
+        }
+      }
+
+      if (buffer.trim()) {
+        try {
+          const event = JSON.parse(buffer);
+          if (event?.type === "delta" && typeof event.text === "string") {
+            callbacks.onDelta(event.text);
+          } else if (event?.type === "done") {
+            finalResult = event.result;
+            callbacks.onComplete(event.result);
+          }
+        } catch {
+          // ignore trailing partial
+        }
+      }
+
+      if (!finalResult) {
+        callbacks.onComplete();
+      }
+
+      return { result: finalResult };
+    } catch (e: any) {
+      callbacks.onError(e.message || "Streaming request failed");
+      return {};
+    }
+  }
+
   async editWorkflowWithAI(
     workflowId: string,
     request: {

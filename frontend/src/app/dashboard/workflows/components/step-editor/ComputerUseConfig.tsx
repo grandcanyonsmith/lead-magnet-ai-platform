@@ -2,15 +2,12 @@
 
 import React from "react";
 import { Select } from "@/components/ui/Select";
+import { ComputerUseConfigState } from "./types";
 
 interface ComputerUseConfigProps {
-  config: {
-    display_width: number;
-    display_height: number;
-    environment: "browser" | "mac" | "windows" | "ubuntu";
-  };
+  config: ComputerUseConfigState;
   onChange: (
-    field: "display_width" | "display_height" | "environment",
+    field: keyof ComputerUseConfigState,
     value: number | string
   ) => void;
   index: number;
@@ -127,4 +124,3 @@ export default function ComputerUseConfig({
     </div>
   );
 }
-

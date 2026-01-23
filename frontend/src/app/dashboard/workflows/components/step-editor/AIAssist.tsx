@@ -35,13 +35,22 @@ export default function AIAssist({
     generateStep,
     acceptProposal,
     rejectProposal,
+    streamedText,
   } = useWorkflowStepAI;
 
-  if (!workflowId) return null;
+  const isWorkflowReady = Boolean(workflowId);
 
   const handleAIGenerate = async () => {
-    if (!generateStep || !aiPrompt.trim()) {
+    if (!aiPrompt.trim()) {
       toast.error("Please enter a prompt");
+      return;
+    }
+    if (!isWorkflowReady) {
+      toast.error("Save this workflow to enable AI Assist");
+      return;
+    }
+    if (!generateStep) {
+      toast.error("AI Assist is not available right now");
       return;
     }
 
@@ -71,6 +80,10 @@ export default function AIAssist({
     toast("AI proposal rejected");
   };
 
+  const isGenerateDisabled = !aiPrompt.trim() || isGenerating || !isWorkflowReady;
+  const showStream = !proposal && (isGenerating || streamedText);
+  const streamOutput = streamedText || "Generating response...";
+
   const assistContent = (
     <div className="space-y-3">
       <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -79,6 +92,12 @@ export default function AIAssist({
       </p>
 
       <div className="space-y-3">
+        {!isWorkflowReady && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-900/20 dark:text-amber-200">
+            Save this workflow to enable AI Assist. You can draft a prompt now; the
+            generate button will unlock after saving.
+          </div>
+        )}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             What would you like to change?
@@ -87,7 +106,7 @@ export default function AIAssist({
             value={aiPrompt}
             onChange={(e) => setAiPrompt(e.target.value)}
             placeholder="e.g., 'Change the model to GPT-4o and add web search tool' or 'Update instructions to focus on competitive analysis'"
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-[13px] sm:text-sm"
             rows={3}
             disabled={isGenerating}
           />
@@ -96,7 +115,7 @@ export default function AIAssist({
         <button
           type="button"
           onClick={handleAIGenerate}
-          disabled={!aiPrompt.trim() || isGenerating}
+          disabled={isGenerateDisabled}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors"
         >
           {isGenerating ? (
@@ -111,6 +130,17 @@ export default function AIAssist({
             </>
           )}
         </button>
+
+        {showStream && (
+          <div className="rounded-lg border border-purple-200/70 bg-purple-50/60 px-3 py-2 text-xs text-purple-900 dark:border-purple-800/60 dark:bg-purple-900/20 dark:text-purple-100">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-purple-700 dark:text-purple-300">
+              Live response
+            </div>
+            <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-purple-900 dark:text-purple-100 sm:max-h-48 sm:text-xs">
+              {streamOutput}
+            </pre>
+          </div>
+        )}
 
         {aiError && (
           <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded border border-red-200 dark:border-red-900">

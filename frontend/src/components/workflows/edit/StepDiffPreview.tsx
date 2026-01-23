@@ -181,7 +181,7 @@ export default function StepDiffPreview({
   const diffs = getFieldDiffs();
 
   return (
-    <div className="border-2 border-primary-200 rounded-lg bg-primary-50 p-4">
+    <div className="border-2 border-primary-200 rounded-lg bg-primary-50 p-3 sm:p-4">
       <div className="flex items-start justify-between mb-4">
         <div>
           <h4 className="text-sm font-semibold text-primary-900 mb-1">
@@ -213,21 +213,21 @@ export default function StepDiffPreview({
               </div>
 
               {action === "update" && diff.from !== null && (
-                <div className="flex items-start gap-2 text-sm mb-1">
-                  <span className="text-red-600 font-medium min-w-[60px]">
+                <div className="flex flex-col gap-1 text-sm mb-1 sm:flex-row sm:items-start sm:gap-2">
+                  <span className="text-red-600 font-medium sm:min-w-[60px]">
                     Before:
                   </span>
-                  <span className="text-red-700 bg-red-50 px-2 py-1 rounded flex-1 break-words">
+                  <span className="text-red-700 bg-red-50 px-2 py-1 rounded break-words sm:flex-1">
                     {renderValue(diff.from, diff.field)}
                   </span>
                 </div>
               )}
 
-              <div className="flex items-start gap-2 text-sm">
-                <span className="text-green-600 font-medium min-w-[60px]">
+              <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-start sm:gap-2">
+                <span className="text-green-600 font-medium sm:min-w-[60px]">
                   {action === "add" ? "Value:" : "After:"}
                 </span>
-                <span className="text-green-700 bg-green-50 px-2 py-1 rounded flex-1 break-words">
+                <span className="text-green-700 bg-green-50 px-2 py-1 rounded break-words sm:flex-1">
                   {renderValue(diff.to, diff.field)}
                 </span>
               </div>
@@ -236,7 +236,7 @@ export default function StepDiffPreview({
         </div>
       )}
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
         <button
           onClick={onAccept}
           disabled={isLoading}

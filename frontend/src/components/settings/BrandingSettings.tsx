@@ -20,7 +20,7 @@ import {
 
 interface BrandingSettingsProps {
   settings: Settings;
-  onChange: (field: keyof Settings, value: string) => void;
+  onChange: (field: keyof Settings, value: Settings[keyof Settings]) => void;
   errors?: Record<string, string>;
 }
 

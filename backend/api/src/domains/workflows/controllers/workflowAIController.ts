@@ -22,22 +22,60 @@ export class WorkflowAIController {
    */
   async getModels(tenantId: string): Promise<RouteResponse> {
     void tenantId;
-    const { MODEL_DESCRIPTIONS_DETAILED, AVAILABLE_MODELS } = await import('@domains/workflows/services/workflow/modelDescriptions');
-    
-    // Map models to a more frontend-friendly format
-    const models = AVAILABLE_MODELS.map(id => ({
-      id,
-      name: id === 'gpt-5.2' ? 'GPT-5.2' : id, // Basic formatting, could be enhanced
-      description: MODEL_DESCRIPTIONS_DETAILED[id]?.bestFor || '',
-      ...MODEL_DESCRIPTIONS_DETAILED[id]
-    }));
+    const formatModelName = (modelId: string) =>
+      modelId
+        .replace("gpt-", "GPT-")
+        .replace("turbo", "Turbo")
+        .replace("computer-use-preview", "Computer Use");
 
-    return {
-      statusCode: 200,
-      body: {
-        models
-      }
-    };
+    try {
+      const openai = await getOpenAIClient();
+      const response = await openai.models.list();
+      const data = Array.isArray((response as any)?.data)
+        ? (response as any).data
+        : [];
+
+      const { MODEL_DESCRIPTIONS_DETAILED } = await import(
+        "@domains/workflows/services/workflow/modelDescriptions"
+      );
+
+      const models = data
+        .map((model: any) => {
+          const id = typeof model?.id === "string" ? model.id : "";
+          if (!id) return null;
+          const description = MODEL_DESCRIPTIONS_DETAILED[id]?.bestFor || "";
+          return {
+            id,
+            name: formatModelName(id),
+            description,
+            ...MODEL_DESCRIPTIONS_DETAILED[id],
+          };
+        })
+        .filter(Boolean)
+        .sort((a: any, b: any) => a.name.localeCompare(b.name));
+
+      return {
+        statusCode: 200,
+        body: { models },
+      };
+    } catch (error: any) {
+      logger.error("[WorkflowAIController] Failed to fetch OpenAI models", {
+        error: error?.message || String(error),
+      });
+      const { MODEL_DESCRIPTIONS_DETAILED, AVAILABLE_MODELS } = await import(
+        "@domains/workflows/services/workflow/modelDescriptions"
+      );
+      const models = AVAILABLE_MODELS.map((id) => ({
+        id,
+        name: formatModelName(id),
+        description: MODEL_DESCRIPTIONS_DETAILED[id]?.bestFor || "",
+        ...MODEL_DESCRIPTIONS_DETAILED[id],
+      }));
+      return {
+        statusCode: 200,
+        body: { models },
+      };
+    }
   }
 
   /**
@@ -774,6 +812,127 @@ export class WorkflowAIController {
       });
       throw new ApiError(`Failed to generate step: ${error.message}`, 500);
     }
+  }
+
+  /**
+   * Generate a workflow step using AI with streaming output.
+   */
+  async aiGenerateStepStream(
+    tenantId: string,
+    workflowId: string,
+    body: any,
+    context?: RequestContext,
+  ): Promise<RouteResponse> {
+    const { db } = await import('@utils/db');
+    const { env } = await import('@utils/env');
+    const WORKFLOWS_TABLE = env.workflowsTable;
+    const USER_SETTINGS_TABLE = env.userSettingsTable;
+
+    if (!body.userPrompt || typeof body.userPrompt !== 'string') {
+      throw new ApiError('userPrompt is required and must be a string', 400);
+    }
+
+    const workflow = await db.get(WORKFLOWS_TABLE, { workflow_id: workflowId });
+
+    if (!workflow || workflow.deleted_at) {
+      throw new ApiError('This lead magnet doesn\'t exist or has been removed', 404);
+    }
+
+    if (workflow.tenant_id !== tenantId) {
+      throw new ApiError('You don\'t have permission to access this lead magnet', 403);
+    }
+
+    const res = (context as any)?.res;
+    if (!res) {
+      return await this.aiGenerateStep(tenantId, workflowId, body);
+    }
+
+    logger.info('[AI Step Generation] Starting streamed generation', {
+      workflowId,
+      workflowName: workflow.workflow_name,
+      userPrompt: body.userPrompt.substring(0, 100),
+      action: body.action,
+      currentStepIndex: body.currentStepIndex,
+    });
+
+    const settings = USER_SETTINGS_TABLE
+      ? await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId })
+      : null;
+    const defaultToolChoice =
+      settings?.default_tool_choice === 'auto' ||
+      settings?.default_tool_choice === 'required' ||
+      settings?.default_tool_choice === 'none'
+        ? settings.default_tool_choice
+        : undefined;
+    const defaultServiceTier =
+      settings?.default_service_tier &&
+      ["auto", "default", "flex", "scale", "priority"].includes(
+        settings.default_service_tier,
+      )
+        ? settings.default_service_tier
+        : undefined;
+    const defaultTextVerbosity =
+      settings?.default_text_verbosity &&
+      ["low", "medium", "high"].includes(settings.default_text_verbosity)
+        ? settings.default_text_verbosity
+        : undefined;
+    const promptOverrides = getPromptOverridesFromSettings(settings || undefined);
+
+    const aiRequest: AIStepGenerationRequest = {
+      userPrompt: body.userPrompt,
+      action: body.action,
+      defaultToolChoice,
+      defaultServiceTier,
+      defaultTextVerbosity,
+      tenantId,
+      promptOverrides,
+      workflowContext: {
+        workflow_id: workflowId,
+        workflow_name: workflow.workflow_name || 'Untitled Workflow',
+        workflow_description: workflow.workflow_description || '',
+        current_steps: (workflow.steps || []).map((step: any) => ({
+          step_name: step.step_name,
+          step_description: step.step_description,
+          model: step.model,
+          tools: step.tools,
+          depends_on: step.depends_on,
+          step_order: step.step_order,
+        })),
+      },
+      currentStep: body.currentStep,
+      currentStepIndex: body.currentStepIndex,
+    };
+
+    res.writeHead(200, {
+      'Content-Type': 'application/x-ndjson',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    });
+    if (typeof res.flushHeaders === 'function') {
+      res.flushHeaders();
+    }
+
+    try {
+      const openai = await getOpenAIClient();
+      const aiService = new WorkflowStepAIService(openai);
+
+      const result = await aiService.streamGenerateStep(aiRequest, {
+        onDelta: (text) => {
+          res.write(JSON.stringify({ type: 'delta', text }) + '\n');
+        },
+      });
+
+      res.write(JSON.stringify({ type: 'done', result }) + '\n');
+    } catch (error: any) {
+      const message = error?.message || 'Failed to stream step generation';
+      res.write(JSON.stringify({ type: 'error', message }) + '\n');
+    } finally {
+      if (!res.writableEnded) {
+        res.end();
+      }
+    }
+
+    return { statusCode: 200, body: { handled: true } };
   }
 
   /**

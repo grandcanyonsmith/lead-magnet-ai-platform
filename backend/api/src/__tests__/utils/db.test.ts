@@ -25,7 +25,8 @@ process.env.AWS_REGION = "us-east-1";
 
 import { db, normalizeQueryResult, docClient } from "../../utils/db";
 
-const ddbMock = mockClient(DynamoDBDocumentClient);
+// Cast to any to avoid aws-sdk-client-mock type mismatches across SDK versions.
+const ddbMock = mockClient(DynamoDBDocumentClient as any) as any;
 
 describe("DynamoDB Service", () => {
   beforeAll(() => {

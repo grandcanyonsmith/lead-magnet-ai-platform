@@ -212,6 +212,15 @@ export interface UserSettings {
   default_tool_choice?: "auto" | "required" | "none";
   default_service_tier?: "auto" | "default" | "flex" | "scale" | "priority";
   default_text_verbosity?: "low" | "medium" | "high";
+  default_image_settings?: {
+    model?: string;
+    size?: "1024x1024" | "1024x1536" | "1536x1024" | "auto";
+    quality?: "low" | "medium" | "high" | "auto";
+    format?: "png" | "jpeg" | "webp";
+    compression?: number;
+    background?: "transparent" | "opaque" | "auto";
+    input_fidelity?: "low" | "high";
+  };
   default_workflow_improvement_user_id?: string;
   default_workflow_improvement_service_tier?:
     | "auto"

@@ -23,16 +23,18 @@ export function CollapsibleSection({
           <DisclosureButton
             type="button"
             onClick={onToggle}
-            className="flex w-full items-center justify-between bg-muted/40 px-4 py-3 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+            className="flex w-full items-center justify-between gap-3 bg-muted/40 px-3 py-2 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 sm:px-4 sm:py-3"
           >
-            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+            <h3 className="text-sm font-semibold text-foreground text-left flex-1 min-w-0">
+              {title}
+            </h3>
             {open ? (
               <FiChevronUp className="w-5 h-5 text-muted-foreground" />
             ) : (
               <FiChevronDown className="w-5 h-5 text-muted-foreground" />
             )}
           </DisclosureButton>
-          <DisclosurePanel className="p-4">{children}</DisclosurePanel>
+          <DisclosurePanel className="p-3 sm:p-4">{children}</DisclosurePanel>
         </div>
       )}
     </Disclosure>

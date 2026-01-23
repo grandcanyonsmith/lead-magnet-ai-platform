@@ -418,6 +418,17 @@ export const updateSettingsSchema = z.object({
     .enum(["auto", "default", "flex", "scale", "priority"])
     .optional(),
   default_text_verbosity: z.enum(["low", "medium", "high"]).optional(),
+  default_image_settings: z
+    .object({
+      model: z.string().optional(),
+      size: z.enum(["1024x1024", "1024x1536", "1536x1024", "auto"]).optional(),
+      quality: z.enum(["low", "medium", "high", "auto"]).optional(),
+      format: z.enum(["png", "jpeg", "webp"]).optional(),
+      compression: z.number().min(0).max(100).optional(),
+      background: z.enum(["transparent", "opaque", "auto"]).optional(),
+      input_fidelity: z.enum(["low", "high"]).optional(),
+    })
+    .optional(),
   default_workflow_improvement_user_id: z.string().optional(),
   default_workflow_improvement_service_tier: z
     .enum(["auto", "default", "flex", "scale", "priority"])

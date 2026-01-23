@@ -297,6 +297,20 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
     return this.workflows.generateStepWithAI(workflowId, request);
   }
 
+  async streamGenerateStepWithAI(
+    workflowId: string,
+    request: Parameters<WorkflowsClient["streamGenerateStepWithAI"]>[1],
+    callbacks: Parameters<WorkflowsClient["streamGenerateStepWithAI"]>[2],
+    signal?: Parameters<WorkflowsClient["streamGenerateStepWithAI"]>[3],
+  ) {
+    return this.workflows.streamGenerateStepWithAI(
+      workflowId,
+      request,
+      callbacks,
+      signal,
+    );
+  }
+
   async editWorkflowWithAI(
     workflowId: string,
     request: Parameters<WorkflowsClient["editWorkflowWithAI"]>[1],
