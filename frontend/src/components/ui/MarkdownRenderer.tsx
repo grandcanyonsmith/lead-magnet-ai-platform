@@ -2,6 +2,7 @@
 
 import type { ComponentType, ReactNode } from "react";
 import dynamic from "next/dynamic";
+import type { Components } from "react-markdown";
 import { useRemarkGfm } from "@/hooks/useRemarkGfm";
 
 const ReactMarkdown = dynamic(() => import("react-markdown"), {
@@ -156,10 +157,10 @@ export function MarkdownRenderer({
   components,
 }: MarkdownRendererProps) {
   const remarkGfm = useRemarkGfm();
-  const mergedComponents = {
+  const mergedComponents: Components = {
     "color-swatch": ColorSwatch,
     ...(components ?? {}),
-  };
+  } as Components;
 
   if (!remarkGfm) {
     return (

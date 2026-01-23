@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   FiSave,
   FiZap,
@@ -950,7 +951,7 @@ export default function NewWorkflowPage() {
                 Chat to Ideate
               </h1>
               <p className="text-gray-600 dark:text-muted-foreground text-base leading-relaxed">
-                Describe your lead magnet idea. We'll suggest options with quick visual previews, 
+                Describe your lead magnet idea. We&apos;ll suggest options with quick visual previews, 
                 help you refine the concept, and then build it for you.
               </p>
             </div>
@@ -1239,13 +1240,14 @@ export default function NewWorkflowPage() {
                                   <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400 dark:text-gray-500">
                                     <FiImage className="w-8 h-8 opacity-50" />
                                   </div>
-                                  <img
+                                  <Image
                                     src={previewUrl}
                                     alt={deliverable.title}
-                                    className="absolute inset-0 h-full w-full object-cover"
-                                    loading="lazy"
+                                    fill
+                                    className="object-cover"
+                                    unoptimized
                                     onError={(event) => {
-                                      const target = event.currentTarget;
+                                      const target = event.currentTarget as HTMLImageElement;
                                       if (target.dataset.fallback === "true") {
                                         target.style.display = "none";
                                         return;
@@ -1297,16 +1299,17 @@ export default function NewWorkflowPage() {
                                                   className="relative h-12 w-12 rounded-md overflow-hidden border border-gray-200 dark:border-gray-700"
                                                   title={image.title || undefined}
                                                 >
-                                                  <img
+                                                  <Image
                                                     src={image.url}
                                                     alt={
                                                       image.title ||
                                                       `${deliverable.title} example ${imageIndex + 1}`
                                                     }
-                                                    className="h-full w-full object-cover"
-                                                    loading="lazy"
+                                                    fill
+                                                    className="object-cover"
+                                                    unoptimized
                                                     onError={(event) => {
-                                                      event.currentTarget.style.display =
+                                                      (event.currentTarget as HTMLImageElement).style.display =
                                                         "none";
                                                     }}
                                                   />
@@ -1444,13 +1447,14 @@ export default function NewWorkflowPage() {
                             <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400 dark:text-gray-500">
                               <FiImage className="w-6 h-6 opacity-50" />
                             </div>
-                            <img
+                            <Image
                               src={url}
                               alt={`Deliverable mockup ${index + 1}`}
-                              className="absolute inset-0 h-full w-full object-cover"
-                              loading="lazy"
+                              fill
+                              className="object-cover"
+                              unoptimized
                               onError={(event) => {
-                                event.currentTarget.style.display = "none";
+                                (event.currentTarget as HTMLImageElement).style.display = "none";
                               }}
                             />
                           </div>
