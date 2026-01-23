@@ -16,6 +16,7 @@ export interface WorkflowIdeationRequest {
   model?: string;
   mode?: "ideation" | "followup";
   selected_deliverable?: WorkflowIdeationSelectedDeliverable;
+  image_strategy?: "preview" | "generated";
 }
 
 export interface WorkflowIdeationSelectedDeliverable {
@@ -50,34 +51,41 @@ export interface WorkflowIdeationMockupResponse {
   images: Array<{ url: string; s3_key: string }>;
 }
 
+type IdeationImageStrategy = "preview" | "generated";
+
 const DEFAULT_MODEL = "gpt-5.2";
 const DEFAULT_IMAGE_MODEL = "gpt-image-1.5";
 const MAX_DELIVERABLES = 5;
 const DEFAULT_MOCKUP_COUNT = 4;
+const DEFAULT_IMAGE_STRATEGY: IdeationImageStrategy = "preview";
+const PREVIEW_IMAGE_WIDTH = 1024;
+const PREVIEW_IMAGE_HEIGHT = 768;
 
 const IDEATION_SYSTEM_PROMPT = `You are a Lead Magnet Strategist helping a user decide what to build.
-Your job is to propose a small set of high-value deliverables based on the conversation so far.
+Your job is to propose a small set of high-value deliverables and help the user go deeper on their goal.
 
 Guidelines:
 - Provide 3 to 5 distinct deliverable options.
 - Each option should be feasible, specific, and high-conversion.
 - Provide image prompts for cover-style visuals (no text in image).
 - Provide a build_description that can be used directly to generate a workflow.
-- Be concise and actionable.
+- assistant_message must be a single line, 1-3 sentences. Make it slightly more in-depth: acknowledge the goal, summarize the options at a high level, and ask 1-2 targeted questions to refine the direction.
 
 Output format:
 1) A single line starting with "MESSAGE:" followed by the assistant_message text.
-2) A JSON object that matches the required schema.`;
+2) A JSON object that matches the required schema.
+Do NOT wrap the JSON in markdown code fences.`;
 
 const FOLLOWUP_SYSTEM_PROMPT = `You are a Lead Magnet Strategist.
-The user has already selected a deliverable. Answer their questions, clarify scope, and help refine the deliverable.
+The user has already selected a deliverable. Answer their questions, clarify scope, and help refine the deliverable in depth.
 Do NOT propose new deliverables unless the user explicitly asks for more options.
 If no new options are requested, return an empty deliverables array.
-Be concise, helpful, and actionable.
+- assistant_message must be a single line, 1-3 sentences. Provide deeper guidance and ask 1-2 targeted questions if needed.
 
 Output format:
 1) A single line starting with "MESSAGE:" followed by the assistant_message text.
-2) A JSON object that matches the required schema.`;
+2) A JSON object that matches the required schema.
+Do NOT wrap the JSON in markdown code fences.`;
 
 class WorkflowIdeationService {
   async ideateWorkflow(
@@ -101,6 +109,7 @@ class WorkflowIdeationService {
         ? payload.model.trim()
         : DEFAULT_MODEL;
     const mode = payload.mode === "followup" ? "followup" : "ideation";
+    const imageStrategy = this.resolveImageStrategy(payload.image_strategy);
 
     const conversation = this.buildConversationTranscript(messages);
     const deliverableContext =
@@ -110,6 +119,7 @@ class WorkflowIdeationService {
     const prompt = `${conversation}${deliverableContext}
 
 Remember: output a "MESSAGE:" line before the JSON.
+Return raw JSON only (no code fences).
 Return JSON using this schema:
 {
   "assistant_message": "A short, friendly response to the user.",
@@ -129,6 +139,7 @@ Return JSON using this schema:
       tenantId,
       model,
       messageCount: messages.length,
+      imageStrategy,
     });
 
     const completionParams: any = {
@@ -145,15 +156,20 @@ Return JSON using this schema:
     const normalized = this.normalizeDeliverables(
       Array.isArray(parsed.deliverables) ? parsed.deliverables : [],
     );
-    const shouldAttachImages = normalized.length > 0;
-
-    const deliverables = shouldAttachImages
-      ? await Promise.all(
-          normalized.map((deliverable, index) =>
-            this.attachImage(openai, tenantId, deliverable, index),
-          ),
-        )
-      : normalized;
+    const deliverables =
+      normalized.length > 0
+        ? await Promise.all(
+            normalized.map((deliverable, index) =>
+              this.attachIdeationImage(
+                openai,
+                tenantId,
+                deliverable,
+                index,
+                imageStrategy,
+              ),
+            ),
+          )
+        : normalized;
 
     return {
       assistant_message:
@@ -187,6 +203,7 @@ Return JSON using this schema:
         ? payload.model.trim()
         : DEFAULT_MODEL;
     const mode = payload.mode === "followup" ? "followup" : "ideation";
+    const imageStrategy = this.resolveImageStrategy(payload.image_strategy);
 
     const conversation = this.buildConversationTranscript(messages);
     const deliverableContext =
@@ -196,6 +213,7 @@ Return JSON using this schema:
     const prompt = `${conversation}${deliverableContext}
 
 Remember: output a "MESSAGE:" line before the JSON.
+Return raw JSON only (no code fences).
 Return JSON using this schema:
 {
   "assistant_message": "A short, friendly response to the user.",
@@ -215,6 +233,7 @@ Return JSON using this schema:
       tenantId,
       model,
       messageCount: messages.length,
+      imageStrategy,
     });
 
     const stream = await (openai as any).responses.create({
@@ -245,15 +264,53 @@ Return JSON using this schema:
       handlers?.onDelta?.(delta);
     }
 
-    const parsed = this.parseIdeationResult(outputText);
+    let parsed;
+    try {
+      parsed = this.parseIdeationResult(outputText);
+    } catch (error: any) {
+      logger.error("[Workflow Ideation] Failed to parse ideation result", {
+        error: String(error),
+        errorMessage: error?.message,
+        outputTextLength: outputText.length,
+        outputTextPreview: outputText.slice(0, 1000),
+        outputTextEnd: outputText.slice(-500),
+      });
+      // Try to extract JSON more aggressively as fallback
+      const jsonMatch = outputText.match(/\{[\s\S]*"deliverables"[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          const fallbackParsed = JSON.parse(jsonMatch[0]);
+          if (Array.isArray(fallbackParsed.deliverables)) {
+            parsed = fallbackParsed;
+            logger.info("[Workflow Ideation] Recovered using fallback parsing");
+          } else {
+            throw error;
+          }
+        } catch {
+          throw error;
+        }
+      } else {
+        throw error;
+      }
+    }
+    
     const normalized = this.normalizeDeliverables(
       Array.isArray(parsed.deliverables) ? parsed.deliverables : [],
     );
-    const deliverables = await Promise.all(
-      normalized.map((deliverable, index) =>
-        this.attachImage(openai, tenantId, deliverable, index),
-      ),
-    );
+    const deliverables =
+      normalized.length > 0
+        ? await Promise.all(
+            normalized.map((deliverable, index) =>
+              this.attachIdeationImage(
+                openai,
+                tenantId,
+                deliverable,
+                index,
+                imageStrategy,
+              ),
+            ),
+          )
+        : normalized;
 
     return {
       assistant_message:
@@ -282,21 +339,195 @@ Return JSON using this schema:
     assistant_message?: string;
     deliverables: any[];
   } {
-    const cleaned = stripMarkdownCodeFences(outputText).trim();
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      logger.error("[Workflow Ideation] Invalid JSON from model", {
+    // First strip markdown code fences (handles ```json ... ```)
+    let cleaned = stripMarkdownCodeFences(outputText).trim();
+    
+    // Also handle cases where JSON might be wrapped in ```json at the start
+    // and ``` at the end separately
+    cleaned = cleaned.replace(/^```json\s*/i, "").replace(/\s*```$/i, "").trim();
+    
+    // Extract MESSAGE: prefix if present (single-line per prompt)
+    let messagePrefix = "";
+    const messageMatch = cleaned.match(/^\s*MESSAGE:\s*([^\n]*)/i);
+    if (messageMatch) {
+      messagePrefix = messageMatch[1].trim();
+    }
+
+    // Prefer JSON inside explicit ```json fences if present anywhere in the output.
+    const fencedJsonMatch = cleaned.match(/```json\s*([\s\S]*?)```/i);
+    let jsonText = fencedJsonMatch ? fencedJsonMatch[1].trim() : cleaned;
+    if (!fencedJsonMatch && messageMatch) {
+      const afterMessage = cleaned.slice(messageMatch[0].length).trim();
+      if (afterMessage.includes("{")) {
+        jsonText = afterMessage;
+      }
+    }
+
+    // If any generic code fence remains, strip it defensively.
+    if (jsonText.includes("```")) {
+      jsonText = jsonText.replace(/^```[a-z0-9_-]*\s*/i, "").replace(/\s*```$/i, "").trim();
+    }
+    
+    // Try to find JSON object - look for the first { that starts a complete object
+    const firstBrace = jsonText.indexOf("{");
+    if (firstBrace === -1) {
+      logger.error("[Workflow Ideation] No JSON object found", {
         outputSnippet: cleaned.slice(0, 500),
       });
       throw new ApiError("AI response was not valid JSON", 500);
     }
-
-    const parsed = JSON.parse(jsonMatch[0]);
+    
+    // Find the first complete JSON object and stop there
+    const parsed = this.parseFirstJsonObject(jsonText);
     if (!parsed) {
-      throw new ApiError("AI response was empty", 500);
+      logger.error("[Workflow Ideation] Invalid JSON from model", {
+        outputSnippet: cleaned.slice(0, 500),
+        jsonTextPreview: jsonText.slice(0, 500),
+        jsonTextLength: jsonText.length,
+      });
+      throw new ApiError("AI response was not valid JSON", 500);
     }
 
-    return parsed;
+    // Use MESSAGE: prefix as assistant_message if not in JSON
+    if (messagePrefix && !parsed.assistant_message) {
+      parsed.assistant_message = messagePrefix;
+    }
+
+    // Ensure we return a clean object with only expected fields
+    return {
+      assistant_message: parsed.assistant_message || messagePrefix || undefined,
+      deliverables: Array.isArray(parsed.deliverables) ? parsed.deliverables : [],
+    };
+  }
+
+  private parseFirstJsonObject(text: string): any | null {
+    // First try: extract using brace matching
+    const candidates = this.extractJsonCandidates(text);
+    for (const candidate of candidates) {
+      try {
+        // Trim the candidate to ensure no trailing whitespace
+        const trimmed = candidate.trim();
+        if (!trimmed) continue;
+        
+        const parsed = JSON.parse(trimmed);
+        // Validate it has the expected structure for ideation response
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          !Array.isArray(parsed) &&
+          (typeof parsed.assistant_message === "string" ||
+            Array.isArray(parsed.deliverables))
+        ) {
+          return parsed;
+        }
+      } catch (e: any) {
+        // Log the error with more context
+        logger.debug("[Workflow Ideation] Failed to parse JSON candidate", {
+          error: String(e),
+          errorMessage: e?.message,
+          candidateLength: candidate.length,
+          candidatePreview: candidate.slice(0, 200),
+          candidateEnd: candidate.slice(-100),
+        });
+        // Try next candidate
+      }
+    }
+    
+    // Fallback: try regex to find JSON object
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          !Array.isArray(parsed) &&
+          (typeof parsed.assistant_message === "string" ||
+            Array.isArray(parsed.deliverables))
+        ) {
+          return parsed;
+        }
+      } catch (e: any) {
+        logger.debug("[Workflow Ideation] Regex fallback also failed", {
+          error: String(e),
+          matchLength: jsonMatch[0].length,
+        });
+      }
+    }
+    
+    return null;
+  }
+
+  private extractJsonCandidates(text: string): string[] {
+    const candidates: string[] = [];
+    let startIndex = -1;
+    let depth = 0;
+    let inString = false;
+    let isEscaped = false;
+
+    for (let i = 0; i < text.length; i += 1) {
+      const char = text[i];
+
+      if (inString) {
+        if (isEscaped) {
+          isEscaped = false;
+          continue;
+        }
+        if (char === "\\") {
+          isEscaped = true;
+          continue;
+        }
+        if (char === "\"") {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === "\"") {
+        inString = true;
+        continue;
+      }
+
+      if (char === "{") {
+        if (depth === 0) {
+          startIndex = i;
+        }
+        depth += 1;
+        continue;
+      }
+
+      if (char === "}") {
+        if (depth === 0) {
+          continue;
+        }
+        depth -= 1;
+        if (depth === 0 && startIndex !== -1) {
+          // Extract only up to the closing brace, no trailing text
+          const candidate = text.slice(startIndex, i + 1);
+          // Verify the candidate ends with } 
+          if (candidate.endsWith("}")) {
+            // Check if there's non-whitespace after the closing brace
+            const afterBrace = text.slice(i + 1).trim();
+            if (afterBrace.length > 0) {
+              logger.debug("[Workflow Ideation] Found text after JSON", {
+                afterBracePreview: afterBrace.slice(0, 50),
+              });
+            }
+            candidates.push(candidate);
+            logger.debug("[Workflow Ideation] Extracted JSON candidate", {
+              candidateLength: candidate.length,
+              candidateEndsWithBrace: candidate.endsWith("}"),
+              textAfterCandidate: text.slice(i + 1, i + 20),
+            });
+            // Stop after finding the first complete JSON object
+            // This prevents issues with trailing text
+            break;
+          }
+        }
+      }
+    }
+
+    return candidates;
   }
 
   private normalizeDeliverables(rawDeliverables: any[]): WorkflowIdeationDeliverable[] {
@@ -332,6 +563,58 @@ Return JSON using this schema:
         image_prompt: imagePrompt,
       };
     });
+  }
+
+  private resolveImageStrategy(value?: string): IdeationImageStrategy {
+    return value === "generated" ? "generated" : DEFAULT_IMAGE_STRATEGY;
+  }
+
+  private async attachIdeationImage(
+    openai: OpenAI,
+    tenantId: string,
+    deliverable: WorkflowIdeationDeliverable,
+    index: number,
+    imageStrategy: IdeationImageStrategy,
+  ): Promise<WorkflowIdeationDeliverable> {
+    if (imageStrategy === "generated") {
+      return this.attachImage(openai, tenantId, deliverable, index);
+    }
+    return this.attachPreviewImage(deliverable, index);
+  }
+
+  private async attachPreviewImage(
+    deliverable: WorkflowIdeationDeliverable,
+    index: number,
+  ): Promise<WorkflowIdeationDeliverable> {
+    const imageUrl = this.buildPreviewImageUrl(deliverable, index);
+    return {
+      ...deliverable,
+      image_url: imageUrl,
+      image_s3_key: null,
+    };
+  }
+
+  private buildPreviewImageUrl(
+    deliverable: WorkflowIdeationDeliverable,
+    index: number,
+  ): string {
+    const query = this.buildPreviewImageQuery(deliverable);
+    const encodedQuery = encodeURIComponent(query);
+    const sig = index + 1;
+    return `https://source.unsplash.com/random/${PREVIEW_IMAGE_WIDTH}x${PREVIEW_IMAGE_HEIGHT}/?${encodedQuery}&sig=${sig}`;
+  }
+
+  private buildPreviewImageQuery(
+    deliverable: WorkflowIdeationDeliverable,
+  ): string {
+    const parts = [
+      deliverable.title,
+      deliverable.deliverable_type,
+      "cover",
+      "minimal",
+      "modern",
+    ];
+    return parts.filter((part) => typeof part === "string" && part.trim()).join(" ");
   }
 
   private async attachImage(
@@ -389,8 +672,16 @@ Return JSON using this schema:
       response = await openai.images.generate(params);
     } catch (error: any) {
       const message = String(error?.message || "");
+      let didRetry = false;
       if (message.includes("Unknown parameter: 'response_format'")) {
         delete params.response_format;
+        didRetry = true;
+      }
+      if (message.includes("Unknown parameter: 'input_fidelity'")) {
+        delete params.input_fidelity;
+        didRetry = true;
+      }
+      if (didRetry) {
         response = await openai.images.generate(params);
       } else {
         throw error;
@@ -484,8 +775,16 @@ Context: ${deliverable.description || deliverable.build_description || "High-val
       response = await openai.images.generate(params);
     } catch (error: any) {
       const message = String(error?.message || "");
+      let didRetry = false;
       if (message.includes("Unknown parameter: 'response_format'")) {
         delete params.response_format;
+        didRetry = true;
+      }
+      if (message.includes("Unknown parameter: 'input_fidelity'")) {
+        delete params.input_fidelity;
+        didRetry = true;
+      }
+      if (didRetry) {
         response = await openai.images.generate(params);
       } else {
         throw error;

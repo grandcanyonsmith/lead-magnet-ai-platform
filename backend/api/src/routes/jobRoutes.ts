@@ -140,6 +140,32 @@ export function registerJobRoutes(): void {
     },
   );
 
+  // Get auto upload content for a job
+  router.register(
+    "GET",
+    "/admin/jobs/:id/auto-uploads/content",
+    async (params, _body, query, tenantId) => {
+      return await jobsController.getAutoUploadContent(
+        tenantId!,
+        params.id,
+        query,
+      );
+    },
+  );
+
+  // Get shell executor auto upload content for a job
+  router.register(
+    "GET",
+    "/admin/jobs/:id/auto-uploads/content",
+    async (params, _body, query, tenantId) => {
+      return await jobsController.getAutoUploadContent(
+        tenantId!,
+        params.id,
+        query,
+      );
+    },
+  );
+
   // Get job logs (for streaming)
   router.register(
     "GET",

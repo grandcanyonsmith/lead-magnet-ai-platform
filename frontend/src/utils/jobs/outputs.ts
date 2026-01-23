@@ -23,6 +23,8 @@ export interface OutputPreviewMeta {
   fileName?: string;
   contentType?: string;
   artifactId?: string;
+  jobId?: string;
+  autoUploadKey?: string;
 }
 
 const OUTPUT_GROUP_ORDER: OutputGroupKey[] = [
@@ -207,5 +209,7 @@ export const getOutputPreviewMeta = (
     contentType:
       artifact?.content_type || (item.kind === "imageUrl" ? "image/png" : undefined),
     artifactId: artifact?.artifact_id,
+    jobId: item.jobId || artifact?.job_id,
+    autoUploadKey: item.autoUploadKey,
   };
 };

@@ -112,6 +112,7 @@ export class WorkflowsClient extends BaseApiClient {
       model: request.model || "gpt-5.2",
       mode: request.mode,
       selected_deliverable: request.selected_deliverable,
+      image_strategy: request.image_strategy || "preview",
     });
   }
 
@@ -148,72 +149,247 @@ export class WorkflowsClient extends BaseApiClient {
           model: request.model || "gpt-5.2",
           mode: request.mode,
           selected_deliverable: request.selected_deliverable,
+          image_strategy: request.image_strategy || "preview",
         }),
         signal,
       });
 
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        const json = await response.json();
-        callbacks.onComplete(json);
-        return;
+      // Log response metadata for debugging
+      if (process.env.NODE_ENV === "development") {
+        console.log("[Ideation Stream] Response:", {
+          status: response.status,
+          contentType: response.headers.get("content-type"),
+        });
       }
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error("[Ideation Stream] Response not OK:", {
+          status: response.status,
+          errorText,
+        });
         callbacks.onError(`Failed to start ideation: ${response.status} ${errorText}`);
-        return;
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        callbacks.onError("Response body is not readable");
         return;
       }
 
       const decoder = new TextDecoder();
       let buffer = "";
+      let completed = false;
+      let pendingResult: WorkflowIdeationResponse | undefined;
+      let allChunks: string[] = [];
+
+      const handleParsedEvent = (event: any) => {
+        if (!event || typeof event !== "object") {
+          return;
+        }
+        if (event.type === "delta" && typeof event.text === "string") {
+          callbacks.onDelta(event.text);
+          return;
+        }
+        if (event.type === "done") {
+          completed = true;
+          callbacks.onComplete(event.result);
+          return;
+        }
+        if (event.type === "error") {
+          completed = true;
+          callbacks.onError(event.message || "Streaming error");
+          return;
+        }
+        if (
+          typeof event.assistant_message === "string" ||
+          Array.isArray(event.deliverables)
+        ) {
+          pendingResult = event;
+        }
+      };
+
+      const extractJsonCandidates = (text: string): string[] => {
+        const candidates: string[] = [];
+        let startIndex = -1;
+        let depth = 0;
+        let inString = false;
+        let isEscaped = false;
+
+        for (let i = 0; i < text.length; i += 1) {
+          const char = text[i];
+
+          if (inString) {
+            if (isEscaped) {
+              isEscaped = false;
+              continue;
+            }
+            if (char === "\\") {
+              isEscaped = true;
+              continue;
+            }
+            if (char === "\"") {
+              inString = false;
+            }
+            continue;
+          }
+
+          if (char === "\"") {
+            inString = true;
+            continue;
+          }
+
+          if (char === "{") {
+            if (depth === 0) {
+              startIndex = i;
+            }
+            depth += 1;
+            continue;
+          }
+
+          if (char === "}") {
+            if (depth === 0) {
+              continue;
+            }
+            depth -= 1;
+            if (depth === 0 && startIndex !== -1) {
+              candidates.push(text.slice(startIndex, i + 1));
+              startIndex = -1;
+            }
+          }
+        }
+
+        return candidates;
+      };
+
+      const parseNdjsonLine = (rawLine: string): boolean => {
+        const trimmed = rawLine.trim();
+        if (!trimmed) return false;
+        if (trimmed.startsWith(":")) return false;
+
+        let jsonLine = trimmed;
+        if (jsonLine.startsWith("data:")) {
+          jsonLine = jsonLine.replace(/^data:\s*/, "");
+          if (!jsonLine || jsonLine === "[DONE]") {
+            return false;
+          }
+        }
+
+        try {
+          const event = JSON.parse(jsonLine);
+          handleParsedEvent(event);
+          return true;
+        } catch (e) {
+          const candidates = extractJsonCandidates(jsonLine);
+          if (candidates.length > 0) {
+            let parsedAny = false;
+            for (const candidate of candidates) {
+              try {
+                const event = JSON.parse(candidate);
+                handleParsedEvent(event);
+                parsedAny = true;
+              } catch {
+                // ignore malformed candidate
+              }
+            }
+            return parsedAny;
+          }
+
+          console.error("[Ideation Stream] Failed to parse NDJSON line:", {
+            error: (e as Error)?.message,
+            linePreview: jsonLine.slice(0, 200),
+          });
+          return false;
+        }
+      };
+
+      const parseNdjsonText = (text: string): boolean => {
+        let parsedSomething = false;
+        const lines = text.split("\n");
+        for (const line of lines) {
+          if (parseNdjsonLine(line)) {
+            parsedSomething = true;
+            if (completed) {
+              return true;
+            }
+          }
+        }
+
+        if (!parsedSomething) {
+          const candidates = extractJsonCandidates(text);
+          for (const candidate of candidates) {
+            try {
+              const event = JSON.parse(candidate);
+              handleParsedEvent(event);
+              parsedSomething = true;
+              if (completed) {
+                return true;
+              }
+            } catch {
+              // ignore malformed candidate
+            }
+          }
+        }
+
+        return parsedSomething;
+      };
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        const text = await response.text();
+        if (process.env.NODE_ENV === "development") {
+          console.log("[Ideation Stream] No reader - Full response:", {
+            length: text.length,
+            preview: text.slice(0, 200),
+          });
+        }
+        const parsedSomething = parseNdjsonText(text);
+        if (completed) return;
+        if (pendingResult) {
+          callbacks.onComplete(pendingResult);
+          return;
+        }
+        if (!parsedSomething) {
+          callbacks.onError("Response body is not readable");
+          return;
+        }
+        callbacks.onComplete();
+        return;
+      }
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          if (process.env.NODE_ENV === "development") {
+            console.log("[Ideation Stream] Stream complete. Total chunks:", allChunks.length);
+          }
+          break;
+        }
 
-        buffer += decoder.decode(value, { stream: true });
+        const chunk = decoder.decode(value, { stream: true });
+        allChunks.push(chunk);
+        buffer += chunk;
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
 
         for (const line of lines) {
           if (!line.trim()) continue;
-          try {
-            const event = JSON.parse(line);
-            if (event.type === "delta" && typeof event.text === "string") {
-              callbacks.onDelta(event.text);
-            } else if (event.type === "done") {
-              callbacks.onComplete(event.result);
-            } else if (event.type === "error") {
-              callbacks.onError(event.message || "Streaming error");
-              return;
-            }
-          } catch (e) {
-            console.error("Failed to parse NDJSON line:", line);
+          if (parseNdjsonLine(line) && completed) {
+            return;
           }
         }
       }
 
       if (buffer.trim()) {
-        try {
-          const event = JSON.parse(buffer);
-          if (event?.type === "delta" && typeof event.text === "string") {
-            callbacks.onDelta(event.text);
-          } else if (event?.type === "done") {
-            callbacks.onComplete(event.result);
-          }
-        } catch {
-          // ignore trailing partial
+        const parsedSomething = parseNdjsonText(buffer.trim());
+        if (completed) return;
+        if (parsedSomething) {
+          buffer = "";
         }
       }
 
-      callbacks.onComplete();
+      if (pendingResult) {
+        callbacks.onComplete(pendingResult);
+        return;
+      }
+      if (!completed) {
+        callbacks.onComplete();
+      }
     } catch (e: any) {
       callbacks.onError(e.message || "Failed to stream ideation");
     }

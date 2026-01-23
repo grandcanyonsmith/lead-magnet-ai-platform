@@ -41,6 +41,17 @@ export class JobsClient extends BaseApiClient {
     return this.get(`/admin/jobs/${jobId}/auto-uploads`);
   }
 
+  async getJobAutoUploadContent(jobId: string, key: string): Promise<string> {
+    const response = await this.client.get(
+      `/admin/jobs/${jobId}/auto-uploads/content`,
+      {
+        params: { key },
+        responseType: "text",
+      },
+    );
+    return response.data;
+  }
+
   async resubmitJob(jobId: string): Promise<JobResubmitResponse> {
     return this.post<JobResubmitResponse>(`/admin/jobs/${jobId}/resubmit`);
   }

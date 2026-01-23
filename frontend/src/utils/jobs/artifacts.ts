@@ -160,6 +160,8 @@ export function buildArtifactGalleryItems({
       id: `auto-upload-${upload.key}`,
       kind: "autoUpload",
       url: upload.object_url,
+      jobId: job?.job_id,
+      autoUploadKey: upload.key,
       label: fileName,
       description: "Auto upload",
       sortOrder: createdTimestamp ?? fallbackOrder,

@@ -258,6 +258,7 @@ export interface WorkflowIdeationRequest {
   model?: AIModel;
   mode?: "ideation" | "followup";
   selected_deliverable?: WorkflowIdeationSelectedDeliverable;
+  image_strategy?: "preview" | "generated";
 }
 
 export interface WorkflowIdeationSelectedDeliverable {

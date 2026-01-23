@@ -939,6 +939,8 @@ export default function JobDetailClient() {
             objectUrl={previewObjectUrl}
             fileName={previewFileName}
             artifactId={previewItem?.artifact?.artifact_id}
+            jobId={previewItem?.jobId || previewItem?.artifact?.job_id}
+            autoUploadKey={previewItem?.autoUploadKey}
             onNext={handleNextPreview}
             onPrevious={handlePreviousPreview}
             hasNext={currentPreviewIndex < artifactGalleryItems.length - 1}
