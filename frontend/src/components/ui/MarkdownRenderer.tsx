@@ -5,6 +5,14 @@ import dynamic from "next/dynamic";
 import type { Components } from "react-markdown";
 import { useRemarkGfm } from "@/hooks/useRemarkGfm";
 
+// Extend Components to include custom elements
+type ExtendedComponents = Components & {
+  "color-swatch"?: ComponentType<{
+    children?: ReactNode;
+    [key: string]: unknown;
+  }>;
+};
+
 const ReactMarkdown = dynamic(() => import("react-markdown"), {
   ssr: false,
 });
@@ -157,10 +165,10 @@ export function MarkdownRenderer({
   components,
 }: MarkdownRendererProps) {
   const remarkGfm = useRemarkGfm();
-  const mergedComponents: Components = {
+  const mergedComponents: ExtendedComponents = {
     "color-swatch": ColorSwatch,
     ...(components ?? {}),
-  } as Components;
+  };
 
   if (!remarkGfm) {
     return (
@@ -175,7 +183,7 @@ export function MarkdownRenderer({
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeColorSwatches]}
-        components={mergedComponents}
+        components={mergedComponents as Components}
       >
         {value}
       </ReactMarkdown>
@@ -187,7 +195,7 @@ export function MarkdownRenderer({
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeColorSwatches]}
-        components={mergedComponents}
+        components={mergedComponents as Components}
       >
         {value}
       </ReactMarkdown>
