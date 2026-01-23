@@ -99,6 +99,9 @@ class AIStepProcessor:
         # Extract text verbosity and max_output_tokens from step config
         step_text_verbosity = step.get('text_verbosity')
         step_max_output_tokens = step.get('max_output_tokens')
+        step_shell_settings = step.get("shell_settings")
+        if not isinstance(step_shell_settings, dict):
+            step_shell_settings = None
         
         logger.info(f"[AIStepProcessor] Processing AI step {step_index + 1}", extra={
             'job_id': job_id,
@@ -133,6 +136,7 @@ class AIStepProcessor:
                 step_index=step_index,
                 text_verbosity=step_text_verbosity,
                 max_output_tokens=step_max_output_tokens,
+                shell_settings=step_shell_settings,
             )
         finally:
             # Clean up step context

@@ -74,9 +74,29 @@ export interface ImageGenerationToolConfig {
   input_fidelity?: "low" | "high";
 }
 
-export type Tool = ToolType | ComputerUseToolConfig | ImageGenerationToolConfig;
+export interface CodeInterpreterToolConfig {
+  type: "code_interpreter";
+  container?: {
+    type?: "auto" | "explicit";
+    id?: string;
+    memory_limit?: string;
+  };
+}
+
+export type Tool =
+  | ToolType
+  | ComputerUseToolConfig
+  | ImageGenerationToolConfig
+  | CodeInterpreterToolConfig;
 
 export type ImageGenerationSettings = Omit<ImageGenerationToolConfig, "type">;
+
+export interface ShellSettings {
+  max_iterations?: number;
+  max_duration_seconds?: number;
+  command_timeout_ms?: number;
+  command_max_output_length?: number;
+}
 
 export interface WorkflowStep {
   step_name: string;
@@ -97,6 +117,7 @@ export interface WorkflowStep {
   step_order?: number;
   tools?: Tool[];
   tool_choice?: ToolChoice;
+  shell_settings?: ShellSettings;
   depends_on?: number[]; // Array of step indices this step depends on
   // Webhook step fields
   webhook_url?: string;

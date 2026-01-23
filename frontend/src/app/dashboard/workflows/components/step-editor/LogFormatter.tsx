@@ -1,10 +1,32 @@
 import React from 'react';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { FiLayout } from 'react-icons/fi';
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 
 // Regex patterns
 const KPI_REGEX = /input\.kpis\s*=\s*(\[[\s\S]*?\]);?/;
 const CITATIONS_REGEX = /input\.citations\s*=\s*(\{[\s\S]*?\});?/;
-const URL_REGEX = /(https?:\/\/[^\s<>"'()]+)/g;
-const BOLD_REGEX = /\*\*(.*?)\*\*/g;
+const HTML_TAG_REGEX =
+  /^\s*<(!DOCTYPE|html|head|body|div|span|p|section|article|main|header|footer|h[1-6]|table|thead|tbody|tr|th|td|ul|ol|li|img|svg|style|script|form|input|textarea|select|option|link|meta|button|iframe)\b/i;
+const MARKDOWN_PATTERNS = [
+  /```/,
+  /(^|\n)#{1,6}\s+\S/,
+  /(^|\n)[*-]\s+\S/,
+  /(^|\n)\d+\.\s+\S/,
+  /\|.+\|\n\|[-:\s|]+\|/,
+  /\*\*[^*]+\*\*/,
+  /\[.+\]\(.+\)/,
+];
+const PYTHON_PATTERNS = [
+  /(^|\n)\s*def\s+\w+\s*\(.*\)\s*:/,
+  /(^|\n)\s*class\s+\w+/,
+  /(^|\n)\s*import\s+\w+/,
+  /(^|\n)\s*from\s+\w+\s+import\s+/,
+  /if\s+__name__\s*==\s*['"]__main__['"]/,
+  /Traceback \(most recent call last\):/,
+  /File ".*", line \d+/,
+];
 
 // Helper to clean JS object string to valid JSON
 const cleanJsToJSON = (str: string) => {
@@ -21,6 +43,37 @@ const cleanJsToJSON = (str: string) => {
     console.warn("Failed to parse JS object:", e);
     return null;
   }
+};
+
+const looksLikeMarkdown = (value: string) =>
+  MARKDOWN_PATTERNS.some((pattern) => pattern.test(value));
+
+const looksLikePython = (value: string) =>
+  PYTHON_PATTERNS.some((pattern) => pattern.test(value));
+
+const looksLikeHtml = (value: string) => HTML_TAG_REGEX.test(value.trim());
+
+const buildHtmlSrcDoc = (html: string) => {
+  const trimmed = html.trim();
+  const hasDocTag = /<!doctype/i.test(trimmed) || /<html[\s>]/i.test(trimmed);
+  if (hasDocTag) {
+    return trimmed;
+  }
+  return [
+    '<!doctype html>',
+    '<html>',
+    '<head>',
+    '<base target="_blank" />',
+    '<style>',
+    'body { margin: 0; padding: 12px; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }',
+    'img, video { max-width: 100%; height: auto; }',
+    '</style>',
+    '</head>',
+    '<body>',
+    trimmed,
+    '</body>',
+    '</html>',
+  ].join('');
 };
 
 interface KpiItem {
@@ -92,13 +145,86 @@ const CitationTable = ({ citations }: { citations: Record<string, CitationItem> 
   </div>
 );
 
-const JsonBlock = ({ data }: { data: any }) => (
-  <div className="my-2 p-3 bg-gray-50 dark:bg-[#1e1e1e] rounded-lg border border-gray-200 dark:border-gray-700 font-mono text-xs overflow-x-auto">
-    <pre className="text-gray-700 dark:text-gray-300">
-      {JSON.stringify(data, null, 2)}
-    </pre>
+const HtmlPreview = ({ html }: { html: string }) => (
+  <div className="my-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 overflow-hidden">
+    <div className="flex items-center gap-1 px-2 py-1 text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+      <FiLayout className="h-3 w-3" />
+      HTML Preview
+    </div>
+    <iframe
+      title="HTML Preview"
+      className="w-full h-56 bg-white"
+      sandbox=""
+      srcDoc={buildHtmlSrcDoc(html)}
+    />
   </div>
 );
+
+const renderMarkdown = (value: string, options?: { forceCodeLanguage?: string }) => {
+  const content = options?.forceCodeLanguage
+    ? `\`\`\`${options.forceCodeLanguage}\n${value}\n\`\`\``
+    : value;
+
+  return (
+    <MarkdownRenderer
+      value={content}
+      className="whitespace-pre-wrap break-words"
+      fallbackClassName="whitespace-pre-wrap break-words"
+      components={{
+        pre: ({ children }) => <>{children}</>,
+        code({ inline, className, children, ...props }: any) {
+          const match = /language-(\w+)/.exec(className || '');
+          if (!inline && match) {
+            const raw =
+              Array.isArray(children)
+                ? children.map((child) => (typeof child === 'string' ? child : '')).join('')
+                : String(children);
+            return (
+              <div className="my-2 rounded-lg border border-gray-800 bg-black/30 overflow-hidden">
+                <SyntaxHighlighter
+                  style={vscDarkPlus}
+                  language={match[1]}
+                  PreTag="div"
+                  customStyle={{
+                    margin: 0,
+                    background: 'transparent',
+                    padding: '12px',
+                    fontSize: '12px',
+                    lineHeight: '1.6',
+                  }}
+                  {...props}
+                >
+                  {raw.replace(/\n$/, '')}
+                </SyntaxHighlighter>
+              </div>
+            );
+          }
+          return (
+            <code className="rounded bg-white/10 px-1 py-0.5 text-[0.9em]" {...props}>
+              {children}
+            </code>
+          );
+        },
+        a: ({ href, children, ...props }: any) => (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300 hover:underline decoration-blue-400/40"
+            {...props}
+          >
+            {children}
+          </a>
+        ),
+        ul: ({ children }) => <ul className="list-disc pl-5 space-y-1 m-0">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1 m-0">{children}</ol>,
+        p: ({ children }) => (
+          <p className="whitespace-pre-wrap break-words m-0">{children}</p>
+        ),
+      }}
+    />
+  );
+};
 
 // -----------------------------------------------------------------------------
 // Parser & Renderer
@@ -135,46 +261,39 @@ export function formatLogMessage(message: string): React.ReactNode {
     }
   }
 
-  // 3. Detect pure JSON
+  // 3. Detect pure JSON (render as markdown code block)
   const trimmed = message.trim();
-  if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+  if (
+    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+    (trimmed.startsWith('[') && trimmed.endsWith(']'))
+  ) {
     try {
       const json = JSON.parse(trimmed);
-      return <JsonBlock data={json} />;
+      return (
+        <div className="my-2">
+          {renderMarkdown(JSON.stringify(json, null, 2), { forceCodeLanguage: 'json' })}
+        </div>
+      );
     } catch {
       // Not valid JSON, continue to text formatting
     }
   }
 
-  // 4. Rich Text Formatting (Bold, Links)
-  // Split by bold markers first
-  const parts = message.split(BOLD_REGEX);
-  
-  return (
-    <span>
-      {parts.map((part, i) => {
-        // Even indices are regular text, odd are bold matches (captured group)
-        if (i % 2 === 1) {
-          return <strong key={i} className="font-bold text-gray-900 dark:text-white">{part}</strong>;
-        }
-        
-        // Process links in regular text
-        const subParts = part.split(URL_REGEX);
-        return (
-          <span key={i}>
-            {subParts.map((sub, j) => {
-              if (sub.match(URL_REGEX)) {
-                return (
-                  <a key={j} href={sub} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 hover:underline decoration-blue-400/30">
-                    {sub} 🔗
-                  </a>
-                );
-              }
-              return sub;
-            })}
-          </span>
-        );
-      })}
-    </span>
-  );
+  // 4. Detect HTML (render iframe preview)
+  if (looksLikeHtml(trimmed)) {
+    return <HtmlPreview html={message} />;
+  }
+
+  // 5. Detect Python (render as code block)
+  if (looksLikePython(message)) {
+    return renderMarkdown(message, { forceCodeLanguage: 'python' });
+  }
+
+  // 6. Markdown (render markdown)
+  if (looksLikeMarkdown(message)) {
+    return renderMarkdown(message);
+  }
+
+  // 7. Default text (render markdown for color swatches)
+  return renderMarkdown(message);
 }

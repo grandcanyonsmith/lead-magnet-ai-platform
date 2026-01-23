@@ -29,6 +29,12 @@ interface RawStep {
   depends_on?: number[];
   tools?: string[] | unknown[];
   tool_choice?: string;
+  shell_settings?: {
+    max_iterations?: number;
+    max_duration_seconds?: number;
+    command_timeout_ms?: number;
+    command_max_output_length?: number;
+  };
   [key: string]: unknown;
 }
 
@@ -67,6 +73,34 @@ function resolveDefaultTextVerbosity(
     return undefined;
   }
   return defaultTextVerbosity as WorkflowStep["text_verbosity"];
+}
+
+function normalizeShellSettings(
+  value: unknown,
+): WorkflowStep["shell_settings"] | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const raw = value as Record<string, unknown>;
+  const normalizeInt = (input: unknown, min: number, max: number): number | undefined => {
+    if (typeof input !== "number" || !Number.isFinite(input)) return undefined;
+    const coerced = Math.floor(input);
+    if (coerced < min || coerced > max) return undefined;
+    return coerced;
+  };
+
+  const settings: WorkflowStep["shell_settings"] = {};
+  const maxIterations = normalizeInt(raw.max_iterations, 1, 100);
+  if (maxIterations !== undefined) settings.max_iterations = maxIterations;
+  const maxDuration = normalizeInt(raw.max_duration_seconds, 30, 840);
+  if (maxDuration !== undefined) settings.max_duration_seconds = maxDuration;
+  const commandTimeout = normalizeInt(raw.command_timeout_ms, 1000, 900000);
+  if (commandTimeout !== undefined) settings.command_timeout_ms = commandTimeout;
+  const commandMaxOutput = normalizeInt(raw.command_max_output_length, 256, 10_000_000);
+  if (commandMaxOutput !== undefined) settings.command_max_output_length = commandMaxOutput;
+
+  return Object.keys(settings).length > 0 ? settings : undefined;
 }
 
 export function parseWorkflowConfig(
@@ -182,6 +216,8 @@ function normalizeStep(step: RawStep, index: number, defaults?: WorkflowDefaults
       ? Math.floor(step.max_output_tokens)
       : undefined;
 
+  const shell_settings = normalizeShellSettings(step.shell_settings);
+
   const tools: (string | ToolConfig)[] = isArray(step.tools)
     ? (step.tools as unknown[]).filter((t): t is string | ToolConfig => typeof t === 'string' || (typeof t === 'object' && t !== null && 'type' in t))
     : shouldAddDefaultWebSearch
@@ -231,6 +267,7 @@ function normalizeStep(step: RawStep, index: number, defaults?: WorkflowDefaults
     text_verbosity,
     max_output_tokens,
     output_format,
+    shell_settings,
     instructions: isString(step.instructions) && step.instructions.trim().length > 0 ? step.instructions : 'Generate content based on form submission data.',
     step_order: typeof step.step_order === 'number' && step.step_order >= 0 ? step.step_order : index,
     depends_on: isArray(step.depends_on) ? step.depends_on.filter((d): d is number => typeof d === 'number' && d >= 0 && d < 1000) : [],
@@ -325,6 +362,8 @@ function ensureStepDefaultsWithOptions(
         ? (step.text_verbosity as WorkflowStep["text_verbosity"])
         : undefined;
 
+    const shell_settings = normalizeShellSettings(step.shell_settings);
+
     return {
       ...step,
       step_name: step.step_name || `Step ${index + 1}`,
@@ -335,6 +374,7 @@ function ensureStepDefaultsWithOptions(
       tool_choice: (validToolChoice || (hasTools ? resolvedDefaultToolChoice : 'none')) as ToolChoice,
       service_tier: normalizedServiceTier ?? resolvedDefaultServiceTier,
       text_verbosity: normalizedTextVerbosity ?? resolvedDefaultTextVerbosity,
+      shell_settings,
       model,
       instructions: step.instructions || '',
     } as WorkflowStep;

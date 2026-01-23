@@ -111,6 +111,8 @@ class ShellLoopService:
         output_format: Optional[Dict[str, Any]] = None,
         max_iterations: int = 25,
         max_duration_seconds: int = 300,
+        default_command_timeout_ms: Optional[int] = None,
+        default_command_max_output_length: Optional[int] = None,
         job_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
         step_index: Optional[int] = None,
@@ -133,6 +135,8 @@ class ShellLoopService:
             "model": model,
             "max_iterations": max_iterations,
             "max_duration_seconds": max_duration_seconds,
+            "default_command_timeout_ms": default_command_timeout_ms,
+            "default_command_max_output_length": default_command_max_output_length,
         })
 
         workspace_id = _derive_workspace_id(tenant_id=tenant_id, job_id=job_id, step_index=step_index)
@@ -233,7 +237,11 @@ class ShellLoopService:
                     commands = action_dict.get("commands") or []
                     timeout_ms = action_dict.get("timeout_ms")
                     max_output_length = action_dict.get("max_output_length")
+                    if timeout_ms is None:
+                        timeout_ms = default_command_timeout_ms
                     # Enforce a default limit if not provided to prevent context window exhaustion
+                    if max_output_length is None:
+                        max_output_length = default_command_max_output_length
                     if max_output_length is None:
                         max_output_length = 4096
 
@@ -379,6 +387,8 @@ class ShellLoopService:
         output_format: Optional[Dict[str, Any]] = None,
         max_iterations: int = 25,
         max_duration_seconds: int = 300,
+        default_command_timeout_ms: Optional[int] = None,
+        default_command_max_output_length: Optional[int] = None,
         job_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
         step_index: Optional[int] = None,
@@ -391,6 +401,21 @@ class ShellLoopService:
         """
 
         yield {"type": "log", "timestamp": time.time(), "level": "info", "message": "Starting shell execution..."}
+        if default_command_timeout_ms or default_command_max_output_length:
+            timeout_label = (
+                f"{default_command_timeout_ms}ms" if default_command_timeout_ms else "executor default"
+            )
+            output_label = (
+                str(default_command_max_output_length)
+                if default_command_max_output_length
+                else "4096"
+            )
+            yield {
+                "type": "log",
+                "timestamp": time.time(),
+                "level": "info",
+                "message": f"Using defaults: timeout {timeout_label}, output {output_label} chars",
+            }
         
         workspace_id = _derive_workspace_id(tenant_id=tenant_id, job_id=job_id, step_index=step_index)
         reset_workspace_next = True
@@ -456,7 +481,11 @@ class ShellLoopService:
                     commands = action_dict.get("commands") or []
                     timeout_ms = action_dict.get("timeout_ms")
                     max_output_length = action_dict.get("max_output_length")
+                    if timeout_ms is None:
+                        timeout_ms = default_command_timeout_ms
                     # Enforce a default limit if not provided to prevent context window exhaustion
+                    if max_output_length is None:
+                        max_output_length = default_command_max_output_length
                     if max_output_length is None:
                         max_output_length = 4096
 

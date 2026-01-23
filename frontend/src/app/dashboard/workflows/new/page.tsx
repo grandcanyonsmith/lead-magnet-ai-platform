@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -21,15 +21,17 @@ import { useWorkflowSteps } from "@/hooks/useWorkflowSteps";
 import { useWorkflowValidation } from "@/hooks/useWorkflowValidation";
 import { useWorkflowSubmission } from "@/hooks/useWorkflowSubmission";
 import { useWorkflowGenerationStatus } from "@/hooks/useWorkflowGenerationStatus";
-import { useSettings } from "@/hooks/api/useSettings";
+import { useSettings, useUpdateSettings } from "@/hooks/api/useSettings";
 import { useWorkflowIdeation } from "@/hooks/useWorkflowIdeation";
 import { api } from "@/lib/api";
 import {
   AIModel,
+  ICPProfile,
   WorkflowIdeationDeliverable,
   WorkflowIdeationMessage,
 } from "@/types";
 import { AI_MODELS, DEFAULT_AI_MODEL } from "@/constants/models";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 
 const isAIModel = (value?: string): value is AIModel =>
   !!value && AI_MODELS.some((model) => model.value === value);
@@ -38,6 +40,7 @@ const PREVIEW_IMAGE_WIDTH = 1024;
 const PREVIEW_IMAGE_HEIGHT = 768;
 const buildPreviewFallbackUrl = (seed: string) =>
   `https://picsum.photos/seed/${encodeURIComponent(seed)}/${PREVIEW_IMAGE_WIDTH}/${PREVIEW_IMAGE_HEIGHT}`;
+const CHAT_SCROLL_THRESHOLD = 120;
 
 type ChatMessage = WorkflowIdeationMessage & {
   id: string;
@@ -46,6 +49,18 @@ type ChatMessage = WorkflowIdeationMessage & {
 
 const createChatId = () =>
   `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+const createInitialChatMessages = (): ChatMessage[] => [
+  {
+    id: createChatId(),
+    role: "assistant",
+    content:
+      "Tell me what you want to build. I'll suggest a few lead magnet ideas with quick visual references, and we can go deeper before you pick one.",
+  },
+];
+
+const createIcpId = () =>
+  `icp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 type IdeationDraft = {
   icp: string;
@@ -310,34 +325,30 @@ const IDEATION_STEPS: IdeationStepConfig[] = [
   },
 ];
 
-const CHAT_QUICK_REPLIES = [
-  "Give me more options",
-  "Make it more premium",
-  "Focus on one pain",
-  "Shorten the deliverable",
-  "Add concrete examples",
-];
-
-const CHAT_SUGGESTION_CARDS = [
+const CHAT_STARTER_PROMPTS = [
   {
-    title: "Refine ICP",
-    description: "Narrow to a more specific segment",
-    value: "Lets refine the ICP to: ",
+    title: "7-day action plan",
+    description: "Daily steps + quick wins",
+    value:
+      "Create a 7-day action plan lead magnet for [audience] that helps them achieve [outcome].",
   },
   {
-    title: "Sharpen the pain",
-    description: "Pick the most urgent pain point",
-    value: "The most urgent pain is: ",
+    title: "Scorecard + next steps",
+    description: "Self-assessment with recommendations",
+    value:
+      "I want a scorecard that helps [audience] grade their [topic] and gives 3 next steps.",
   },
   {
-    title: "Share examples",
-    description: "Paste links or references you like",
-    value: "Examples I like: ",
+    title: "Template pack",
+    description: "Ready-to-use assets",
+    value:
+      "Suggest a template pack lead magnet for [audience] that saves time on [task].",
   },
   {
-    title: "More options",
-    description: "Generate 3 more deliverable ideas",
-    value: "Give me 3 more deliverable options.",
+    title: "ROI calculator",
+    description: "Estimate impact or savings",
+    value:
+      "Build an ROI calculator lead magnet for [audience] to estimate [benefit].",
   },
 ];
 
@@ -359,26 +370,27 @@ export default function NewWorkflowPage() {
     DEFAULT_IDEATION_DRAFT,
   );
   const [chatSetupError, setChatSetupError] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: createChatId(),
-      role: "assistant",
-      content:
-        "Tell me what you want to build. I'll suggest a few lead magnet ideas with quick visual references, and we can go deeper before you pick one.",
-    },
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
+    createInitialChatMessages(),
+  );
   const [selectedDeliverableId, setSelectedDeliverableId] = useState<
     string | null
   >(null);
   const [mockupImages, setMockupImages] = useState<string[]>([]);
   const [isGeneratingMockups, setIsGeneratingMockups] = useState(false);
   const [mockupError, setMockupError] = useState<string | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const [selectedIcpProfileId, setSelectedIcpProfileId] = useState<string>("");
+  const [icpProfileName, setIcpProfileName] = useState("");
+  const [icpProfileError, setIcpProfileError] = useState<string | null>(null);
 
   // Hooks
   const aiGeneration = useAIGeneration();
   const ideation = useWorkflowIdeation();
   const workflowForm = useWorkflowForm();
   const { settings } = useSettings();
+  const { updateSettings, loading: isUpdatingSettings } = useUpdateSettings();
   const workflowSteps = useWorkflowSteps({
     defaultToolChoice: settings?.default_tool_choice,
     defaultServiceTier: settings?.default_service_tier,
@@ -410,6 +422,15 @@ export default function NewWorkflowPage() {
   ) as string[];
   const hasUserMessages = chatMessages.some(
     (message) => message.role === "user",
+  );
+  const icpProfiles = useMemo(
+    () =>
+      Array.isArray(settings?.icp_profiles) ? settings.icp_profiles : [],
+    [settings?.icp_profiles],
+  );
+  const selectedIcpProfile = useMemo(
+    () => icpProfiles.find((profile) => profile.id === selectedIcpProfileId),
+    [icpProfiles, selectedIcpProfileId],
   );
   const wizardStepValue =
     !isWizardReview && currentWizardStep
@@ -444,6 +465,12 @@ export default function NewWorkflowPage() {
     setChatSetupError(null);
   };
 
+  const focusChatInput = () => {
+    requestAnimationFrame(() => {
+      chatInputRef.current?.focus();
+    });
+  };
+
   const applyChatSuggestion = (value: string) => {
     setChatInput((prev) => {
       const trimmed = prev.trim();
@@ -451,6 +478,104 @@ export default function NewWorkflowPage() {
       if (trimmed.endsWith(value)) return trimmed;
       return `${trimmed} ${value}`;
     });
+    focusChatInput();
+  };
+  const applyStarterPrompt = (value: string) => {
+    setChatInput(value);
+    focusChatInput();
+  };
+
+  const buildIcpContextMessage = (
+    profile?: ICPProfile,
+  ): WorkflowIdeationMessage | null => {
+    if (!profile) return null;
+    const lines = [
+      `ICP Profile: ${profile.name}`,
+      profile.icp ? `ICP: ${profile.icp}` : "",
+      profile.pain ? `Pain: ${profile.pain}` : "",
+      profile.outcome ? `Outcome: ${profile.outcome}` : "",
+      profile.offer ? `Offer: ${profile.offer}` : "",
+      profile.constraints ? `Constraints: ${profile.constraints}` : "",
+      profile.examples ? `Examples: ${profile.examples}` : "",
+    ].filter(Boolean);
+    if (lines.length === 0) return null;
+    return {
+      role: "system",
+      content: lines.join("\n"),
+    };
+  };
+
+  const icpContextMessage = useMemo(
+    () => buildIcpContextMessage(selectedIcpProfile),
+    [selectedIcpProfile],
+  );
+
+  const buildRequestMessages = (messages: ChatMessage[]) => {
+    const base = messages.map(({ role, content }) => ({ role, content }));
+    return icpContextMessage ? [icpContextMessage, ...base] : base;
+  };
+
+  const applyIcpProfile = (profile: ICPProfile) => {
+    setIdeationDraft({
+      icp: profile.icp || "",
+      pain: profile.pain || "",
+      outcome: profile.outcome || "",
+      offer: profile.offer || "",
+      constraints: profile.constraints || "",
+      examples: profile.examples || "",
+    });
+    setChatSetupError(null);
+    setChatSetupStep(totalWizardSteps);
+  };
+
+  const handleSaveIcpProfile = async () => {
+    if (!hasWizardCore) {
+      setIcpProfileError(
+        "Add ICP, pain, and outcome before saving a profile.",
+      );
+      return;
+    }
+    const name = icpProfileName.trim();
+    if (!name) {
+      setIcpProfileError("Please name this ICP profile.");
+      return;
+    }
+    setIcpProfileError(null);
+
+    const now = new Date().toISOString();
+    const newProfile: ICPProfile = {
+      id: createIcpId(),
+      name,
+      icp: ideationDraft.icp.trim(),
+      pain: ideationDraft.pain.trim(),
+      outcome: ideationDraft.outcome.trim(),
+      offer: ideationDraft.offer.trim(),
+      constraints: ideationDraft.constraints.trim(),
+      examples: ideationDraft.examples.trim(),
+      created_at: now,
+      updated_at: now,
+    };
+
+    const nextProfiles = [...icpProfiles];
+    const existingIndex = nextProfiles.findIndex(
+      (profile) => profile.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (existingIndex >= 0) {
+      nextProfiles[existingIndex] = {
+        ...nextProfiles[existingIndex],
+        ...newProfile,
+        id: nextProfiles[existingIndex].id,
+        created_at: nextProfiles[existingIndex].created_at || now,
+        updated_at: now,
+      };
+    } else {
+      nextProfiles.push(newProfile);
+    }
+
+    const result = await updateSettings({ icp_profiles: nextProfiles });
+    if (result) {
+      setIcpProfileName("");
+    }
   };
 
   const buildWizardSummary = () => {
@@ -555,11 +680,185 @@ export default function NewWorkflowPage() {
   const selectedDeliverable = allDeliverables.find(
     (deliverable) => deliverable.id === selectedDeliverableId,
   );
+  const latestUserMessage = useMemo(() => {
+    for (let i = chatMessages.length - 1; i >= 0; i -= 1) {
+      const message = chatMessages[i];
+      if (message.role === "user") {
+        return message.content.trim();
+      }
+    }
+    return "";
+  }, [chatMessages]);
+  const chatSuggestionCards = useMemo(() => {
+    const suggestions: Array<{
+      title: string;
+      description: string;
+      value: string;
+    }> = [];
+    const icpHint = ideationDraft.icp.trim();
+    const painHint = ideationDraft.pain.trim();
+    const outcomeHint = ideationDraft.outcome.trim();
+
+    if (selectedDeliverable) {
+      suggestions.push({
+        title: "Refine this deliverable",
+        description: "Add sections and outcomes",
+        value: `Refine "${selectedDeliverable.title}" with clear sections and outputs.`,
+      });
+      suggestions.push({
+        title: "Adjust the style",
+        description: "Explore a different visual feel",
+        value: `Suggest 3 style directions for "${selectedDeliverable.title}".`,
+      });
+      suggestions.push({
+        title: "Make it shorter",
+        description: "Trim to a quick-win version",
+        value: `Shorten "${selectedDeliverable.title}" to a 1-page version.`,
+      });
+      suggestions.push({
+        title: "Focus on one pain",
+        description: "Anchor it to the core pain point",
+        value: painHint
+          ? `Focus this on: ${painHint}`
+          : "Focus this on one urgent pain point.",
+      });
+    } else if (allDeliverables.length > 0) {
+      suggestions.push({
+        title: "Compare options",
+        description: "Evaluate impact vs effort",
+        value: "Compare the top 2 options for impact vs effort.",
+      });
+      suggestions.push({
+        title: "Pick the best fit",
+        description: "Recommend a single winner",
+        value: "Recommend the best option and explain why.",
+      });
+      suggestions.push({
+        title: "More options",
+        description: "Generate additional ideas",
+        value: "Give me 3 more deliverable options.",
+      });
+      suggestions.push({
+        title: "Refine ICP",
+        description: "Narrow the target audience",
+        value: icpHint ? `Narrow the ICP to: ${icpHint}` : "Let's refine the ICP.",
+      });
+    } else {
+      suggestions.push({
+        title: "Refine ICP",
+        description: "Narrow to a specific segment",
+        value: icpHint ? `ICP: ${icpHint}` : "My ICP is: ",
+      });
+      suggestions.push({
+        title: "Sharpen the pain",
+        description: "Pick the most urgent pain",
+        value: painHint ? `The most urgent pain is: ${painHint}` : "The most urgent pain is: ",
+      });
+      suggestions.push({
+        title: "Define outcome",
+        description: "Clarify the desired result",
+        value: outcomeHint ? `Desired outcome: ${outcomeHint}` : "The desired outcome is: ",
+      });
+      suggestions.push({
+        title: "Share examples",
+        description: "Paste links or styles you like",
+        value: "Examples I like: ",
+      });
+    }
+
+    if (latestUserMessage && suggestions.length > 0) {
+      suggestions[0] = {
+        ...suggestions[0],
+        description: `Based on: "${latestUserMessage.slice(0, 60)}"`,
+      };
+    }
+
+    return suggestions.slice(0, 4);
+  }, [allDeliverables.length, ideationDraft, latestUserMessage, selectedDeliverable]);
+  const chatQuickReplies = useMemo(() => {
+    const replies: string[] = [];
+    const painHint = ideationDraft.pain.trim();
+
+    if (selectedDeliverable) {
+      replies.push("Make it more premium");
+      replies.push("Shorten to one page");
+      replies.push("Add concrete examples");
+      replies.push("Show a draft outline");
+      if (painHint) {
+        replies.push(`Focus on: ${painHint}`);
+      }
+    } else if (allDeliverables.length > 0) {
+      replies.push("Give me more options");
+      replies.push("Compare the top 2");
+      replies.push("Make it more premium");
+      replies.push("Focus on one pain");
+      replies.push("Shorten the deliverable");
+    } else {
+      replies.push("Give me more options");
+      replies.push("Refine ICP");
+      replies.push("Sharpen the pain");
+      replies.push("Share examples");
+      replies.push("Add concrete outcomes");
+    }
+
+    return replies.filter((item, index) => replies.indexOf(item) === index).slice(0, 6);
+  }, [allDeliverables.length, ideationDraft.pain, selectedDeliverable]);
+  const showStarterPrompts =
+    isChatSetupComplete && !hasUserMessages && !ideation.isIdeating;
+  const showSuggestionCards =
+    isChatSetupComplete &&
+    chatSuggestionCards.length > 0 &&
+    (hasUserMessages || allDeliverables.length > 0 || Boolean(selectedDeliverable));
+  const showQuickReplies =
+    isChatSetupComplete &&
+    chatQuickReplies.length > 0 &&
+    (hasUserMessages || allDeliverables.length > 0 || Boolean(selectedDeliverable));
+  const contextItems = useMemo(
+    () =>
+      [
+        { label: "ICP", value: ideationDraft.icp.trim() },
+        { label: "Pain", value: ideationDraft.pain.trim() },
+        { label: "Outcome", value: ideationDraft.outcome.trim() },
+        { label: "Offer", value: ideationDraft.offer.trim() },
+        { label: "Constraints", value: ideationDraft.constraints.trim() },
+        { label: "Examples", value: ideationDraft.examples.trim() },
+      ].filter((item) => item.value),
+    [ideationDraft],
+  );
+  const chatPlaceholder = selectedDeliverable
+    ? `Ask a follow-up about "${selectedDeliverable.title}"...`
+    : "Describe the lead magnet you want to build...";
 
   useEffect(() => {
     setMockupImages([]);
     setMockupError(null);
   }, [selectedDeliverableId]);
+  useEffect(() => {
+    if (!isChatSetupComplete) {
+      return;
+    }
+    const container = chatScrollRef.current;
+    if (!container) {
+      return;
+    }
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom > CHAT_SCROLL_THRESHOLD) {
+      return;
+    }
+    requestAnimationFrame(() => {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth",
+      });
+    });
+  }, [
+    chatMessages,
+    ideation.isIdeating,
+    isChatSetupComplete,
+    selectedDeliverableId,
+    mockupImages.length,
+  ]);
 
   const handleGenerateFromChat = async () => {
     if (!selectedDeliverable) {
@@ -581,6 +880,20 @@ export default function NewWorkflowPage() {
 
   const handleSkipWizard = () => {
     setIsChatSetupComplete(true);
+    setChatSetupError(null);
+  };
+  const handleEditWizard = () => {
+    setIsChatSetupComplete(false);
+    setChatSetupStep(totalWizardSteps);
+    setChatSetupError(null);
+    setSelectedDeliverableId(null);
+  };
+  const handleResetChat = () => {
+    setChatMessages(createInitialChatMessages());
+    setChatInput("");
+    setSelectedDeliverableId(null);
+    setMockupImages([]);
+    setMockupError(null);
     setChatSetupError(null);
   };
 
@@ -611,10 +924,10 @@ export default function NewWorkflowPage() {
       role: "assistant",
       content: "",
     };
-    const requestMessages: WorkflowIdeationMessage[] = [
+    const requestMessages: WorkflowIdeationMessage[] = buildRequestMessages([
       ...chatMessages,
       userMessage,
-    ].map(({ role, content }) => ({ role, content }));
+    ]);
 
     setChatMessages((prev) => [...prev, userMessage, assistantMessage]);
 
@@ -670,10 +983,10 @@ export default function NewWorkflowPage() {
       role: "assistant",
       content: "",
     };
-    const requestMessages: WorkflowIdeationMessage[] = [
+    const requestMessages: WorkflowIdeationMessage[] = buildRequestMessages([
       ...chatMessages,
       userMessage,
-    ].map(({ role, content }) => ({ role, content }));
+    ]);
 
     setChatMessages((prev) => [...prev, userMessage, assistantMessage]);
     setChatInput("");
@@ -973,6 +1286,81 @@ export default function NewWorkflowPage() {
 
         <div className="bg-white dark:bg-card rounded-lg shadow-lg border border-gray-200 dark:border-border overflow-hidden">
           <div className="space-y-6 p-6">
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  ICP Library
+                </div>
+                <span className="text-[10px] px-2 py-1 rounded-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
+                  {icpProfiles.length} saved
+                </span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <select
+                  value={selectedIcpProfileId}
+                  onChange={(event) => {
+                    setSelectedIcpProfileId(event.target.value);
+                    setIcpProfileError(null);
+                  }}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
+                >
+                  <option value="">Select a saved ICP profile</option>
+                  {icpProfiles.map((profile) => (
+                    <option key={profile.id} value={profile.id}>
+                      {profile.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() =>
+                    selectedIcpProfile && applyIcpProfile(selectedIcpProfile)
+                  }
+                  disabled={!selectedIcpProfile}
+                  className="px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Use ICP
+                </button>
+              </div>
+              {selectedIcpProfile && (
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  {selectedIcpProfile.icp
+                    ? `ICP: ${selectedIcpProfile.icp}`
+                    : "ICP profile loaded."}
+                </div>
+              )}
+              <div className="pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Save current ICP
+                </div>
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                  <input
+                    value={icpProfileName}
+                    onChange={(event) => setIcpProfileName(event.target.value)}
+                    placeholder="e.g., Creator Ops Consultants"
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveIcpProfile}
+                    disabled={!hasWizardCore || isUpdatingSettings}
+                    className="px-4 py-2 text-sm rounded-lg border border-emerald-600 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUpdatingSettings ? "Saving..." : "Save ICP"}
+                  </button>
+                </div>
+                {!hasWizardCore && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    Complete ICP, pain, and outcome before saving.
+                  </div>
+                )}
+                {icpProfileError && (
+                  <div className="text-xs text-red-600 dark:text-red-400">
+                    {icpProfileError}
+                  </div>
+                )}
+              </div>
+            </div>
             {!isChatSetupComplete ? (
               <div className="space-y-5">
                 <div className="flex items-start justify-between gap-4">
@@ -1177,25 +1565,83 @@ export default function NewWorkflowPage() {
               </div>
             ) : (
               <>
-            <div className="rounded-lg border border-gray-200 dark:border-border bg-gradient-to-b from-gray-50/50 to-white dark:from-gray-900/50 dark:to-gray-950 p-4 max-h-[500px] overflow-y-auto space-y-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
-              {chatMessages.map((message, index) => (
-                <div key={message.id} className="space-y-3">
-                  <div
-                    className={`flex ${
-                      message.role === "user" ? "justify-end" : "justify-start"
-                    } animate-in fade-in slide-in-from-bottom-2 duration-300`}
-                    style={{ animationDelay: `${index * 10}ms` }}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap shadow-sm ${
-                        message.role === "user"
-                          ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white"
-                          : "bg-white dark:bg-gray-800 text-gray-900 dark:text-foreground border border-gray-200 dark:border-gray-700"
-                      }`}
-                    >
-                      {message.content}
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-3 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Context summary
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={handleEditWizard}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-700 hover:text-emerald-700 dark:hover:text-emerald-200 transition-colors"
+                      >
+                        Edit context
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResetChat}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500 hover:text-gray-900 dark:hover:text-foreground transition-colors"
+                      >
+                        Reset chat
+                      </button>
                     </div>
                   </div>
+                  {contextItems.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {contextItems.map((item) => (
+                        <div
+                          key={item.label}
+                          className="rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 px-2.5 py-2 max-w-full"
+                          title={`${item.label}: ${item.value}`}
+                        >
+                          <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">
+                            {item.label}
+                          </div>
+                          <div className="text-xs text-gray-700 dark:text-gray-200 line-clamp-2">
+                            {item.value}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      No saved context yet. Use the wizard or share a quick summary in chat.
+                    </div>
+                  )}
+                </div>
+                <div
+                  ref={chatScrollRef}
+                  className="rounded-lg border border-gray-200 dark:border-border bg-gradient-to-b from-gray-50/50 to-white dark:from-gray-900/50 dark:to-gray-950 p-4 max-h-[500px] overflow-y-auto space-y-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700"
+                >
+              {chatMessages.map((message, index) => {
+                const isUserMessage = message.role === "user";
+                return (
+                  <div key={message.id} className="space-y-3">
+                    <div
+                      className={`flex ${
+                        isUserMessage ? "justify-end" : "justify-start"
+                      } animate-in fade-in slide-in-from-bottom-2 duration-300`}
+                      style={{ animationDelay: `${index * 10}ms` }}
+                    >
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                          isUserMessage
+                            ? "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white whitespace-pre-wrap"
+                            : "bg-white dark:bg-gray-800 text-gray-900 dark:text-foreground border border-gray-200 dark:border-gray-700"
+                        }`}
+                      >
+                        {isUserMessage ? (
+                          message.content
+                        ) : (
+                          <MarkdownRenderer
+                            value={message.content}
+                            className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0"
+                            fallbackClassName="whitespace-pre-wrap text-sm text-gray-900 dark:text-foreground"
+                          />
+                        )}
+                      </div>
+                    </div>
 
                   {message.deliverables && message.deliverables.length > 0 && (
                     <div className="flex justify-start animate-in fade-in slide-in-from-bottom-3 duration-300">
@@ -1229,6 +1675,8 @@ export default function NewWorkflowPage() {
                                 onClick={() =>
                                   setSelectedDeliverableId(deliverable.id)
                                 }
+                                aria-pressed={isSelected}
+                                aria-label={`Select ${deliverable.title}`}
                                 className={`group text-left rounded-xl border-2 p-4 transition-all duration-200 hover:shadow-lg ${
                                   isSelected
                                     ? "border-emerald-500 ring-4 ring-emerald-200/50 dark:ring-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-md"
@@ -1272,6 +1720,16 @@ export default function NewWorkflowPage() {
                                   <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
                                     {deliverable.description}
                                   </p>
+                                  {deliverable.build_description?.trim() && (
+                                    <div className="rounded-lg bg-gray-50/80 dark:bg-gray-900/60 border border-gray-100 dark:border-gray-700 px-2 py-1.5 space-y-1">
+                                      <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">
+                                        Build plan
+                                      </div>
+                                      <div className="text-xs text-gray-600 dark:text-gray-300 line-clamp-3">
+                                        {deliverable.build_description}
+                                      </div>
+                                    </div>
+                                  )}
                                   <div className="flex items-center gap-2 pt-1">
                                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase tracking-wide font-medium">
                                       {deliverable.deliverable_type}
@@ -1327,8 +1785,42 @@ export default function NewWorkflowPage() {
                       </div>
                     </div>
                   )}
+                  </div>
+                );
+              })}
+
+              {showStarterPrompts && (
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-3 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Starter prompts
+                    </div>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Tap to fill the composer
+                    </span>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {CHAT_STARTER_PROMPTS.map((prompt) => (
+                      <button
+                        key={prompt.title}
+                        type="button"
+                        onClick={() => applyStarterPrompt(prompt.value)}
+                        className="text-left rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-950 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all"
+                      >
+                        <div className="text-sm font-semibold text-gray-900 dark:text-foreground">
+                          {prompt.title}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          {prompt.description}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-500 mt-2 line-clamp-2">
+                          {prompt.value}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
 
               {ideation.isIdeating && (
                 <div className="flex justify-start animate-in fade-in">
@@ -1396,7 +1888,17 @@ export default function NewWorkflowPage() {
                       <div className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
                         {selectedDeliverable.description}
                       </div>
-                      <div className="mt-3 text-xs text-emerald-700/90 dark:text-emerald-200/90 bg-white/60 dark:bg-gray-800/60 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                      {selectedDeliverable.build_description?.trim() && (
+                        <div className="mt-3 rounded-lg bg-white/70 dark:bg-gray-900/60 px-3 py-2 border border-emerald-100 dark:border-emerald-900/60 space-y-1">
+                          <div className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                            Build plan
+                          </div>
+                          <div className="text-xs text-emerald-700/90 dark:text-emerald-200/90 line-clamp-4">
+                            {selectedDeliverable.build_description}
+                          </div>
+                        </div>
+                      )}
+                      <div className="mt-2 text-xs text-emerald-700/90 dark:text-emerald-200/90 bg-white/60 dark:bg-gray-800/60 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800">
                         💡 Optional: Generate custom mockups to preview the final deliverable (takes ~1 minute)
                       </div>
                     </div>
@@ -1467,56 +1969,71 @@ export default function NewWorkflowPage() {
 
             </div>
 
-            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-4 space-y-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Suggested prompts
+            {showSuggestionCards && (
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Suggested prompts
+                  </div>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Tap to add to the composer
+                  </span>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {chatSuggestionCards.map((card) => (
+                    <button
+                      key={card.title}
+                      type="button"
+                      onClick={() => applyChatSuggestion(card.value)}
+                      disabled={ideation.isIdeating}
+                      className="text-left rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <div className="text-sm font-semibold text-gray-900 dark:text-foreground">
+                        {card.title}
+                      </div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                        {card.description}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {CHAT_SUGGESTION_CARDS.map((card) => (
-                  <button
-                    key={card.title}
-                    type="button"
-                    onClick={() => applyChatSuggestion(card.value)}
-                    disabled={ideation.isIdeating}
-                    className="text-left rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <div className="text-sm font-semibold text-gray-900 dark:text-foreground">
-                      {card.title}
-                    </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      {card.description}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+            )}
 
             <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex flex-wrap gap-2">
-                {CHAT_QUICK_REPLIES.map((reply) => (
-                  <button
-                    key={reply}
-                    type="button"
-                    onClick={() => applyChatSuggestion(reply)}
-                    disabled={ideation.isIdeating}
-                    className="px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {reply}
-                  </button>
-                ))}
-              </div>
+              {showQuickReplies && (
+                <div className="flex flex-wrap gap-2">
+                  {chatQuickReplies.map((reply) => (
+                    <button
+                      key={reply}
+                      type="button"
+                      onClick={() => applyChatSuggestion(reply)}
+                      disabled={ideation.isIdeating}
+                      className="px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {reply}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="relative">
                 <textarea
+                  ref={chatInputRef}
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !ideation.isIdeating && chatInput.trim()) {
+                    if (
+                      e.key === "Enter" &&
+                      !e.shiftKey &&
+                      !ideation.isIdeating &&
+                      chatInput.trim()
+                    ) {
                       e.preventDefault();
                       handleSendChatMessage();
                     }
                   }}
                   className="w-full px-4 py-3 pr-12 border-2 border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-foreground placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-gray-900 disabled:cursor-not-allowed resize-none transition-all"
-                  placeholder="Describe the lead magnet you want to build... (⌘+Enter to send)"
+                  placeholder={`${chatPlaceholder} (Enter to send, Shift+Enter for a new line)`}
                   rows={3}
                   disabled={ideation.isIdeating}
                 />
@@ -1525,7 +2042,7 @@ export default function NewWorkflowPage() {
                   onClick={handleSendChatMessage}
                   disabled={ideation.isIdeating || !chatInput.trim()}
                   className="absolute right-3 bottom-3 p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                  title="Send message (⌘+Enter)"
+                  title="Send message (Enter)"
                 >
                   <FiMessageSquare className="w-4 h-4" />
                 </button>
