@@ -43,6 +43,23 @@ class FormsController {
     };
   }
 
+  async uploadPublicFile(
+    slug: string,
+    body: any,
+    sourceIp: string,
+    requestOrigin?: string,
+  ): Promise<RouteResponse> {
+    return {
+      statusCode: 201,
+      body: await formManagementService.uploadPublicFormFile(
+        slug,
+        body,
+        sourceIp,
+        requestOrigin,
+      ),
+    };
+  }
+
   async create(tenantId: string, body: any): Promise<RouteResponse> {
     return {
       statusCode: 201,

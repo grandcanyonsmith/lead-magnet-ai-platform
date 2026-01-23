@@ -69,6 +69,12 @@ function FormPreview({ formFormData }: { formFormData: FormFormData }) {
                   </option>
                 ))}
               </Select>
+            ) : field.field_type === "file" ? (
+              <input
+                type="file"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary"
+                disabled
+              />
             ) : (
               <input
                 type={
@@ -78,6 +84,8 @@ function FormPreview({ formFormData }: { formFormData: FormFormData }) {
                       ? "tel"
                       : field.field_type === "number"
                         ? "number"
+                        : field.field_type === "url"
+                          ? "url"
                         : "text"
                 }
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary"
@@ -272,6 +280,8 @@ export function FormTab({
                       <option value="textarea">Textarea</option>
                       <option value="select">Select</option>
                       <option value="number">Number</option>
+                      <option value="url">URL</option>
+                      <option value="file">File Upload</option>
                     </Select>
                   </div>
                   <div>

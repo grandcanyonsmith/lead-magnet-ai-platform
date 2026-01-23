@@ -1,8 +1,9 @@
 "use client";
 
-import { Fragment, useState, useEffect, useRef, useCallback } from "react";
+import { Fragment, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import type { IconType } from "react-icons";
 import {
   FiAlertCircle,
   FiCheck,
@@ -91,6 +92,27 @@ export default function PlaygroundPage() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const [logs, setLogs] = useState<string[]>([]);
+
+  const contextSummary = useMemo(() => {
+    const jsonString = JSON.stringify(accumulatedContext || {}, null, 2);
+    const sizeKb = Math.max(1, Math.round(jsonString.length / 1024));
+    const topKeys = Object.keys(accumulatedContext || {});
+    return { sizeKb, keys: topKeys.length };
+  }, [accumulatedContext]);
+
+  const tabItems: { id: SidebarTab; label: string; icon: IconType; badge?: number }[] = [
+    { id: "input", label: "Input", icon: FiFileText },
+    { id: "step-config", label: "Step", icon: FiSettings },
+    { id: "context", label: "Context", icon: FiDatabase },
+    { id: "logs", label: "Logs", icon: FiTerminal, badge: executionResults.length },
+  ];
+
+  const tabButtonClasses = (tabId: SidebarTab) =>
+    `group relative isolate flex-1 px-4 py-3 text-[13px] sm:text-sm font-semibold border-b-2 transition-all duration-200 flex items-center justify-center gap-2 rounded-t-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+      activeTab === tabId
+        ? "border-primary text-primary bg-gradient-to-b from-primary/10 via-primary/5 to-transparent shadow-[inset_0_-1px_0_0_rgba(59,130,246,0.3)]"
+        : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/40"
+    }`;
 
   const stepsCount = steps.length;
   const activeStepNumber =
@@ -459,6 +481,17 @@ export default function PlaygroundPage() {
       setIsEditingContext(true);
   };
 
+const handleCopyContext = async () => {
+    try {
+        const payload = JSON.stringify(accumulatedContext || {}, null, 2);
+        await navigator.clipboard.writeText(payload);
+        toast.success("Context copied to clipboard");
+    } catch (err) {
+        console.error(err);
+        toast.error("Unable to copy context");
+    }
+};
+
   const handleSaveContext = () => {
       try {
           const parsed = JSON.parse(contextEditValue);
@@ -475,7 +508,7 @@ export default function PlaygroundPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-65px)] flex-col overflow-hidden bg-muted/30">
+    <div className="flex min-h-[calc(100vh-65px)] flex-col bg-muted/30">
       
       {/* Top Bar */}
       <div className="flex flex-col gap-4 px-4 py-4 bg-background border-b border-border shadow-sm z-10 shrink-0 sm:px-6">
@@ -589,77 +622,64 @@ export default function PlaygroundPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col overflow-hidden lg:flex-row">
-        {/* Left Panel: Flowchart Visualizer */}
-        <div className="flex-1 min-w-0 min-h-[240px] bg-slate-50 dark:bg-black/20 relative flex flex-col lg:min-h-0">
-            <div className="flex-1 relative">
-                <WorkflowFlowchart
-                    steps={steps}
-                    onStepClick={handleStepClick}
-                    onAddStep={addStep}
-                    onStepsReorder={(newSteps) => reorderSteps(newSteps)}
-                    activeStepIndex={activeStepIndex}
-                    onTriggerClick={() => setActiveTab("input")}
-                />
-            </div>
-        </div>
-
+      <div className="flex flex-col gap-4">
         {/* Right Panel: Tabs */}
-        <div className="flex-1 w-full min-h-[260px] bg-background border-t border-border flex flex-col shadow-xl z-20 lg:min-h-0 lg:flex-none lg:w-[520px] xl:w-[600px] lg:border-l lg:border-t-0">
+        <div className="w-full min-h-[260px] bg-background border-t border-border flex flex-col shadow-xl z-20">
             {/* Tab Header */}
-            <div className="flex border-b border-border bg-muted/5">
-                <button 
-                    onClick={() => setActiveTab("input")}
-                    className={`flex-1 py-3 text-xs font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${
-                        activeTab === "input" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
-                >
-                    <FiFileText /> Input
-                </button>
-                <button 
-                    onClick={() => setActiveTab("step-config")}
-                    className={`flex-1 py-3 text-xs font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${
-                        activeTab === "step-config" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
-                >
-                    <FiSettings /> Step
-                </button>
-                <button 
-                    onClick={() => setActiveTab("context")}
-                    className={`flex-1 py-3 text-xs font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${
-                        activeTab === "context" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
-                >
-                    <FiDatabase /> Context
-                </button>
-                <button 
-                    onClick={() => setActiveTab("logs")}
-                    className={`flex-1 py-3 text-xs font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${
-                        activeTab === "logs" ? "border-primary text-primary bg-primary/5" : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }`}
-                >
-                    <FiTerminal /> Logs
-                    {executionResults.length > 0 && (
-                        <span className="bg-muted-foreground/20 text-muted-foreground px-1.5 rounded-full text-[10px]">{executionResults.length}</span>
+            <div
+              className="flex border-b border-border bg-muted/5 px-1"
+              role="tablist"
+              aria-label="Playground panels"
+            >
+              {tabItems.map(({ id, label, icon: Icon, badge }) => {
+                const isActive = activeTab === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setActiveTab(id)}
+                    className={tabButtonClasses(id)}
+                    aria-selected={isActive}
+                    role="tab"
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{label}</span>
+                    {badge && badge > 0 ? (
+                      <span className="inline-flex items-center justify-center rounded-full bg-primary/10 text-primary px-2 text-[10px] font-semibold shadow-sm">
+                        {badge}
+                      </span>
+                    ) : null}
+                    {isActive && (
+                      <span
+                        className="pointer-events-none absolute inset-0 -z-10 rounded-t-md bg-gradient-to-b from-primary/10 via-primary/5 to-transparent"
+                        aria-hidden="true"
+                      />
                     )}
-                </button>
+                    {isActive && (
+                      <span
+                        className="pointer-events-none absolute inset-x-6 bottom-[-2px] h-0.5 rounded-full bg-primary/80"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
             
-            <div className="flex-1 overflow-hidden relative">
+            <div className="relative">
                 {/* INPUT TAB */}
                 {activeTab === "input" && (
-                    <div className="absolute inset-0 flex flex-col">
+                    <div className="flex flex-col">
                         <div className="p-4 border-b border-border bg-muted/10">
                             <h3 className="text-sm font-semibold">Initial Input</h3>
                             <p className="text-xs text-muted-foreground mt-1">
                                 JSON data passed to the first step.
                             </p>
                         </div>
-                        <div className="flex-1 p-0">
+                        <div className="p-0">
                             <textarea 
                                 value={currentInput}
                                 onChange={(e) => setCurrentInput(e.target.value)}
-                                className="w-full h-full bg-background p-4 text-xs font-mono resize-none focus:outline-none"
+                                className="w-full min-h-[240px] bg-background p-4 text-xs font-mono resize-y focus:outline-none"
                                 placeholder="{}"
                                 spellCheck={false}
                             />
@@ -669,9 +689,9 @@ export default function PlaygroundPage() {
 
                 {/* STEP CONFIG TAB */}
                 {activeTab === "step-config" && (
-                     <div className="absolute inset-0 flex flex-col overflow-hidden">
+                     <div className="flex flex-col">
                         {selectedStepIndex !== null && steps[selectedStepIndex] ? (
-                            <div className="h-full overflow-y-auto">
+                            <div className="flex flex-col">
                                 <div className="p-4 border-b border-border bg-muted/10 sticky top-0 z-10 flex justify-between items-center backdrop-blur-md">
                                     <div>
                                         <h3 className="text-sm font-semibold">Step {selectedStepIndex + 1}: {steps[selectedStepIndex].step_name || "Untitled"}</h3>
@@ -728,22 +748,38 @@ export default function PlaygroundPage() {
 
                 {/* CONTEXT TAB */}
                 {activeTab === "context" && (
-                    <div className="absolute inset-0 flex flex-col overflow-hidden">
-                        <div className="p-4 border-b border-border bg-muted/10 flex justify-between items-center">
+                    <div className="flex flex-col">
+                        <div className="p-4 border-b border-border bg-muted/10 flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <h3 className="text-sm font-semibold">Accumulated Context</h3>
                                 <p className="text-xs text-muted-foreground mt-1">
                                     Merged output from all executed steps.
                                 </p>
+                                <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2 py-0.5">
+                                        Keys: {contextSummary.keys}
+                                    </span>
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2 py-0.5">
+                                        ~{contextSummary.sizeKb} KB
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                                 {!isEditingContext ? (
-                                    <button 
-                                        onClick={handleEditContext}
-                                        className="text-[10px] border border-border bg-background hover:bg-muted px-2 py-1 rounded font-medium flex items-center gap-1"
-                                    >
-                                        <FiEdit2 className="w-3 h-3" /> Edit
-                                    </button>
+                                    <>
+                                        <button 
+                                            onClick={handleCopyContext}
+                                            className="text-[10px] border border-border bg-background hover:bg-muted px-2 py-1 rounded font-medium flex items-center gap-1"
+                                        >
+                                            <FiFileText className="w-3 h-3" /> Copy
+                                        </button>
+                                        <button 
+                                            onClick={handleEditContext}
+                                            className="text-[10px] border border-border bg-background hover:bg-muted px-2 py-1 rounded font-medium flex items-center gap-1"
+                                        >
+                                            <FiEdit2 className="w-3 h-3" /> Edit
+                                        </button>
+                                    </>
                                 ) : (
                                     <>
                                         <button 
@@ -762,19 +798,21 @@ export default function PlaygroundPage() {
                                 )}
                             </div>
                         </div>
-                        <div className="flex-1 overflow-auto p-4">
+                        <div className="p-4 bg-gradient-to-b from-muted/10 via-background to-background">
                             {isEditingContext ? (
                                 <textarea 
                                     value={contextEditValue}
                                     onChange={(e) => setContextEditValue(e.target.value)}
-                                    className="w-full h-full font-mono text-xs bg-muted/30 p-2 rounded border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+                                    className="w-full min-h-[240px] font-mono text-xs bg-background p-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/40 shadow-inner resize-y"
                                     spellCheck={false}
                                 />
                             ) : (
-                                <JsonViewer 
-                                    value={accumulatedContext}
-                                    defaultExpandedDepth={2}
-                                />
+                                <div className="h-full rounded-xl border border-border/80 bg-card/60 dark:bg-card/70 shadow-inner p-3">
+                                    <JsonViewer 
+                                        value={accumulatedContext}
+                                        defaultExpandedDepth={2}
+                                    />
+                                </div>
                             )}
                         </div>
                     </div>
@@ -782,7 +820,7 @@ export default function PlaygroundPage() {
 
                 {/* LOGS TAB */}
                 {activeTab === "logs" && (
-                    <div className="absolute inset-0 flex flex-col overflow-hidden">
+                    <div className="flex flex-col">
                         <div className="p-4 border-b border-border bg-muted/10 flex justify-between items-center">
                             <div>
                                 <h3 className="text-sm font-semibold">Live Logs</h3>
@@ -794,7 +832,7 @@ export default function PlaygroundPage() {
                                 <button onClick={() => { setLogs([]); setExecutionResults([]); }} className="text-xs text-muted-foreground hover:text-destructive">Clear</button>
                             )}
                         </div>
-                        <div className="flex-1 overflow-auto p-4 bg-black/5 dark:bg-black/30 font-mono text-xs">
+                        <div className="p-4 bg-black/5 dark:bg-black/30 font-mono text-xs">
                             {logs.length === 0 && executionResults.length === 0 && (
                                 <div className="text-center py-10 text-muted-foreground italic">
                                     Ready to run.
@@ -837,6 +875,20 @@ export default function PlaygroundPage() {
                         </div>
                     </div>
                 )}
+            </div>
+        </div>
+
+        {/* Left Panel: Flowchart Visualizer */}
+        <div className="flex-1 min-w-0 min-h-[240px] bg-slate-50 dark:bg-black/20 relative flex flex-col lg:min-h-0">
+            <div className="flex-1 relative">
+                <WorkflowFlowchart
+                    steps={steps}
+                    onStepClick={handleStepClick}
+                    onAddStep={addStep}
+                    onStepsReorder={(newSteps) => reorderSteps(newSteps)}
+                    activeStepIndex={activeStepIndex}
+                    onTriggerClick={() => setActiveTab("input")}
+                />
             </div>
         </div>
       </div>

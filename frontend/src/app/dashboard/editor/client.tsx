@@ -25,8 +25,9 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
 import type { Job } from "@/types/job";
-import type { Workflow } from "@/types/workflow";
+import type { Workflow, AIModel } from "@/types/workflow";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useAIModels } from "@/hooks/api/useWorkflows";
 
 import { useEditorHistory } from "./hooks/useEditorHistory";
 import { useHtmlPatcher } from "./hooks/useHtmlPatcher";
@@ -101,6 +102,23 @@ export default function EditorClient() {
     onApply: handlePatchApplied,
     initialUrl,
   });
+  const { models: aiModels, loading: aiModelsLoading, error: aiModelsError } =
+    useAIModels();
+
+  const aiModelOptions = useMemo(() => {
+    if (aiModels.length > 0) {
+      const hasCurrent = aiModels.some((model) => model.id === aiModel);
+      return hasCurrent
+        ? aiModels
+        : [{ id: aiModel, name: aiModel, description: "" }, ...aiModels];
+    }
+    return [{ id: aiModel, name: aiModel, description: "" }];
+  }, [aiModels, aiModel]);
+
+  const activeModelLabel = useMemo(() => {
+    const match = aiModelOptions.find((model) => model.id === aiModel);
+    return match?.name ?? aiModel;
+  }, [aiModelOptions, aiModel]);
 
   const isDirty = lastSavedHtml !== null && htmlState.html !== lastSavedHtml;
 
@@ -761,9 +779,12 @@ export default function EditorClient() {
                     <button
                       onClick={() => setShowAiSettings((v) => !v)}
                       className="px-2.5 py-1.5 text-[10px] font-semibold bg-zinc-800 text-amber-300/90 rounded-lg flex items-center gap-1.5 border border-white/5 hover:bg-zinc-700 transition-colors shadow-sm"
+                      title={activeModelLabel}
                     >
                       <FiZap className="w-3 h-3" />
-                      <span className="hidden sm:inline">GPT-5.2</span>
+                      <span className="hidden sm:inline truncate max-w-[140px]">
+                        {activeModelLabel}
+                      </span>
                     </button>
                   </Tooltip>
 
@@ -804,16 +825,30 @@ export default function EditorClient() {
                         AI Model
                       </div>
                       <div className="grid grid-cols-1 gap-1 bg-black/20 p-1 rounded-lg border border-white/5">
-                        <button
-                          onClick={() => setAiModel("gpt-5.2")}
-                          className={`text-xs py-1.5 rounded-md transition-colors font-medium ${
-                            aiModel === "gpt-5.2"
-                              ? "bg-zinc-700 text-white shadow-sm"
-                              : "text-gray-500 hover:text-gray-300"
-                          }`}
-                        >
-                          GPT-5.2
-                        </button>
+                        {aiModelsLoading && (
+                          <div className="px-2 py-1.5 text-[11px] text-gray-500">
+                            Loading models...
+                          </div>
+                        )}
+                        {aiModelsError && !aiModelsLoading && (
+                          <div className="px-2 py-1.5 text-[11px] text-amber-300/80">
+                            Unable to load models. Showing current selection.
+                          </div>
+                        )}
+                        {aiModelOptions.map((model) => (
+                          <button
+                            key={model.id}
+                            onClick={() => setAiModel(model.id as AIModel)}
+                            className={`text-xs py-1.5 rounded-md transition-colors font-medium ${
+                              aiModel === model.id
+                                ? "bg-zinc-700 text-white shadow-sm"
+                                : "text-gray-500 hover:text-gray-300"
+                            }`}
+                            title={model.name}
+                          >
+                            {model.name}
+                          </button>
+                        ))}
                       </div>
                     </div>
 

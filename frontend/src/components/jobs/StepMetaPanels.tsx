@@ -1,10 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { AI_MODELS } from "@/constants/models";
+import { useAIModels } from "@/hooks/api/useWorkflows";
 import { REASONING_EFFORT_LABELS, SERVICE_TIER_LABELS } from "@/utils/stepMeta";
 import type { AIModel, ImageGenerationSettings, ServiceTier } from "@/types/workflow";
 import type {
@@ -104,6 +105,25 @@ export function ModelDetailsPanel({
   isModelAllowed,
   modelDetailsRows,
 }: ModelDetailsPanelProps) {
+  const {
+    models: aiModels,
+    loading: aiModelsLoading,
+    error: aiModelsError,
+  } = useAIModels();
+  const modelOptions = useMemo(() => {
+    const options = aiModels.map((model) => ({
+      value: model.id as AIModel,
+      label: model.name,
+    }));
+    const hasCurrent = options.some((option) => option.value === draftModel);
+    const withCurrent = hasCurrent
+      ? options
+      : [{ value: draftModel, label: draftModel }, ...options];
+    return withCurrent.length > 0
+      ? withCurrent
+      : [{ value: draftModel, label: draftModel }];
+  }, [aiModels, draftModel]);
+
   return (
     <div
       id={id}
@@ -124,22 +144,32 @@ export function ModelDetailsPanel({
             }
             className="h-9"
             aria-label="Select model"
+            disabled={aiModelsLoading}
           >
-            {AI_MODELS.map((model) => {
-              const isAllowed =
-                !modelRestriction.allowedModels ||
-                modelRestriction.allowedModels.has(model.value);
-              return (
-                <option
-                  key={model.value}
-                  value={model.value}
-                  disabled={!isAllowed}
-                >
-                  {model.label}
-                </option>
-              );
-            })}
+            {aiModelsLoading ? (
+              <option>Loading models...</option>
+            ) : (
+              modelOptions.map((model) => {
+                const isAllowed =
+                  !modelRestriction.allowedModels ||
+                  modelRestriction.allowedModels.has(model.value);
+                return (
+                  <option
+                    key={model.value}
+                    value={model.value}
+                    disabled={!isAllowed}
+                  >
+                    {model.label}
+                  </option>
+                );
+              })
+            )}
           </Select>
+          {aiModelsError && !aiModelsLoading && (
+            <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
+              Unable to load models. Showing current selection.
+            </div>
+          )}
           {modelRestriction.reason && (
             <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">
               {modelRestriction.reason}

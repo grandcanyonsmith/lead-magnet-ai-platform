@@ -6,6 +6,8 @@ import { ensureRequiredFields } from '@utils/formFieldUtils';
 import { validate, createFormSchema, updateFormSchema, submitFormSchema } from '@utils/validation';
 import { formSubmissionService, FormSubmissionData } from './formSubmissionService';
 import { rateLimitService } from '@services/rateLimitService';
+import { fileService } from '@services/files/fileService';
+import { s3Service } from '@services/s3Service';
 import { env } from '@utils/env';
 
 const FORMS_TABLE = env.formsTable;
@@ -211,6 +213,83 @@ class FormManagementService {
       message: result.message,
       job_id: result.jobId,
       redirect_url: result.redirectUrl,
+    };
+  }
+
+  async uploadPublicFormFile(
+    slug: string,
+    body: any,
+    sourceIp: string,
+    requestOrigin?: string,
+  ): Promise<{
+    file_id: string;
+    original_filename: string;
+    file_size: number;
+    content_type: string;
+    download_url: string;
+  }> {
+    const form = await this.getActiveFormBySlug(slug);
+
+    const normalizedOrigin = normalizeOriginHeader(requestOrigin);
+    const isCustomOrigin = Boolean(
+      normalizedOrigin && !this.isPlatformOrigin(normalizedOrigin),
+    );
+
+    if (isCustomOrigin && USER_SETTINGS_TABLE) {
+      try {
+        const settings = await db.get(USER_SETTINGS_TABLE, {
+          tenant_id: form.tenant_id,
+        });
+        const tenantCustom = normalizeOriginHeader(settings?.custom_domain);
+        if (!tenantCustom || tenantCustom !== normalizedOrigin) {
+          throw new ApiError("This form doesn't exist or has been removed", 404);
+        }
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        logger.warn("Failed to enforce custom domain for form upload", {
+          error: error instanceof Error ? error.message : String(error),
+          tenantId: form.tenant_id,
+          slug,
+          origin: requestOrigin,
+          sourceIp,
+        });
+        throw new ApiError("This form doesn't exist or has been removed", 404);
+      }
+    } else if (isCustomOrigin && !USER_SETTINGS_TABLE) {
+      throw new ApiError("This form doesn't exist or has been removed", 404);
+    }
+
+    if (!body?.file || !body?.filename) {
+      throw new ApiError("File and filename are required", 400);
+    }
+
+    let fileBuffer: Buffer;
+    if (typeof body.file === "string") {
+      fileBuffer = Buffer.from(body.file, "base64");
+    } else if (Buffer.isBuffer(body.file)) {
+      fileBuffer = body.file;
+    } else {
+      throw new ApiError("Invalid file format", 400);
+    }
+
+    const fileRecord = await fileService.uploadFile(
+      form.tenant_id,
+      fileBuffer,
+      body.filename,
+      {
+        category: "form_uploads",
+        fileType: "form_upload",
+        contentType: body.contentType,
+      },
+    );
+    const downloadUrl = await s3Service.getFileUrl(fileRecord.s3_key);
+
+    return {
+      file_id: fileRecord.file_id,
+      original_filename: fileRecord.original_filename,
+      file_size: fileRecord.file_size,
+      content_type: fileRecord.content_type,
+      download_url: downloadUrl,
     };
   }
 

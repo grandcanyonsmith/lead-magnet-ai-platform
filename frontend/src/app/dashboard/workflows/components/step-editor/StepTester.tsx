@@ -673,7 +673,10 @@ export default function StepTester({ step, index }: StepTesterProps) {
                         input_text: inputText,
                         tools,
                         tool_choice: toolChoice,
-                        params: vars
+                        params: vars,
+                        reasoning_effort: step.reasoning_effort,
+                        service_tier: step.service_tier,
+                        text_verbosity: step.text_verbosity
                     };
                  })()}
                  onClose={() => {

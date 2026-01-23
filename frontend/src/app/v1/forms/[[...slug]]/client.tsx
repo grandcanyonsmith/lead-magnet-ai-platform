@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 type FormField = {
   field_id: string;
@@ -19,7 +20,9 @@ type FormField = {
     | "tel"
     | "number"
     | "select"
-    | "checkbox";
+    | "checkbox"
+    | "url"
+    | "file";
   label: string;
   placeholder?: string;
   required: boolean;
@@ -91,6 +94,9 @@ export default function PublicFormPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [fileUploads, setFileUploads] = useState<
+    Record<string, { uploading: boolean; error?: string; fileName?: string }>
+  >({});
   const [generating, setGenerating] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
@@ -127,6 +133,8 @@ export default function PublicFormPage() {
           initialData[field.field_id] = false;
         } else if (field.field_type === "select") {
           initialData[field.field_id] = "";
+        } else if (field.field_type === "file") {
+          initialData[field.field_id] = null;
         } else {
           initialData[field.field_id] = "";
         }
@@ -164,6 +172,7 @@ export default function PublicFormPage() {
     stopPolling();
     setSuccess(false);
     setSubmitting(false);
+    setFileUploads({});
     setGenerating(false);
     setJobId(null);
     setJobStatus(null);
@@ -177,6 +186,102 @@ export default function PublicFormPage() {
       setLoading(false);
     }
   }, [slug, loadForm, stopPolling]);
+
+  const hasUploadingFiles = Object.values(fileUploads).some(
+    (upload) => upload?.uploading,
+  );
+  const hasFileUploadErrors = Object.values(fileUploads).some(
+    (upload) => upload?.error,
+  );
+
+  const updateFileUploadState = useCallback(
+    (
+      fieldId: string,
+      nextState: { uploading?: boolean; error?: string; fileName?: string },
+    ) => {
+      setFileUploads((prev) => ({
+        ...prev,
+        [fieldId]: { ...prev[fieldId], ...nextState },
+      }));
+    },
+    [],
+  );
+
+  const readFileAsBase64 = useCallback((file: File) => {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(",")[1];
+        if (!base64) {
+          reject(new Error("Failed to read file"));
+          return;
+        }
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const uploadFileForField = useCallback(
+    async (fieldId: string, file: File) => {
+      if (!slug) return;
+
+      if (file.size > MAX_FILE_SIZE) {
+        updateFileUploadState(fieldId, {
+          uploading: false,
+          error: "File size exceeds 10MB limit",
+          fileName: file.name,
+        });
+        return;
+      }
+
+      updateFileUploadState(fieldId, {
+        uploading: true,
+        error: undefined,
+        fileName: file.name,
+      });
+
+      try {
+        const base64 = await readFileAsBase64(file);
+        const response = await axios.post(
+          `${API_URL}/v1/forms/${slug}/files`,
+          {
+            file: base64,
+            filename: file.name,
+            contentType: file.type,
+          },
+        );
+        const uploaded = response.data || {};
+        setFormData((prev) => ({
+          ...prev,
+          [fieldId]: {
+            file_id: uploaded.file_id,
+            file_name: uploaded.original_filename || file.name,
+            content_type: uploaded.content_type || file.type,
+            file_size: uploaded.file_size || file.size,
+            download_url: uploaded.download_url,
+          },
+        }));
+        updateFileUploadState(fieldId, { uploading: false });
+      } catch (error: any) {
+        logger.debug("Failed to upload file", {
+          context: "PublicForm",
+          error,
+        });
+        setFormData((prev) => ({ ...prev, [fieldId]: null }));
+        updateFileUploadState(fieldId, {
+          uploading: false,
+          error:
+            error?.response?.data?.message ||
+            error?.message ||
+            "Failed to upload file",
+        });
+      }
+    },
+    [readFileAsBase64, slug, updateFileUploadState],
+  );
 
   const startPollingJobStatus = useCallback(
     (jobIdToPoll: string) => {
@@ -278,6 +383,17 @@ export default function PublicFormPage() {
     stopPolling();
     setError(null);
     setSuccess(false);
+
+    if (hasUploadingFiles) {
+      setError("Please wait for file uploads to finish.");
+      return;
+    }
+
+    if (hasFileUploadErrors) {
+      setError("Please resolve file upload errors before submitting.");
+      return;
+    }
+
     setSubmitting(true);
     setGenerating(false);
     setJobId(null);
@@ -358,6 +474,48 @@ export default function PublicFormPage() {
           </Select>
         );
 
+      case "file": {
+        const uploadState = fileUploads[field.field_id];
+        const uploadedValue = formData[field.field_id];
+        const uploadedName =
+          uploadedValue && typeof uploadedValue === "object"
+            ? uploadedValue.file_name ||
+              uploadedValue.original_filename ||
+              uploadedValue.filename ||
+              ""
+            : "";
+
+        return (
+          <div className="space-y-2">
+            <input
+              type="file"
+              id={field.field_id}
+              onChange={(e) => {
+                const nextFile = e.target.files?.[0];
+                if (!nextFile) return;
+                uploadFileForField(field.field_id, nextFile);
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              required={field.required}
+            />
+            {uploadState?.uploading && (
+              <p className="text-xs text-gray-500">
+                Uploading {uploadState.fileName || "file"}...
+              </p>
+            )}
+            {uploadState?.error && (
+              <p className="text-xs text-red-600">{uploadState.error}</p>
+            )}
+            {!uploadState?.uploading && !uploadState?.error && uploadedName && (
+              <p className="text-xs text-gray-500">Uploaded: {uploadedName}</p>
+            )}
+            {!uploadState?.uploading && !uploadState?.error && !uploadedName && (
+              <p className="text-xs text-gray-400">Max file size: 10MB</p>
+            )}
+          </div>
+        );
+      }
+
       case "checkbox":
         return (
           <div className="flex items-center">
@@ -387,6 +545,8 @@ export default function PublicFormPage() {
                   ? "tel"
                   : field.field_type === "number"
                     ? "number"
+                    : field.field_type === "url"
+                      ? "url"
                     : "text"
             }
             id={field.field_id}
@@ -639,10 +799,14 @@ export default function PublicFormPage() {
             <div className="pt-3 sm:pt-4">
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || hasUploadingFiles}
                 className="w-full flex justify-center py-2.5 sm:py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm sm:text-base font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {submitting ? "Submitting..." : "Submit"}
+                {hasUploadingFiles
+                  ? "Uploading files..."
+                  : submitting
+                    ? "Submitting..."
+                    : "Submit"}
               </button>
             </div>
           </form>

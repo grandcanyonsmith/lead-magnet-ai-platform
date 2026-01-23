@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -23,6 +23,7 @@ import { useWorkflowSubmission } from "@/hooks/useWorkflowSubmission";
 import { useWorkflowGenerationStatus } from "@/hooks/useWorkflowGenerationStatus";
 import { useSettings, useUpdateSettings } from "@/hooks/api/useSettings";
 import { useWorkflowIdeation } from "@/hooks/useWorkflowIdeation";
+import { useAIModels } from "@/hooks/api/useWorkflows";
 import { api } from "@/lib/api";
 import {
   AIModel,
@@ -30,11 +31,8 @@ import {
   WorkflowIdeationDeliverable,
   WorkflowIdeationMessage,
 } from "@/types";
-import { AI_MODELS, DEFAULT_AI_MODEL } from "@/constants/models";
+import { DEFAULT_AI_MODEL } from "@/constants/models";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
-
-const isAIModel = (value?: string): value is AIModel =>
-  !!value && AI_MODELS.some((model) => model.value === value);
 
 const PREVIEW_IMAGE_WIDTH = 1024;
 const PREVIEW_IMAGE_HEIGHT = 768;
@@ -393,6 +391,7 @@ export default function NewWorkflowPage() {
   const workflowForm = useWorkflowForm();
   const { settings, refetch: refetchSettings } = useSettings();
   const { updateSettings, loading: isUpdatingSettings } = useUpdateSettings();
+  const { models: aiModels } = useAIModels();
   const workflowSteps = useWorkflowSteps({
     defaultToolChoice: settings?.default_tool_choice,
     defaultServiceTier: settings?.default_service_tier,
@@ -405,9 +404,16 @@ export default function NewWorkflowPage() {
   );
   const submission = useWorkflowSubmission();
   const generationStatus = useWorkflowGenerationStatus(generationJobId);
-  const resolvedModel = isAIModel(settings?.default_ai_model)
-    ? settings.default_ai_model
-    : DEFAULT_AI_MODEL;
+  const resolvedModel = useMemo<AIModel>(() => {
+    const preferred = settings?.default_ai_model;
+    if (preferred && aiModels.some((model) => model.id === preferred)) {
+      return preferred as AIModel;
+    }
+    if (aiModels.some((model) => model.id === DEFAULT_AI_MODEL)) {
+      return DEFAULT_AI_MODEL;
+    }
+    return (aiModels[0]?.id || DEFAULT_AI_MODEL) as AIModel;
+  }, [aiModels, settings?.default_ai_model]);
   const totalWizardSteps = IDEATION_STEPS.length;
   const isWizardReview = chatSetupStep >= totalWizardSteps;
   const currentWizardStep = IDEATION_STEPS[chatSetupStep];
@@ -490,56 +496,57 @@ export default function NewWorkflowPage() {
     focusChatInput();
   };
 
-  const summarizeList = (items?: string[], limit = 6) => {
+  const summarizeList = useCallback((items?: string[], limit = 6) => {
     if (!items || items.length === 0) return "";
     return items
       .map((item) => item.trim())
       .filter(Boolean)
       .slice(0, limit)
       .join("; ");
-  };
+  }, []);
 
-  const buildIcpContextMessage = (
-    profile?: ICPProfile,
-  ): WorkflowIdeationMessage | null => {
-    if (!profile) return null;
-    const lines = [
-      `ICP Profile: ${profile.name}`,
-      profile.icp ? `ICP: ${profile.icp}` : "",
-      profile.pain ? `Pain: ${profile.pain}` : "",
-      profile.outcome ? `Outcome: ${profile.outcome}` : "",
-      profile.offer ? `Offer: ${profile.offer}` : "",
-      profile.constraints ? `Constraints: ${profile.constraints}` : "",
-      profile.examples ? `Examples: ${profile.examples}` : "",
-    ].filter(Boolean);
-    if (profile.research_report) {
-      const report = profile.research_report;
-      if (report.summary) {
-        lines.push(`Research summary: ${report.summary}`);
+  const buildIcpContextMessage = useCallback(
+    (profile?: ICPProfile): WorkflowIdeationMessage | null => {
+      if (!profile) return null;
+      const lines = [
+        `ICP Profile: ${profile.name}`,
+        profile.icp ? `ICP: ${profile.icp}` : "",
+        profile.pain ? `Pain: ${profile.pain}` : "",
+        profile.outcome ? `Outcome: ${profile.outcome}` : "",
+        profile.offer ? `Offer: ${profile.offer}` : "",
+        profile.constraints ? `Constraints: ${profile.constraints}` : "",
+        profile.examples ? `Examples: ${profile.examples}` : "",
+      ].filter(Boolean);
+      if (profile.research_report) {
+        const report = profile.research_report;
+        if (report.summary) {
+          lines.push(`Research summary: ${report.summary}`);
+        }
+        const researchPains = summarizeList(report.pains, 5);
+        if (researchPains) {
+          lines.push(`Research pains: ${researchPains}`);
+        }
+        const researchDesires = summarizeList(report.desires, 5);
+        if (researchDesires) {
+          lines.push(`Research desires: ${researchDesires}`);
+        }
+        const researchWants = summarizeList(report.wants, 5);
+        if (researchWants) {
+          lines.push(`Research wants: ${researchWants}`);
+        }
       }
-      const researchPains = summarizeList(report.pains, 5);
-      if (researchPains) {
-        lines.push(`Research pains: ${researchPains}`);
-      }
-      const researchDesires = summarizeList(report.desires, 5);
-      if (researchDesires) {
-        lines.push(`Research desires: ${researchDesires}`);
-      }
-      const researchWants = summarizeList(report.wants, 5);
-      if (researchWants) {
-        lines.push(`Research wants: ${researchWants}`);
-      }
-    }
-    if (lines.length === 0) return null;
-    return {
-      role: "system",
-      content: lines.join("\n"),
-    };
-  };
+      if (lines.length === 0) return null;
+      return {
+        role: "system",
+        content: lines.join("\n"),
+      };
+    },
+    [summarizeList],
+  );
 
   const icpContextMessage = useMemo(
     () => buildIcpContextMessage(selectedIcpProfile),
-    [selectedIcpProfile],
+    [buildIcpContextMessage, selectedIcpProfile],
   );
 
   const buildRequestMessages = (messages: ChatMessage[]) => {
