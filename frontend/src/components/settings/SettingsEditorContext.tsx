@@ -48,6 +48,8 @@ type SettingsEditorContextValue = {
   setField: (field: keyof Settings, value: string) => void;
   promptOverridesJson: string;
   setPromptOverridesJson: (value: string) => void;
+  toolSecretsJson: string;
+  setToolSecretsJson: (value: string) => void;
 
   saving: boolean;
   save: () => Promise<boolean>;
@@ -135,6 +137,64 @@ function parsePromptOverridesJson(value: string): {
   }
 }
 
+const TOOL_SECRET_KEY_PATTERN = /^[A-Z_][A-Z0-9_]*$/;
+
+function formatToolSecrets(secrets?: Record<string, string> | null): string {
+  const safeSecrets =
+    secrets && typeof secrets === "object" && !Array.isArray(secrets)
+      ? secrets
+      : {};
+  const normalized = Object.keys(safeSecrets)
+    .sort()
+    .reduce<Record<string, string>>((acc, key) => {
+      const value = safeSecrets[key];
+      if (typeof value === "string") {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+  return JSON.stringify(normalized, null, 2);
+}
+
+function parseToolSecretsJson(value: string): {
+  data?: Record<string, string>;
+  error?: string;
+} {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { data: {} };
+  }
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { error: "Tool secrets must be a JSON object." };
+    }
+    const cleaned: Record<string, string> = {};
+    const invalidKeys: string[] = [];
+    Object.entries(parsed).forEach(([key, rawValue]) => {
+      const name = key.trim();
+      if (!name) return;
+      if (!TOOL_SECRET_KEY_PATTERN.test(name)) {
+        invalidKeys.push(name);
+        return;
+      }
+      if (rawValue == null) return;
+      const val = String(rawValue).trim();
+      if (!val) return;
+      cleaned[name] = val;
+    });
+    if (invalidKeys.length > 0) {
+      return {
+        error:
+          "Secret keys must be uppercase environment variable names (e.g. MY_API_KEY).",
+      };
+    }
+    return { data: cleaned };
+  } catch {
+    return { error: "Tool secrets must be valid JSON." };
+  }
+}
+
 function validateForm(formData: Partial<Settings>): Record<string, string> {
   const newErrors: Record<string, string> = {};
 
@@ -197,9 +257,11 @@ export function SettingsEditorProvider({
   const [formData, setFormData] = useState<Partial<Settings>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [promptOverridesJson, setPromptOverridesJsonState] = useState("");
+  const [toolSecretsJson, setToolSecretsJsonState] = useState("");
   const initializedRef = useRef(false);
   const lastSavedRef = useRef<Partial<Settings>>({});
   const promptOverridesRef = useRef("");
+  const toolSecretsRef = useRef("");
 
   const { settings, loading, error, refetch } = useSettings();
   const { updateSettings, loading: saving } = useUpdateSettings();
@@ -246,6 +308,9 @@ export function SettingsEditorProvider({
       const overridesJson = formatPromptOverrides(settings.prompt_overrides);
       setPromptOverridesJsonState(overridesJson);
       promptOverridesRef.current = overridesJson;
+      const secretsJson = formatToolSecrets(settings.tool_secrets as Record<string, string>);
+      setToolSecretsJsonState(secretsJson);
+      toolSecretsRef.current = secretsJson;
       initializedRef.current = true;
     } else if (
       settings &&
@@ -287,6 +352,11 @@ export function SettingsEditorProvider({
         const overridesJson = formatPromptOverrides(settings.prompt_overrides);
         setPromptOverridesJsonState(overridesJson);
         promptOverridesRef.current = overridesJson;
+      }
+      if (!toolSecretsRef.current) {
+        const secretsJson = formatToolSecrets(settings.tool_secrets as Record<string, string>);
+        setToolSecretsJsonState(secretsJson);
+        toolSecretsRef.current = secretsJson;
       }
     }
   }, [settings]);
@@ -336,9 +406,10 @@ export function SettingsEditorProvider({
       formData.brand_messaging_guidelines !==
         (compareTo.brand_messaging_guidelines || "") ||
       formData.icp_document_url !== (compareTo.icp_document_url || "") ||
-      promptOverridesJson !== promptOverridesRef.current
+      promptOverridesJson !== promptOverridesRef.current ||
+      toolSecretsJson !== toolSecretsRef.current
     );
-  }, [settings, formData, promptOverridesJson]);
+  }, [settings, formData, promptOverridesJson, toolSecretsJson]);
 
   const isBilling = useMemo(() => {
     if (section === "billing") return true;
@@ -373,6 +444,20 @@ export function SettingsEditorProvider({
         setErrors((prev) => {
           const next = { ...prev };
           delete next.prompt_overrides;
+          return next;
+        });
+      }
+    },
+    [errors],
+  );
+
+  const setToolSecretsJson = useCallback(
+    (value: string) => {
+      setToolSecretsJsonState(value);
+      if (errors.tool_secrets) {
+        setErrors((prev) => {
+          const next = { ...prev };
+          delete next.tool_secrets;
           return next;
         });
       }
@@ -420,6 +505,7 @@ export function SettingsEditorProvider({
     setFormData((prev) => ({ ...prev, ...reset }));
     setErrors({});
     setPromptOverridesJsonState(promptOverridesRef.current);
+    setToolSecretsJsonState(toolSecretsRef.current);
   }, [settings]);
 
   const applyServerSettingsUpdate = useCallback(
@@ -432,6 +518,13 @@ export function SettingsEditorProvider({
         const overridesJson = formatPromptOverrides(updatedSettings.prompt_overrides);
         setPromptOverridesJsonState(overridesJson);
         promptOverridesRef.current = overridesJson;
+      }
+      if (updatedSettings.tool_secrets) {
+        const secretsJson = formatToolSecrets(
+          updatedSettings.tool_secrets as Record<string, string>,
+        );
+        setToolSecretsJsonState(secretsJson);
+        toolSecretsRef.current = secretsJson;
       }
       refetch();
     },
@@ -453,6 +546,15 @@ export function SettingsEditorProvider({
       setErrors((prev) => ({
         ...prev,
         prompt_overrides: promptOverridesResult.error as string,
+      }));
+      return false;
+    }
+
+    const toolSecretsResult = parseToolSecretsJson(toolSecretsJson);
+    if (toolSecretsResult.error) {
+      setErrors((prev) => ({
+        ...prev,
+        tool_secrets: toolSecretsResult.error as string,
       }));
       return false;
     }
@@ -486,6 +588,7 @@ export function SettingsEditorProvider({
         formData.brand_messaging_guidelines?.trim() || undefined,
       icp_document_url: sanitizeUrl(formData.icp_document_url),
       prompt_overrides: promptOverridesResult.data,
+      tool_secrets: toolSecretsResult.data,
     };
 
     const updated = await updateSettings(payload);
@@ -526,10 +629,13 @@ export function SettingsEditorProvider({
     const normalizedOverridesJson = formatPromptOverrides(payload.prompt_overrides);
     setPromptOverridesJsonState(normalizedOverridesJson);
     promptOverridesRef.current = normalizedOverridesJson;
+    const normalizedSecretsJson = formatToolSecrets(payload.tool_secrets || {});
+    setToolSecretsJsonState(normalizedSecretsJson);
+    toolSecretsRef.current = normalizedSecretsJson;
     refetch();
 
     return true;
-  }, [formData, updateSettings, refetch, promptOverridesJson]);
+  }, [formData, updateSettings, refetch, promptOverridesJson, toolSecretsJson]);
 
   const currentSettings = useMemo<Settings | null>(() => {
     if (!settings) return null;
@@ -549,6 +655,8 @@ export function SettingsEditorProvider({
       setField,
       promptOverridesJson,
       setPromptOverridesJson,
+      toolSecretsJson,
+      setToolSecretsJson,
       saving,
       save,
       hasUnsavedChanges,
@@ -566,6 +674,8 @@ export function SettingsEditorProvider({
       setField,
       promptOverridesJson,
       setPromptOverridesJson,
+      toolSecretsJson,
+      setToolSecretsJson,
       saving,
       save,
       hasUnsavedChanges,

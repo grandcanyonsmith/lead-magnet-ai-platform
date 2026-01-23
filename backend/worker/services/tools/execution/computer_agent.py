@@ -291,8 +291,8 @@ class CUAgent:
         if has_computer_use_tool and has_shell_tool:
             hint = (
                 "TOOL ORDER: If a subtask can be solved via command-line/network inspection "
-                "(e.g. ping, dig, nslookup, whois, curl), prefer starting with "
-                "`execute_shell_command` to gather facts first, then use `computer_use_preview` "
+                "(e.g. ping, dig, nslookup, whois, curl), prefer starting with the "
+                "`shell` tool to gather facts first, then use `computer_use_preview` "
                 "to browse/verify visually.\n"
                 "CLOUD PROVIDER TASKS: To identify a site's cloud/DNS provider, first run:\n"
                 "- dig +short NS <domain>\n"
@@ -303,8 +303,8 @@ class CUAgent:
                 "WEB NAVIGATION: When you need to open a new website, use a computer action of type "
                 "`navigate` with a full URL (e.g. https://cloudflare.com). This is more reliable than "
                 "clicking the address bar/search box. Avoid repeating clicks if the page doesn't change.\n"
-                "IMPORTANT: When you need to run shell/terminal commands, call "
-                "`execute_shell_command` to run commands directly on the backend server. "
+                "IMPORTANT: When you need to run shell/terminal commands, call the "
+                "`shell` tool to run commands directly on the backend server. "
                 "Do NOT try to open or click a terminal inside the browser UI. "
                 "Call it with JSON like: {\"commands\": [\"ping -c 1 coursecreator360.com\", \"ls -la\"]}."
             )
@@ -795,20 +795,12 @@ class CUAgent:
                                 if func:
                                     tool_name = _get_attr_or_key(func, 'name')
                             
-                            if tool_name in ('shell', 'execute_shell_command'):
+                            if tool_name == 'shell':
                                 shell_calls.append(item)
                             else:
                                 generic_tool_calls.append(item)
                         elif item_type == 'function_call':
-                            fn_name = _get_attr_or_key(item, 'name')
-                            if not fn_name:
-                                func = _get_attr_or_key(item, 'function')
-                                if func:
-                                    fn_name = _get_attr_or_key(func, 'name')
-                            if fn_name in ('shell', 'execute_shell_command'):
-                                shell_calls.append(item)
-                            else:
-                                generic_tool_calls.append(item)
+                            generic_tool_calls.append(item)
                         elif item_type == 'reasoning':
                             # Extract reasoning summary
                             summary = getattr(item, 'summary', [])
@@ -1285,7 +1277,6 @@ class CUAgent:
                     workspace_id = job_id or f"temp_{int(time.time())}"
                     
                     for call in shell_calls:
-                        call_type = _get_attr_or_key(call, "type")
                         call_id = _get_attr_or_key(call, "call_id") or _get_attr_or_key(call, "id")
                         if not call_id:
                             yield LogEvent(
@@ -1330,30 +1321,22 @@ class CUAgent:
 
                         timeout_ms = action_dict.get("timeout_ms")
                         max_output_length = action_dict.get("max_output_length")
+                        effective_max_len = max_output_length or 4096
                         
                         if not isinstance(commands, list):
                             commands = [str(commands)] if commands else []
                         
                         if not commands:
-                            if call_type == "function_call":
-                                next_input.append({
-                                    "type": "function_call_output",
-                                    "call_id": call_id,
-                                    "output": json.dumps({
-                                        "error": "No commands provided",
-                                        "output": [],
-                                    }),
-                                })
-                            else:
-                                next_input.append({
-                                    "type": "shell_call_output",
-                                    "call_id": call_id,
-                                    "output": [{
-                                        "stdout": "", 
-                                        "stderr": "No commands provided", 
-                                        "outcome": {"type": "exit", "exit_code": 1}
-                                    }]
-                                })
+                            next_input.append({
+                                "type": "shell_call_output",
+                                "call_id": call_id,
+                                "max_output_length": effective_max_len,
+                                "output": [{
+                                    "stdout": "",
+                                    "stderr": "No commands provided",
+                                    "outcome": {"type": "exit", "exit_code": 1}
+                                }]
+                            })
                             continue
                             
                         # Log commands
@@ -1369,7 +1352,7 @@ class CUAgent:
                             result = self.shell_executor.run_shell_job(
                                 commands=commands,
                                 timeout_ms=timeout_ms or 120000,
-                                max_output_length=max_output_length or 4096,
+                                max_output_length=effective_max_len,
                                 workspace_id=workspace_id,
                                 reset_workspace=False, # Persist workspace between calls in same loop
                                 env=env_overrides
@@ -1377,6 +1360,7 @@ class CUAgent:
                             
                             # Log output (truncated)
                             output_list = result.get('output', [])
+                            result_max_len = result.get("max_output_length") or effective_max_len
                             for out_item in output_list:
                                 stdout = out_item.get('stdout', '')
                                 stderr = out_item.get('stderr', '')
@@ -1388,42 +1372,26 @@ class CUAgent:
                                                  message=f'⚠️ Stderr: {stderr[:200]}{"..." if len(stderr)>200 else ""}')
                                 
                             next_input.append({
-                                "type": "function_call_output" if call_type == "function_call" else "shell_call_output",
+                                "type": "shell_call_output",
                                 "call_id": call_id,
-                                **(
-                                    {"output": json.dumps({
-                                        "commands": commands,
-                                        "output": output_list,
-                                        "max_output_length": result.get("max_output_length"),
-                                    })}
-                                    if call_type == "function_call"
-                                    else {"max_output_length": result.get("max_output_length"), "output": output_list}
-                                ),
+                                "max_output_length": result_max_len,
+                                "output": output_list,
                             })
                             
                         except Exception as e:
                             logger.error(f"Shell execution failed: {e}")
                             yield LogEvent(type='log', timestamp=time.time(), level='error', 
                                          message=f'❌ Shell execution error: {e}')
-                            if call_type == "function_call":
-                                next_input.append({
-                                    "type": "function_call_output",
-                                    "call_id": call_id,
-                                    "output": json.dumps({
-                                        "error": str(e),
-                                        "output": [],
-                                    }),
-                                })
-                            else:
-                                next_input.append({
-                                    "type": "shell_call_output",
-                                    "call_id": call_id,
-                                    "output": [{
-                                        "stdout": "", 
-                                        "stderr": str(e), 
-                                        "outcome": {"type": "error", "message": str(e)}
-                                    }]
-                                })
+                            next_input.append({
+                                "type": "shell_call_output",
+                                "call_id": call_id,
+                                "max_output_length": effective_max_len,
+                                "output": [{
+                                    "stdout": "",
+                                    "stderr": str(e),
+                                    "outcome": {"type": "error", "message": str(e)}
+                                }]
+                            })
 
                 # --- Handle Generic/Other Tool Calls ---
                 if generic_tool_calls:

@@ -384,12 +384,14 @@ export default function NewWorkflowPage() {
   const [selectedIcpProfileId, setSelectedIcpProfileId] = useState<string>("");
   const [icpProfileName, setIcpProfileName] = useState("");
   const [icpProfileError, setIcpProfileError] = useState<string | null>(null);
+  const [isIcpResearching, setIsIcpResearching] = useState(false);
+  const [icpResearchError, setIcpResearchError] = useState<string | null>(null);
 
   // Hooks
   const aiGeneration = useAIGeneration();
   const ideation = useWorkflowIdeation();
   const workflowForm = useWorkflowForm();
-  const { settings } = useSettings();
+  const { settings, refetch: refetchSettings } = useSettings();
   const { updateSettings, loading: isUpdatingSettings } = useUpdateSettings();
   const workflowSteps = useWorkflowSteps({
     defaultToolChoice: settings?.default_tool_choice,
@@ -432,6 +434,9 @@ export default function NewWorkflowPage() {
     () => icpProfiles.find((profile) => profile.id === selectedIcpProfileId),
     [icpProfiles, selectedIcpProfileId],
   );
+  const selectedIcpResearchStatus =
+    selectedIcpProfile?.research_status ||
+    (selectedIcpProfile?.research_report ? "completed" : undefined);
   const wizardStepValue =
     !isWizardReview && currentWizardStep
       ? ideationDraft[currentWizardStep.key]
@@ -485,6 +490,15 @@ export default function NewWorkflowPage() {
     focusChatInput();
   };
 
+  const summarizeList = (items?: string[], limit = 6) => {
+    if (!items || items.length === 0) return "";
+    return items
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, limit)
+      .join("; ");
+  };
+
   const buildIcpContextMessage = (
     profile?: ICPProfile,
   ): WorkflowIdeationMessage | null => {
@@ -498,6 +512,24 @@ export default function NewWorkflowPage() {
       profile.constraints ? `Constraints: ${profile.constraints}` : "",
       profile.examples ? `Examples: ${profile.examples}` : "",
     ].filter(Boolean);
+    if (profile.research_report) {
+      const report = profile.research_report;
+      if (report.summary) {
+        lines.push(`Research summary: ${report.summary}`);
+      }
+      const researchPains = summarizeList(report.pains, 5);
+      if (researchPains) {
+        lines.push(`Research pains: ${researchPains}`);
+      }
+      const researchDesires = summarizeList(report.desires, 5);
+      if (researchDesires) {
+        lines.push(`Research desires: ${researchDesires}`);
+      }
+      const researchWants = summarizeList(report.wants, 5);
+      if (researchWants) {
+        lines.push(`Research wants: ${researchWants}`);
+      }
+    }
     if (lines.length === 0) return null;
     return {
       role: "system",
@@ -526,6 +558,29 @@ export default function NewWorkflowPage() {
     });
     setChatSetupError(null);
     setChatSetupStep(totalWizardSteps);
+  };
+
+  const runIcpResearch = async (profileId: string, force = false) => {
+    setIsIcpResearching(true);
+    setIcpResearchError(null);
+    try {
+      await api.settings.generateIcpResearch({
+        profile_id: profileId,
+        model: "o4-mini-deep-research",
+        force,
+      });
+      await refetchSettings();
+      return true;
+    } catch (err: any) {
+      setIcpResearchError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to generate ICP research",
+      );
+      return false;
+    } finally {
+      setIsIcpResearching(false);
+    }
   };
 
   const handleSaveIcpProfile = async () => {
@@ -575,6 +630,10 @@ export default function NewWorkflowPage() {
     const result = await updateSettings({ icp_profiles: nextProfiles });
     if (result) {
       setIcpProfileName("");
+      const targetProfileId =
+        existingIndex >= 0 ? nextProfiles[existingIndex].id : newProfile.id;
+      setSelectedIcpProfileId(targetProfileId);
+      await runIcpResearch(targetProfileId, true);
     }
   };
 
@@ -895,6 +954,7 @@ export default function NewWorkflowPage() {
     setMockupImages([]);
     setMockupError(null);
     setChatSetupError(null);
+    setIcpResearchError(null);
   };
 
   const handleGenerateFromWizard = async () => {
@@ -1323,10 +1383,131 @@ export default function NewWorkflowPage() {
                 </button>
               </div>
               {selectedIcpProfile && (
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  {selectedIcpProfile.icp
-                    ? `ICP: ${selectedIcpProfile.icp}`
-                    : "ICP profile loaded."}
+                <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                  <div>
+                    {selectedIcpProfile.icp
+                      ? `ICP: ${selectedIcpProfile.icp}`
+                      : "ICP profile loaded."}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">
+                      Research
+                    </span>
+                    {selectedIcpResearchStatus ? (
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          selectedIcpResearchStatus === "completed"
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200"
+                            : selectedIcpResearchStatus === "failed"
+                              ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200"
+                              : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200"
+                        }`}
+                      >
+                        {selectedIcpResearchStatus === "completed"
+                          ? "Ready"
+                          : selectedIcpResearchStatus === "failed"
+                            ? "Failed"
+                            : "In progress"}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                        Not started
+                      </span>
+                    )}
+                    {selectedIcpProfile.research_completed_at && (
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                        Updated{" "}
+                        {new Date(
+                          selectedIcpProfile.research_completed_at,
+                        ).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                  {selectedIcpProfile.research_report && (
+                    <div className="rounded-lg border border-gray-100 dark:border-gray-800 bg-white/80 dark:bg-gray-950/40 p-3 space-y-2">
+                      {selectedIcpProfile.research_report.summary && (
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">
+                            Summary
+                          </div>
+                          <div className="text-xs text-gray-700 dark:text-gray-200">
+                            {selectedIcpProfile.research_report.summary}
+                          </div>
+                        </div>
+                      )}
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        {selectedIcpProfile.research_report.pains &&
+                          selectedIcpProfile.research_report.pains.length > 0 && (
+                            <div>
+                              <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">
+                                Pains
+                              </div>
+                              <ul className="list-disc list-inside text-xs text-gray-700 dark:text-gray-200 space-y-1">
+                                {selectedIcpProfile.research_report.pains
+                                  .slice(0, 4)
+                                  .map((item) => (
+                                    <li key={item}>{item}</li>
+                                  ))}
+                              </ul>
+                            </div>
+                          )}
+                        {selectedIcpProfile.research_report.desires &&
+                          selectedIcpProfile.research_report.desires.length > 0 && (
+                            <div>
+                              <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">
+                                Desires
+                              </div>
+                              <ul className="list-disc list-inside text-xs text-gray-700 dark:text-gray-200 space-y-1">
+                                {selectedIcpProfile.research_report.desires
+                                  .slice(0, 4)
+                                  .map((item) => (
+                                    <li key={item}>{item}</li>
+                                  ))}
+                              </ul>
+                            </div>
+                          )}
+                        {selectedIcpProfile.research_report.wants &&
+                          selectedIcpProfile.research_report.wants.length > 0 && (
+                            <div>
+                              <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">
+                                Wants
+                              </div>
+                              <ul className="list-disc list-inside text-xs text-gray-700 dark:text-gray-200 space-y-1">
+                                {selectedIcpProfile.research_report.wants
+                                  .slice(0, 4)
+                                  .map((item) => (
+                                    <li key={item}>{item}</li>
+                                  ))}
+                              </ul>
+                            </div>
+                          )}
+                      </div>
+                    </div>
+                  )}
+                  {selectedIcpProfile.research_error && (
+                    <div className="text-xs text-red-600 dark:text-red-400">
+                      {selectedIcpProfile.research_error}
+                    </div>
+                  )}
+                  {icpResearchError && (
+                    <div className="text-xs text-red-600 dark:text-red-400">
+                      {icpResearchError}
+                    </div>
+                  )}
+                  {selectedIcpProfile && (
+                    <button
+                      type="button"
+                      onClick={() => runIcpResearch(selectedIcpProfile.id, true)}
+                      disabled={
+                        isIcpResearching || selectedIcpResearchStatus === "pending"
+                      }
+                      className="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-600 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {selectedIcpResearchStatus === "pending" || isIcpResearching
+                        ? "Running deep research..."
+                        : "Run deep research"}
+                    </button>
+                  )}
                 </div>
               )}
               <div className="pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
@@ -1343,10 +1524,14 @@ export default function NewWorkflowPage() {
                   <button
                     type="button"
                     onClick={handleSaveIcpProfile}
-                    disabled={!hasWizardCore || isUpdatingSettings}
+                    disabled={!hasWizardCore || isUpdatingSettings || isIcpResearching}
                     className="px-4 py-2 text-sm rounded-lg border border-emerald-600 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isUpdatingSettings ? "Saving..." : "Save ICP"}
+                    {isUpdatingSettings
+                      ? "Saving..."
+                      : isIcpResearching
+                        ? "Researching..."
+                        : "Save ICP"}
                   </button>
                 </div>
                 {!hasWizardCore && (

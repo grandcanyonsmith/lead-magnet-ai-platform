@@ -82,16 +82,6 @@ class ShellLoopService:
                 if tool_name == "shell":
                     shell_calls.append(item)
             
-            # Standard function calls
-            if item_type == "function_call":
-                fn_name = _get_attr_or_key(item, "name")
-                if not fn_name:
-                    func = _get_attr_or_key(item, "function")
-                    if func:
-                        fn_name = _get_attr_or_key(func, "name")
-                if fn_name == "shell":
-                    shell_calls.append(item)
-
         return shell_calls
 
     def run_shell_loop(
@@ -113,6 +103,7 @@ class ShellLoopService:
         max_duration_seconds: int = 300,
         default_command_timeout_ms: Optional[int] = None,
         default_command_max_output_length: Optional[int] = None,
+        tool_secrets_env: Optional[Dict[str, str]] = None,
         job_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
         step_index: Optional[int] = None,
@@ -272,6 +263,8 @@ class ShellLoopService:
                         "LM_STEP_INDEX": str(step_index) if step_index is not None else "",
                         "SHELL_EXECUTOR_WORKSPACE_ID": workspace_id,
                     }
+                    if tool_secrets_env:
+                        exec_env.update(tool_secrets_env)
                     reset_workspace_flag = reset_workspace_next
                     for cmd in commands:
                         _append_live_output(f"$ {cmd}\n")
@@ -389,6 +382,7 @@ class ShellLoopService:
         max_duration_seconds: int = 300,
         default_command_timeout_ms: Optional[int] = None,
         default_command_max_output_length: Optional[int] = None,
+        tool_secrets_env: Optional[Dict[str, str]] = None,
         job_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
         step_index: Optional[int] = None,
@@ -516,6 +510,8 @@ class ShellLoopService:
                         "LM_STEP_INDEX": str(step_index) if step_index is not None else "",
                         "SHELL_EXECUTOR_WORKSPACE_ID": workspace_id,
                     }
+                    if tool_secrets_env:
+                        exec_env.update(tool_secrets_env)
                     exec_result = await loop.run_in_executor(
                         None, 
                         lambda: self.shell_executor_service.run_shell_job(

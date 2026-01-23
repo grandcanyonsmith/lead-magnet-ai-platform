@@ -104,6 +104,20 @@ export function registerAdminRoutes(): void {
   );
 
   router.register(
+    "POST",
+    "/admin/settings/icp-research",
+    async (_params, body, _query, tenantId, context) => {
+      return await settingsController.generateIcpResearch(
+        _params,
+        body,
+        _query,
+        tenantId,
+        context,
+      );
+    },
+  );
+
+  router.register(
     "GET",
     "/admin/settings/webhook",
     async (_params, _body, _query, tenantId, context) => {

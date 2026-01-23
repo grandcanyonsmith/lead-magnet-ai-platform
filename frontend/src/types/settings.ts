@@ -17,6 +17,7 @@ export interface OnboardingSurveyResponses {
 
 export interface Settings extends BaseEntity {
   tenant_id: string;
+  tool_secrets?: Record<string, string>;
   onboarding_survey_completed?: boolean;
   onboarding_survey_responses?: OnboardingSurveyResponses;
   onboarding_checklist?: OnboardingChecklist;
@@ -62,8 +63,33 @@ export interface ICPProfile {
   offer?: string;
   constraints?: string;
   examples?: string;
+  research_status?: "pending" | "completed" | "failed";
+  research_model?: string;
+  research_requested_at?: string;
+  research_completed_at?: string;
+  research_error?: string;
+  research_report?: IcpResearchReport;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface IcpResearchReport {
+  summary?: string;
+  pains?: string[];
+  desires?: string[];
+  wants?: string[];
+  goals?: string[];
+  objections?: string[];
+  triggers?: string[];
+  buying_criteria?: string[];
+  channels?: string[];
+  language?: string[];
+  opportunities?: string[];
+  risks?: string[];
+  sources?: Array<{
+    title?: string;
+    url: string;
+  }>;
 }
 
 export interface PromptOverride {
@@ -110,6 +136,7 @@ export interface SettingsUpdateRequest {
   icp_document_url?: string;
   icp_profiles?: ICPProfile[];
   prompt_overrides?: PromptOverrides;
+  tool_secrets?: Record<string, string>;
   [key: string]: unknown;
 }
 

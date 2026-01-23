@@ -80,7 +80,7 @@ class ToolValidator:
         if enabled_flag and enabled_flag not in ("true", "1", "yes"):
             return False
         if (os.environ.get("IS_LOCAL") or "").strip().lower() == "true":
-            return True
+            return bool((os.environ.get("SHELL_EXECUTOR_FUNCTION_NAME") or "").strip())
         return bool((os.environ.get("SHELL_EXECUTOR_FUNCTION_NAME") or "").strip())
     
     @staticmethod

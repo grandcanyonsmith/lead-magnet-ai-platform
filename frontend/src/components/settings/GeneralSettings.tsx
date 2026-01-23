@@ -26,6 +26,8 @@ import { AvatarUpload } from "./AvatarUpload";
 interface GeneralSettingsProps {
   settings: Settings;
   onChange: (field: keyof Settings, value: string) => void;
+  toolSecretsJson: string;
+  onToolSecretsChange: (value: string) => void;
   errors?: Record<string, string>;
 }
 
@@ -72,6 +74,8 @@ interface TenantUserOption {
 export function GeneralSettings({
   settings,
   onChange,
+  toolSecretsJson,
+  onToolSecretsChange,
   errors,
 }: GeneralSettingsProps) {
   const { user } = useAuth();
@@ -288,6 +292,28 @@ export function GeneralSettings({
               helpText="Reasoning depth for improvement suggestions"
             />
           </div>
+        </div>
+
+        <div className="space-y-3 border-t border-gray-100 dark:border-border pt-6">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground">
+              Tool Secrets
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              Secrets are injected into every shell and computer-use tool run.
+              Provide a JSON object of environment variables.
+            </p>
+          </div>
+          <FormField
+            label="Tool Secrets (JSON)"
+            name="tool_secrets"
+            type="textarea"
+            value={toolSecretsJson}
+            onChange={onToolSecretsChange}
+            error={errors?.tool_secrets}
+            placeholder='{\n  "MY_API_KEY": "sk-..."\n}'
+            helpText="Use uppercase environment variable names. Values are redacted from internal logs; avoid printing them in outputs."
+          />
         </div>
 
       </CardContent>

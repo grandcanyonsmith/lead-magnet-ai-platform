@@ -7,6 +7,7 @@ import json
 import copy
 from typing import Dict, List, Any, Optional, Tuple
 from services.response_parser import ResponseParser
+from services.tool_secrets import redact_tool_secrets_text, redact_tool_secrets_value
 from cost_service import calculate_openai_cost
 
 logger = logging.getLogger(__name__)
@@ -89,11 +90,12 @@ class OpenAIResponseService:
         # Remove job_id and tenant_id from raw request (these are internal tracking, not sent to OpenAI)
         raw_api_request.pop('job_id', None)
         raw_api_request.pop('tenant_id', None)
+        raw_api_request = redact_tool_secrets_value(raw_api_request)
         
         request_details = {
             "model": model,
-            "instructions": instructions,
-            "input": input_text,
+            "instructions": redact_tool_secrets_text(instructions),
+            "input": redact_tool_secrets_text(input_text),
             "previous_context": previous_context,
             "context": context,
             "tools": tools,
