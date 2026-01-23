@@ -4,25 +4,8 @@ Standard tool definitions and schemas.
 from typing import Dict, Any, Optional
 
 def get_shell_tool_definition() -> Dict[str, Any]:
-    """Returns the function definition for the shell tool."""
-    return {
-        "type": "function",
-        "function": {
-            "name": "execute_shell_command",
-            "description": "EXECUTE a shell command on the backend server (e.g. ls, git, curl). Use this function to run commands directly. DO NOT try to find a terminal in the browser UI.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "commands": {
-                        "type": "array",
-                        "items": { "type": "string" },
-                        "description": "List of shell commands to execute."
-                    }
-                },
-                "required": ["commands"]
-            }
-        }
-    }
+    """Returns the native Responses API shell tool definition."""
+    return {"type": "shell"}
 
 def get_image_generation_defaults() -> Dict[str, Any]:
     """Returns default configuration for image generation tool."""

@@ -3,7 +3,7 @@
  */
 
 import { BaseApiClient, TokenProvider } from "./base.client";
-import { PromptDefaults, Settings, SettingsUpdateRequest } from "@/types";
+import { ICPProfile, PromptDefaults, Settings, SettingsUpdateRequest } from "@/types";
 
 export class SettingsClient extends BaseApiClient {
   constructor(tokenProvider: TokenProvider) {
@@ -51,6 +51,17 @@ export class SettingsClient extends BaseApiClient {
   }> {
     return this.get<{ webhook_url: string; webhook_token: string }>(
       "/admin/settings/webhook",
+    );
+  }
+
+  async generateIcpResearch(data: {
+    profile_id: string;
+    model?: string;
+    force?: boolean;
+  }): Promise<{ profile: ICPProfile }> {
+    return this.post<{ profile: ICPProfile }>(
+      "/admin/settings/icp-research",
+      data,
     );
   }
 

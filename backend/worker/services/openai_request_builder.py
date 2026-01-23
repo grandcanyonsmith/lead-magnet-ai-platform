@@ -272,9 +272,8 @@ class OpenAIRequestBuilder:
         try:
             import json
             import time
-            # Filter out shell tool if computer_use_preview is present to avoid API error
-            # Note: ToolBuilder.clean_tools already handles the conversion of 'shell' to a function tool if needed
-            # So we just log what's happening here without removing it again
+            # Shell is supported alongside computer_use_preview; keep it and just log the final tool set.
+            # ToolBuilder.clean_tools preserves the native shell tool type.
             
             # Convert Decimals to ensure JSON serialization works
             log_data = convert_decimals_to_float({

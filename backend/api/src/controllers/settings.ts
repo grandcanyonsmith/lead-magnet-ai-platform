@@ -1,5 +1,5 @@
 import { db } from "../utils/db";
-import { validate, updateSettingsSchema } from "../utils/validation";
+import { icpResearchSchema, validate, updateSettingsSchema } from "../utils/validation";
 import { RouteResponse } from "../routes";
 import { RequestContext } from "../routes/router";
 import { getCustomerId } from "../utils/rbac";
@@ -12,6 +12,7 @@ import {
 } from "../utils/errors";
 import { env } from "../utils/env";
 import { getPromptDefaults } from "../services/promptDefaults";
+import { icpResearchService } from "../services/icpResearchService";
 
 const USER_SETTINGS_TABLE = env.userSettingsTable;
 const API_URL = env.apiUrl || env.apiGatewayUrl;
@@ -518,6 +519,178 @@ class SettingsController {
           role: context?.auth?.role,
         },
       );
+    }
+  }
+
+  async generateIcpResearch(
+    _params: Record<string, string>,
+    body: unknown,
+    _query: Record<string, string>,
+    _tenantId: string,
+    context: RequestContext,
+  ): Promise<RouteResponse> {
+    try {
+      if (!context.auth) {
+        logger.error(
+          "[SettingsController.generateIcpResearch] Missing authentication context",
+        );
+        throw new ApiError(
+          "Authentication required. Please sign in to access this resource.",
+          401,
+          "AUTHENTICATION_REQUIRED",
+        );
+      }
+
+      const customerId = getCustomerId(context);
+      const tenantId = customerId;
+
+      let data;
+      try {
+        data = validate(icpResearchSchema, body);
+      } catch (validationError) {
+        logger.warn(
+          "[SettingsController.generateIcpResearch] Validation error",
+          {
+            error:
+              validationError instanceof Error
+                ? validationError.message
+                : String(validationError),
+          },
+        );
+        throw new ValidationError(
+          validationError instanceof Error
+            ? validationError.message
+            : "Invalid ICP research request",
+        );
+      }
+
+      const settings = await db.get(USER_SETTINGS_TABLE, {
+        tenant_id: tenantId,
+      });
+      if (!settings) {
+        throw new ApiError("Settings not found", 404);
+      }
+
+      const profiles = Array.isArray(settings.icp_profiles)
+        ? settings.icp_profiles
+        : [];
+      const profileIndex = profiles.findIndex(
+        (profile: any) => profile.id === data.profile_id,
+      );
+      if (profileIndex === -1) {
+        throw new ApiError("ICP profile not found", 404);
+      }
+
+      const existingProfile = profiles[profileIndex];
+      if (
+        existingProfile?.research_status === "completed" &&
+        existingProfile?.research_report &&
+        !data.force
+      ) {
+        return { profile: existingProfile };
+      }
+
+      const resolvedModel =
+        typeof data.model === "string" && data.model.trim()
+          ? data.model.trim()
+          : "o4-mini-deep-research";
+      const requestedAt = new Date().toISOString();
+      const pendingProfile = {
+        ...existingProfile,
+        research_status: "pending",
+        research_model: resolvedModel,
+        research_requested_at: requestedAt,
+        research_error: undefined,
+        updated_at: requestedAt,
+      };
+      const pendingProfiles = profiles.map((profile: any) =>
+        profile.id === pendingProfile.id ? pendingProfile : profile,
+      );
+
+      await db.update(
+        USER_SETTINGS_TABLE,
+        { tenant_id: tenantId },
+        {
+          icp_profiles: pendingProfiles,
+          updated_at: requestedAt,
+        },
+      );
+
+      let report;
+      try {
+        report = await icpResearchService.generateReport(
+          tenantId,
+          {
+            name: pendingProfile.name,
+            icp: pendingProfile.icp,
+            pain: pendingProfile.pain,
+            outcome: pendingProfile.outcome,
+            offer: pendingProfile.offer,
+            constraints: pendingProfile.constraints,
+            examples: pendingProfile.examples,
+          },
+          resolvedModel,
+        );
+      } catch (error) {
+        const failedAt = new Date().toISOString();
+        const failedProfile = {
+          ...pendingProfile,
+          research_status: "failed",
+          research_error:
+            error instanceof Error ? error.message : "Research failed",
+          updated_at: failedAt,
+        };
+        const failedProfiles = profiles.map((profile: any) =>
+          profile.id === failedProfile.id ? failedProfile : profile,
+        );
+        await db.update(
+          USER_SETTINGS_TABLE,
+          { tenant_id: tenantId },
+          {
+            icp_profiles: failedProfiles,
+            updated_at: failedAt,
+          },
+        );
+        throw new InternalServerError("Failed to generate ICP research", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      const completedAt = new Date().toISOString();
+      const completedProfile = {
+        ...pendingProfile,
+        research_status: "completed",
+        research_completed_at: completedAt,
+        research_report: report,
+        research_error: undefined,
+        updated_at: completedAt,
+      };
+      const completedProfiles = profiles.map((profile: any) =>
+        profile.id === completedProfile.id ? completedProfile : profile,
+      );
+
+      await db.update(
+        USER_SETTINGS_TABLE,
+        { tenant_id: tenantId },
+        {
+          icp_profiles: completedProfiles,
+          updated_at: completedAt,
+        },
+      );
+
+      return { profile: completedProfile };
+    } catch (error) {
+      logger.error("[SettingsController.generateIcpResearch] Failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      if (error instanceof ApiError || error instanceof ValidationError) {
+        throw error;
+      }
+
+      throw new InternalServerError("Failed to run ICP research", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 

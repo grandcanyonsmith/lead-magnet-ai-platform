@@ -1071,14 +1071,14 @@ IMPORTANT:
     <div class="meta"><span class="label">Where</span><code>backend/worker/services/tools/execution/computer_agent.py</code> (CUAgent.run_loop)</div>
     <details>
       <summary>Appended block</summary>
-      <pre>TOOL ORDER: If a subtask can be solved via command-line/network inspection (e.g. ping, dig, nslookup, whois), prefer starting with `execute_shell_command` to gather facts first, then use `computer_use_preview` to browse/verify visually.
+      <pre>TOOL ORDER: If a subtask can be solved via command-line/network inspection (e.g. ping, dig, nslookup, whois), prefer starting with the `shell` tool to gather facts first, then use `computer_use_preview` to browse/verify visually.
 CLOUD PROVIDER TASKS: To identify a site's cloud/DNS provider, first run:
 - dig +short NS &lt;domain&gt;
 - dig +short A &lt;domain&gt;
 - whois &lt;ip&gt;
 Then infer provider from NS/WHOIS (e.g. any NS contains 'cloudflare.com' =&gt; Cloudflare) and navigate to the provider's homepage (e.g. https://cloudflare.com).
 WEB NAVIGATION: When you need to open a new website, use a computer action of type `navigate` with a full URL (e.g. https://cloudflare.com). This is more reliable than clicking the address bar/search box. Avoid repeating clicks if the page doesn't change.
-IMPORTANT: When you need to run shell/terminal commands, call `execute_shell_command` to run commands directly on the backend server. Do NOT try to open or click a terminal inside the browser UI. Call it with JSON like: {"commands": ["ping -c 1 coursecreator360.com", "ls -la"]}.
+IMPORTANT: When you need to run shell/terminal commands, call the `shell` tool to run commands directly on the backend server. Do NOT try to open or click a terminal inside the browser UI. Call it with JSON like: {"commands": ["ping -c 1 coursecreator360.com", "ls -la"]}.
       </pre>
     </details>
   </article>

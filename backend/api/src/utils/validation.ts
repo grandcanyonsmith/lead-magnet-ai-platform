@@ -472,6 +472,35 @@ export const updateSettingsSchema = z.object({
         offer: z.string().optional(),
         constraints: z.string().optional(),
         examples: z.string().optional(),
+        research_status: z.enum(["pending", "completed", "failed"]).optional(),
+        research_model: z.string().optional(),
+        research_requested_at: z.string().optional(),
+        research_completed_at: z.string().optional(),
+        research_error: z.string().optional(),
+        research_report: z
+          .object({
+            summary: z.string().optional(),
+            pains: z.array(z.string()).optional(),
+            desires: z.array(z.string()).optional(),
+            wants: z.array(z.string()).optional(),
+            goals: z.array(z.string()).optional(),
+            objections: z.array(z.string()).optional(),
+            triggers: z.array(z.string()).optional(),
+            buying_criteria: z.array(z.string()).optional(),
+            channels: z.array(z.string()).optional(),
+            language: z.array(z.string()).optional(),
+            opportunities: z.array(z.string()).optional(),
+            risks: z.array(z.string()).optional(),
+            sources: z
+              .array(
+                z.object({
+                  title: z.string().optional(),
+                  url: z.string(),
+                }),
+              )
+              .optional(),
+          })
+          .optional(),
         created_at: z.string().optional(),
         updated_at: z.string().optional(),
       }),
@@ -489,6 +518,12 @@ export const updateSettingsSchema = z.object({
     })
     .optional(),
   onboarding_completed_at: z.string().optional(),
+});
+
+export const icpResearchSchema = z.object({
+  profile_id: z.string().min(1),
+  model: z.string().optional(),
+  force: z.boolean().optional(),
 });
 
 // Form submission schema

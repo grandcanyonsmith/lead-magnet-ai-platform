@@ -82,16 +82,6 @@ class ShellLoopService:
                 if tool_name == "shell":
                     shell_calls.append(item)
             
-            # Standard function calls
-            if item_type == "function_call":
-                fn_name = _get_attr_or_key(item, "name")
-                if not fn_name:
-                    func = _get_attr_or_key(item, "function")
-                    if func:
-                        fn_name = _get_attr_or_key(func, "name")
-                if fn_name == "shell":
-                    shell_calls.append(item)
-
         return shell_calls
 
     def run_shell_loop(
