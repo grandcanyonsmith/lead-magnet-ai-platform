@@ -688,6 +688,8 @@ export function PreviewRenderer({
     markdownContent,
     markdownError,
     fetchTextContent,
+    jobId,
+    autoUploadKey,
   ]);
 
   // Fetch HTML content when in view
@@ -760,6 +762,8 @@ export function PreviewRenderer({
     htmlContent,
     htmlError,
     fetchTextContent,
+    jobId,
+    autoUploadKey,
   ]);
 
   // Fetch JSON content when in view
