@@ -35,6 +35,18 @@ export class CUAController {
       jobId: job_id,
     });
 
+    const awsCredentials = {
+      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+      AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+      AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN,
+      AWS_REGION: process.env.AWS_REGION,
+      AWS_DEFAULT_REGION: process.env.AWS_DEFAULT_REGION,
+      AWS_PROFILE: process.env.AWS_PROFILE,
+    };
+    const hasAwsCredentials = Object.values(awsCredentials).some(
+      (value) => typeof value === "string" && value.trim().length > 0,
+    );
+
     const payload = {
       tenant_id: tenantId,
       job_id,
@@ -44,6 +56,7 @@ export class CUAController {
       tools,
       tool_choice,
       params,
+      ...(hasAwsCredentials ? { aws_credentials: awsCredentials } : {}),
     };
 
     // If local dev, spawn the python worker directly

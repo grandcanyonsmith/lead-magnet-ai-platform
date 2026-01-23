@@ -186,7 +186,8 @@ class CUAgent:
         max_duration_seconds: int = 300,
         tenant_id: Optional[str] = None,
         job_id: Optional[str] = None,
-        params: Optional[Dict] = None
+        params: Optional[Dict] = None,
+        shell_env_overrides: Optional[Dict[str, str]] = None,
     ) -> AsyncGenerator[CUAEvent, None]:
         
         start_time = time.time()
@@ -1328,16 +1329,16 @@ class CUAgent:
                         
                         # Execute
                         try:
+                            env_overrides = dict(shell_env_overrides or {})
+                            env_overrides["LM_JOB_ID"] = job_id or ""
+                            env_overrides["LM_TENANT_ID"] = tenant_id or ""
                             result = self.shell_executor.run_shell_job(
                                 commands=commands,
                                 timeout_ms=timeout_ms or 120000,
                                 max_output_length=max_output_length or 4096,
                                 workspace_id=workspace_id,
                                 reset_workspace=False, # Persist workspace between calls in same loop
-                                env={
-                                    "LM_JOB_ID": job_id or "",
-                                    "LM_TENANT_ID": tenant_id or "",
-                                }
+                                env=env_overrides
                             )
                             
                             # Log output (truncated)

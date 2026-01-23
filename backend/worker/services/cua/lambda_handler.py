@@ -45,6 +45,21 @@ class StreamingHandler:
         params = event.get('params', {})
         max_iterations = event.get('max_iterations', 50)
         max_duration = event.get('max_duration_seconds', 300)
+        aws_credentials = event.get("aws_credentials") if isinstance(event, dict) else None
+
+        aws_env_overrides: Dict[str, str] = {}
+        if isinstance(aws_credentials, dict):
+            for key in (
+                "AWS_ACCESS_KEY_ID",
+                "AWS_SECRET_ACCESS_KEY",
+                "AWS_SESSION_TOKEN",
+                "AWS_REGION",
+                "AWS_DEFAULT_REGION",
+                "AWS_PROFILE",
+            ):
+                value = aws_credentials.get(key)
+                if isinstance(value, str) and value.strip():
+                    aws_env_overrides[key] = value.strip()
 
         # Validate model compatibility: computer_use_preview tool requires computer-use-preview model
         has_computer_use = any(
@@ -137,7 +152,8 @@ class StreamingHandler:
                 max_duration_seconds=max_duration,
                 tenant_id=tenant_id,
                 job_id=job_id,
-                params=params
+                params=params,
+                shell_env_overrides=aws_env_overrides or None,
             ):
                 # Convert dataclass to dict and yield as JSON line
                 data = dataclasses.asdict(event_obj)

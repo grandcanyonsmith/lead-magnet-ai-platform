@@ -1,6 +1,7 @@
 """Tool building and cleaning utilities for OpenAI API."""
 import logging
-from typing import Dict, List
+import os
+from typing import Dict, List, Optional
 
 from utils.decimal_utils import convert_decimals_to_int
 from .validator import ToolValidator
@@ -16,6 +17,20 @@ logger = logging.getLogger(__name__)
 
 class ToolBuilder:
     """Handles tool cleaning, validation, and container parameter logic."""
+
+    DEFAULT_CODE_INTERPRETER_MEMORY_LIMIT = "64g"
+    _CODE_INTERPRETER_MEMORY_LIMITS = {"1g", "4g", "16g", "64g"}
+
+    @staticmethod
+    def _normalize_code_interpreter_memory_limit(value: object) -> Optional[str]:
+        if not isinstance(value, str):
+            return None
+        normalized = value.strip().lower()
+        if normalized.endswith("gb"):
+            normalized = normalized[:-2] + "g"
+        if normalized in ToolBuilder._CODE_INTERPRETER_MEMORY_LIMITS:
+            return normalized
+        return None
     
     @staticmethod
     def clean_tools(tools: List[Dict]) -> List[Dict]:
@@ -114,6 +129,43 @@ class ToolBuilder:
                         )
                         cleaned_tool["container"] = {"type": "auto"}
                 
+                if tool_type == "code_interpreter":
+                    memory_limit = None
+                    container = cleaned_tool.get("container")
+                    if isinstance(container, dict):
+                        memory_limit = container.get("memory_limit")
+                    if not memory_limit:
+                        memory_limit = cleaned_tool.get("memory_limit")
+                    if not memory_limit:
+                        memory_limit = os.environ.get("CODE_INTERPRETER_MEMORY_LIMIT")
+                    normalized_limit = ToolBuilder._normalize_code_interpreter_memory_limit(
+                        memory_limit
+                    )
+
+                    enforced_limit = ToolBuilder.DEFAULT_CODE_INTERPRETER_MEMORY_LIMIT
+                    if normalized_limit and normalized_limit != enforced_limit:
+                        logger.info(
+                            "[Tool Builder] Overriding code_interpreter memory_limit to default",
+                            extra={"requested": normalized_limit, "enforced": enforced_limit},
+                        )
+                    elif memory_limit and not normalized_limit:
+                        logger.warning(
+                            "[Tool Builder] Invalid code_interpreter memory_limit; enforcing default",
+                            extra={"memory_limit": memory_limit, "enforced": enforced_limit},
+                        )
+
+                    container_dict = (
+                        cleaned_tool.get("container")
+                        if isinstance(cleaned_tool.get("container"), dict)
+                        else {}
+                    )
+                    container_dict.setdefault("type", "auto")
+                    container_dict["memory_limit"] = enforced_limit
+                    cleaned_tool["container"] = container_dict
+
+                    if "memory_limit" in cleaned_tool:
+                        cleaned_tool.pop("memory_limit", None)
+
                 # Recursively convert ALL Decimal values to int throughout the tool dictionary
                 cleaned_tool = convert_decimals_to_int(cleaned_tool)
                 
