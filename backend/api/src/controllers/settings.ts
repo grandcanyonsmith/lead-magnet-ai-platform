@@ -591,7 +591,7 @@ class SettingsController {
   async generateIcpResearch(
     _params: Record<string, string>,
     body: unknown,
-    _query: Record<string, string>,
+    _query: Record<string, string | undefined>,
     _tenantId: string,
     context: RequestContext,
   ): Promise<RouteResponse> {
