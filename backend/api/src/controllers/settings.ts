@@ -593,10 +593,10 @@ class SettingsController {
     body: unknown,
     _query: Record<string, string | undefined>,
     _tenantId: string | undefined,
-    context: RequestContext,
+    context: RequestContext | undefined,
   ): Promise<RouteResponse> {
     try {
-      if (!context.auth) {
+      if (!context?.auth) {
         logger.error(
           "[SettingsController.generateIcpResearch] Missing authentication context",
         );
