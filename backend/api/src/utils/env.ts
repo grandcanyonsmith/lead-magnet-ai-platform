@@ -49,6 +49,8 @@ export class EnvConfig {
   readonly openaiSecretName: string;
   readonly stripeSecretName: string;
   readonly scrapyApiKey: string | undefined;
+  readonly bingImageSearchKey: string | undefined;
+  readonly bingImageSearchEndpoint: string | undefined;
 
   // Security Configuration
   readonly superAdminEmails: string[];
@@ -175,6 +177,10 @@ export class EnvConfig {
       "leadmagnet/stripe-api-key",
     );
     this.scrapyApiKey = this.getOptional("SCRAPY_API_KEY");
+    this.bingImageSearchKey = this.getOptional("BING_IMAGE_SEARCH_KEY");
+    this.bingImageSearchEndpoint = this.getOptional(
+      "BING_IMAGE_SEARCH_ENDPOINT",
+    );
 
     // Security Configuration
     const superAdminEmailsStr = this.getOptional("SUPER_ADMIN_EMAILS") || "";
