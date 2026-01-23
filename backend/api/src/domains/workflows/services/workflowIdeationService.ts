@@ -1,10 +1,12 @@
 import OpenAI from "openai";
+import { createHash } from "crypto";
 import { ulid } from "ulid";
 import { ApiError } from "@utils/errors";
 import { logger } from "@utils/logger";
 import { stripMarkdownCodeFences } from "@utils/openaiHelpers";
 import { getOpenAIClient } from "@services/openaiService";
 import { s3Service } from "@services/s3Service";
+import { imageSearchService } from "@services/imageSearchService";
 
 export type WorkflowIdeationMessage = {
   role: "user" | "assistant" | "system";
@@ -35,6 +37,13 @@ export interface WorkflowIdeationDeliverable {
   image_prompt: string;
   image_url?: string | null;
   image_s3_key?: string | null;
+  example_images?: WorkflowIdeationExampleImage[];
+}
+
+export interface WorkflowIdeationExampleImage {
+  url: string;
+  source_url?: string;
+  title?: string;
 }
 
 export interface WorkflowIdeationResponse {
@@ -58,6 +67,7 @@ const DEFAULT_IMAGE_MODEL = "gpt-image-1.5";
 const MAX_DELIVERABLES = 5;
 const DEFAULT_MOCKUP_COUNT = 4;
 const DEFAULT_IMAGE_STRATEGY: IdeationImageStrategy = "preview";
+const DEFAULT_EXAMPLE_IMAGE_COUNT = 4;
 const PREVIEW_IMAGE_WIDTH = 1024;
 const PREVIEW_IMAGE_HEIGHT = 768;
 
@@ -576,10 +586,11 @@ Return JSON using this schema:
     index: number,
     imageStrategy: IdeationImageStrategy,
   ): Promise<WorkflowIdeationDeliverable> {
-    if (imageStrategy === "generated") {
-      return this.attachImage(openai, tenantId, deliverable, index);
-    }
-    return this.attachPreviewImage(deliverable, index);
+    const withImage =
+      imageStrategy === "generated"
+        ? await this.attachImage(openai, tenantId, deliverable, index)
+        : await this.attachPreviewImage(deliverable, index);
+    return this.attachExampleImages(withImage);
   }
 
   private async attachPreviewImage(
@@ -599,9 +610,8 @@ Return JSON using this schema:
     index: number,
   ): string {
     const query = this.buildPreviewImageQuery(deliverable);
-    const encodedQuery = encodeURIComponent(query);
-    const sig = index + 1;
-    return `https://source.unsplash.com/random/${PREVIEW_IMAGE_WIDTH}x${PREVIEW_IMAGE_HEIGHT}/?${encodedQuery}&sig=${sig}`;
+    const seed = this.buildPreviewImageSeed(query, index);
+    return `https://picsum.photos/seed/${seed}/${PREVIEW_IMAGE_WIDTH}/${PREVIEW_IMAGE_HEIGHT}`;
   }
 
   private buildPreviewImageQuery(
@@ -615,6 +625,69 @@ Return JSON using this schema:
       "modern",
     ];
     return parts.filter((part) => typeof part === "string" && part.trim()).join(" ");
+  }
+
+  private buildExampleSearchQuery(
+    deliverable: WorkflowIdeationDeliverable,
+  ): string {
+    const type = deliverable.deliverable_type || "lead magnet";
+    const base = deliverable.title || deliverable.build_description || type;
+    const typeHint =
+      type === "calculator"
+        ? "calculator spreadsheet template"
+        : type === "framework"
+          ? "framework worksheet"
+          : type === "checklist"
+            ? "checklist template"
+            : type === "dashboard"
+              ? "dashboard template"
+              : type === "guide"
+                ? "guide pdf"
+                : type === "template"
+                  ? "template"
+                  : type === "report"
+                    ? "report template"
+                    : type;
+    return [base, typeHint, "lead magnet", "example"].join(" ");
+  }
+
+  private async attachExampleImages(
+    deliverable: WorkflowIdeationDeliverable,
+  ): Promise<WorkflowIdeationDeliverable> {
+    const query = this.buildExampleSearchQuery(deliverable);
+    if (!query.trim()) {
+      return deliverable;
+    }
+    try {
+      const images = await imageSearchService.searchImages(
+        query,
+        DEFAULT_EXAMPLE_IMAGE_COUNT,
+      );
+      if (!images.length) {
+        return deliverable;
+      }
+      return {
+        ...deliverable,
+        example_images: images.map((image) => ({
+          url: image.url,
+          source_url: image.source_url,
+          title: image.title,
+        })),
+      };
+    } catch (error: any) {
+      logger.warn("[Workflow Ideation] Example image search failed", {
+        error: error?.message || String(error),
+        deliverable: deliverable.title,
+      });
+      return deliverable;
+    }
+  }
+
+  private buildPreviewImageSeed(query: string, index: number): string {
+    return createHash("sha1")
+      .update(`${query}|${index + 1}`)
+      .digest("hex")
+      .slice(0, 16);
   }
 
   private async attachImage(

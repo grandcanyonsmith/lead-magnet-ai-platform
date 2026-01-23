@@ -277,6 +277,13 @@ export interface WorkflowIdeationDeliverable {
   image_prompt: string;
   image_url?: string | null;
   image_s3_key?: string | null;
+  example_images?: WorkflowIdeationExampleImage[];
+}
+
+export interface WorkflowIdeationExampleImage {
+  url: string;
+  source_url?: string;
+  title?: string;
 }
 
 export interface WorkflowIdeationResponse {
