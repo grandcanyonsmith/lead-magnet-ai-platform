@@ -117,6 +117,8 @@ export class ShellExecutorStack extends cdk.Stack {
       }),
       // AWS Lambda max memory is 10,240 MB (10 GB).
       memorySize: 10240,
+      // Give /tmp fallback extra headroom if EFS is unavailable.
+      ephemeralStorageSize: cdk.Size.gibibytes(10),
       timeout: cdk.Duration.minutes(15), // Max allowed by Lambda
       vpc: this.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
@@ -134,6 +136,8 @@ export class ShellExecutorStack extends cdk.Stack {
         SHELL_EXECUTOR_UPLOAD_ACL: process.env.SHELL_EXECUTOR_UPLOAD_ACL || '',
         SHELL_EXECUTOR_REWRITE_WORK_PATHS: process.env.SHELL_EXECUTOR_REWRITE_WORK_PATHS || 'true',
         SHELL_EXECUTOR_WORK_ROOT: process.env.SHELL_EXECUTOR_WORK_ROOT || '/work',
+        // Clean up stale workspaces to avoid unbounded EFS growth.
+        SHELL_EXECUTOR_WORKSPACE_TTL_HOURS: process.env.SHELL_EXECUTOR_WORKSPACE_TTL_HOURS || '168',
       },
       logGroup,
     });

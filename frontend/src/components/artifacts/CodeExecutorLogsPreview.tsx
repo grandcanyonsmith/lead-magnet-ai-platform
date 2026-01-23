@@ -19,6 +19,7 @@ interface CodeExecutorCallLog {
   status?: string;
   code?: string;
   tool_name?: string | null;
+  container_id?: string;
   outputs?: CodeExecutorOutputItem[];
 }
 
@@ -345,6 +346,11 @@ export function CodeExecutorLogsPreview({
                     {log.tool_name && (
                       <span className="rounded-full bg-white/5 px-2 py-0.5">
                         {log.tool_name}
+                      </span>
+                    )}
+                    {log.container_id && (
+                      <span className="rounded-full bg-white/5 px-2 py-0.5 font-mono">
+                        {log.container_id}
                       </span>
                     )}
                   </div>

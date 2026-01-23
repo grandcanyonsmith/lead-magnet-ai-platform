@@ -50,6 +50,15 @@ type ChatMessage = WorkflowIdeationMessage & {
 const createChatId = () =>
   `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
+const createInitialChatMessages = (): ChatMessage[] => [
+  {
+    id: createChatId(),
+    role: "assistant",
+    content:
+      "Tell me what you want to build. I'll suggest a few lead magnet ideas with quick visual references, and we can go deeper before you pick one.",
+  },
+];
+
 const createIcpId = () =>
   `icp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -361,14 +370,9 @@ export default function NewWorkflowPage() {
     DEFAULT_IDEATION_DRAFT,
   );
   const [chatSetupError, setChatSetupError] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: createChatId(),
-      role: "assistant",
-      content:
-        "Tell me what you want to build. I'll suggest a few lead magnet ideas with quick visual references, and we can go deeper before you pick one.",
-    },
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
+    createInitialChatMessages(),
+  );
   const [selectedDeliverableId, setSelectedDeliverableId] = useState<
     string | null
   >(null);
@@ -376,6 +380,7 @@ export default function NewWorkflowPage() {
   const [isGeneratingMockups, setIsGeneratingMockups] = useState(false);
   const [mockupError, setMockupError] = useState<string | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const [selectedIcpProfileId, setSelectedIcpProfileId] = useState<string>("");
   const [icpProfileName, setIcpProfileName] = useState("");
   const [icpProfileError, setIcpProfileError] = useState<string | null>(null);
@@ -460,6 +465,12 @@ export default function NewWorkflowPage() {
     setChatSetupError(null);
   };
 
+  const focusChatInput = () => {
+    requestAnimationFrame(() => {
+      chatInputRef.current?.focus();
+    });
+  };
+
   const applyChatSuggestion = (value: string) => {
     setChatInput((prev) => {
       const trimmed = prev.trim();
@@ -467,6 +478,11 @@ export default function NewWorkflowPage() {
       if (trimmed.endsWith(value)) return trimmed;
       return `${trimmed} ${value}`;
     });
+    focusChatInput();
+  };
+  const applyStarterPrompt = (value: string) => {
+    setChatInput(value);
+    focusChatInput();
   };
 
   const buildIcpContextMessage = (
@@ -791,11 +807,27 @@ export default function NewWorkflowPage() {
     isChatSetupComplete && !hasUserMessages && !ideation.isIdeating;
   const showSuggestionCards =
     isChatSetupComplete &&
+    chatSuggestionCards.length > 0 &&
     (hasUserMessages || allDeliverables.length > 0 || Boolean(selectedDeliverable));
   const showQuickReplies =
     isChatSetupComplete &&
     chatQuickReplies.length > 0 &&
     (hasUserMessages || allDeliverables.length > 0 || Boolean(selectedDeliverable));
+  const contextItems = useMemo(
+    () =>
+      [
+        { label: "ICP", value: ideationDraft.icp.trim() },
+        { label: "Pain", value: ideationDraft.pain.trim() },
+        { label: "Outcome", value: ideationDraft.outcome.trim() },
+        { label: "Offer", value: ideationDraft.offer.trim() },
+        { label: "Constraints", value: ideationDraft.constraints.trim() },
+        { label: "Examples", value: ideationDraft.examples.trim() },
+      ].filter((item) => item.value),
+    [ideationDraft],
+  );
+  const chatPlaceholder = selectedDeliverable
+    ? `Ask a follow-up about "${selectedDeliverable.title}"...`
+    : "Describe the lead magnet you want to build...";
 
   useEffect(() => {
     setMockupImages([]);
@@ -848,6 +880,20 @@ export default function NewWorkflowPage() {
 
   const handleSkipWizard = () => {
     setIsChatSetupComplete(true);
+    setChatSetupError(null);
+  };
+  const handleEditWizard = () => {
+    setIsChatSetupComplete(false);
+    setChatSetupStep(totalWizardSteps);
+    setChatSetupError(null);
+    setSelectedDeliverableId(null);
+  };
+  const handleResetChat = () => {
+    setChatMessages(createInitialChatMessages());
+    setChatInput("");
+    setSelectedDeliverableId(null);
+    setMockupImages([]);
+    setMockupError(null);
     setChatSetupError(null);
   };
 
@@ -1519,10 +1565,55 @@ export default function NewWorkflowPage() {
               </div>
             ) : (
               <>
-            <div
-              ref={chatScrollRef}
-              className="rounded-lg border border-gray-200 dark:border-border bg-gradient-to-b from-gray-50/50 to-white dark:from-gray-900/50 dark:to-gray-950 p-4 max-h-[500px] overflow-y-auto space-y-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700"
-            >
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-3 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Context summary
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={handleEditWizard}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-700 hover:text-emerald-700 dark:hover:text-emerald-200 transition-colors"
+                      >
+                        Edit context
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResetChat}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500 hover:text-gray-900 dark:hover:text-foreground transition-colors"
+                      >
+                        Reset chat
+                      </button>
+                    </div>
+                  </div>
+                  {contextItems.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {contextItems.map((item) => (
+                        <div
+                          key={item.label}
+                          className="rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-950/40 px-2.5 py-2 max-w-full"
+                          title={`${item.label}: ${item.value}`}
+                        >
+                          <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">
+                            {item.label}
+                          </div>
+                          <div className="text-xs text-gray-700 dark:text-gray-200 line-clamp-2">
+                            {item.value}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      No saved context yet. Use the wizard or share a quick summary in chat.
+                    </div>
+                  )}
+                </div>
+                <div
+                  ref={chatScrollRef}
+                  className="rounded-lg border border-gray-200 dark:border-border bg-gradient-to-b from-gray-50/50 to-white dark:from-gray-900/50 dark:to-gray-950 p-4 max-h-[500px] overflow-y-auto space-y-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700"
+                >
               {chatMessages.map((message, index) => {
                 const isUserMessage = message.role === "user";
                 return (
@@ -1713,7 +1804,7 @@ export default function NewWorkflowPage() {
                       <button
                         key={prompt.title}
                         type="button"
-                        onClick={() => setChatInput(prompt.value)}
+                        onClick={() => applyStarterPrompt(prompt.value)}
                         className="text-left rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-950 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all"
                       >
                         <div className="text-sm font-semibold text-gray-900 dark:text-foreground">
@@ -1927,6 +2018,7 @@ export default function NewWorkflowPage() {
               )}
               <div className="relative">
                 <textarea
+                  ref={chatInputRef}
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -1941,7 +2033,7 @@ export default function NewWorkflowPage() {
                     }
                   }}
                   className="w-full px-4 py-3 pr-12 border-2 border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-foreground placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-gray-900 disabled:cursor-not-allowed resize-none transition-all"
-                  placeholder="Describe the lead magnet you want to build... (Enter to send, Shift+Enter for a new line)"
+                  placeholder={`${chatPlaceholder} (Enter to send, Shift+Enter for a new line)`}
                   rows={3}
                   disabled={ideation.isIdeating}
                 />

@@ -292,6 +292,21 @@ class OpenAIResponseService:
                 or _get_attr(item, "input")
                 or _get_attr(item, "script")
             )
+
+            container_id = None
+            container = (
+                _get_attr(item, "container")
+                or _get_attr(item, "container_id")
+                or _get_attr(item, "containerId")
+            )
+            if isinstance(container, dict):
+                container_id = (
+                    _get_attr(container, "id")
+                    or _get_attr(container, "container_id")
+                    or _get_attr(container, "containerId")
+                )
+            elif container is not None:
+                container_id = _stringify(container)
             
             outputs_raw = _get_attr(item, "outputs") or _get_attr(item, "output") or []
             if isinstance(outputs_raw, dict):
@@ -332,13 +347,16 @@ class OpenAIResponseService:
                 if entry:
                     outputs.append(entry)
             
-            logs.append({
+            log_entry = {
                 "call_id": _stringify(call_id) if call_id is not None else None,
                 "status": _stringify(status) if status is not None else None,
                 "code": _stringify(code) if code is not None else None,
                 "tool_name": tool_name,
                 "outputs": outputs,
-            })
+            }
+            if container_id:
+                log_entry["container_id"] = _stringify(container_id)
+            logs.append(log_entry)
         
         return logs
 

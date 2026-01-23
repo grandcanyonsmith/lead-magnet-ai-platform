@@ -130,10 +130,23 @@ class ToolBuilder:
                         cleaned_tool["container"] = {"type": "auto"}
                 
                 if tool_type == "code_interpreter":
+                    container_dict = (
+                        cleaned_tool.get("container")
+                        if isinstance(cleaned_tool.get("container"), dict)
+                        else {}
+                    )
+                    container_type = container_dict.get("type")
+                    explicit_id = container_dict.get("id")
+                    is_explicit = (
+                        isinstance(container_type, str)
+                        and container_type == "explicit"
+                        and isinstance(explicit_id, str)
+                        and explicit_id.strip()
+                    )
+
                     memory_limit = None
-                    container = cleaned_tool.get("container")
-                    if isinstance(container, dict):
-                        memory_limit = container.get("memory_limit")
+                    if isinstance(container_dict, dict):
+                        memory_limit = container_dict.get("memory_limit")
                     if not memory_limit:
                         memory_limit = cleaned_tool.get("memory_limit")
                     if not memory_limit:
@@ -143,25 +156,32 @@ class ToolBuilder:
                     )
 
                     enforced_limit = ToolBuilder.DEFAULT_CODE_INTERPRETER_MEMORY_LIMIT
-                    if normalized_limit and normalized_limit != enforced_limit:
-                        logger.info(
-                            "[Tool Builder] Overriding code_interpreter memory_limit to default",
-                            extra={"requested": normalized_limit, "enforced": enforced_limit},
-                        )
-                    elif memory_limit and not normalized_limit:
-                        logger.warning(
-                            "[Tool Builder] Invalid code_interpreter memory_limit; enforcing default",
-                            extra={"memory_limit": memory_limit, "enforced": enforced_limit},
-                        )
 
-                    container_dict = (
-                        cleaned_tool.get("container")
-                        if isinstance(cleaned_tool.get("container"), dict)
-                        else {}
-                    )
-                    container_dict.setdefault("type", "auto")
-                    container_dict["memory_limit"] = enforced_limit
-                    cleaned_tool["container"] = container_dict
+                    if is_explicit:
+                        # Preserve explicit container IDs; only normalize a provided memory limit.
+                        if memory_limit and not normalized_limit:
+                            logger.warning(
+                                "[Tool Builder] Invalid code_interpreter memory_limit for explicit container; removing",
+                                extra={"memory_limit": memory_limit},
+                            )
+                            container_dict.pop("memory_limit", None)
+                        elif normalized_limit:
+                            container_dict["memory_limit"] = normalized_limit
+                        cleaned_tool["container"] = container_dict
+                    else:
+                        if normalized_limit and normalized_limit != enforced_limit:
+                            logger.info(
+                                "[Tool Builder] Overriding code_interpreter memory_limit to default",
+                                extra={"requested": normalized_limit, "enforced": enforced_limit},
+                            )
+                        elif memory_limit and not normalized_limit:
+                            logger.warning(
+                                "[Tool Builder] Invalid code_interpreter memory_limit; enforcing default",
+                                extra={"memory_limit": memory_limit, "enforced": enforced_limit},
+                            )
+                        container_dict.setdefault("type", "auto")
+                        container_dict["memory_limit"] = enforced_limit
+                        cleaned_tool["container"] = container_dict
 
                     if "memory_limit" in cleaned_tool:
                         cleaned_tool.pop("memory_limit", None)

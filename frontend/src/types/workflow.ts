@@ -74,7 +74,20 @@ export interface ImageGenerationToolConfig {
   input_fidelity?: "low" | "high";
 }
 
-export type Tool = ToolType | ComputerUseToolConfig | ImageGenerationToolConfig;
+export interface CodeInterpreterToolConfig {
+  type: "code_interpreter";
+  container?: {
+    type?: "auto" | "explicit";
+    id?: string;
+    memory_limit?: string;
+  };
+}
+
+export type Tool =
+  | ToolType
+  | ComputerUseToolConfig
+  | ImageGenerationToolConfig
+  | CodeInterpreterToolConfig;
 
 export type ImageGenerationSettings = Omit<ImageGenerationToolConfig, "type">;
 

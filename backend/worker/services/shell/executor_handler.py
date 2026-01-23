@@ -6,6 +6,7 @@ import errno
 import json
 import mimetypes
 import re
+import shutil
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
 
@@ -52,6 +53,60 @@ def _read_positive_int_env(name: str, default: int) -> int:
     except Exception:
         return default
     return parsed if parsed > 0 else default
+
+
+WORKSPACE_TTL_HOURS = _read_positive_int_env("SHELL_EXECUTOR_WORKSPACE_TTL_HOURS", 0)
+WORKSPACE_CLEANUP_LIMIT = _read_positive_int_env("SHELL_EXECUTOR_WORKSPACE_CLEANUP_LIMIT", 200)
+_CLEANUP_BUDGET_RAW = (os.environ.get("SHELL_EXECUTOR_WORKSPACE_CLEANUP_BUDGET_SECS") or "1.0").strip()
+try:
+    WORKSPACE_CLEANUP_BUDGET_SECS = max(float(_CLEANUP_BUDGET_RAW), 0.1)
+except Exception:
+    WORKSPACE_CLEANUP_BUDGET_SECS = 1.0
+
+
+def _cleanup_old_workspaces(base_dir: str, *, current_workspace: str, ttl_seconds: int) -> None:
+    if ttl_seconds <= 0:
+        return
+    try:
+        entries = os.listdir(base_dir)
+    except Exception:
+        return
+
+    now = time.time()
+    start = time.time()
+    removed = 0
+
+    for name in entries:
+        if removed >= WORKSPACE_CLEANUP_LIMIT:
+            break
+        if (time.time() - start) >= WORKSPACE_CLEANUP_BUDGET_SECS:
+            break
+        if name == current_workspace:
+            continue
+        path = os.path.join(base_dir, name)
+        try:
+            if not os.path.isdir(path):
+                continue
+            mtime = os.path.getmtime(path)
+        except Exception:
+            continue
+        if (now - mtime) < ttl_seconds:
+            continue
+        try:
+            shutil.rmtree(path, ignore_errors=True)
+            removed += 1
+        except Exception as e:
+            logger.warning("Failed to prune workspace", extra={"path": path, "error": str(e)})
+
+    if removed:
+        logger.info(
+            "Pruned stale workspaces",
+            extra={
+                "base_dir": base_dir,
+                "removed": removed,
+                "ttl_seconds": ttl_seconds,
+            },
+        )
 
 def _prepare_workspace_path(workspace_id: str) -> Tuple[str, bool]:
     """
@@ -336,6 +391,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     commands = event.get("commands", [])
     workspace_id = event.get("workspace_id", "default")
+    safe_workspace_id = "".join(c for c in str(workspace_id) if c.isalnum() or c in "-_") or "default"
     timeout_ms = event.get("timeout_ms", DEFAULT_TIMEOUT_MS)
     max_output_length = event.get("max_output_length", DEFAULT_MAX_OUTPUT_LENGTH)
     try:
@@ -351,6 +407,14 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     if max_output_length <= 0:
         max_output_length = DEFAULT_MAX_OUTPUT_LENGTH
     env_vars = event.get("env", {})
+
+    ttl_seconds = WORKSPACE_TTL_HOURS * 3600
+    if ttl_seconds > 0:
+        _cleanup_old_workspaces(
+            os.path.join(MOUNT_POINT, "sessions"),
+            current_workspace=safe_workspace_id,
+            ttl_seconds=ttl_seconds,
+        )
     
     if not commands:
         return {
@@ -369,6 +433,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
     if used_fallback:
         logger.warning("Shell executor using /tmp fallback workspace", extra={"workspace_path": workspace_path})
+        if ttl_seconds > 0:
+            _cleanup_old_workspaces(
+                os.path.join(FALLBACK_ROOT, "sessions"),
+                current_workspace=safe_workspace_id,
+                ttl_seconds=ttl_seconds,
+            )
         
     # Prepare /work root (symlinked to workspace when possible)
     work_root, work_root_fallback = _ensure_work_root(workspace_path)

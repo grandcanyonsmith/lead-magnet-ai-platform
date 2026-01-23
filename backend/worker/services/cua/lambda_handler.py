@@ -63,6 +63,62 @@ class StreamingHandler:
                 if isinstance(value, str) and value.strip():
                     aws_env_overrides[key] = value.strip()
 
+        def _is_aws_task(text: str) -> bool:
+            if not text:
+                return False
+            lowered = text.lower()
+            return any(
+                token in lowered
+                for token in (
+                    "aws",
+                    "s3",
+                    "s3://",
+                    "bucket",
+                    "presigned",
+                    "iam",
+                    "aws_access_key",
+                    "aws_secret_access_key",
+                    "aws session token",
+                    "upload to s3",
+                    "s3 upload",
+                )
+            )
+
+        aws_shell_forced = False
+        if _is_aws_task(f"{instructions}\n{input_text}"):
+            has_shell = any(
+                (isinstance(t, str) and t == "shell")
+                or (isinstance(t, dict) and t.get("type") == "shell")
+                for t in (tools or [])
+            )
+            had_code_interpreter = any(
+                (isinstance(t, str) and t == "code_interpreter")
+                or (isinstance(t, dict) and t.get("type") == "code_interpreter")
+                for t in (tools or [])
+            )
+            if had_code_interpreter or not has_shell:
+                tools = [
+                    t
+                    for t in (tools or [])
+                    if not (
+                        (isinstance(t, str) and t == "code_interpreter")
+                        or (isinstance(t, dict) and t.get("type") == "code_interpreter")
+                    )
+                ]
+                if not has_shell:
+                    tools.append({"type": "shell"})
+                aws_shell_forced = True
+
+        if aws_shell_forced:
+            yield _json.dumps({
+                "type": "log",
+                "timestamp": time.time(),
+                "level": "info",
+                "message": (
+                    "AWS/S3 task detected: forcing shell tool and disabling code_interpreter."
+                ),
+            }) + "\n"
+
         # Validate model compatibility: computer_use_preview tool requires computer-use-preview model
         has_computer_use = any(
             (isinstance(t, str) and t == 'computer_use_preview') or
