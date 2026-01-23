@@ -11,7 +11,9 @@ export type FormFieldType =
   | "tel"
   | "number"
   | "select"
-  | "checkbox";
+  | "checkbox"
+  | "url"
+  | "file";
 
 export interface FormField {
   field_id: string;

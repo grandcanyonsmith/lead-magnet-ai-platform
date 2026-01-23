@@ -122,7 +122,9 @@ export interface FormField {
     | "textarea"
     | "select"
     | "checkbox"
-    | "radio";
+    | "radio"
+    | "url"
+    | "file";
   label: string;
   placeholder?: string;
   required: boolean;

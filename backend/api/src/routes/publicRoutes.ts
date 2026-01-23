@@ -60,6 +60,26 @@ export function registerPublicRoutes(): void {
     false,
   );
 
+  // Public form file upload
+  router.register(
+    "POST",
+    "/v1/forms/:slug/files",
+    async (params, body, _query, _tenantId, context) => {
+      logger.info("[Public Routes] POST /v1/forms/:slug/files", {
+        slug: params.slug,
+      });
+      const headers = context?.event?.headers || {};
+      const origin = headers["origin"] || headers["Origin"];
+      return await formsController.uploadPublicFile(
+        params.slug,
+        body,
+        context?.sourceIp || "",
+        origin,
+      );
+    },
+    false,
+  );
+
   // Public job status endpoint (for form submissions)
   router.register(
     "GET",

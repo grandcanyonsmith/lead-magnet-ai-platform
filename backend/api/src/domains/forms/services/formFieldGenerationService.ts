@@ -76,7 +76,7 @@ export class FormFieldGenerationService {
   "fields": [
     {
       "field_id": "field_1", // unique ID
-      "field_type": "text|email|tel|textarea|select|number",
+      "field_type": "text|email|tel|textarea|select|number|url|file",
       "label": "...",
       "placeholder": "...",
       "required": true|false,

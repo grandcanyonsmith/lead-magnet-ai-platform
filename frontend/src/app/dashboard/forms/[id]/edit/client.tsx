@@ -19,7 +19,9 @@ type FormField = {
     | "tel"
     | "number"
     | "select"
-    | "checkbox";
+    | "checkbox"
+    | "url"
+    | "file";
   label: string;
   placeholder?: string;
   required: boolean;
@@ -337,6 +339,8 @@ export default function EditFormClient() {
                       <option value="textarea">Textarea</option>
                       <option value="select">Select</option>
                       <option value="number">Number</option>
+                      <option value="url">URL</option>
+                      <option value="file">File Upload</option>
                     </Select>
                   </div>
                   <div>

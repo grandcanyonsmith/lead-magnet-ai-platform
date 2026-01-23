@@ -126,6 +126,12 @@ export function FormFieldsEditor({
                             ),
                           )}
                         </Select>
+                      ) : field.field_type === "file" ? (
+                        <input
+                          type="file"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          disabled
+                        />
                       ) : (
                         <input
                           type={
@@ -135,6 +141,8 @@ export function FormFieldsEditor({
                                 ? "tel"
                                 : field.field_type === "number"
                                   ? "number"
+                                  : field.field_type === "url"
+                                    ? "url"
                                   : "text"
                           }
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -212,6 +220,8 @@ export function FormFieldsEditor({
                       <option value="textarea">Textarea</option>
                       <option value="select">Select</option>
                       <option value="number">Number</option>
+                      <option value="url">URL</option>
+                      <option value="file">File Upload</option>
                     </Select>
                   </div>
                 </div>

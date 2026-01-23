@@ -338,6 +338,8 @@ export const createFormSchema = z.object({
           "select",
           "checkbox",
           "radio",
+          "url",
+          "file",
         ]),
         label: z.string(),
         placeholder: z.string().optional(),
