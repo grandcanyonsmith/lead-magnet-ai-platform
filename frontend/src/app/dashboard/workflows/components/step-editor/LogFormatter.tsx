@@ -1,7 +1,8 @@
 import React from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { FiLayout } from 'react-icons/fi';
+import { FiLayout, FiCopy } from 'react-icons/fi';
+import toast from 'react-hot-toast';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 
 // Regex patterns
@@ -205,17 +206,37 @@ const renderMarkdown = (value: string, options?: { forceCodeLanguage?: string })
             </code>
           );
         },
-        a: ({ href, children, ...props }: any) => (
-          <a
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 hover:underline decoration-blue-400/40"
-            {...props}
-          >
-            {children}
-          </a>
-        ),
+        a: ({ href, children, ...props }: any) => {
+          const handleCopy = (e: React.MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (href) {
+              navigator.clipboard.writeText(href);
+              toast.success("Link copied");
+            }
+          };
+
+          return (
+            <span className="inline-flex items-baseline gap-1 group/link align-bottom">
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 hover:underline decoration-blue-400/40 break-all"
+                {...props}
+              >
+                {children}
+              </a>
+              <button
+                onClick={handleCopy}
+                className="opacity-0 group-hover/link:opacity-100 transition-opacity text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/10 flex-shrink-0 self-center"
+                title="Copy link"
+              >
+                <FiCopy className="w-3 h-3" />
+              </button>
+            </span>
+          );
+        },
         ul: ({ children }) => <ul className="list-disc pl-5 space-y-1 m-0">{children}</ul>,
         ol: ({ children }) => <ol className="list-decimal pl-5 space-y-1 m-0">{children}</ol>,
         p: ({ children }) => (

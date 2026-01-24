@@ -20,6 +20,8 @@ const ReactMarkdown = dynamic(() => import("react-markdown"), {
 const COLOR_HEX_REGEX =
   /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![0-9a-fA-F])/g;
 
+const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+
 type HastNode = {
   type: "root" | "element" | "text";
   tagName?: string;
@@ -173,7 +175,7 @@ export function MarkdownRenderer({
   if (!remarkGfm) {
     return (
       <pre className={fallbackClassName ?? className}>
-        {renderTextWithColorSwatches(value)}
+        {renderTextWithHighlights(value)}
       </pre>
     );
   }
