@@ -20,7 +20,7 @@ import { CardHeaderIntro } from "@/components/ui/CardHeaderIntro";
 import { BuildingOfficeIcon } from "@heroicons/react/24/outline";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useAIModels } from "@/hooks/api/useWorkflows";
+import { useAIModelOptions } from "@/hooks/useAIModelOptions";
 import ImageGenerationConfig from "@/app/dashboard/workflows/components/step-editor/ImageGenerationConfig";
 import {
   resolveImageSettingsDefaults,
@@ -84,25 +84,13 @@ export function GeneralSettings({
   const [tenantUsers, setTenantUsers] = useState<TenantUserOption[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const {
-    models: aiModels,
+    options: aiModelOptions,
     loading: aiModelsLoading,
     error: aiModelsError,
-  } = useAIModels();
-
-  const aiModelOptions = useMemo(() => {
-    const options = aiModels.map((model) => ({
-      value: model.id,
-      label: model.name,
-    }));
-    const currentModel = settings.default_ai_model || DEFAULT_AI_MODEL;
-    const hasCurrent = options.some((option) => option.value === currentModel);
-    const withCurrent = hasCurrent
-      ? options
-      : [{ value: currentModel, label: currentModel }, ...options];
-    return withCurrent.length > 0
-      ? withCurrent
-      : [{ value: DEFAULT_AI_MODEL, label: "GPT-5.2" }];
-  }, [aiModels, settings.default_ai_model]);
+  } = useAIModelOptions({
+    currentModel: settings.default_ai_model || DEFAULT_AI_MODEL,
+    fallbackModel: DEFAULT_AI_MODEL,
+  });
 
   const aiModelHelpText = useMemo(() => {
     if (aiModelsLoading) return "Loading available models...";

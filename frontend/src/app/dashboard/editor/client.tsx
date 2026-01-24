@@ -27,7 +27,7 @@ import { ApiError } from "@/lib/api/errors";
 import type { Job } from "@/types/job";
 import type { Workflow, AIModel } from "@/types/workflow";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { useAIModels } from "@/hooks/api/useWorkflows";
+import { useAIModelOptions } from "@/hooks/useAIModelOptions";
 
 import { useEditorHistory } from "./hooks/useEditorHistory";
 import { useHtmlPatcher } from "./hooks/useHtmlPatcher";
@@ -102,22 +102,15 @@ export default function EditorClient() {
     onApply: handlePatchApplied,
     initialUrl,
   });
-  const { models: aiModels, loading: aiModelsLoading, error: aiModelsError } =
-    useAIModels();
-
-  const aiModelOptions = useMemo(() => {
-    if (aiModels.length > 0) {
-      const hasCurrent = aiModels.some((model) => model.id === aiModel);
-      return hasCurrent
-        ? aiModels
-        : [{ id: aiModel, name: aiModel, description: "" }, ...aiModels];
-    }
-    return [{ id: aiModel, name: aiModel, description: "" }];
-  }, [aiModels, aiModel]);
+  const {
+    options: aiModelOptions,
+    loading: aiModelsLoading,
+    error: aiModelsError,
+  } = useAIModelOptions({ currentModel: aiModel });
 
   const activeModelLabel = useMemo(() => {
-    const match = aiModelOptions.find((model) => model.id === aiModel);
-    return match?.name ?? aiModel;
+    const match = aiModelOptions.find((model) => model.value === aiModel);
+    return match?.label ?? aiModel;
   }, [aiModelOptions, aiModel]);
 
   const isDirty = lastSavedHtml !== null && htmlState.html !== lastSavedHtml;
@@ -837,16 +830,16 @@ export default function EditorClient() {
                         )}
                         {aiModelOptions.map((model) => (
                           <button
-                            key={model.id}
-                            onClick={() => setAiModel(model.id as AIModel)}
+                            key={model.value}
+                            onClick={() => setAiModel(model.value as AIModel)}
                             className={`text-xs py-1.5 rounded-md transition-colors font-medium ${
-                              aiModel === model.id
+                              aiModel === model.value
                                 ? "bg-zinc-700 text-white shadow-sm"
                                 : "text-gray-500 hover:text-gray-300"
                             }`}
-                            title={model.name}
+                            title={model.label}
                           >
-                            {model.name}
+                            {model.label}
                           </button>
                         ))}
                       </div>

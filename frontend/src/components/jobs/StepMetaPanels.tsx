@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { FiPlus, FiTrash2 } from "react-icons/fi";
-import { useAIModels } from "@/hooks/api/useWorkflows";
+import { useAIModelOptions } from "@/hooks/useAIModelOptions";
 import { REASONING_EFFORT_LABELS, SERVICE_TIER_LABELS } from "@/utils/stepMeta";
 import type { AIModel, ImageGenerationSettings, ServiceTier } from "@/types/workflow";
 import type {
@@ -108,23 +108,10 @@ export function ModelDetailsPanel({
   modelDetailsRows,
 }: ModelDetailsPanelProps) {
   const {
-    models: aiModels,
+    options: modelOptions,
     loading: aiModelsLoading,
     error: aiModelsError,
-  } = useAIModels();
-  const modelOptions = useMemo(() => {
-    const options = aiModels.map((model) => ({
-      value: model.id as AIModel,
-      label: model.name,
-    }));
-    const hasCurrent = options.some((option) => option.value === draftModel);
-    const withCurrent = hasCurrent
-      ? options
-      : [{ value: draftModel, label: draftModel }, ...options];
-    return withCurrent.length > 0
-      ? withCurrent
-      : [{ value: draftModel, label: draftModel }];
-  }, [aiModels, draftModel]);
+  } = useAIModelOptions({ currentModel: draftModel });
 
   return (
     <div
@@ -148,24 +135,21 @@ export function ModelDetailsPanel({
             aria-label="Select model"
             disabled={aiModelsLoading}
           >
-            {aiModelsLoading ? (
-              <option>Loading models...</option>
-            ) : (
-              modelOptions.map((model) => {
-                const isAllowed =
-                  !modelRestriction.allowedModels ||
-                  modelRestriction.allowedModels.has(model.value);
-                return (
-                  <option
-                    key={model.value}
-                    value={model.value}
-                    disabled={!isAllowed}
-                  >
-                    {model.label}
-                  </option>
-                );
-              })
-            )}
+            {aiModelsLoading && <option value="">Loading models...</option>}
+            {modelOptions.map((model) => {
+              const isAllowed =
+                !modelRestriction.allowedModels ||
+                modelRestriction.allowedModels.has(model.value as AIModel);
+              return (
+                <option
+                  key={model.value}
+                  value={model.value}
+                  disabled={!isAllowed}
+                >
+                  {model.label}
+                </option>
+              );
+            })}
           </Select>
           {aiModelsError && !aiModelsLoading && (
             <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] text-muted-foreground">

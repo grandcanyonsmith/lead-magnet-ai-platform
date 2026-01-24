@@ -14,7 +14,6 @@ import type {
 import { StepHeader } from "./StepHeader";
 import { StepInputOutput } from "./StepInputOutput";
 import { StepProgressBar } from "./StepProgressBar";
-import { LiveOutputRenderer } from "./LiveOutputRenderer";
 import { ImagePreview } from "./ImagePreview";
 import { getStepStatus } from "./utils";
 import { Artifact } from "@/types/artifact";
@@ -23,6 +22,7 @@ import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatLiveOutputText } from "@/utils/jobFormatting";
 import { Button } from "@/components/ui/Button";
+import { StreamViewerUI, type LogEntry } from "@/components/ui/StreamViewerUI";
 
 type StepQuickUpdate = {
   model?: AIModel | null;
@@ -197,8 +197,6 @@ export function ExecutionSteps({
   onResubmit,
   resubmitting,
 }: ExecutionStepsProps) {
-  const liveOutputRef = useRef<HTMLDivElement>(null);
-  const [autoScrollLiveOutput, setAutoScrollLiveOutput] = useState(true);
 
   // Sort steps by step_order once (must be before early return)
   const sortedSteps = useMemo(() => {
@@ -249,10 +247,66 @@ export function ExecutionSteps({
     Boolean(liveStep?.error) ||
     Boolean(liveStep?.status);
 
-  useEffect(() => {
-    if (!autoScrollLiveOutput || !liveOutputRef.current) return;
-    liveOutputRef.current.scrollTop = liveOutputRef.current.scrollHeight;
-  }, [autoScrollLiveOutput, liveStep?.output_text, liveStep?.updated_at]);
+  const liveLogs = useMemo(() => {
+    if (!liveOutputText) return [];
+    
+    const lines = liveOutputText.split('\n');
+    const logs: LogEntry[] = [];
+    let buffer: string[] = [];
+    let currentLevel = 'info';
+    
+    const TOOL_OUTPUT_MARKER = /^\[Tool output\]\s*$/i;
+    const CODE_MARKER = /^\[Code interpreter\](.*)$/i;
+    const CODE_LOGS_MARKER = /^\[Code interpreter logs\]\s*$/i;
+    const CODE_ERROR_MARKER = /^\[Code interpreter error\]\s*$/i;
+
+    const flush = () => {
+      if (buffer.length === 0) return;
+      logs.push({
+        timestamp: Date.now() / 1000,
+        message: buffer.join('\n'),
+        level: currentLevel,
+        type: 'log'
+      });
+      buffer = [];
+    };
+
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      
+      if (TOOL_OUTPUT_MARKER.test(trimmed)) {
+        flush();
+        currentLevel = 'info';
+        buffer.push("📤 [Tool output]");
+        return;
+      }
+      if (CODE_LOGS_MARKER.test(trimmed)) {
+        flush();
+        currentLevel = 'info';
+        buffer.push("📤 [Code logs]");
+        return;
+      }
+      if (CODE_ERROR_MARKER.test(trimmed)) {
+        flush();
+        currentLevel = 'error';
+        buffer.push("⚠️ [Code error]");
+        return;
+      }
+      const codeMatch = trimmed.match(CODE_MARKER);
+      if (codeMatch) {
+        flush();
+        currentLevel = 'info';
+        const status = codeMatch[1]?.trim();
+        buffer.push(status ? `💻 [Code interpreter] ${status}` : "💻 [Code interpreter]");
+        return;
+      }
+
+      buffer.push(line);
+    });
+    
+    flush();
+    return logs;
+  }, [liveOutputText]);
 
   const liveStepHref =
     jobId && liveStepOrder !== undefined
@@ -269,76 +323,6 @@ export function ExecutionSteps({
     : null;
   const liveUpdatedAt = formatLiveUpdatedAt(liveStep?.updated_at);
 
-  const liveOutputPanel = shouldShowLivePanel ? (
-    <SectionCard
-      title="Live execution log"
-      description="Streaming output from the active step while the job runs."
-      actions={
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setAutoScrollLiveOutput((prev) => !prev)}
-            aria-pressed={autoScrollLiveOutput}
-            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors ${
-              autoScrollLiveOutput
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-border/70 bg-muted/60 text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Auto-scroll {autoScrollLiveOutput ? "on" : "off"}
-          </button>
-          {liveStepHref && (
-            <Link
-              href={liveStepHref}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-primary-600 hover:text-primary-700"
-            >
-              View step details
-              <ChevronDownIcon className="h-3.5 w-3.5 rotate-[-90deg]" />
-            </Link>
-          )}
-        </div>
-      }
-    >
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        {liveStepOrder !== undefined && (
-          <span className="rounded-full border border-border/70 bg-muted/60 px-2 py-0.5 text-xs font-semibold text-foreground">
-            Step {liveStepOrder}
-          </span>
-        )}
-        <span className="font-medium text-foreground">{liveStepName}</span>
-        {liveStepType && <span className="capitalize">{liveStepType}</span>}
-        {liveStepStatus && (
-          <span className="rounded-full border border-border/70 bg-muted/60 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-            {liveStepStatus}
-          </span>
-        )}
-        {liveStep?.truncated && (
-          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-            Output truncated
-          </span>
-        )}
-        {liveUpdatedAt && <span>Updated {liveUpdatedAt}</span>}
-      </div>
-      <div className="mt-3 rounded-lg border border-slate-800/80 bg-[#0d1117] shadow-inner ring-1 ring-white/5">
-        <LiveOutputRenderer
-          ref={liveOutputRef}
-          value={
-            hasLiveOutput
-              ? liveOutputText
-              : jobStatus === "processing"
-                ? "Waiting for live output..."
-                : "No live output available for this job."
-          }
-          className="max-h-64 overflow-y-auto p-4 font-mono text-sm leading-6 text-slate-100 scrollbar-hide-until-hover antialiased selection:bg-slate-700 selection:text-white"
-          textClassName="m-0 whitespace-pre-wrap break-words"
-          ariaLive="polite"
-        />
-      </div>
-      {liveStep?.error && (
-        <p className="mt-3 text-xs text-red-600">{liveStep.error}</p>
-      )}
-    </SectionCard>
-  ) : null;
 
   const headerActions =
     (typeof onVariantChange === "function" ||
@@ -412,7 +396,7 @@ export function ExecutionSteps({
 
     return (
       <div className="space-y-3">
-        {liveOutputPanel}
+        {/* liveOutputPanel removed */}
         <SectionCard
           title="Execution timeline"
           description="Track step-by-step progress for this run."
@@ -430,7 +414,7 @@ export function ExecutionSteps({
 
   return (
     <div className="space-y-3">
-      {liveOutputPanel}
+      {/* liveOutputPanel removed */}
       <SectionCard
         title="Execution timeline"
         description="Track step-by-step progress and outputs."
@@ -471,6 +455,7 @@ export function ExecutionSteps({
             )}
             {stepsForTimeline.map((step) => {
               const stepOrder = step.step_order ?? 0;
+              const isLiveStep = liveStep?.step_order === stepOrder;
               const isExpanded = expandedSteps.has(stepOrder);
               const stepStatus = getStepStatusForStep(step);
               const liveOutputForStep =
@@ -539,6 +524,15 @@ export function ExecutionSteps({
                       updatingStepIndex={updatingStepIndex}
                       detailsHref={detailsHref}
                     />
+                    {isLiveStep && shouldShowLivePanel && (
+                      <div className="border-t border-border/60">
+                        <StreamViewerUI 
+                          logs={liveLogs}
+                          status={jobStatus === 'processing' ? 'streaming' : jobStatus === 'completed' ? 'completed' : jobStatus === 'failed' ? 'error' : 'pending'}
+                          className="h-[500px] border-0 rounded-none shadow-none"
+                        />
+                      </div>
+                    )}
                     {variant === "compact" ? (
                       <div className="border-t border-border/60 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                         <div className="flex min-w-0 flex-wrap items-center gap-2">

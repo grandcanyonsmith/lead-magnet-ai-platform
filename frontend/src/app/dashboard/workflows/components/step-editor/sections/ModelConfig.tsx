@@ -1,6 +1,7 @@
 import React from "react";
 import { WorkflowStep, AIModel, ServiceTier } from "@/types/workflow";
-import { useAIModels } from "@/hooks/api/useWorkflows";
+import { DEFAULT_AI_MODEL } from "@/constants/models";
+import { useAIModelOptions } from "@/hooks/useAIModelOptions";
 import { Select } from "@/components/ui/Select";
 import {
   FIELD_LABEL,
@@ -18,7 +19,14 @@ interface ModelConfigProps {
 }
 
 export default function ModelConfig({ step, index, onChange }: ModelConfigProps) {
-  const { models, loading: modelsLoading, error: modelsError } = useAIModels();
+  const {
+    options: modelOptions,
+    loading: modelsLoading,
+    error: modelsError,
+  } = useAIModelOptions({
+    currentModel: step.model,
+    fallbackModel: DEFAULT_AI_MODEL,
+  });
 
   return (
     <div className="rounded-xl border border-border/50 bg-muted/10 p-5 space-y-4">
@@ -33,22 +41,18 @@ export default function ModelConfig({ step, index, onChange }: ModelConfigProps)
           value={step.model}
           onChange={(nextValue) => onChange("model", nextValue as AIModel)}
           className={SELECT_CONTROL}
-          placeholder="Select model"
+          placeholder={modelsLoading ? "Loading models..." : "Select model"}
           disabled={modelsLoading || !!modelsError}
         >
-          {modelsLoading ? (
-            <option>Loading models...</option>
-          ) : modelsError ? (
-            <option>Error loading models</option>
-          ) : models.length > 0 ? (
-            models.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.name}
-              </option>
-            ))
-          ) : (
-            <option value="gpt-5.2">GPT-5.2 (Default)</option>
+          {modelsLoading && <option value="">Loading models...</option>}
+          {modelsError && !modelsLoading && (
+            <option value="">Error loading models</option>
           )}
+          {modelOptions.map((model) => (
+            <option key={model.value} value={model.value}>
+              {model.label}
+            </option>
+          ))}
         </Select>
       </div>
 

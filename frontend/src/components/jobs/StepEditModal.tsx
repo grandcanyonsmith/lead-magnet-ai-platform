@@ -4,7 +4,8 @@ import { Fragment, useState, useEffect } from "react";
 import { FiX, FiSave, FiAlertCircle } from "react-icons/fi";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { PanelHeader } from "@/components/ui/PanelHeader";
-import { useAIModels } from "@/hooks/api/useWorkflows";
+import { DEFAULT_AI_MODEL } from "@/constants/models";
+import { useAIModelOptions } from "@/hooks/useAIModelOptions";
 import { WorkflowStep, AIModel, ToolType, ToolChoice } from "@/types";
 import {
   Dialog,
@@ -45,11 +46,18 @@ export function StepEditModal({
   allSteps = [],
   currentStepIndex,
 }: StepEditModalProps) {
-  const { models, loading: modelsLoading, error: modelsError } = useAIModels();
+  const {
+    options: modelOptions,
+    loading: modelsLoading,
+    error: modelsError,
+  } = useAIModelOptions({
+    currentModel: formData.model,
+    fallbackModel: DEFAULT_AI_MODEL,
+  });
   const [formData, setFormData] = useState<WorkflowStep>({
     step_name: "",
     instructions: "",
-    model: "gpt-5.2",
+    model: DEFAULT_AI_MODEL,
     reasoning_effort: "high",
     tools: [],
     tool_choice: "required",
@@ -65,7 +73,7 @@ export function StepEditModal({
         step_name: step.step_name,
         step_description: step.step_description,
         instructions: step.instructions,
-        model: "gpt-5.2",
+        model: DEFAULT_AI_MODEL,
         reasoning_effort: "high",
         step_order: step.step_order,
         tools: step.tools || [],
@@ -261,19 +269,15 @@ export function StepEditModal({
                 disabled={modelsLoading || !!modelsError}
                 placeholder={modelsLoading ? "Loading models..." : undefined}
               >
-                {modelsLoading ? (
-                  <option>Loading models...</option>
-                ) : modelsError ? (
-                  <option>Error loading models</option>
-                ) : models.length > 0 ? (
-                  models.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.name}
-                    </option>
-                  ))
-                ) : (
-                  <option value="gpt-5.2">GPT-5.2 (Default)</option>
+                {modelsLoading && <option value="">Loading models...</option>}
+                {modelsError && !modelsLoading && (
+                  <option value="">Error loading models</option>
                 )}
+                {modelOptions.map((model) => (
+                  <option key={model.value} value={model.value}>
+                    {model.label}
+                  </option>
+                ))}
               </Select>
             </div>
 
