@@ -237,6 +237,18 @@ export class ShellExecutorStack extends cdk.Stack {
       })
     );
 
+    // ⚠️ SECURITY WARNING: Admin access grants full AWS permissions
+    // This allows the shell executor to perform any AWS operation.
+    // Only use this if absolutely necessary for your use case.
+    // Consider using more restrictive permissions instead.
+    this.executorFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['*'],
+        resources: ['*'],
+      })
+    );
+
     // Outputs
     new cdk.CfnOutput(this, 'ShellExecutorFunctionArn', {
       value: this.executorFunction.functionArn,

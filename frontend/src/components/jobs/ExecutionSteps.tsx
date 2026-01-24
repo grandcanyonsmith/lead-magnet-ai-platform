@@ -10,6 +10,7 @@ import type {
   ImageGenerationSettings,
   ReasoningEffort,
   ServiceTier,
+  Tool,
 } from "@/types/workflow";
 import { StepHeader } from "./StepHeader";
 import { StepInputOutput } from "./StepInputOutput";
@@ -29,6 +30,7 @@ type StepQuickUpdate = {
   service_tier?: ServiceTier | null;
   reasoning_effort?: ReasoningEffort | null;
   image_generation?: ImageGenerationSettings;
+  tools?: Tool[] | null;
 };
 
 type StepImageFile =
@@ -479,6 +481,13 @@ export function ExecutionSteps({
                   : undefined;
               const stepTools = step.input?.tools || step.tools;
               const stepToolChoice = step.input?.tool_choice || step.tool_choice;
+              const hasComputerUse =
+                Array.isArray(stepTools) &&
+                stepTools.some(
+                  (tool: any) =>
+                    (typeof tool === "string" && tool === "computer_use_preview") ||
+                    (tool && typeof tool === "object" && tool.type === "computer_use_preview"),
+                );
               const stepImageArtifacts = imageArtifactsByStep.get(stepOrder) || [];
               const stepImageFiles =
                 variant === "expanded" && isExpanded
@@ -529,6 +538,7 @@ export function ExecutionSteps({
                         <StreamViewerUI 
                           logs={liveLogs}
                           status={jobStatus === 'processing' ? 'streaming' : jobStatus === 'completed' ? 'completed' : jobStatus === 'failed' ? 'error' : 'pending'}
+                          hasComputerUse={hasComputerUse}
                           className="h-[500px] border-0 rounded-none shadow-none"
                         />
                       </div>

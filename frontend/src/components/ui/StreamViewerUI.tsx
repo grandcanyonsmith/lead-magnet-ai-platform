@@ -22,7 +22,11 @@ import {
 import toast from "react-hot-toast";
 import { FullScreenPreviewModal } from "@/components/ui/FullScreenPreviewModal";
 import { PanelHeader } from "@/components/ui/PanelHeader";
-import { formatLogMessage } from "@/app/dashboard/workflows/components/step-editor/LogFormatter";
+import {
+  buildHtmlSrcDoc,
+  formatLogMessage,
+  looksLikeHtml,
+} from "@/app/dashboard/workflows/components/step-editor/LogFormatter";
 
 export interface LogEntry {
   timestamp: number;
@@ -35,6 +39,7 @@ export interface StreamViewerUIProps {
   logs: LogEntry[];
   screenshotUrl?: string | null;
   screenshotBase64?: string | null;
+  hasComputerUse?: boolean;
   status: "connecting" | "streaming" | "completed" | "error" | "pending";
   error?: string | null;
   onClearLogs?: () => void;
@@ -104,6 +109,30 @@ const matchesSearch = (log: LogEntry, query: string) => {
 
 const formatLogLine = (log: LogEntry) =>
   `[${formatTimestamp(log.timestamp)}] [${getLogLevelBucket(log).toUpperCase()}] ${log.message}`;
+
+const stripShellPrefix = (message: string) => {
+  if (
+    message.startsWith("💻") ||
+    message.startsWith("📤") ||
+    message.startsWith("⚠️")
+  ) {
+    return message.substring(2).trim();
+  }
+  return message;
+};
+
+const extractHtmlFromMessage = (message: string) => {
+  const trimmed = message.trim();
+  const htmlMatch = trimmed.match(/```html\s*([\s\S]*?)\s*```/i);
+  if (htmlMatch?.[1]) return htmlMatch[1].trim();
+  const genericMatch = trimmed.match(/```\s*([\s\S]*?)\s*```/);
+  if (genericMatch?.[1]) {
+    const inner = genericMatch[1].trim();
+    if (looksLikeHtml(inner)) return inner;
+  }
+  if (looksLikeHtml(trimmed)) return trimmed;
+  return null;
+};
 
 function LogLine({
   log,
@@ -229,6 +258,7 @@ export function StreamViewerUI({
   logs,
   screenshotUrl,
   screenshotBase64,
+  hasComputerUse = false,
   status,
   error,
   onClearLogs,
@@ -388,7 +418,37 @@ export function StreamViewerUI({
   };
 
   const hasScreenshot = Boolean(screenshotUrl || screenshotBase64);
-  const currentScreenshotSrc = screenshotUrl || (screenshotBase64 ? `data:image/jpeg;base64,${screenshotBase64}` : '');
+  const currentScreenshotSrc =
+    screenshotUrl || (screenshotBase64 ? `data:image/jpeg;base64,${screenshotBase64}` : "");
+  const htmlPreview = useMemo(() => {
+    for (let i = logs.length - 1; i >= 0; i -= 1) {
+      const candidate = extractHtmlFromMessage(stripShellPrefix(logs[i].message || ""));
+      if (candidate) return candidate;
+    }
+    return null;
+  }, [logs]);
+  const showHtmlPreview = Boolean(htmlPreview) && !hasScreenshot && !hasComputerUse;
+  const htmlSrcDoc = useMemo(() => {
+    if (!showHtmlPreview || !htmlPreview) return "";
+    return buildHtmlSrcDoc(htmlPreview);
+  }, [showHtmlPreview, htmlPreview]);
+  const htmlObjectUrl = useMemo(() => {
+    if (!showHtmlPreview || !htmlSrcDoc) return null;
+    const blob = new Blob([htmlSrcDoc], { type: "text/html" });
+    return URL.createObjectURL(blob);
+  }, [showHtmlPreview, htmlSrcDoc]);
+  useEffect(() => {
+    if (!htmlObjectUrl) return;
+    return () => {
+      URL.revokeObjectURL(htmlObjectUrl);
+    };
+  }, [htmlObjectUrl]);
+  const previewLabel = showHtmlPreview ? "HTML Preview" : "Latest Screenshot";
+  const previewObjectUrl = showHtmlPreview ? htmlObjectUrl : currentScreenshotSrc;
+  const previewFileName = showHtmlPreview
+    ? "log-preview.html"
+    : `screenshot-${Date.now()}.jpg`;
+  const previewContentType = showHtmlPreview ? "text/html" : "image/jpeg";
   const summaryText = useMemo(() => {
     if (!logs.length) return "No events yet";
     const base =
@@ -403,6 +463,14 @@ export function StreamViewerUI({
     const lastLabel = lastLog ? `Last ${formatTimestamp(lastLog.timestamp)}` : null;
     return [base, spanLabel, lastLabel].filter(Boolean).join(" | ");
   }, [logs, filterLevel, searchQuery, filteredLogs.length]);
+
+  const hasPreview = hasScreenshot || showHtmlPreview;
+
+  useEffect(() => {
+    if (!hasPreview && viewMode !== "terminal") {
+      setViewMode("terminal");
+    }
+  }, [hasPreview, viewMode]);
 
   const containerClasses = isMaximized
     ? "fixed inset-4 z-50 flex flex-col bg-white dark:bg-gray-950 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 animate-in fade-in zoom-in duration-200"
@@ -474,11 +542,20 @@ export function StreamViewerUI({
                    <span className="text-[11px] text-gray-500">{summaryText}</span>
                  </div>
                  <div className="flex items-center gap-2">
-                   <button
-                      onClick={() => setViewMode(viewMode === 'terminal' ? 'split' : 'terminal')}
-                      className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
-                      title={viewMode === 'terminal' ? "Minimize Console" : "Maximize Console"}
-                   >
+                  <button
+                     onClick={() => setViewMode(viewMode === 'terminal' ? 'split' : 'terminal')}
+                     className={`p-1.5 rounded transition-colors ${
+                       hasPreview
+                         ? "text-gray-400 hover:text-white hover:bg-white/10"
+                         : "text-gray-600 cursor-not-allowed"
+                     }`}
+                     title={
+                       hasPreview
+                         ? viewMode === 'terminal' ? "Minimize Console" : "Maximize Console"
+                         : "Preview available when HTML or screenshots are present"
+                     }
+                     disabled={!hasPreview}
+                  >
                       {viewMode === 'terminal' ? <FiMinimize2 className="w-3.5 h-3.5" /> : <FiMaximize2 className="w-3.5 h-3.5" />}
                    </button>
                    <div className="w-px h-3 bg-gray-700 mx-1" />
@@ -694,9 +771,9 @@ export function StreamViewerUI({
              <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-xs shadow-sm z-10">
                <div className="flex items-center gap-2 font-medium text-gray-700 dark:text-gray-300">
                  <FiImage className="text-gray-400" /> 
-                 Latest Screenshot
+                 {previewLabel}
                </div>
-               {hasScreenshot && (
+               {previewObjectUrl && (
                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => setViewMode(viewMode === 'preview' ? 'split' : 'preview')}
@@ -715,15 +792,15 @@ export function StreamViewerUI({
                     </button>
                     <div className="w-px h-3 bg-gray-200 dark:bg-gray-700 mx-1" />
                     <a 
-                      href={currentScreenshotSrc}
-                      download={`screenshot-${Date.now()}.jpg`}
+                      href={previewObjectUrl}
+                      download={previewFileName}
                       className="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                       title="Download"
                     >
                       <FiDownload className="w-3.5 h-3.5" />
                     </a>
                     <a 
-                      href={currentScreenshotSrc}
+                      href={previewObjectUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
@@ -736,7 +813,27 @@ export function StreamViewerUI({
              </div>
              
              <div className="flex-1 flex items-center justify-center p-6 overflow-hidden relative group bg-gray-50/50 dark:bg-black/20">
-               {hasScreenshot ? (
+               {showHtmlPreview ? (
+                 <div
+                    className="relative w-full h-full flex items-center justify-center cursor-zoom-in"
+                    onClick={() => setIsPreviewOpen(true)}
+                  >
+                    <div className="absolute inset-0 pattern-dots opacity-5 pointer-events-none" />
+                    <iframe
+                      title="HTML Preview"
+                      className="w-full h-full rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl"
+                      sandbox=""
+                      srcDoc={htmlSrcDoc}
+                    />
+                    
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
+                      <div className="bg-black/75 text-white px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                        Click to enlarge
+                      </div>
+                    </div>
+                 </div>
+               ) : hasScreenshot ? (
                  <div 
                     className="relative w-full h-full flex items-center justify-center cursor-zoom-in"
                     onClick={() => setIsPreviewOpen(true)}
@@ -764,8 +861,12 @@ export function StreamViewerUI({
                       <FiImage className="w-8 h-8 opacity-50" />
                    </div>
                    <div className="text-center">
-                     <p className="text-sm font-medium text-gray-500 dark:text-gray-500">No screenshot yet</p>
-                     <p className="text-xs text-gray-400 mt-1">Screenshots will appear here during execution</p>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-500">No preview yet</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {hasComputerUse
+                        ? "Screenshots will appear here during execution"
+                        : "HTML previews will appear here when detected"}
+                    </p>
                    </div>
                  </div>
                )}
@@ -782,13 +883,13 @@ export function StreamViewerUI({
         />
       )}
 
-      {/* Full Screen Image Preview */}
+      {/* Full Screen Preview */}
       <FullScreenPreviewModal
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
-        objectUrl={currentScreenshotSrc || undefined}
-        fileName={`Screenshot-${new Date().toLocaleTimeString()}`}
-        contentType="image/jpeg"
+        objectUrl={previewObjectUrl || undefined}
+        fileName={previewFileName}
+        contentType={previewContentType}
       />
     </>
   );

@@ -7,6 +7,7 @@ import type {
   ImageGenerationSettings,
   ReasoningEffort,
   ServiceTier,
+  Tool as WorkflowTool,
 } from "@/types/workflow";
 import { useSettings } from "@/hooks/api/useSettings";
 import { StepMetaBadges } from "@/components/jobs/StepMetaBadges";
@@ -36,7 +37,6 @@ import {
   REASONING_EFFORT_LEVELS,
   SERVICE_TIER_LABELS,
   SERVICE_TIER_SPEED,
-  type Tool,
 } from "@/utils/stepMeta";
 import {
   resolveImageSettingsDefaults,
@@ -48,11 +48,11 @@ type StepMetaUpdate = {
   service_tier?: ServiceTier | null;
   reasoning_effort?: ReasoningEffort | null;
   image_generation?: ImageGenerationSettings;
-  tools?: unknown[] | null;
+  tools?: WorkflowTool[] | null;
   instructions?: string | null;
 };
 
-const EMPTY_TOOL_LIST: Tool[] = [];
+const EMPTY_TOOL_LIST: WorkflowTool[] = [];
 
 const SHELL_COMPATIBLE_MODELS: AIModel[] = [
   "gpt-5.2",
@@ -99,21 +99,37 @@ const isImageSettingsDifferent = (
   return false;
 };
 
-function getToolDisplayName(tool: Tool): string {
+function getToolDisplayName(tool: WorkflowTool): string {
   if (typeof tool === "string") return tool;
   if (!tool || typeof tool !== "object") return "unknown";
-  const record = tool as Record<string, unknown>;
+  if (tool.type === "mcp") {
+    const serverLabel = tool.server_label?.trim() || null;
+    const connectorId = tool.connector_id?.trim() || null;
+    const serverUrl = tool.server_url?.trim() || null;
+    if (serverLabel) return `mcp:${serverLabel}`;
+    if (connectorId) return `mcp:${connectorId}`;
+    if (serverUrl) {
+      try {
+        const parsed = new URL(serverUrl);
+        if (parsed.hostname) return `mcp:${parsed.hostname}`;
+      } catch {
+        return `mcp:${serverUrl}`;
+      }
+    }
+    return "mcp";
+  }
   const functionName =
-    record.function &&
-    typeof record.function === "object" &&
-    typeof (record.function as { name?: unknown }).name === "string"
-      ? String((record.function as { name?: unknown }).name)
+    "function" in tool &&
+    tool.function &&
+    typeof tool.function === "object" &&
+    typeof (tool.function as { name?: unknown }).name === "string"
+      ? String((tool.function as { name?: unknown }).name)
       : null;
   if (functionName && functionName.trim()) {
     return functionName;
   }
-  if (typeof record.name === "string" && record.name.trim()) {
-    return record.name;
+  if ("name" in tool && typeof tool.name === "string" && tool.name.trim()) {
+    return tool.name;
   }
   return getToolName(tool);
 }
@@ -156,7 +172,7 @@ export function StepMetaRow({
   const [draftImageSettings, setDraftImageSettings] =
     useState<ImageGenerationSettings>(() => ({ ...defaultImageSettings }));
   const [draftInstructions, setDraftInstructions] = useState<string>("");
-  const [draftTools, setDraftTools] = useState<unknown[]>([]);
+  const [draftTools, setDraftTools] = useState<WorkflowTool[]>([]);
   const showContext = openPanel === "context";
   const showImageSettings = openPanel === "image";
   const showModelDetails = openPanel === "model";
@@ -180,7 +196,7 @@ export function StepMetaRow({
     : step.tools;
   const toolList = Array.isArray(tools) ? tools : EMPTY_TOOL_LIST;
   const imageTool = toolList.find(
-    (tool) => getToolName(tool as Tool) === "image_generation",
+    (tool) => getToolName(tool) === "image_generation",
   );
   const imageToolConfig = isRecord(imageTool) ? imageTool : null;
   const hasImageGenerationTool = Boolean(imageTool);
@@ -242,11 +258,10 @@ export function StepMetaRow({
           };
         }
         if (tool && typeof tool === "object") {
-          const toolValue = tool as Tool;
-          const record = toolValue as Record<string, unknown>;
+          const record = tool as unknown as Record<string, unknown>;
           const { type: _type, name: _name, ...rest } = record;
           const config = Object.keys(rest).length > 0 ? rest : null;
-          const displayName = getToolDisplayName(toolValue);
+          const displayName = getToolDisplayName(tool);
           return {
             id: `${displayName}-${index}`,
             name: displayName,
@@ -263,9 +278,7 @@ export function StepMetaRow({
   );
   const toolTypes = useMemo(
     () =>
-      new Set(
-        toolList.map((tool) => getToolName(tool as Tool)).filter(Boolean),
-      ),
+      new Set(toolList.map((tool) => getToolName(tool)).filter(Boolean)),
     [toolList],
   );
   const hasComputerUseTool = toolTypes.has("computer_use_preview");

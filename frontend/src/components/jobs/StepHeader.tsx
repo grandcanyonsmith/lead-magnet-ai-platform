@@ -24,6 +24,7 @@ interface StepHeaderProps {
     service_tier?: import("@/types/workflow").ServiceTier | null;
     reasoning_effort?: import("@/types/workflow").ReasoningEffort | null;
     image_generation?: import("@/types/workflow").ImageGenerationSettings;
+    tools?: import("@/types/workflow").Tool[] | null;
   }) => Promise<void>;
   updatingStepIndex?: number | null;
   detailsHref?: string;

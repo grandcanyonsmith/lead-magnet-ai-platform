@@ -40,6 +40,34 @@ export function buildArtifactGalleryItems({
     { stepOrder?: number; stepName?: string; stepType?: string }
   >();
   const stepsForMeta = steps ?? [];
+  const jobOutputKey = normalizeUrlKey(job?.output_url);
+  // Try to find the actual final artifact so the editor has a stable artifact_id to load.
+  // Prefer URL match (exact output), then html_final/markdown_final, then filename/content-type heuristics.
+  // Note: backend returns artifacts sorted by created_at DESC (newest first), so we do NOT reverse.
+  const matchingArtifactByUrl = jobOutputKey
+    ? (artifacts ?? []).find((a) => {
+        const publicKey = normalizeUrlKey(a.public_url);
+        const objectKey = normalizeUrlKey(a.object_url);
+        return publicKey === jobOutputKey || objectKey === jobOutputKey;
+      })
+    : undefined;
+  const finalArtifactCandidate = jobOutputKey
+    ? (artifacts ?? []).find((a) => {
+        const artifactType = String(a.artifact_type || "").toLowerCase();
+        const contentType = String(a.content_type || "").toLowerCase();
+        const name = String(a.file_name || a.artifact_name || "").toLowerCase();
+        return (
+          artifactType === "html_final" ||
+          artifactType === "markdown_final" ||
+          name === "final.html" ||
+          (contentType === "text/html" &&
+            name.endsWith(".html") &&
+            name.includes("final"))
+        );
+      })
+    : undefined;
+  const jobOutputArtifact = matchingArtifactByUrl || finalArtifactCandidate;
+  const jobOutputArtifactId = jobOutputArtifact?.artifact_id;
 
   stepsForMeta.forEach((step) => {
     if (step.artifact_id) {
@@ -54,6 +82,22 @@ export function buildArtifactGalleryItems({
   artifacts?.forEach((artifact, index) => {
     const normalizedObjectUrl = normalizeUrlKey(artifact.object_url);
     const normalizedPublicUrl = normalizeUrlKey(artifact.public_url);
+    if (
+      job?.output_url &&
+      ((jobOutputArtifactId && artifact.artifact_id === jobOutputArtifactId) ||
+        (jobOutputKey &&
+          (normalizedObjectUrl === jobOutputKey ||
+            normalizedPublicUrl === jobOutputKey)))
+    ) {
+      return;
+    }
+
+    if (
+      (normalizedObjectUrl && seen.has(normalizedObjectUrl)) ||
+      (normalizedPublicUrl && seen.has(normalizedPublicUrl))
+    ) {
+      return;
+    }
     const uniqueKey =
       artifact.artifact_id ||
       normalizedObjectUrl ||
@@ -79,9 +123,11 @@ export function buildArtifactGalleryItems({
         ? formatStepLabel(meta?.stepOrder, meta?.stepType, meta?.stepName)
         : artifact.artifact_name || artifact.file_name || "Generated Artifact";
 
-    const urlKey = normalizedObjectUrl || normalizedPublicUrl;
-    if (urlKey) {
-      seen.add(urlKey);
+    if (normalizedObjectUrl) {
+      seen.add(normalizedObjectUrl);
+    }
+    if (normalizedPublicUrl) {
+      seen.add(normalizedPublicUrl);
     }
 
     const createdTimestamp = artifact.created_at
@@ -139,6 +185,9 @@ export function buildArtifactGalleryItems({
 
   autoUploads?.forEach((upload, index) => {
     const normalizedObjectUrl = normalizeUrlKey(upload.object_url);
+    if (jobOutputKey && normalizedObjectUrl === jobOutputKey) {
+      return;
+    }
     if (normalizedObjectUrl && seen.has(normalizedObjectUrl)) {
       return;
     }
@@ -168,38 +217,11 @@ export function buildArtifactGalleryItems({
     });
   });
 
-  if (job?.output_url && !seen.has(job.output_url)) {
+  if (job?.output_url) {
     const completionTimestamp = job.completed_at
       ? new Date(job.completed_at).getTime()
       : Number.MAX_SAFE_INTEGER - 1;
-
-    // Try to find the actual final artifact so the editor has a stable artifact_id to load.
-    // Prefer URL match (exact output), then html_final/markdown_final, then filename/content-type heuristics.
-    // Note: backend returns artifacts sorted by created_at DESC (newest first), so we do NOT reverse.
-    const jobOutputKey = normalizeUrlKey(job.output_url);
-    const matchingArtifactByUrl = jobOutputKey
-      ? (artifacts ?? []).find((a) => {
-          const publicKey = normalizeUrlKey(a.public_url);
-          const objectKey = normalizeUrlKey(a.object_url);
-          return publicKey === jobOutputKey || objectKey === jobOutputKey;
-        })
-      : undefined;
-
-    const finalArtifactCandidate = (artifacts ?? []).find((a) => {
-      const artifactType = String(a.artifact_type || "").toLowerCase();
-      const contentType = String(a.content_type || "").toLowerCase();
-      const name = String(a.file_name || a.artifact_name || "").toLowerCase();
-      return (
-        artifactType === "html_final" ||
-        artifactType === "markdown_final" ||
-        name === "final.html" ||
-        (contentType === "text/html" &&
-          name.endsWith(".html") &&
-          name.includes("final"))
-      );
-    });
-
-    const matchingArtifact = matchingArtifactByUrl || finalArtifactCandidate;
+    const matchingArtifact = jobOutputArtifact;
 
     items.push({
       id: "job-output-url",
@@ -211,7 +233,6 @@ export function buildArtifactGalleryItems({
       sortOrder: completionTimestamp,
       artifact: matchingArtifact,
     });
-    seen.add(job.output_url);
   }
 
   return items.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));

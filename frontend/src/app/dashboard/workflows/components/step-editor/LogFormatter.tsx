@@ -52,9 +52,10 @@ const looksLikeMarkdown = (value: string) =>
 const looksLikePython = (value: string) =>
   PYTHON_PATTERNS.some((pattern) => pattern.test(value));
 
-const looksLikeHtml = (value: string) => HTML_TAG_REGEX.test(value.trim());
+export const looksLikeHtml = (value: string) =>
+  HTML_TAG_REGEX.test(value.trim());
 
-const buildHtmlSrcDoc = (html: string) => {
+export const buildHtmlSrcDoc = (html: string) => {
   const trimmed = html.trim();
   const hasDocTag = /<!doctype/i.test(trimmed) || /<html[\s>]/i.test(trimmed);
   if (hasDocTag) {

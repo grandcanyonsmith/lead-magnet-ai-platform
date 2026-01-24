@@ -46,14 +46,6 @@ export function StepEditModal({
   allSteps = [],
   currentStepIndex,
 }: StepEditModalProps) {
-  const {
-    options: modelOptions,
-    loading: modelsLoading,
-    error: modelsError,
-  } = useAIModelOptions({
-    currentModel: formData.model,
-    fallbackModel: DEFAULT_AI_MODEL,
-  });
   const [formData, setFormData] = useState<WorkflowStep>({
     step_name: "",
     instructions: "",
@@ -62,6 +54,14 @@ export function StepEditModal({
     tools: [],
     tool_choice: "required",
     depends_on: [],
+  });
+  const {
+    options: modelOptions,
+    loading: modelsLoading,
+    error: modelsError,
+  } = useAIModelOptions({
+    currentModel: formData.model,
+    fallbackModel: DEFAULT_AI_MODEL,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

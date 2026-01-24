@@ -51,7 +51,8 @@ export type ToolType =
   | "computer_use_preview"
   | "file_search"
   | "code_interpreter"
-  | "shell";
+  | "shell"
+  | "mcp";
 
 export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export type HTTPBodyMode = "auto" | "custom";
@@ -83,11 +84,24 @@ export interface CodeInterpreterToolConfig {
   };
 }
 
+export type McpRequireApproval = "always" | "never";
+
+export interface McpToolConfig {
+  type: "mcp";
+  server_label?: string;
+  server_url?: string;
+  connector_id?: string;
+  allowed_tools?: string[];
+  authorization?: string;
+  require_approval?: McpRequireApproval;
+}
+
 export type Tool =
   | ToolType
   | ComputerUseToolConfig
   | ImageGenerationToolConfig
-  | CodeInterpreterToolConfig;
+  | CodeInterpreterToolConfig
+  | McpToolConfig;
 
 export type ImageGenerationSettings = Omit<ImageGenerationToolConfig, "type">;
 

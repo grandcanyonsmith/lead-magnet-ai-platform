@@ -106,11 +106,39 @@ const matchesSearch = (log: LogEntry, query: string) => {
 const formatLogLine = (log: LogEntry) =>
   `[${formatTimestamp(log.timestamp)}] [${getLogLevelBucket(log).toUpperCase()}] ${log.message}`;
 
+const stripShellPrefix = (message: string) => {
+  if (
+    message.startsWith("💻") ||
+    message.startsWith("📤") ||
+    message.startsWith("⚠️")
+  ) {
+    return message.substring(2).trim();
+  }
+  return message;
+};
+
+const extractHtmlFromMessage = (message: string) => {
+  const trimmed = message.trim();
+  const htmlMatch = trimmed.match(/```html\s*([\s\S]*?)\s*```/i);
+  if (htmlMatch?.[1]) return htmlMatch[1].trim();
+  const genericMatch = trimmed.match(/```\s*([\s\S]*?)\s*```/);
+  if (genericMatch?.[1]) {
+    const inner = genericMatch[1].trim();
+    if (looksLikeHtml(inner)) return inner;
+  }
+  if (looksLikeHtml(trimmed)) return trimmed;
+  return null;
+};
+
 // -----------------------------------------------------------------------------
 // Log Line Component
 // -----------------------------------------------------------------------------
 
-import { formatLogMessage } from "./LogFormatter";
+import {
+  buildHtmlSrcDoc,
+  formatLogMessage,
+  looksLikeHtml,
+} from "./LogFormatter";
 
 function LogLine({
   log,
@@ -187,11 +215,11 @@ function LogLine({
 
   // Determine background class based on type
   let bgClass = "";
-  if (log.level === 'error') bgClass = "bg-red-500/10";
-  else if (log.level === 'warn') bgClass = "bg-yellow-500/10";
-  else if (isShellInput) bgClass = "bg-blue-900/20 border-l-2 border-blue-500/50";
-  else if (isShellOutput) bgClass = "bg-emerald-900/10 border-l-2 border-emerald-500/30";
-  else if (isShellError) bgClass = "bg-red-900/10 border-l-2 border-red-500/30";
+  if (levelBucket === "error") bgClass = "bg-red-500/10";
+  else if (levelBucket === "warn") bgClass = "bg-yellow-500/10";
+  if (isShellInput) bgClass = "bg-blue-900/20 border-l-2 border-blue-500/50";
+  if (isShellOutput) bgClass = "bg-emerald-900/10 border-l-2 border-emerald-500/30";
+  if (isShellError) bgClass = "bg-red-900/10 border-l-2 border-red-500/30";
   
   if (isCurrentMatch) bgClass = "bg-blue-500/40";
   else if (isMatch && !isCurrentMatch) bgClass = "bg-yellow-500/20";
@@ -200,12 +228,12 @@ function LogLine({
     <div 
       ref={onRef}
       className={`
-        flex items-start gap-3 py-0.5 px-4 hover:bg-white/5 transition-colors font-mono text-[13px] leading-6 group
+        flex items-start gap-3 py-1 px-3 sm:px-4 hover:bg-white/5 transition-colors font-mono text-[12px] sm:text-[13px] leading-5 sm:leading-6 group
         ${bgClass}
       `}
     >
-      <div className="flex gap-3 w-full">
-        <div className="flex items-start gap-3 shrink-0">
+      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 w-full">
+        <div className="flex flex-wrap items-center gap-2 sm:items-start sm:gap-3 shrink-0">
           {showLineNumbers && (
             <div className="flex select-none text-gray-600 text-right w-[28px] opacity-50 group-hover:opacity-100 transition-opacity">
               {index + 1}
@@ -221,7 +249,7 @@ function LogLine({
           </span>
         </div>
         <div
-          className={`w-full border-l border-gray-800 pl-3 min-h-[1.5em] ${
+          className={`w-full sm:border-l sm:border-gray-800 sm:pl-3 min-h-[1.5em] ${
             wrapLines ? "whitespace-pre-wrap break-words" : "whitespace-pre overflow-x-auto"
           }`}
         >
@@ -259,6 +287,16 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
   const matchRefs = useRef<(HTMLDivElement | null)[]>([]);
   const streamedOutputLogIndexRef = useRef<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(max-width: 640px)");
+    if (media.matches) {
+      setShowLineNumbers(false);
+      setShowTimestamps(false);
+      setWrapLines(true);
+    }
+  }, []);
 
   // Connection Logic
   useEffect(() => {
@@ -544,10 +582,52 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
     toast.success("Logs cleared");
   };
 
+  const hasComputerUse = useMemo(() => {
+    const tools = requestBody?.tools;
+    if (!Array.isArray(tools)) return false;
+    return tools.some(
+      (tool: any) =>
+        (typeof tool === "string" && tool === "computer_use_preview") ||
+        (tool && typeof tool === "object" && tool.type === "computer_use_preview"),
+    );
+  }, [requestBody]);
+
   const hasScreenshot = Boolean(screenshotUrl || screenshotBase64);
-  const currentScreenshotSrc = screenshotUrl || (screenshotBase64 ? `data:image/jpeg;base64,${screenshotBase64}` : '');
-  const summaryText = useMemo(() => {
-    if (!logs.length) return "No events yet";
+  const currentScreenshotSrc =
+    screenshotUrl || (screenshotBase64 ? `data:image/jpeg;base64,${screenshotBase64}` : "");
+  const htmlPreview = useMemo(() => {
+    for (let i = logs.length - 1; i >= 0; i -= 1) {
+      const candidate = extractHtmlFromMessage(stripShellPrefix(logs[i].message || ""));
+      if (candidate) return candidate;
+    }
+    return null;
+  }, [logs]);
+  const showHtmlPreview = Boolean(htmlPreview) && !hasScreenshot && !hasComputerUse;
+  const htmlSrcDoc = useMemo(() => {
+    if (!showHtmlPreview || !htmlPreview) return "";
+    return buildHtmlSrcDoc(htmlPreview);
+  }, [showHtmlPreview, htmlPreview]);
+  const htmlObjectUrl = useMemo(() => {
+    if (!showHtmlPreview || !htmlSrcDoc) return null;
+    const blob = new Blob([htmlSrcDoc], { type: "text/html" });
+    return URL.createObjectURL(blob);
+  }, [showHtmlPreview, htmlSrcDoc]);
+  useEffect(() => {
+    if (!htmlObjectUrl) return;
+    return () => {
+      URL.revokeObjectURL(htmlObjectUrl);
+    };
+  }, [htmlObjectUrl]);
+  const previewLabel = showHtmlPreview ? "HTML Preview" : "Latest Screenshot";
+  const previewObjectUrl = showHtmlPreview ? htmlObjectUrl : currentScreenshotSrc;
+  const previewFileName = showHtmlPreview
+    ? "log-preview.html"
+    : `screenshot-${Date.now()}.jpg`;
+  const previewContentType = showHtmlPreview ? "text/html" : "image/jpeg";
+  const summaryMeta = useMemo(() => {
+    if (!logs.length) {
+      return { base: "No events yet", details: "" };
+    }
     const base =
       filterLevel === "all" && !searchQuery.trim()
         ? `${logs.length} events`
@@ -558,7 +638,8 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
         ? `Span ${formatDuration(lastLog.timestamp - logs[0].timestamp)}`
         : null;
     const lastLabel = lastLog ? `Last ${formatTimestamp(lastLog.timestamp)}` : null;
-    return [base, spanLabel, lastLabel].filter(Boolean).join(" | ");
+    const details = [spanLabel, lastLabel].filter(Boolean).join(" | ");
+    return { base, details };
   }, [logs, filterLevel, searchQuery, filteredLogs.length]);
 
   const fakeStep: MergedStep = useMemo(() => ({
@@ -651,54 +732,66 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
           }`}>
              {/* Console Toolbar */}
              <div className="flex flex-col gap-3 px-3 py-2 bg-[#161b22] border-b border-gray-800 text-xs select-none">
-               <div className="flex flex-wrap items-center justify-between gap-2">
-                 <div className="flex items-center gap-3">
+               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                 <div className="flex flex-wrap items-center gap-2">
                    <span className="font-mono font-semibold text-gray-300 flex items-center gap-2">
                      <FiTerminal /> Console Output
                    </span>
-                   <span className="text-[11px] text-gray-500">{summaryText}</span>
+                   <span className="text-[11px] text-gray-500">{summaryMeta.base}</span>
+                   {summaryMeta.details && (
+                     <span className="hidden sm:inline text-[11px] text-gray-500">
+                       • {summaryMeta.details}
+                     </span>
+                   )}
                  </div>
-                 <div className="flex items-center gap-2">
+                 <div className="flex flex-wrap items-center gap-2">
                    <button
-                      onClick={() => setViewMode(viewMode === 'terminal' ? 'split' : 'terminal')}
-                      className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
-                      title={viewMode === 'terminal' ? "Minimize Console" : "Maximize Console"}
+                     onClick={() => setViewMode(viewMode === 'terminal' ? 'split' : 'terminal')}
+                     className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
+                     title={viewMode === 'terminal' ? "Minimize Console" : "Maximize Console"}
                    >
-                      {viewMode === 'terminal' ? <FiMinimize2 className="w-3.5 h-3.5" /> : <FiMaximize2 className="w-3.5 h-3.5" />}
+                     {viewMode === 'terminal' ? <FiMinimize2 className="w-3.5 h-3.5" /> : <FiMaximize2 className="w-3.5 h-3.5" />}
                    </button>
                    <div className="w-px h-3 bg-gray-700 mx-1" />
                    <button 
-                      onClick={() => setAutoScroll(!autoScroll)}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-colors ${
-                        autoScroll
-                          ? "text-emerald-300 bg-emerald-900/20 border-emerald-800/70"
-                          : "text-gray-400 border-gray-700 hover:text-gray-200 hover:border-gray-600"
-                      }`}
-                      title={autoScroll ? "Stick to bottom" : "Manual scroll"}
+                     onClick={() => setAutoScroll(!autoScroll)}
+                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-colors ${
+                       autoScroll
+                         ? "text-emerald-300 bg-emerald-900/20 border-emerald-800/70"
+                         : "text-gray-400 border-gray-700 hover:text-gray-200 hover:border-gray-600"
+                     }`}
+                     title={autoScroll ? "Stick to bottom" : "Manual scroll"}
                    >
                      {autoScroll ? <FiPlay className="w-3 h-3" /> : <FiPause className="w-3 h-3" />}
-                     {autoScroll ? "Stick to bottom" : "Manual scroll"}
+                     <span className="hidden sm:inline">
+                       {autoScroll ? "Stick to bottom" : "Manual scroll"}
+                     </span>
+                     <span className="sm:hidden">
+                       {autoScroll ? "Auto" : "Manual"}
+                     </span>
                    </button>
-                  {!autoScroll && (
-                    <button
-                      onClick={scrollToBottom}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600 transition-colors"
-                      title="Jump to latest"
-                    >
-                      <FiArrowDown className="w-3 h-3" />
-                      Jump to latest
-                    </button>
-                  )}
+                   {!autoScroll && (
+                     <button
+                       onClick={scrollToBottom}
+                       className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600 transition-colors"
+                       title="Jump to latest"
+                     >
+                       <FiArrowDown className="w-3 h-3" />
+                       <span className="hidden sm:inline">Jump to latest</span>
+                     </button>
+                   )}
                    <div className="flex items-center gap-1 rounded-md border border-gray-700/70 bg-[#0d1117] px-1 py-0.5">
                      <button onClick={copyLogs} className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Copy visible logs">
                        <FiCopy className="w-3.5 h-3.5" />
                      </button>
-                     <button onClick={() => downloadLogs("txt")} className="flex items-center gap-1 px-2 py-1 text-[11px] text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Download visible logs (.txt)">
+                     <button onClick={() => downloadLogs("txt")} className="flex items-center gap-1 px-1.5 sm:px-2 py-1 text-[11px] text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Download visible logs (.txt)">
                        <FiDownload className="w-3.5 h-3.5" />
-                       TXT
+                       <span className="hidden sm:inline">TXT</span>
+                       <span className="sm:hidden">T</span>
                      </button>
-                     <button onClick={() => downloadLogs("json")} className="px-2 py-1 text-[11px] font-mono text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Download visible logs (.json)">
-                       JSON
+                     <button onClick={() => downloadLogs("json")} className="px-1.5 sm:px-2 py-1 text-[11px] font-mono text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Download visible logs (.json)">
+                       <span className="hidden sm:inline">JSON</span>
+                       <span className="sm:hidden">J</span>
                      </button>
                      <button onClick={clearLogs} className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors" title="Clear Logs">
                        <FiTrash2 className="w-3.5 h-3.5" />
@@ -707,8 +800,8 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
                  </div>
                </div>
                
-               <div className="flex flex-wrap items-center gap-2">
-                 <div className="flex items-center gap-1">
+               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                 <div className="flex items-center gap-1 overflow-x-auto sm:overflow-visible scrollbar-hide">
                    {[
                      { value: "all", label: "All", count: logCounts.all, accent: "text-gray-300" },
                      { value: "info", label: "Info", count: logCounts.info, accent: "text-blue-300" },
@@ -718,7 +811,7 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
                      <button
                        key={option.value}
                        onClick={() => setFilterLevel(option.value as LogLevelFilter)}
-                       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] transition-colors ${
+                       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] transition-colors whitespace-nowrap ${
                          filterLevel === option.value
                            ? "border-blue-500/70 text-blue-200 bg-blue-500/10"
                            : "border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600"
@@ -733,85 +826,87 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
                    ))}
                  </div>
 
-                 {/* Search Bar */}
-                <div className="flex items-center gap-2 ml-auto">
-                  <div className="flex items-center gap-1 rounded-md border border-gray-700 bg-[#0d1117] px-1 py-0.5 text-[11px] text-gray-400">
-                    <span className="px-1 text-gray-500">View</span>
-                    <button
-                      onClick={() => setWrapLines((prev) => !prev)}
-                      aria-pressed={wrapLines}
-                      className={`px-2 py-1 rounded transition-colors ${
-                        wrapLines ? "text-blue-200 bg-blue-500/10" : "text-gray-400 hover:text-gray-200"
-                      }`}
-                      title={wrapLines ? "Disable line wrapping" : "Enable line wrapping"}
-                    >
-                      Wrap
-                    </button>
-                    <button
-                      onClick={() => setShowTimestamps((prev) => !prev)}
-                      aria-pressed={showTimestamps}
-                      className={`px-2 py-1 rounded transition-colors ${
-                        showTimestamps ? "text-blue-200 bg-blue-500/10" : "text-gray-400 hover:text-gray-200"
-                      }`}
-                      title={showTimestamps ? "Hide timestamps" : "Show timestamps"}
-                    >
-                      Time
-                    </button>
-                    <button
-                      onClick={() => setShowLineNumbers((prev) => !prev)}
-                      aria-pressed={showLineNumbers}
-                      className={`px-2 py-1 rounded transition-colors ${
-                        showLineNumbers ? "text-blue-200 bg-blue-500/10" : "text-gray-400 hover:text-gray-200"
-                      }`}
-                      title={showLineNumbers ? "Hide line numbers" : "Show line numbers"}
-                    >
-                      Line #
-                    </button>
-                  </div>
-                  <div className="relative min-w-[220px]">
-                     <FiSearch className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-                     <input
-                      ref={searchInputRef}
-                       type="text"
-                       value={searchQuery}
-                       onChange={(e) => setSearchQuery(e.target.value)}
-                       placeholder="Search logs, levels, timestamps..."
-                       className="w-full pl-8 pr-8 py-1.5 bg-[#0d1117] border border-gray-700 rounded text-gray-200 placeholder-gray-500 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                     />
-                     {searchQuery && (
-                       <button
-                         onClick={() => setSearchQuery("")}
-                         className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-500 hover:text-gray-300 rounded"
-                         title="Clear search"
-                       >
-                         <FiX className="w-3.5 h-3.5" />
-                       </button>
+                 {/* Search + view controls */}
+                 <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:ml-auto sm:w-auto">
+                   <div className="flex flex-wrap items-center gap-1 rounded-md border border-gray-700 bg-[#0d1117] px-1 py-0.5 text-[11px] text-gray-400">
+                     <span className="px-1 text-gray-500">View</span>
+                     <button
+                       onClick={() => setWrapLines((prev) => !prev)}
+                       aria-pressed={wrapLines}
+                       className={`px-2 py-1 rounded transition-colors ${
+                         wrapLines ? "text-blue-200 bg-blue-500/10" : "text-gray-400 hover:text-gray-200"
+                       }`}
+                       title={wrapLines ? "Disable line wrapping" : "Enable line wrapping"}
+                     >
+                       Wrap
+                     </button>
+                     <button
+                       onClick={() => setShowTimestamps((prev) => !prev)}
+                       aria-pressed={showTimestamps}
+                       className={`px-2 py-1 rounded transition-colors ${
+                         showTimestamps ? "text-blue-200 bg-blue-500/10" : "text-gray-400 hover:text-gray-200"
+                       }`}
+                       title={showTimestamps ? "Hide timestamps" : "Show timestamps"}
+                     >
+                       Time
+                     </button>
+                     <button
+                       onClick={() => setShowLineNumbers((prev) => !prev)}
+                       aria-pressed={showLineNumbers}
+                       className={`px-2 py-1 rounded transition-colors ${
+                         showLineNumbers ? "text-blue-200 bg-blue-500/10" : "text-gray-400 hover:text-gray-200"
+                       }`}
+                       title={showLineNumbers ? "Hide line numbers" : "Show line numbers"}
+                     >
+                       Line #
+                     </button>
+                   </div>
+                   <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                     <div className="relative w-full sm:min-w-[220px]">
+                       <FiSearch className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                       <input
+                         ref={searchInputRef}
+                         type="text"
+                         value={searchQuery}
+                         onChange={(e) => setSearchQuery(e.target.value)}
+                         placeholder="Search logs, levels, timestamps..."
+                         className="w-full pl-8 pr-8 py-1.5 bg-[#0d1117] border border-gray-700 rounded text-gray-200 placeholder-gray-500 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                       />
+                       {searchQuery && (
+                         <button
+                           onClick={() => setSearchQuery("")}
+                           className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-500 hover:text-gray-300 rounded"
+                           title="Clear search"
+                         >
+                           <FiX className="w-3.5 h-3.5" />
+                         </button>
+                       )}
+                     </div>
+                     {searchQuery.trim() && matchingIndices.length > 0 && (
+                       <div className="flex items-center gap-1 text-gray-500">
+                         <button
+                           onClick={() => navigateMatch('prev')}
+                           className="px-2 py-1 hover:bg-white/10 rounded transition-colors"
+                           title="Previous match (Shift+Enter)"
+                         >
+                           ↑
+                         </button>
+                         <span className="text-[10px] min-w-[45px] text-center">
+                           {currentMatchIndex + 1}/{matchingIndices.length}
+                         </span>
+                         <button
+                           onClick={() => navigateMatch('next')}
+                           className="px-2 py-1 hover:bg-white/10 rounded transition-colors"
+                           title="Next match (Enter)"
+                         >
+                           ↓
+                         </button>
+                       </div>
+                     )}
+                     {searchQuery.trim() && matchingIndices.length === 0 && (
+                       <span className="text-[10px] text-gray-500">No matches</span>
                      )}
                    </div>
-                   {searchQuery.trim() && matchingIndices.length > 0 && (
-                     <div className="flex items-center gap-1 text-gray-500">
-                       <button
-                         onClick={() => navigateMatch('prev')}
-                         className="px-2 py-1 hover:bg-white/10 rounded transition-colors"
-                         title="Previous match (Shift+Enter)"
-                       >
-                         ↑
-                       </button>
-                       <span className="text-[10px] min-w-[45px] text-center">
-                         {currentMatchIndex + 1}/{matchingIndices.length}
-                       </span>
-                       <button
-                         onClick={() => navigateMatch('next')}
-                         className="px-2 py-1 hover:bg-white/10 rounded transition-colors"
-                         title="Next match (Enter)"
-                       >
-                         ↓
-                       </button>
-                     </div>
-                   )}
-                   {searchQuery.trim() && matchingIndices.length === 0 && (
-                     <span className="text-[10px] text-gray-500">No matches</span>
-                   )}
                  </div>
                </div>
              </div>
@@ -819,7 +914,7 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
              <div 
                ref={scrollRef}
               onScroll={handleScroll}
-               className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
+              className="flex-1 overflow-y-auto p-2 sm:p-3 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
              >
                <div className="space-y-0.5">
                 {filteredLogs.map((log) => {
@@ -877,11 +972,11 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
               viewMode === 'preview' ? 'w-full' : 'hidden'
           }`}>
              <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-xs shadow-sm z-10">
-               <div className="flex items-center gap-2 font-medium text-gray-700 dark:text-gray-300">
-                 <FiImage className="text-gray-400" /> 
-                 Latest Screenshot
-               </div>
-               {hasScreenshot && (
+              <div className="flex items-center gap-2 font-medium text-gray-700 dark:text-gray-300">
+                <FiImage className="text-gray-400" /> 
+                {previewLabel}
+              </div>
+              {previewObjectUrl && (
                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => setViewMode(viewMode === 'preview' ? 'split' : 'preview')}
@@ -899,16 +994,16 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
                       <FiMaximize2 className="w-3.5 h-3.5" />
                     </button>
                     <div className="w-px h-3 bg-gray-200 dark:bg-gray-700 mx-1" />
-                    <a 
-                      href={currentScreenshotSrc}
-                      download={`screenshot-${Date.now()}.jpg`}
+                   <a 
+                      href={previewObjectUrl}
+                      download={previewFileName}
                       className="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                       title="Download"
                     >
                       <FiDownload className="w-3.5 h-3.5" />
                     </a>
                     <a 
-                      href={currentScreenshotSrc}
+                      href={previewObjectUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
@@ -920,8 +1015,28 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
                )}
              </div>
              
-             <div className="flex-1 flex items-center justify-center p-6 overflow-hidden relative group bg-gray-50/50 dark:bg-black/20">
-               {hasScreenshot ? (
+            <div className="flex-1 flex items-center justify-center p-6 overflow-hidden relative group bg-gray-50/50 dark:bg-black/20">
+              {showHtmlPreview ? (
+                <div
+                   className="relative w-full h-full flex items-center justify-center cursor-zoom-in"
+                   onClick={() => setIsPreviewOpen(true)}
+                 >
+                   <div className="absolute inset-0 pattern-dots opacity-5 pointer-events-none" />
+                   <iframe
+                     title="HTML Preview"
+                     className="w-full h-full rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl"
+                     sandbox=""
+                     srcDoc={htmlSrcDoc}
+                   />
+                   
+                   {/* Hover Overlay */}
+                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
+                     <div className="bg-black/75 text-white px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                       Click to enlarge
+                     </div>
+                   </div>
+                </div>
+              ) : hasScreenshot ? (
                  <div 
                     className="relative w-full h-full flex items-center justify-center cursor-zoom-in"
                     onClick={() => setIsPreviewOpen(true)}
@@ -943,14 +1058,18 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
                       </div>
                     </div>
                  </div>
-               ) : (
+              ) : (
                  <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 gap-4 select-none">
                    <div className="w-20 h-20 rounded-2xl bg-gray-100 dark:bg-gray-800/50 flex items-center justify-center border border-dashed border-gray-200 dark:border-gray-700">
                       <FiImage className="w-8 h-8 opacity-50" />
                    </div>
                    <div className="text-center">
-                     <p className="text-sm font-medium text-gray-500 dark:text-gray-500">No screenshot yet</p>
-                     <p className="text-xs text-gray-400 mt-1">Screenshots will appear here during execution</p>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-500">No preview yet</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {hasComputerUse
+                        ? "Screenshots will appear here during execution"
+                        : "HTML previews will appear here when detected"}
+                    </p>
                    </div>
                  </div>
                )}
@@ -967,13 +1086,13 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
         />
       )}
 
-      {/* Full Screen Image Preview */}
+      {/* Full Screen Preview */}
       <FullScreenPreviewModal
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
-        objectUrl={currentScreenshotSrc || undefined}
-        fileName={`Screenshot-${new Date().toLocaleTimeString()}`}
-        contentType="image/jpeg"
+        objectUrl={previewObjectUrl || undefined}
+        fileName={previewFileName}
+        contentType={previewContentType}
       />
     </>
   );

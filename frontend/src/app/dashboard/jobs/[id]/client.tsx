@@ -50,6 +50,7 @@ type QuickUpdateStepInput = {
   service_tier?: WorkflowStep["service_tier"] | null;
   reasoning_effort?: WorkflowStep["reasoning_effort"] | null;
   image_generation?: ImageGenerationSettings;
+  tools?: WorkflowStep["tools"] | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -696,6 +697,14 @@ export default function JobDetailClient() {
         nextTools.push(normalizedConfig);
       }
       updatedStep.tools = nextTools;
+    }
+
+    if ("tools" in update) {
+      if (update.tools === null) {
+        delete updatedStep.tools;
+      } else if (update.tools !== undefined) {
+        updatedStep.tools = update.tools;
+      }
     }
 
     const updatedSteps = [...workflow.steps];

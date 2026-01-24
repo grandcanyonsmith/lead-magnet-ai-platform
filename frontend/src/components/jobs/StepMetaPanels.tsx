@@ -9,7 +9,15 @@ import { Textarea } from "@/components/ui/Textarea";
 import { FiPlus, FiTrash2 } from "react-icons/fi";
 import { useAIModelOptions } from "@/hooks/useAIModelOptions";
 import { REASONING_EFFORT_LABELS, SERVICE_TIER_LABELS } from "@/utils/stepMeta";
-import type { AIModel, ImageGenerationSettings, ServiceTier } from "@/types/workflow";
+import type {
+  AIModel,
+  ImageGenerationSettings,
+  McpRequireApproval,
+  McpToolConfig,
+  ServiceTier,
+  Tool,
+  ToolType,
+} from "@/types/workflow";
 import type {
   DependencyPreview,
   DetailRow,
@@ -357,8 +365,8 @@ type ToolsPanelProps = {
   id: string;
   toolDetails: ToolDetail[];
   editPanel?: EditablePanel | null;
-  draftTools?: unknown[];
-  onDraftToolsChange?: (tools: unknown[]) => void;
+  draftTools?: Tool[];
+  onDraftToolsChange?: (tools: Tool[]) => void;
   renderEditButton?: (panel: EditablePanel) => JSX.Element | null;
   onCancel?: () => void;
   onSave?: () => void;
@@ -366,7 +374,7 @@ type ToolsPanelProps = {
   isToolsDirty?: boolean;
 };
 
-const AVAILABLE_TOOLS = [
+const AVAILABLE_TOOLS: ToolType[] = [
   "web_search",
   "computer_use_preview",
   "file_search",
@@ -374,6 +382,64 @@ const AVAILABLE_TOOLS = [
   "shell",
   "image_generation",
 ];
+
+const MCP_CATALOG = [
+  { id: "browser", label: "Browser", serverLabel: "browser" },
+  { id: "openai", label: "OpenAI", serverLabel: "openai" },
+  { id: "openai-tools", label: "OpenAI Tools", serverLabel: "openai_tools" },
+];
+
+const isMcpTool = (tool: Tool): tool is McpToolConfig =>
+  Boolean(tool) &&
+  typeof tool === "object" &&
+  !Array.isArray(tool) &&
+  tool.type === "mcp";
+
+const formatAllowedTools = (allowedTools?: string[]) => {
+  if (!Array.isArray(allowedTools) || allowedTools.length === 0) return "";
+  return allowedTools.join(", ");
+};
+
+const parseAllowedTools = (value: string): string[] | undefined => {
+  const tokens = value
+    .split(",")
+    .map((token) => token.trim())
+    .filter(Boolean);
+  return tokens.length > 0 ? tokens : undefined;
+};
+
+const getApprovalValue = (value?: McpRequireApproval): "" | McpRequireApproval => {
+  if (value === "always" || value === "never") return value;
+  return "";
+};
+
+const getMcpDisplayLabel = (tool: McpToolConfig): string => {
+  const serverLabel = tool.server_label?.trim() || null;
+  const connectorId = tool.connector_id?.trim() || null;
+  const serverUrl = tool.server_url?.trim() || null;
+  if (serverLabel) return `mcp:${serverLabel}`;
+  if (connectorId) return `mcp:${connectorId}`;
+  if (serverUrl) {
+    try {
+      const parsed = new URL(serverUrl);
+      if (parsed.hostname) return `mcp:${parsed.hostname}`;
+    } catch {
+      return `mcp:${serverUrl}`;
+    }
+  }
+  return "mcp";
+};
+
+const getToolDisplayLabel = (tool: Tool): string => {
+  if (typeof tool === "string") return tool;
+  if (tool.type === "mcp") {
+    return getMcpDisplayLabel(tool);
+  }
+  if ("name" in tool && typeof tool.name === "string" && tool.name.trim()) {
+    return tool.name.trim();
+  }
+  return tool.type || "Unknown";
+};
 
 export function ToolsPanel({
   id,
@@ -387,23 +453,57 @@ export function ToolsPanel({
   isUpdating,
   isToolsDirty,
 }: ToolsPanelProps) {
-  const [newToolName, setNewToolName] = useState("");
+  const [newToolName, setNewToolName] = useState<"" | ToolType>("");
+  const [mcpCatalogSelection, setMcpCatalogSelection] = useState("");
 
   const handleAddTool = () => {
     if (!newToolName || !onDraftToolsChange) return;
     const currentTools = draftTools || [];
     // Check if tool already exists (simple string check)
     if (
-      currentTools.some((t) =>
-        typeof t === "string"
-          ? t === newToolName
-          : (t as any).type === newToolName || (t as any).name === newToolName,
-      )
+      currentTools.some((tool) => {
+        if (typeof tool === "string") {
+          return tool === newToolName;
+        }
+        const name =
+          "name" in tool && typeof tool.name === "string" ? tool.name : null;
+        return (
+          tool.type === newToolName ||
+          (typeof name === "string" && name === newToolName)
+        );
+      })
     ) {
       return;
     }
     onDraftToolsChange([...currentTools, newToolName]);
     setNewToolName("");
+  };
+
+  const handleAddMcpCustom = () => {
+    if (!onDraftToolsChange) return;
+    const currentTools = draftTools || [];
+    onDraftToolsChange([
+      ...currentTools,
+      {
+        type: "mcp",
+        server_label: "",
+      },
+    ]);
+  };
+
+  const handleAddMcpFromCatalog = () => {
+    if (!onDraftToolsChange || !mcpCatalogSelection) return;
+    const entry = MCP_CATALOG.find((item) => item.id === mcpCatalogSelection);
+    if (!entry) return;
+    const currentTools = draftTools || [];
+    onDraftToolsChange([
+      ...currentTools,
+      {
+        type: "mcp",
+        server_label: entry.serverLabel,
+      },
+    ]);
+    setMcpCatalogSelection("");
   };
 
   const handleRemoveTool = (index: number) => {
@@ -412,6 +512,23 @@ export function ToolsPanel({
     const nextTools = [...currentTools];
     nextTools.splice(index, 1);
     onDraftToolsChange(nextTools);
+  };
+
+  const updateToolAt = (index: number, updater: (tool: Tool) => Tool) => {
+    if (!onDraftToolsChange) return;
+    const currentTools = draftTools || [];
+    const nextTools = [...currentTools];
+    nextTools[index] = updater(nextTools[index]);
+    onDraftToolsChange(nextTools);
+  };
+
+  const updateMcpToolAt = (
+    index: number,
+    updater: (tool: McpToolConfig) => McpToolConfig,
+  ) => {
+    updateToolAt(index, (current) =>
+      isMcpTool(current) ? updater(current) : current,
+    );
   };
 
   return (
@@ -430,18 +547,179 @@ export function ToolsPanel({
         <div className="space-y-3">
           <div className="space-y-2">
             {(draftTools || []).map((tool, idx) => {
-              const name = typeof tool === "string" ? tool : (tool as any).type || (tool as any).name || "Unknown";
+              const name = getToolDisplayLabel(tool);
+              const isMcp = isMcpTool(tool);
+              const mcpTool = isMcp ? tool : null;
+              const connectionType =
+                isMcp && mcpTool?.connector_id ? "connector" : "remote";
+              const isMissingConnection =
+                isMcp && !mcpTool?.server_url && !mcpTool?.connector_id;
               return (
-                <div key={idx} className="flex items-center justify-between rounded-md border border-border/60 bg-background/70 px-2 py-1.5">
-                  <span className="font-mono text-xs">{name}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTool(idx)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded"
-                    title="Remove tool"
-                  >
-                    <FiTrash2 className="w-3.5 h-3.5" />
-                  </button>
+                <div
+                  key={idx}
+                  className="rounded-md border border-border/60 bg-background/70 px-2 py-2 space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs">{name}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTool(idx)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded"
+                      title="Remove tool"
+                    >
+                      <FiTrash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {isMcp && mcpTool && (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-muted-foreground">
+                          Server label
+                        </label>
+                        <Input
+                          value={mcpTool.server_label ?? ""}
+                          onChange={(event) =>
+                            updateMcpToolAt(idx, (current) => ({
+                              ...current,
+                              server_label: event.target.value,
+                            }))
+                          }
+                          className="h-8"
+                          placeholder="browser"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-muted-foreground">
+                          Connection type
+                        </label>
+                        <Select
+                          value={connectionType}
+                          onChange={(nextValue) =>
+                            updateMcpToolAt(idx, (current) => ({
+                              ...current,
+                              server_url:
+                                nextValue === "remote" ? current.server_url : undefined,
+                              connector_id:
+                                nextValue === "connector"
+                                  ? current.connector_id
+                                  : undefined,
+                            }))
+                          }
+                          className="h-8"
+                        >
+                          <option value="remote">Remote server URL</option>
+                          <option value="connector">Connector ID</option>
+                        </Select>
+                      </div>
+
+                      {connectionType === "remote" ? (
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="text-[11px] font-medium text-muted-foreground">
+                            Server URL
+                          </label>
+                          <Input
+                            value={mcpTool.server_url ?? ""}
+                            onChange={(event) =>
+                              updateMcpToolAt(idx, (current) => ({
+                                ...current,
+                                server_url: event.target.value.trim() || undefined,
+                              }))
+                            }
+                            className="h-8"
+                            placeholder="https://example.com/mcp"
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="text-[11px] font-medium text-muted-foreground">
+                            Connector ID
+                          </label>
+                          <Input
+                            value={mcpTool.connector_id ?? ""}
+                            onChange={(event) =>
+                              updateMcpToolAt(idx, (current) => ({
+                                ...current,
+                                connector_id: event.target.value.trim() || undefined,
+                              }))
+                            }
+                            className="h-8"
+                            placeholder="connector_xxx"
+                          />
+                        </div>
+                      )}
+
+                      <div className="space-y-1 sm:col-span-2">
+                        <label className="text-[11px] font-medium text-muted-foreground">
+                          Authorization
+                        </label>
+                        <Input
+                          value={mcpTool.authorization ?? ""}
+                          onChange={(event) =>
+                            updateMcpToolAt(idx, (current) => ({
+                              ...current,
+                              authorization: event.target.value,
+                            }))
+                          }
+                          className="h-8"
+                          placeholder="Bearer <token>"
+                        />
+                      </div>
+
+                      <div className="space-y-1 sm:col-span-2">
+                        <label className="text-[11px] font-medium text-muted-foreground">
+                          Allowed tools
+                        </label>
+                        <Input
+                          value={formatAllowedTools(
+                            Array.isArray(mcpTool.allowed_tools)
+                              ? mcpTool.allowed_tools
+                              : undefined,
+                          )}
+                          onChange={(event) =>
+                            updateMcpToolAt(idx, (current) => ({
+                              ...current,
+                              allowed_tools: parseAllowedTools(event.target.value),
+                            }))
+                          }
+                          className="h-8"
+                          placeholder="search, open, *"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-muted-foreground">
+                          Require approval
+                        </label>
+                        <Select
+                          value={getApprovalValue(
+                            mcpTool.require_approval,
+                          )}
+                          onChange={(nextValue) =>
+                            updateMcpToolAt(idx, (current) => ({
+                              ...current,
+                              require_approval:
+                                nextValue === "always" || nextValue === "never"
+                                  ? (nextValue as McpRequireApproval)
+                                  : undefined,
+                            }))
+                          }
+                          className="h-8"
+                        >
+                          <option value="">Default behavior</option>
+                          <option value="always">Always require approval</option>
+                          <option value="never">Never require approval</option>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+
+                  {isMissingConnection && (
+                    <div className="rounded-md border border-amber-200/70 bg-amber-50/50 px-2 py-1 text-[11px] text-amber-700">
+                      Add a server URL or connector ID to enable this MCP server.
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -453,7 +731,7 @@ export function ToolsPanel({
           <div className="flex flex-col sm:flex-row gap-2">
             <Select
               value={newToolName}
-              onChange={(val) => setNewToolName(val)}
+              onChange={(val) => setNewToolName((val as ToolType) || "")}
               className="h-8 w-full sm:flex-1"
               placeholder="Select tool to add..."
             >
@@ -472,6 +750,45 @@ export function ToolsPanel({
             >
               <FiPlus className="w-3.5 h-3.5" />
             </Button>
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-background/70 px-2 py-2">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              MCP servers
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Select
+                value={mcpCatalogSelection}
+                onChange={(val) => setMcpCatalogSelection(val)}
+                className="h-8 w-full sm:flex-1"
+              >
+                <option value="">Add from catalog...</option>
+                {MCP_CATALOG.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.label}
+                  </option>
+                ))}
+              </Select>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleAddMcpFromCatalog}
+                disabled={!mcpCatalogSelection}
+                className="h-8 w-full sm:w-auto px-2"
+              >
+                <FiPlus className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={handleAddMcpCustom}
+                className="h-8 w-full sm:w-auto px-2"
+              >
+                Custom
+              </Button>
+            </div>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">

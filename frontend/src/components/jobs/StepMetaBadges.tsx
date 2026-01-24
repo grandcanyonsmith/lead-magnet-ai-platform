@@ -8,6 +8,28 @@ type BadgeIcon = ComponentType<{ className?: string }>;
 const HOVER_CHEVRON_CLASS =
   "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100";
 
+const getToolDisplayLabel = (tool: Tool): string => {
+  if (typeof tool === "string") return tool;
+  if (!tool || typeof tool !== "object") return "unknown";
+  if (tool.type === "mcp") {
+    const serverLabel = tool.server_label?.trim() || null;
+    const connectorId = tool.connector_id?.trim() || null;
+    const serverUrl = tool.server_url?.trim() || null;
+    if (serverLabel) return `mcp:${serverLabel}`;
+    if (connectorId) return `mcp:${connectorId}`;
+    if (serverUrl) {
+      try {
+        const parsed = new URL(serverUrl);
+        if (parsed.hostname) return `mcp:${parsed.hostname}`;
+      } catch {
+        return `mcp:${serverUrl}`;
+      }
+    }
+    return "mcp";
+  }
+  return getToolName(tool);
+};
+
 // Render tool badges inline
 function renderToolBadges({
   tools,
@@ -38,6 +60,7 @@ function renderToolBadges({
     <div className="flex flex-wrap gap-1">
       {tools.map((tool, toolIdx) => {
         const toolName = getToolName(tool as Tool);
+        const displayName = getToolDisplayLabel(tool as Tool);
         const isImageTool = toolName === "image_generation";
         const baseClass =
           "inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-md border whitespace-nowrap";
@@ -61,7 +84,7 @@ function renderToolBadges({
               className={buttonClass}
               title="Toggle image generation settings"
             >
-              <span>{toolName}</span>
+              <span>{displayName}</span>
               <ToggleIcon
                 className={`h-3 w-3 ${HOVER_CHEVRON_CLASS}`}
                 aria-hidden="true"
@@ -82,7 +105,7 @@ function renderToolBadges({
               className={`${defaultBadgeClass} transition-all cursor-pointer shadow-sm hover:shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-1 dark:focus-visible:ring-slate-700 group`}
               title="Toggle tool details"
             >
-              <span>{toolName}</span>
+              <span>{displayName}</span>
               <ToggleIcon
                 className={`h-3 w-3 ${HOVER_CHEVRON_CLASS}`}
                 aria-hidden="true"
@@ -92,7 +115,7 @@ function renderToolBadges({
         }
         return (
           <span key={toolIdx} className={defaultBadgeClass}>
-            {toolName}
+            {displayName}
           </span>
         );
       })}

@@ -30,6 +30,12 @@ export type ToolConfig =
       display_width?: number;
       display_height?: number;
       environment?: "browser" | "mac" | "windows" | "ubuntu";
+      server_label?: string;
+      server_url?: string;
+      connector_id?: string;
+      allowed_tools?: string[];
+      authorization?: string;
+      require_approval?: "always" | "never";
       [key: string]: unknown;
     };
 

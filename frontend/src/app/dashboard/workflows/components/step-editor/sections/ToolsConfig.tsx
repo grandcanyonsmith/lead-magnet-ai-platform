@@ -5,6 +5,7 @@ import { Select } from "@/components/ui/Select";
 import { CollapsibleSection } from "@/components/workflows/edit/CollapsibleSection";
 import ComputerUseConfig from "../ComputerUseConfig";
 import ImageGenerationConfig from "../ImageGenerationConfig";
+import McpToolsConfig from "../McpToolsConfig";
 import {
   AVAILABLE_TOOLS,
   TOOL_CHOICE_OPTIONS,
@@ -166,6 +167,11 @@ export default function ToolsConfig({
           </p>
         </div>
       </div>
+
+      <McpToolsConfig
+        tools={step.tools}
+        onToolsChange={(nextTools) => onChange("tools", nextTools)}
+      />
 
       {isToolSelected("shell") && (
         <CollapsibleSection

@@ -1,6 +1,7 @@
 import { MergedStep } from "@/types/job";
+import type { Tool as WorkflowTool } from "@/types/workflow";
 
-export type Tool = string | { type: string; [key: string]: unknown };
+export type Tool = WorkflowTool;
 
 export const SERVICE_TIER_SPEED: Record<string, number> = {
   flex: 1,

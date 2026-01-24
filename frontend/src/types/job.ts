@@ -3,6 +3,7 @@
  */
 
 import { BaseEntity, Status } from "./common";
+import type { Tool } from "./workflow";
 import type { Artifact } from "./artifact";
 
 export type StepStatus = "pending" | "in_progress" | "completed" | "failed";
@@ -28,7 +29,7 @@ export interface ExecutionStepUsageInfo {
 }
 
 export interface ExecutionStepInput {
-  tools?: string[] | unknown[];
+  tools?: Tool[];
   tool_choice?: string;
   [key: string]: unknown;
 }
@@ -39,7 +40,7 @@ export interface ExecutionStep {
   step_name?: string;
   success?: boolean;
   model?: string;
-  tools?: string[] | unknown[];
+  tools?: Tool[];
   tool_choice?: string;
   instructions?: string;
   input?: ExecutionStepInput;
