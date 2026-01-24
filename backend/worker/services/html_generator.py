@@ -6,6 +6,7 @@ from typing import Dict, Optional, Tuple
 from utils.decimal_utils import convert_decimals_to_float
 from services.prompt_overrides import resolve_prompt_override
 from services.html_sanitizer import strip_template_placeholders
+from core.prompts import PROMPT_CONFIGS, STYLED_HTML_INSTRUCTIONS, STYLED_HTML_PROMPT_TEMPLATE
 
 logger = logging.getLogger(__name__)
 
@@ -100,33 +101,27 @@ class HTMLGenerator:
         submission_json = json.dumps(serializable_submission, ensure_ascii=False, indent=2)
         style_hint = template_style.strip() if isinstance(template_style, str) else ""
 
-        instructions = (
-            "You are a Senior Frontend Engineer and Design System Expert.\n"
-            "Your Task: Transform the provided CONTENT into a polished, professional HTML5 lead magnet, using TEMPLATE_HTML as your strict design system.\n\n"
-            "## Core Directives\n"
-            "1. **Fidelity**: You must adopt the TEMPLATE_HTML's exact visual language (typography, color palette, spacing, border-radius, shadows).\n"
-            "2. **Structure**: Return a valid, standalone HTML5 document (<!DOCTYPE html>...</html>).\n"
-            "3. **Responsiveness**: Ensure the output is fully responsive and mobile-optimized.\n"
-            "4. **Content Integrity**: Present the CONTENT accurately. Do not summarize unless asked. Use appropriate HTML tags (h1-h6, p, ul, table, blockquote) to structure the data.\n"
-            "5. **No Template Placeholders**: Do not include {{...}} placeholder tokens. If TEMPLATE_HTML contains placeholders, replace them with real text derived from CONTENT.\n"
-            "6. **No Hallucinations**: Do not invent new content. Only format what is provided.\n\n"
-            "## Output Format\n"
-            "Return ONLY the raw HTML code. Do not wrap it in Markdown code blocks. Do not add conversational text."
+        sanitized_template_html = strip_template_placeholders(template_html)
+        
+        # Use template from config
+        input_text = STYLED_HTML_PROMPT_TEMPLATE.format(
+            template_html=sanitized_template_html,
+            template_style=style_hint if style_hint else '(none)',
+            content_label=content_label,
+            content=content,
+            submission_data_json=submission_json
         )
 
-        sanitized_template_html = strip_template_placeholders(template_html)
-        input_text = (
-            f"TEMPLATE_HTML (style reference):\n<<<\n{sanitized_template_html}\n>>>\n\n"
-            f"TEMPLATE_STYLE_GUIDANCE:\n{style_hint if style_hint else '(none)'}\n\n"
-            f"{content_label}:\n<<<\n{content}\n>>>\n\n"
-            f"SUBMISSION_DATA_JSON (optional personalization context):\n<<<\n{submission_json}\n>>>\n"
-        )
+        defaults = PROMPT_CONFIGS["styled_html_generation"].copy()
+        defaults.update({
+            "instructions": STYLED_HTML_INSTRUCTIONS,
+            "prompt": input_text,
+            "model": model or defaults.get("model", "gpt-5.2")
+        })
+
         resolved = resolve_prompt_override(
             key="styled_html_generation",
-            defaults={
-                "instructions": instructions,
-                "prompt": input_text,
-            },
+            defaults=defaults,
             overrides=prompt_overrides,
             variables={
                 "content_label": content_label,
@@ -137,22 +132,27 @@ class HTMLGenerator:
                 "input_text": input_text,
             },
         )
-        instructions = resolved.get("instructions") or instructions
-        input_text = resolved.get("prompt") or input_text
+        instructions = resolved.get("instructions")
+        input_text = resolved.get("prompt")
+        resolved_model = resolved.get("model")
+        service_tier = resolved.get("service_tier")
+        reasoning_effort = resolved.get("reasoning_effort")
 
         # Build params for Responses API. No tools are needed for this.
         params = self.openai_client.build_api_params(
-            model=model,
+            model=resolved_model,
             instructions=instructions,
             input_text=input_text,
             tools=[],
             tool_choice="none",
             has_computer_use=False,
             reasoning_level=None,
+            service_tier=service_tier,
+            reasoning_effort=reasoning_effort,
         )
 
         logger.info("[HTMLGenerator] Calling OpenAI for template-based HTML deliverable", extra={
-            "model": model,
+            "model": resolved_model,
             "content_length": len(content or ""),
             "template_html_length": len(template_html),
             "has_style_hint": bool(style_hint),
@@ -163,7 +163,7 @@ class HTMLGenerator:
 
         output_text, usage_info, request_details, response_details = self.openai_client.process_api_response(
             response=response,
-            model=model,
+            model=resolved_model,
             instructions=instructions,
             input_text=input_text,
             previous_context="",

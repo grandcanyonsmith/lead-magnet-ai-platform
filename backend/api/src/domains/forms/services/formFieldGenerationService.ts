@@ -39,7 +39,7 @@ export class FormFieldGenerationService {
   async generateFormFields(
     description: string,
     workflowName: string,
-    _model: string,
+    model: string,
     tenantId: string,
     jobId?: string,
     brandContext?: string,
@@ -109,11 +109,11 @@ The public_slug should be URL-friendly (lowercase, hyphens only). Return ONLY va
     const formStartTime = Date.now();
     
     const formCompletionParams: any = {
-      model: "gpt-5.2",
+      model: model || resolved.model || "gpt-5.2",
       instructions: resolved.instructions,
       input: resolved.prompt,
-      reasoning: { effort: "high" },
-      service_tier: "priority",
+      reasoning: { effort: resolved.reasoning_effort || "high" },
+      service_tier: resolved.service_tier || "priority",
     };
     const formCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(formCompletionParams),

@@ -5,6 +5,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from services.openai_client import OpenAIClient
 from services.image_handler import ImageHandler
 from services.prompt_overrides import resolve_prompt_override
+from core.prompts import PROMPT_CONFIGS, IMAGE_PROMPT_PLANNER_INSTRUCTIONS, IMAGE_PROMPT_PLANNER_INPUT_TEMPLATE
 
 logger = logging.getLogger(__name__)
 
@@ -62,34 +63,24 @@ class ImageGenerator:
         if planner_tool_choice == "required" and (not planner_tools or len(planner_tools) == 0):
             planner_tool_choice = "none"
 
-        planner_instructions = (
-            "You are generating prompts for an image model.\n"
-            "Return STRICT JSON only (no markdown, no commentary) with this schema:\n"
-            "{\n"
-            "  \"images\": [\n"
-            "    {\n"
-            "      \"label\": \"short human label\",\n"
-            "      \"prompt\": \"the full image prompt\"\n"
-            "    }\n"
-            "  ]\n"
-            "}\n"
-            "Rules:\n"
-            "- Output 1 to 12 images depending on what is requested.\n"
-            "- Each prompt must be self-contained and include brand palette/style cues from the context.\n"
-            "- If the step instructions describe multiple distinct images (e.g., logos, module thumbnails), create one prompt per image.\n"
+        planner_instructions = IMAGE_PROMPT_PLANNER_INSTRUCTIONS
+
+        planner_input = IMAGE_PROMPT_PLANNER_INPUT_TEMPLATE.format(
+            step_name=step_name or 'N/A',
+            step_instructions=step_instructions,
+            full_context=full_context
         )
 
-        planner_input = (
-            f"Step Name: {step_name or 'N/A'}\n\n"
-            f"Step Instructions:\n{step_instructions}\n\n"
-            f"Context:\n{full_context}\n"
-        )
+        defaults = PROMPT_CONFIGS["image_prompt_planner"].copy()
+        defaults.update({
+            "instructions": planner_instructions,
+            "prompt": planner_input,
+            "model": model or defaults.get("model", "gpt-5.2")
+        })
+
         resolved = resolve_prompt_override(
             key="image_prompt_planner",
-            defaults={
-                "instructions": planner_instructions,
-                "prompt": planner_input,
-            },
+            defaults=defaults,
             overrides=prompt_overrides,
             variables={
                 "step_name": step_name,
@@ -100,13 +91,16 @@ class ImageGenerator:
                 "planner_input": planner_input,
             },
         )
-        planner_instructions = resolved.get("instructions") or planner_instructions
-        planner_input = resolved.get("prompt") or planner_input
+        planner_instructions = resolved.get("instructions")
+        planner_input = resolved.get("prompt")
+        resolved_model = resolved.get("model")
+        service_tier = resolved.get("service_tier")
+        reasoning_effort = resolved.get("reasoning_effort")
 
         # Build planner params (Responses API) WITHOUT the image_generation tool.
         # has_computer_use=False since we filtered out computer_use tools to prevent browser automation.
         planner_params = self.openai_client.build_api_params(
-            model=model,
+            model=resolved_model,
             instructions=planner_instructions,
             input_text=planner_input,
             tools=planner_tools,
@@ -117,6 +111,7 @@ class ImageGenerator:
             job_id=job_id,
             tenant_id=tenant_id,
             reasoning_effort=reasoning_effort,
+            service_tier=service_tier,
         )
 
         planner_response = self.openai_client.make_api_call(planner_params)

@@ -4,6 +4,8 @@ This project supports tenant-level prompt overrides via the settings field
 `prompt_overrides`. Overrides let a user replace default system instructions
 and/or prompt templates for specific AI calls.
 
+> **Note for Developers**: The default source prompts are located in [`backend/api/src/config/prompts.ts`](../../backend/api/src/config/prompts.ts).
+
 ## Format
 
 `prompt_overrides` is a JSON object keyed by prompt id. Each value can include:

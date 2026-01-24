@@ -15,6 +15,8 @@ export const PROMPT_OVERRIDE_DEFINITIONS = [
   { key: "styled_html_generation", label: "Styled HTML generation" },
   { key: "image_prompt_planner", label: "Image prompt planner" },
   { key: "shell_tool_loop_default", label: "Shell tool loop default" },
+  { key: "workflow_ideation", label: "Workflow ideation" },
+  { key: "workflow_ideation_followup", label: "Workflow ideation followup" },
 ] as const;
 
 export type PromptOverrideKey =

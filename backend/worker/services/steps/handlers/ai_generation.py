@@ -9,6 +9,7 @@ from services.s3_context_service import S3ContextService
 from services.context_builder import ContextBuilder
 from services.tools import get_image_generation_defaults
 from core import log_context
+from core.prompts import PROMPT_CONFIGS
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,8 @@ class AIStepHandler(AbstractStepHandler):
 
     def _prepare_step_tools(self, step: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]], str]:
         """Prepare and normalize tools for a step."""
-        step_model = step.get('model', 'gpt-5.2')
+        defaults = PROMPT_CONFIGS["ai_generation"]
+        step_model = step.get('model', defaults["model"])
         
         # Check if this is a deep research model
         is_deep_research_model = (

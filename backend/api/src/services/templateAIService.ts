@@ -141,11 +141,11 @@ Return ONLY the raw HTML code. No Markdown code blocks.`;
     const startTime = Date.now();
 
     const completionParams: any = {
-      model,
+      model: request.model || resolved.model || "gpt-5.2",
       instructions: resolved.instructions,
       input: resolved.prompt,
-      service_tier: "priority",
-      reasoning: { effort: "high" },
+      service_tier: resolved.service_tier || "priority",
+      reasoning: { effort: resolved.reasoning_effort || "high" },
     };
     // gpt-5.1-codex handles temperature differently or defaults are fine
     // if (!model.startsWith('gpt-5')) {
@@ -250,10 +250,10 @@ Return JSON format: {"name": "...", "description": "..."}`;
     const startTime = Date.now();
 
     const completionParams: any = {
-      model,
+      model: request.model || resolved.model || "gpt-5.2",
       input: resolved.prompt,
-      service_tier: "priority",
-      reasoning: { effort: "high" },
+      service_tier: resolved.service_tier || "priority",
+      reasoning: { effort: resolved.reasoning_effort || "high" },
     };
     if (resolved.instructions) {
       completionParams.instructions = resolved.instructions;

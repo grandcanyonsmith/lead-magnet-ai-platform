@@ -7,7 +7,7 @@ import base64
 import re
 from typing import Optional
 from services.api_key_manager import APIKeyManager
-import openai
+from core.prompts import PROMPT_CONFIGS, IMAGE_NAMING_INSTRUCTIONS, IMAGE_NAMING_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -57,31 +57,16 @@ class ImageNamingService:
             context_text = "\n".join(context_parts) if context_parts else None
             
             # Build the prompt for filename generation
-            prompt = """Analyze this image and generate a concise, descriptive filename for it. 
-The filename should:
-- Be lowercase
-- Use underscores instead of spaces
-- Be 3-8 words maximum
-- Describe the main subject or content of the image
-- Be suitable as a file name (no special characters except underscores and hyphens)
-- Not include file extension
-
-Examples of good filenames:
-- sunset_over_mountains
-- abstract_geometric_pattern
-- business_presentation_slide
-- colorful_abstract_art
-- modern_office_space
-
-Generate only the filename, nothing else."""
+            prompt = IMAGE_NAMING_PROMPT
             
             if context_text:
                 prompt += f"\n\nAdditional context:\n{context_text}"
             
+            config = PROMPT_CONFIGS["image_naming"]
             # Use vision model to analyze the image with Responses API
             response = self.client.responses.create(
-                model="gpt-4o",  # Use vision-capable model
-                instructions="You are a helpful assistant that generates descriptive filenames for images.",
+                model=config["model"],  # Use vision-capable model
+                instructions=IMAGE_NAMING_INSTRUCTIONS,
                 input=[
                     {
                         "role": "user",

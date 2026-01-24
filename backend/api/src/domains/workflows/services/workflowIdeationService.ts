@@ -7,6 +7,11 @@ import { stripMarkdownCodeFences } from "@utils/openaiHelpers";
 import { getOpenAIClient } from "@services/openaiService";
 import { s3Service } from "@services/s3Service";
 import { imageSearchService } from "@services/imageSearchService";
+import { IDEATION_SYSTEM_PROMPT, FOLLOWUP_SYSTEM_PROMPT } from "@config/prompts";
+import {
+  getPromptOverridesForTenant,
+  resolvePromptOverride,
+} from "@services/promptOverrides";
 
 export type WorkflowIdeationMessage = {
   role: "user" | "assistant" | "system";
@@ -65,85 +70,37 @@ type IdeationImageStrategy = "preview" | "generated";
 const DEFAULT_MODEL = "gpt-5.2";
 const DEFAULT_IMAGE_MODEL = "gpt-image-1.5";
 const MAX_DELIVERABLES = 5;
+const MAX_MESSAGE_HISTORY = 20;
 const DEFAULT_MOCKUP_COUNT = 4;
 const DEFAULT_IMAGE_STRATEGY: IdeationImageStrategy = "preview";
 const DEFAULT_EXAMPLE_IMAGE_COUNT = 4;
 const PREVIEW_IMAGE_WIDTH = 1024;
 const PREVIEW_IMAGE_HEIGHT = 768;
-
-const IDEATION_SYSTEM_PROMPT = `You are a Lead Magnet Strategist helping a user decide what to build.
-Your job is to propose a small set of high-value deliverables and help the user go deeper on their goal.
-
-Guidelines:
-- Provide 3 to 5 distinct deliverable options.
-- Each option should be feasible, specific, and high-conversion.
-- Provide image prompts for cover-style visuals (no text in image).
-- Provide a build_description that can be used directly to generate a workflow.
-- assistant_message must be a single line, 1-3 sentences. Make it slightly more in-depth: acknowledge the goal, summarize the options at a high level, and ask 1-2 targeted questions to refine the direction.
-
-Output format:
-1) A single line starting with "MESSAGE:" followed by the assistant_message text.
-2) A JSON object that matches the required schema.
-Do NOT wrap the JSON in markdown code fences.`;
-
-const FOLLOWUP_SYSTEM_PROMPT = `You are a Lead Magnet Strategist.
-The user has already selected a deliverable. Answer their questions, clarify scope, and help refine the deliverable in depth.
-Do NOT propose new deliverables unless the user explicitly asks for more options.
-If no new options are requested, return an empty deliverables array.
-- assistant_message must be a single line, 1-3 sentences. Provide deeper guidance and ask 1-2 targeted questions if needed.
-
-Output format:
-1) A single line starting with "MESSAGE:" followed by the assistant_message text.
-2) A JSON object that matches the required schema.
-Do NOT wrap the JSON in markdown code fences.`;
+const IDEATION_OUTPUT_INSTRUCTIONS = [
+  "Remember: output a \"MESSAGE:\" line before the JSON.",
+  "Return raw JSON only (no code fences).",
+  "Return JSON using this schema:",
+  "{",
+  "  \"assistant_message\": \"A short, friendly response to the user.\",",
+  "  \"deliverables\": [",
+  "    {",
+  "      \"title\": \"Short deliverable title\",",
+  "      \"description\": \"1-2 sentence summary\",",
+  "      \"deliverable_type\": \"report|checklist|template|guide|calculator|framework|dashboard\",",
+  "      \"build_description\": \"A detailed description that can be used directly to generate the workflow, including audience, scope, sections, and outputs.\",",
+  "      \"image_prompt\": \"A concise visual prompt for a cover image. No text in the image.\"",
+  "    }",
+  "  ]",
+  "}",
+].join("\n");
 
 class WorkflowIdeationService {
   async ideateWorkflow(
     tenantId: string,
     payload: WorkflowIdeationRequest,
   ): Promise<WorkflowIdeationResponse> {
-    if (!payload || !Array.isArray(payload.messages)) {
-      throw new ApiError("messages array is required", 400);
-    }
-
-    const messages = payload.messages
-      .filter((message) => message?.content?.trim())
-      .slice(-20);
-
-    if (messages.length === 0) {
-      throw new ApiError("At least one message is required", 400);
-    }
-
-    const model =
-      typeof payload.model === "string" && payload.model.trim()
-        ? payload.model.trim()
-        : DEFAULT_MODEL;
-    const mode = payload.mode === "followup" ? "followup" : "ideation";
-    const imageStrategy = this.resolveImageStrategy(payload.image_strategy);
-
-    const conversation = this.buildConversationTranscript(messages);
-    const deliverableContext =
-      mode === "followup" && payload.selected_deliverable
-        ? `\n\nSelected deliverable:\nTitle: ${payload.selected_deliverable.title}\nType: ${payload.selected_deliverable.deliverable_type || "n/a"}\nDescription: ${payload.selected_deliverable.description || "n/a"}\nBuild description: ${payload.selected_deliverable.build_description || "n/a"}`
-        : "";
-    const prompt = `${conversation}${deliverableContext}
-
-Remember: output a "MESSAGE:" line before the JSON.
-Return raw JSON only (no code fences).
-Return JSON using this schema:
-{
-  "assistant_message": "A short, friendly response to the user.",
-  "deliverables": [
-    {
-      "title": "Short deliverable title",
-      "description": "1-2 sentence summary",
-      "deliverable_type": "report|checklist|template|guide|calculator|framework|dashboard",
-      "build_description": "A detailed description that can be used directly to generate the workflow, including audience, scope, sections, and outputs.",
-      "image_prompt": "A concise visual prompt for a cover image. No text in the image."
-    }
-  ]
-}`;
-
+    const { messages, model, mode, imageStrategy, prompt } =
+      this.prepareIdeationRequest(payload);
     const openai = await getOpenAIClient();
     logger.info("[Workflow Ideation] Starting ideation", {
       tenantId,
@@ -152,43 +109,19 @@ Return JSON using this schema:
       imageStrategy,
     });
 
-    const completionParams: any = {
-      model,
-      instructions: mode === "followup" ? FOLLOWUP_SYSTEM_PROMPT : IDEATION_SYSTEM_PROMPT,
-      input: prompt,
-      reasoning: { effort: "high" },
-      service_tier: "priority",
-    };
-    const completion = await openai.responses.create(completionParams);
-
+    const completion = await openai.responses.create(
+      this.buildCompletionParams(model, mode, prompt),
+    );
     const outputText = String((completion as any)?.output_text || "");
     const parsed = this.parseIdeationResult(outputText);
-    const normalized = this.normalizeDeliverables(
-      Array.isArray(parsed.deliverables) ? parsed.deliverables : [],
-    );
-    const deliverables =
-      normalized.length > 0
-        ? await Promise.all(
-            normalized.map((deliverable, index) =>
-              this.attachIdeationImage(
-                openai,
-                tenantId,
-                deliverable,
-                index,
-                imageStrategy,
-              ),
-            ),
-          )
-        : normalized;
 
-    return {
-      assistant_message:
-        parsed.assistant_message ||
-        (mode === "followup"
-          ? "Got it. What would you like to refine or explore about this deliverable?"
-          : "Here are a few strong options to consider."),
-      deliverables,
-    };
+    return this.finalizeIdeationResponse({
+      parsed,
+      openai,
+      tenantId,
+      mode,
+      imageStrategy,
+    });
   }
 
   async ideateWorkflowStream(
@@ -196,48 +129,8 @@ Return JSON using this schema:
     payload: WorkflowIdeationRequest,
     handlers?: { onDelta?: (text: string) => void },
   ): Promise<WorkflowIdeationResponse> {
-    if (!payload || !Array.isArray(payload.messages)) {
-      throw new ApiError("messages array is required", 400);
-    }
-
-    const messages = payload.messages
-      .filter((message) => message?.content?.trim())
-      .slice(-20);
-
-    if (messages.length === 0) {
-      throw new ApiError("At least one message is required", 400);
-    }
-
-    const model =
-      typeof payload.model === "string" && payload.model.trim()
-        ? payload.model.trim()
-        : DEFAULT_MODEL;
-    const mode = payload.mode === "followup" ? "followup" : "ideation";
-    const imageStrategy = this.resolveImageStrategy(payload.image_strategy);
-
-    const conversation = this.buildConversationTranscript(messages);
-    const deliverableContext =
-      mode === "followup" && payload.selected_deliverable
-        ? `\n\nSelected deliverable:\nTitle: ${payload.selected_deliverable.title}\nType: ${payload.selected_deliverable.deliverable_type || "n/a"}\nDescription: ${payload.selected_deliverable.description || "n/a"}\nBuild description: ${payload.selected_deliverable.build_description || "n/a"}`
-        : "";
-    const prompt = `${conversation}${deliverableContext}
-
-Remember: output a "MESSAGE:" line before the JSON.
-Return raw JSON only (no code fences).
-Return JSON using this schema:
-{
-  "assistant_message": "A short, friendly response to the user.",
-  "deliverables": [
-    {
-      "title": "Short deliverable title",
-      "description": "1-2 sentence summary",
-      "deliverable_type": "report|checklist|template|guide|calculator|framework|dashboard",
-      "build_description": "A detailed description that can be used directly to generate the workflow, including audience, scope, sections, and outputs.",
-      "image_prompt": "A concise visual prompt for a cover image. No text in the image."
-    }
-  ]
-}`;
-
+    const { messages, model, mode, imageStrategy, prompt } =
+      this.prepareIdeationRequest(payload);
     const openai = await getOpenAIClient();
     logger.info("[Workflow Ideation] Starting streamed ideation", {
       tenantId,
@@ -246,14 +139,13 @@ Return JSON using this schema:
       imageStrategy,
     });
 
-    const stream = await (openai as any).responses.create({
+    const streamParams = await this.buildStreamCompletionParams({
+      tenantId,
+      mode,
       model,
-      instructions: mode === "followup" ? FOLLOWUP_SYSTEM_PROMPT : IDEATION_SYSTEM_PROMPT,
-      input: prompt,
-      reasoning: { effort: "high" },
-      service_tier: "priority",
-      stream: true,
+      prompt,
     });
+    const stream = await (openai as any).responses.create(streamParams);
 
     let outputText = "";
     for await (const event of stream as any) {
@@ -274,9 +166,157 @@ Return JSON using this schema:
       handlers?.onDelta?.(delta);
     }
 
-    let parsed;
+    const parsed = this.parseIdeationResultWithFallback(outputText);
+
+    return this.finalizeIdeationResponse({
+      parsed,
+      openai,
+      tenantId,
+      mode,
+      imageStrategy,
+    });
+  }
+
+  private buildConversationTranscript(messages: WorkflowIdeationMessage[]): string {
+    const lines = messages.map((message) => {
+      const role =
+        message.role === "assistant"
+          ? "Assistant"
+          : message.role === "system"
+            ? "System"
+            : "User";
+      return `${role}: ${message.content.trim()}`;
+    });
+    return `Conversation so far:\n${lines.join("\n")}`;
+  }
+
+  private prepareIdeationRequest(payload: WorkflowIdeationRequest): {
+    messages: WorkflowIdeationMessage[];
+    model: string;
+    mode: "ideation" | "followup";
+    imageStrategy: IdeationImageStrategy;
+    prompt: string;
+  } {
+    const messages = this.getValidatedMessages(payload);
+    const model = this.resolveIdeationModel(payload.model);
+    const mode = this.resolveIdeationMode(payload.mode);
+    const imageStrategy = this.resolveImageStrategy(payload.image_strategy);
+    const prompt = this.buildIdeationPrompt(
+      messages,
+      mode,
+      payload.selected_deliverable,
+    );
+
+    return { messages, model, mode, imageStrategy, prompt };
+  }
+
+  private getValidatedMessages(
+    payload: WorkflowIdeationRequest,
+  ): WorkflowIdeationMessage[] {
+    if (!payload || !Array.isArray(payload.messages)) {
+      throw new ApiError("messages array is required", 400);
+    }
+
+    const messages = payload.messages
+      .filter((message) => message?.content?.trim())
+      .slice(-MAX_MESSAGE_HISTORY);
+
+    if (messages.length === 0) {
+      throw new ApiError("At least one message is required", 400);
+    }
+
+    return messages;
+  }
+
+  private resolveIdeationModel(model?: string): string {
+    return typeof model === "string" && model.trim() ? model.trim() : DEFAULT_MODEL;
+  }
+
+  private resolveIdeationMode(
+    mode?: WorkflowIdeationRequest["mode"],
+  ): "ideation" | "followup" {
+    return mode === "followup" ? "followup" : "ideation";
+  }
+
+  private buildIdeationPrompt(
+    messages: WorkflowIdeationMessage[],
+    mode: "ideation" | "followup",
+    selectedDeliverable?: WorkflowIdeationSelectedDeliverable,
+  ): string {
+    const conversation = this.buildConversationTranscript(messages);
+    const deliverableContext = this.buildDeliverableContext(
+      mode,
+      selectedDeliverable,
+    );
+    return `${conversation}${deliverableContext}\n\n${IDEATION_OUTPUT_INSTRUCTIONS}`;
+  }
+
+  private buildDeliverableContext(
+    mode: "ideation" | "followup",
+    selectedDeliverable?: WorkflowIdeationSelectedDeliverable,
+  ): string {
+    if (mode !== "followup" || !selectedDeliverable) {
+      return "";
+    }
+
+    return `\n\nSelected deliverable:\nTitle: ${selectedDeliverable.title}\nType: ${selectedDeliverable.deliverable_type || "n/a"}\nDescription: ${selectedDeliverable.description || "n/a"}\nBuild description: ${selectedDeliverable.build_description || "n/a"}`;
+  }
+
+  private buildCompletionParams(
+    model: string,
+    mode: "ideation" | "followup",
+    prompt: string,
+  ): any {
+    return {
+      model,
+      instructions:
+        mode === "followup" ? FOLLOWUP_SYSTEM_PROMPT : IDEATION_SYSTEM_PROMPT,
+      input: prompt,
+      reasoning: { effort: "high" },
+      service_tier: "priority",
+    };
+  }
+
+  private async buildStreamCompletionParams({
+    tenantId,
+    mode,
+    model,
+    prompt,
+  }: {
+    tenantId: string;
+    mode: "ideation" | "followup";
+    model: string;
+    prompt: string;
+  }): Promise<any> {
+    const overrides = await getPromptOverridesForTenant(tenantId);
+    const resolved = resolvePromptOverride({
+      key: mode === "followup" ? "workflow_ideation_followup" : "workflow_ideation",
+      defaults: {
+        instructions: mode === "followup" ? FOLLOWUP_SYSTEM_PROMPT : IDEATION_SYSTEM_PROMPT,
+        prompt: "{{input}}",
+      },
+      overrides,
+      variables: {
+        input: prompt,
+      },
+    });
+
+    return {
+      model: model || resolved.model || DEFAULT_MODEL,
+      instructions: resolved.instructions,
+      input: resolved.prompt,
+      reasoning: { effort: resolved.reasoning_effort || "high" },
+      service_tier: resolved.service_tier || "priority",
+      stream: true,
+    };
+  }
+
+  private parseIdeationResultWithFallback(outputText: string): {
+    assistant_message?: string;
+    deliverables: any[];
+  } {
     try {
-      parsed = this.parseIdeationResult(outputText);
+      return this.parseIdeationResult(outputText);
     } catch (error: any) {
       logger.error("[Workflow Ideation] Failed to parse ideation result", {
         error: String(error),
@@ -291,19 +331,31 @@ Return JSON using this schema:
         try {
           const fallbackParsed = JSON.parse(jsonMatch[0]);
           if (Array.isArray(fallbackParsed.deliverables)) {
-            parsed = fallbackParsed;
             logger.info("[Workflow Ideation] Recovered using fallback parsing");
-          } else {
-            throw error;
+            return fallbackParsed;
           }
+          throw error;
         } catch {
           throw error;
         }
-      } else {
-        throw error;
       }
+      throw error;
     }
-    
+  }
+
+  private async finalizeIdeationResponse({
+    parsed,
+    openai,
+    tenantId,
+    mode,
+    imageStrategy,
+  }: {
+    parsed: { assistant_message?: string; deliverables: any[] };
+    openai: OpenAI;
+    tenantId: string;
+    mode: "ideation" | "followup";
+    imageStrategy: IdeationImageStrategy;
+  }): Promise<WorkflowIdeationResponse> {
     const normalized = this.normalizeDeliverables(
       Array.isArray(parsed.deliverables) ? parsed.deliverables : [],
     );
@@ -330,19 +382,6 @@ Return JSON using this schema:
           : "Here are a few strong options to consider."),
       deliverables,
     };
-  }
-
-  private buildConversationTranscript(messages: WorkflowIdeationMessage[]): string {
-    const lines = messages.map((message) => {
-      const role =
-        message.role === "assistant"
-          ? "Assistant"
-          : message.role === "system"
-            ? "System"
-            : "User";
-      return `${role}: ${message.content.trim()}`;
-    });
-    return `Conversation so far:\n${lines.join("\n")}`;
   }
 
   private parseIdeationResult(outputText: string): {

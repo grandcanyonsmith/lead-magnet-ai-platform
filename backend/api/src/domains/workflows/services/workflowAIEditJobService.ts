@@ -12,6 +12,52 @@ import { getPromptOverridesFromSettings } from "@services/promptOverrides";
 const JOBS_TABLE = env.jobsTable;
 const WORKFLOWS_TABLE = env.workflowsTable;
 
+type ToolChoiceValue = NonNullable<WorkflowAIEditRequest["defaultToolChoice"]>;
+type ServiceTier = "auto" | "default" | "flex" | "scale" | "priority";
+type ReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh";
+type TextVerbosity = "low" | "medium" | "high";
+
+const VALID_TOOL_CHOICES = new Set<ToolChoiceValue>([
+  "auto",
+  "required",
+  "none",
+]);
+const VALID_SERVICE_TIERS = new Set<ServiceTier>([
+  "auto",
+  "default",
+  "flex",
+  "scale",
+  "priority",
+]);
+const VALID_REASONING_EFFORTS = new Set<ReasoningEffort>([
+  "none",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+]);
+const VALID_TEXT_VERBOSITIES = new Set<TextVerbosity>([
+  "low",
+  "medium",
+  "high",
+]);
+const DEFAULT_REVIEW_SERVICE_TIER: ServiceTier = "priority";
+const DEFAULT_REVIEW_REASONING_EFFORT: ReasoningEffort = "high";
+
+type ExecutionHistory = NonNullable<WorkflowAIEditRequest["executionHistory"]>;
+type ReferenceExample = NonNullable<WorkflowAIEditRequest["referenceExamples"]>[number];
+type ReviewerUser = NonNullable<WorkflowAIEditRequest["reviewerUser"]>;
+
+type WorkflowAIEditRuntimeSettings = {
+  defaultToolChoice?: ToolChoiceValue;
+  defaultServiceTier?: ServiceTier;
+  defaultTextVerbosity?: TextVerbosity;
+  reviewServiceTier: ServiceTier;
+  reviewReasoningEffort: ReasoningEffort;
+  reviewUserId?: string;
+  promptOverrides?: ReturnType<typeof getPromptOverridesFromSettings>;
+};
+
 type StartWorkflowAIEditInput = {
   tenantId: string;
   workflowId: string;
@@ -23,6 +69,374 @@ type StartWorkflowAIEditInput = {
 type ImprovementStatus = "pending" | "approved" | "denied";
 
 class WorkflowAIEditJobService {
+  private getSetting<T extends string>(
+    value: unknown,
+    validSet: Set<T>,
+  ): T | undefined {
+    if (typeof value !== "string") return undefined;
+    return validSet.has(value as T) ? (value as T) : undefined;
+  }
+
+  private getSettingOrDefault<T extends string>(
+    value: unknown,
+    validSet: Set<T>,
+    fallback: T,
+  ): T {
+    return this.getSetting(value, validSet) ?? fallback;
+  }
+
+  private resolveReviewUserId(
+    settings: Record<string, any> | null | undefined,
+    job: Record<string, any>,
+  ): string | undefined {
+    const reviewUserIdValue =
+      typeof settings?.default_workflow_improvement_user_id === "string"
+        ? settings.default_workflow_improvement_user_id.trim()
+        : "";
+    if (reviewUserIdValue && reviewUserIdValue !== "auto") {
+      return reviewUserIdValue;
+    }
+    return typeof job?.requested_by_user_id === "string"
+      ? job.requested_by_user_id
+      : undefined;
+  }
+
+  private resolveRuntimeSettings(
+    settings: Record<string, any> | null | undefined,
+    job: Record<string, any>,
+  ): WorkflowAIEditRuntimeSettings {
+    const defaultToolChoice = this.getSetting(
+      settings?.default_tool_choice,
+      VALID_TOOL_CHOICES,
+    );
+    const defaultServiceTier = this.getSetting(
+      settings?.default_service_tier,
+      VALID_SERVICE_TIERS,
+    );
+    const defaultTextVerbosity = this.getSetting(
+      settings?.default_text_verbosity,
+      VALID_TEXT_VERBOSITIES,
+    );
+    const reviewServiceTier = this.getSettingOrDefault(
+      settings?.default_workflow_improvement_service_tier,
+      VALID_SERVICE_TIERS,
+      DEFAULT_REVIEW_SERVICE_TIER,
+    );
+    const reviewReasoningEffort = this.getSettingOrDefault(
+      settings?.default_workflow_improvement_reasoning_effort,
+      VALID_REASONING_EFFORTS,
+      DEFAULT_REVIEW_REASONING_EFFORT,
+    );
+    const reviewUserId = this.resolveReviewUserId(settings, job);
+    const promptOverrides = getPromptOverridesFromSettings(settings || undefined);
+
+    return {
+      defaultToolChoice,
+      defaultServiceTier,
+      defaultTextVerbosity,
+      reviewServiceTier,
+      reviewReasoningEffort,
+      reviewUserId,
+      promptOverrides,
+    };
+  }
+
+  private async loadReviewerUser(
+    tenantId: string,
+    reviewUserId: string | undefined,
+    usersTable?: string,
+  ): Promise<ReviewerUser | undefined> {
+    if (!reviewUserId || !usersTable) return undefined;
+
+    try {
+      const reviewer = await db.get(usersTable, { user_id: reviewUserId });
+      if (reviewer && reviewer.customer_id === tenantId) {
+        return {
+          user_id: reviewer.user_id,
+          name: reviewer.name,
+          email: reviewer.email,
+          role: reviewer.role,
+        };
+      }
+    } catch (err: any) {
+      logger.warn("[Workflow AI Edit] Failed to load reviewer user", {
+        reviewUserId,
+        error: err?.message || String(err),
+      });
+    }
+
+    return undefined;
+  }
+
+  private async fetchS3Json(
+    s3Client: S3Client,
+    bucket: string | undefined,
+    key: string,
+  ): Promise<any | null> {
+    try {
+      const cmd = new GetObjectCommand({ Bucket: bucket as string, Key: key });
+      const res = await s3Client.send(cmd);
+      if (res.Body) {
+        const str = await res.Body.transformToString();
+        return JSON.parse(str);
+      }
+    } catch (e: any) {
+      logger.warn("[WorkflowAI Edit Job] Failed to fetch S3 JSON", {
+        key,
+        error: e.message,
+      });
+    }
+    return null;
+  }
+
+  private async fetchS3Text(
+    s3Client: S3Client,
+    bucket: string | undefined,
+    key: string,
+  ): Promise<string | null> {
+    try {
+      const cmd = new GetObjectCommand({ Bucket: bucket as string, Key: key });
+      const res = await s3Client.send(cmd);
+      if (res.Body) {
+        return await res.Body.transformToString();
+      }
+    } catch (e: any) {
+      logger.warn("[WorkflowAI Edit Job] Failed to fetch S3 Text", {
+        key,
+        error: e.message,
+      });
+    }
+    return null;
+  }
+
+  private async loadExecutionHistory(params: {
+    contextJobId?: string;
+    tenantId: string;
+    submissionsTable: string | undefined;
+    artifactsTable: string | undefined;
+    artifactsBucket: string | undefined;
+    s3Client: S3Client;
+  }): Promise<ExecutionHistory | undefined> {
+    const {
+      contextJobId,
+      tenantId,
+      submissionsTable,
+      artifactsTable,
+      artifactsBucket,
+      s3Client,
+    } = params;
+    if (!contextJobId) return undefined;
+
+    try {
+      const ctxJob = await db.get(JOBS_TABLE, { job_id: contextJobId });
+      if (!ctxJob || ctxJob.tenant_id !== tenantId) {
+        return undefined;
+      }
+
+      const history: ExecutionHistory = {};
+      const submissionPromise = ctxJob.submission_id
+        ? db.get(submissionsTable as string, { submission_id: ctxJob.submission_id })
+        : Promise.resolve(null);
+      const stepsPromise = ctxJob.execution_steps_s3_key
+        ? this.fetchS3Json(
+            s3Client,
+            artifactsBucket,
+            String(ctxJob.execution_steps_s3_key),
+          )
+        : Promise.resolve(ctxJob.execution_steps || null);
+      let artifactPromise: Promise<string | null> = Promise.resolve(null);
+      if (
+        artifactsTable &&
+        ctxJob.artifacts &&
+        Array.isArray(ctxJob.artifacts) &&
+        ctxJob.artifacts.length > 0
+      ) {
+        const finalArtifactId = ctxJob.artifacts[ctxJob.artifacts.length - 1];
+        artifactPromise = db
+          .get(artifactsTable, { artifact_id: finalArtifactId })
+          .then((artifact) => {
+            if (artifact && artifact.s3_key) {
+              return this.fetchS3Text(
+                s3Client,
+                artifactsBucket,
+                String(artifact.s3_key),
+              );
+            }
+            return null;
+          });
+      }
+
+      const [submission, steps, finalArtifactText] = await Promise.all([
+        submissionPromise,
+        stepsPromise,
+        artifactPromise,
+      ]);
+
+      if (submission) {
+        history.submissionData = submission.submission_data;
+      }
+      if (steps) {
+        history.stepExecutionResults = steps;
+      }
+      if (finalArtifactText) {
+        history.finalArtifactSummary = finalArtifactText;
+      }
+
+      return history;
+    } catch (err: any) {
+      logger.error("[WorkflowAI Edit Job] Failed to fetch context job", {
+        contextJobId,
+        error: err.message,
+      });
+    }
+
+    return undefined;
+  }
+
+  private async loadReferenceExamples(params: {
+    workflowId: string;
+    contextJobId?: string;
+    submissionsTable: string | undefined;
+    artifactsTable: string | undefined;
+    artifactsBucket: string | undefined;
+    s3Client: S3Client;
+  }): Promise<ReferenceExample[]> {
+    const {
+      workflowId,
+      contextJobId,
+      submissionsTable,
+      artifactsTable,
+      artifactsBucket,
+      s3Client,
+    } = params;
+
+    try {
+      const examplesRes = await db.query(
+        JOBS_TABLE,
+        "gsi_workflow_status",
+        "workflow_id = :wId AND #s = :s",
+        { ":wId": workflowId, ":s": "completed" },
+        { "#s": "status" },
+        5,
+      );
+
+      const potentialExamples = examplesRes.items || [];
+      const filtered = potentialExamples.filter(
+        (j: any) => j.job_id !== contextJobId,
+      );
+
+      const examplePromises = filtered.slice(0, 2).map(async (exJob: any) => {
+        const exData: Partial<ReferenceExample> & { jobId: string } = {
+          jobId: exJob.job_id,
+        };
+
+        const subPromise = exJob.submission_id
+          ? db.get(submissionsTable as string, { submission_id: exJob.submission_id })
+          : Promise.resolve(null);
+
+        let artPromise: Promise<string | null> = Promise.resolve(null);
+        if (
+          artifactsTable &&
+          exJob.artifacts &&
+          Array.isArray(exJob.artifacts) &&
+          exJob.artifacts.length > 0
+        ) {
+          const artId = exJob.artifacts[exJob.artifacts.length - 1];
+          artPromise = db
+            .get(artifactsTable, { artifact_id: artId })
+            .then((art) => {
+              if (art && art.s3_key) {
+                return this.fetchS3Text(
+                  s3Client,
+                  artifactsBucket,
+                  String(art.s3_key),
+                );
+              }
+              return null;
+            });
+        }
+
+        const [sub, txt] = await Promise.all([subPromise, artPromise]);
+        if (sub) exData.submissionData = sub.submission_data;
+        if (txt) exData.finalArtifactSummary = txt;
+
+        if (exData.submissionData && exData.finalArtifactSummary) {
+          return exData as ReferenceExample;
+        }
+        return null;
+      });
+
+      const results = await Promise.all(examplePromises);
+      return results.filter(Boolean) as ReferenceExample[];
+    } catch (err: any) {
+      logger.warn("[WorkflowAI Edit Job] Failed to fetch reference examples", {
+        error: err.message,
+      });
+    }
+
+    return [];
+  }
+
+  private buildWorkflowAIEditRequest(params: {
+    userPrompt: string;
+    tenantId: string;
+    workflowId: string;
+    workflow: Record<string, any>;
+    executionHistory?: ExecutionHistory;
+    referenceExamples: ReferenceExample[];
+    settings: WorkflowAIEditRuntimeSettings;
+    reviewerUser?: ReviewerUser;
+  }): WorkflowAIEditRequest {
+    const {
+      userPrompt,
+      tenantId,
+      workflowId,
+      workflow,
+      executionHistory,
+      referenceExamples,
+      settings,
+      reviewerUser,
+    } = params;
+    return {
+      userPrompt,
+      defaultToolChoice: settings.defaultToolChoice,
+      defaultServiceTier: settings.defaultServiceTier,
+      defaultTextVerbosity: settings.defaultTextVerbosity,
+      reviewServiceTier: settings.reviewServiceTier,
+      reviewReasoningEffort: settings.reviewReasoningEffort,
+      tenantId,
+      promptOverrides: settings.promptOverrides,
+      reviewerUser,
+      workflowContext: {
+        workflow_id: workflowId,
+        workflow_name: workflow.workflow_name || "Untitled Workflow",
+        workflow_description: workflow.workflow_description || "",
+        template_id: workflow.template_id,
+        current_steps: workflow.steps || [],
+      },
+      executionHistory,
+      referenceExamples,
+    };
+  }
+
+  private formatImprovementRecord(job: any): Record<string, any> {
+    return {
+      job_id: job.job_id,
+      workflow_id: job.workflow_id,
+      status: job.status,
+      improvement_status:
+        (job.improvement_status as ImprovementStatus) || "pending",
+      created_at: job.created_at,
+      updated_at: job.updated_at,
+      reviewed_at: job.reviewed_at,
+      approved_at: job.approved_at,
+      denied_at: job.denied_at,
+      user_prompt: job.user_prompt,
+      context_job_id: job.context_job_id,
+      result: job.result,
+    };
+  }
+
   async startWorkflowAIEdit({
     tenantId,
     workflowId,
@@ -55,7 +469,7 @@ class WorkflowAIEditJobService {
       tenantId,
       workflowId,
       hasContextJobId: !!contextJobId,
-        hasRequestedByUserId: !!requestedByUserId,
+      hasRequestedByUserId: !!requestedByUserId,
     });
 
     await JobProcessingUtils.triggerAsyncProcessing(
@@ -138,11 +552,10 @@ class WorkflowAIEditJobService {
     userPrompt: string,
     contextJobId?: string,
   ): Promise<void> {
-    const WORKFLOWS_TABLE = env.workflowsTable;
-    const SUBMISSIONS_TABLE = env.submissionsTable;
-    const ARTIFACTS_TABLE = env.artifactsTable;
-    const ARTIFACTS_BUCKET = env.artifactsBucket;
-    const USERS_TABLE = env.usersTable;
+    const submissionsTable = env.submissionsTable;
+    const artifactsTable = env.artifactsTable;
+    const artifactsBucket = env.artifactsBucket;
+    const usersTable = env.usersTable;
 
     logger.info("[Workflow AI Edit] Processing job", {
       jobId,
@@ -174,268 +587,52 @@ class WorkflowAIEditJobService {
       // ---------------------------------------------------------
       // CONTEXT GATHERING (Parallelized)
       // ---------------------------------------------------------
-      let executionHistory: any = undefined;
-      const referenceExamples: any[] = [];
-
       const s3Client = new S3Client({ region: env.awsRegion });
-
-      const fetchS3Json = async (key: string) => {
-        try {
-          const cmd = new GetObjectCommand({ Bucket: ARTIFACTS_BUCKET, Key: key });
-          const res = await s3Client.send(cmd);
-          if (res.Body) {
-            const str = await res.Body.transformToString();
-            return JSON.parse(str);
-          }
-        } catch (e: any) {
-          logger.warn("[WorkflowAI Edit Job] Failed to fetch S3 JSON", {
-            key,
-            error: e.message,
-          });
-        }
-        return null;
-      };
-
-      const fetchS3Text = async (key: string) => {
-        try {
-          const cmd = new GetObjectCommand({ Bucket: ARTIFACTS_BUCKET, Key: key });
-          const res = await s3Client.send(cmd);
-          if (res.Body) {
-            return await res.Body.transformToString();
-          }
-        } catch (e: any) {
-          logger.warn("[WorkflowAI Edit Job] Failed to fetch S3 Text", {
-            key,
-            error: e.message,
-          });
-        }
-        return null;
-      };
-
-      // Context job
-      const contextJobPromise = (async () => {
-        if (!contextJobId) return;
-
-        try {
-          const ctxJob = await db.get(JOBS_TABLE, { job_id: contextJobId });
-          if (ctxJob && ctxJob.tenant_id === tenantId) {
-            const history: any = {};
-
-            const submissionPromise = ctxJob.submission_id
-              ? db.get(SUBMISSIONS_TABLE, { submission_id: ctxJob.submission_id })
-              : Promise.resolve(null);
-
-            const stepsPromise = ctxJob.execution_steps_s3_key
-              ? fetchS3Json(String(ctxJob.execution_steps_s3_key))
-              : Promise.resolve(ctxJob.execution_steps || null);
-
-            let artifactPromise: Promise<string | null> = Promise.resolve(null);
-            if (
-              ARTIFACTS_TABLE &&
-              ctxJob.artifacts &&
-              Array.isArray(ctxJob.artifacts) &&
-              ctxJob.artifacts.length > 0
-            ) {
-              const finalArtifactId = ctxJob.artifacts[ctxJob.artifacts.length - 1];
-              artifactPromise = db
-                .get(ARTIFACTS_TABLE, { artifact_id: finalArtifactId })
-                .then((artifact) => {
-                  if (artifact && artifact.s3_key) {
-                    return fetchS3Text(String(artifact.s3_key));
-                  }
-                  return null;
-                });
-            }
-
-            const [submission, steps, finalArtifactText] = await Promise.all([
-              submissionPromise,
-              stepsPromise,
-              artifactPromise,
-            ]);
-
-            if (submission) {
-              history.submissionData = submission.submission_data;
-            }
-            if (steps) {
-              history.stepExecutionResults = steps;
-            }
-            if (finalArtifactText) {
-              history.finalArtifactSummary = finalArtifactText;
-            }
-
-            executionHistory = history;
-          }
-        } catch (err: any) {
-          logger.error("[WorkflowAI Edit Job] Failed to fetch context job", {
-            contextJobId,
-            error: err.message,
-          });
-        }
-      })();
-
-      // Reference examples
-      const referenceExamplesPromise = (async () => {
-        try {
-          const examplesRes = await db.query(
-            JOBS_TABLE,
-            "gsi_workflow_status",
-            "workflow_id = :wId AND #s = :s",
-            { ":wId": workflowId, ":s": "completed" },
-            { "#s": "status" },
-            5,
-          );
-
-          const potentialExamples = examplesRes.items || [];
-          const filtered = potentialExamples.filter(
-            (j: any) => j.job_id !== contextJobId,
-          );
-
-          const examplePromises = filtered.slice(0, 2).map(async (exJob: any) => {
-            const exData: any = { jobId: exJob.job_id };
-
-            const subPromise = exJob.submission_id
-              ? db.get(SUBMISSIONS_TABLE, { submission_id: exJob.submission_id })
-              : Promise.resolve(null);
-
-            let artPromise: Promise<string | null> = Promise.resolve(null);
-            if (
-              ARTIFACTS_TABLE &&
-              exJob.artifacts &&
-              Array.isArray(exJob.artifacts) &&
-              exJob.artifacts.length > 0
-            ) {
-              const artId = exJob.artifacts[exJob.artifacts.length - 1];
-              artPromise = db
-                .get(ARTIFACTS_TABLE, { artifact_id: artId })
-                .then((art) => {
-                  if (art && art.s3_key) {
-                    return fetchS3Text(String(art.s3_key));
-                  }
-                  return null;
-                });
-            }
-
-            const [sub, txt] = await Promise.all([subPromise, artPromise]);
-            if (sub) exData.submissionData = sub.submission_data;
-            if (txt) exData.finalArtifactSummary = txt;
-
-            if (exData.submissionData && exData.finalArtifactSummary) {
-              return exData;
-            }
-            return null;
-          });
-
-          const results = await Promise.all(examplePromises);
-          results.forEach((res) => {
-            if (res) referenceExamples.push(res);
-          });
-        } catch (err: any) {
-          logger.warn("[WorkflowAI Edit Job] Failed to fetch reference examples", {
-            error: err.message,
-          });
-        }
-      })();
-
-      await Promise.all([contextJobPromise, referenceExamplesPromise]);
+      const [executionHistory, referenceExamples] = await Promise.all([
+        this.loadExecutionHistory({
+          contextJobId,
+          tenantId,
+          submissionsTable,
+          artifactsTable,
+          artifactsBucket,
+          s3Client,
+        }),
+        this.loadReferenceExamples({
+          workflowId,
+          contextJobId,
+          submissionsTable,
+          artifactsTable,
+          artifactsBucket,
+          s3Client,
+        }),
+      ]);
 
       // ---------------------------------------------------------
       // OPENAI CALL
       // ---------------------------------------------------------
-      const settings = env.userSettingsTable
+      const settingsRecord = env.userSettingsTable
         ? await db.get(env.userSettingsTable, { tenant_id: tenantId })
         : null;
-      const defaultToolChoice =
-        settings?.default_tool_choice === "auto" ||
-        settings?.default_tool_choice === "required" ||
-        settings?.default_tool_choice === "none"
-          ? settings.default_tool_choice
-          : undefined;
-      const defaultServiceTier =
-        settings?.default_service_tier &&
-        ["auto", "default", "flex", "scale", "priority"].includes(
-          settings.default_service_tier,
-        )
-          ? settings.default_service_tier
-          : undefined;
-      const defaultTextVerbosity =
-        settings?.default_text_verbosity &&
-        ["low", "medium", "high"].includes(settings.default_text_verbosity)
-          ? settings.default_text_verbosity
-          : undefined;
-      const reviewServiceTier =
-        settings?.default_workflow_improvement_service_tier &&
-        ["auto", "default", "flex", "scale", "priority"].includes(
-          settings.default_workflow_improvement_service_tier,
-        )
-          ? settings.default_workflow_improvement_service_tier
-          : "priority";
-      const reviewReasoningEffort =
-        settings?.default_workflow_improvement_reasoning_effort &&
-        ["none", "low", "medium", "high", "xhigh"].includes(
-          settings.default_workflow_improvement_reasoning_effort,
-        )
-          ? settings.default_workflow_improvement_reasoning_effort
-          : "high";
-      const reviewUserIdValue =
-        typeof settings?.default_workflow_improvement_user_id === "string"
-          ? settings.default_workflow_improvement_user_id.trim()
-          : "";
-      const reviewUserId =
-        reviewUserIdValue && reviewUserIdValue !== "auto"
-          ? reviewUserIdValue
-          : typeof job?.requested_by_user_id === "string"
-            ? job.requested_by_user_id
-            : undefined;
-      const promptOverrides = getPromptOverridesFromSettings(settings || undefined);
-
-      let reviewerUser: {
-        user_id: string;
-        name?: string;
-        email?: string;
-        role?: string;
-      } | null = null;
-      if (reviewUserId && USERS_TABLE) {
-        try {
-          const reviewer = await db.get(USERS_TABLE, { user_id: reviewUserId });
-          if (reviewer && reviewer.customer_id === tenantId) {
-            reviewerUser = {
-              user_id: reviewer.user_id,
-              name: reviewer.name,
-              email: reviewer.email,
-              role: reviewer.role,
-            };
-          }
-        } catch (err: any) {
-          logger.warn("[Workflow AI Edit] Failed to load reviewer user", {
-            reviewUserId,
-            error: err?.message || String(err),
-          });
-        }
-      }
+      const runtimeSettings = this.resolveRuntimeSettings(settingsRecord, job);
+      const reviewerUser = await this.loadReviewerUser(
+        tenantId,
+        runtimeSettings.reviewUserId,
+        usersTable,
+      );
 
       const openai = await getOpenAIClient();
       const aiService = new WorkflowAIService(openai);
 
-      const aiRequest: WorkflowAIEditRequest = {
-        userPrompt: userPrompt,
-        defaultToolChoice,
-        defaultServiceTier,
-        defaultTextVerbosity,
-        reviewServiceTier,
-        reviewReasoningEffort,
+      const aiRequest = this.buildWorkflowAIEditRequest({
+        userPrompt,
         tenantId,
-        promptOverrides,
-        reviewerUser: reviewerUser || undefined,
-        workflowContext: {
-          workflow_id: workflowId,
-          workflow_name: workflow.workflow_name || "Untitled Workflow",
-          workflow_description: workflow.workflow_description || "",
-          template_id: workflow.template_id,
-          current_steps: workflow.steps || [],
-        },
+        workflowId,
+        workflow,
         executionHistory,
         referenceExamples,
-      };
+        settings: runtimeSettings,
+        reviewerUser,
+      });
 
       const result = await aiService.editWorkflow(aiRequest);
 
@@ -516,20 +713,7 @@ class WorkflowAIEditJobService {
         return dateB - dateA;
       });
 
-    return improvements.map((job: any) => ({
-      job_id: job.job_id,
-      workflow_id: job.workflow_id,
-      status: job.status,
-      improvement_status: (job.improvement_status as ImprovementStatus) || "pending",
-      created_at: job.created_at,
-      updated_at: job.updated_at,
-      reviewed_at: job.reviewed_at,
-      approved_at: job.approved_at,
-      denied_at: job.denied_at,
-      user_prompt: job.user_prompt,
-      context_job_id: job.context_job_id,
-      result: job.result,
-    }));
+    return improvements.map((job: any) => this.formatImprovementRecord(job));
   }
 
   async updateImprovementStatus(
@@ -581,21 +765,7 @@ class WorkflowAIEditJobService {
 
     const updated = await db.update(JOBS_TABLE, { job_id: jobId }, updates);
 
-    return {
-      job_id: updated.job_id,
-      workflow_id: updated.workflow_id,
-      status: updated.status,
-      improvement_status:
-        (updated.improvement_status as ImprovementStatus) || "pending",
-      created_at: updated.created_at,
-      updated_at: updated.updated_at,
-      reviewed_at: updated.reviewed_at,
-      approved_at: updated.approved_at,
-      denied_at: updated.denied_at,
-      user_prompt: updated.user_prompt,
-      context_job_id: updated.context_job_id,
-      result: updated.result,
-    };
+    return this.formatImprovementRecord(updated);
   }
 }
 

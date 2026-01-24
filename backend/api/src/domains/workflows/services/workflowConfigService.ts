@@ -92,11 +92,11 @@ export class WorkflowConfigService {
     
     // Force gpt-5.2 with max reasoning + priority tier for best quality and faster throughput.
     const workflowCompletionParams: any = {
-      model: "gpt-5.2",
+      model: resolved.model || "gpt-5.2",
       instructions: resolved.instructions,
       input: resolved.prompt,
-      reasoning: { effort: "high" },
-      service_tier: "priority",
+      reasoning: { effort: resolved.reasoning_effort || "high" },
+      service_tier: resolved.service_tier || "priority",
     };
     const workflowCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(workflowCompletionParams),

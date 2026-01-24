@@ -42,3 +42,9 @@ This document outlines the environment variables and configuration settings for 
 ## 🏗️ Infrastructure (`infrastructure`)
 
 See `infrastructure/cdk.json` for CDK context variables.
+
+## 🤖 AI Prompts
+
+The system uses a set of default prompts for various AI tasks. These can be overridden per-tenant.
+See **[Prompt Overrides](../../docs/prompt-overrides.md)** for details on available keys and variables.
+The default source prompts are located in [`backend/api/src/config/prompts.ts`](../../backend/api/src/config/prompts.ts).

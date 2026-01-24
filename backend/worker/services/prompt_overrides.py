@@ -55,10 +55,10 @@ def apply_prompt_template(
 
 def resolve_prompt_override(
     key: str,
-    defaults: Dict[str, Optional[str]],
+    defaults: Dict[str, Any],
     overrides: Optional[Dict[str, Dict[str, Any]]],
     variables: Optional[Dict[str, Optional[str]]] = None,
-) -> Dict[str, Optional[str]]:
+) -> Dict[str, Any]:
     override = overrides.get(key) if overrides else None
     enabled = True
     if isinstance(override, dict) and isinstance(override.get("enabled"), bool):
@@ -66,14 +66,33 @@ def resolve_prompt_override(
 
     instructions = defaults.get("instructions")
     prompt = defaults.get("prompt")
+    model = defaults.get("model")
+    tools = defaults.get("tools")
+    tool_choice = defaults.get("tool_choice")
+    service_tier = defaults.get("service_tier")
+    reasoning_effort = defaults.get("reasoning_effort")
+    text_verbosity = defaults.get("text_verbosity")
+
     if enabled and isinstance(override, dict):
         instructions = override.get("instructions") or instructions
         prompt = override.get("prompt") or prompt
+        model = override.get("model") or model
+        tools = override.get("tools") or tools
+        tool_choice = override.get("tool_choice") or tool_choice
+        service_tier = override.get("service_tier") or service_tier
+        reasoning_effort = override.get("reasoning_effort") or reasoning_effort
+        text_verbosity = override.get("text_verbosity") or text_verbosity
 
     resolved_vars = variables or {}
     return {
         "instructions": apply_prompt_template(instructions, resolved_vars),
         "prompt": apply_prompt_template(prompt, resolved_vars),
+        "model": model,
+        "tools": tools,
+        "tool_choice": tool_choice,
+        "service_tier": service_tier,
+        "reasoning_effort": reasoning_effort,
+        "text_verbosity": text_verbosity,
     }
 
 

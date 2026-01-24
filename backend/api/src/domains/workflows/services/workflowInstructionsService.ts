@@ -136,35 +136,9 @@ export class WorkflowInstructionsService {
    * Build the refinement prompt with comprehensive guidance.
    */
   private buildRefinementPrompt(current_instructions: string, edit_prompt: string): string {
-    return `You are an expert AI Prompt Engineer and Lead Magnet Strategist. Your task is to refine the following instruction to be clearer, more actionable, and higher quality, based on the user's request: "${edit_prompt}"
-
-Current Instructions:
-${current_instructions}
-
-## Refinement Philosophy
-Great AI outputs come from great instructions. Focus on:
-1. **Precision**: Eliminate ambiguity.
-2. **Context**: Ensure the AI knows *why* it is doing the task.
-3. **Structure**: Force the AI to output in a specific format (Markdown, JSON, etc.).
-4. **Data Integration**: Ensure \`[field_name]\` variables are used effectively.
-
-## Quality Standards checklist
-- [ ] **Role**: Does it assign a persona? (e.g., "Act as a...")
-- [ ] **Task**: Is the primary objective clear?
-- [ ] **Input**: Does it reference previous steps or form data?
-- [ ] **Constraints**: Are there word counts, style guides, or formatting rules?
-- [ ] **Output**: Is the expected format explicitly defined?
-
-  ## Modification Rules
-  1. **Respect Intent**: Only apply changes requested by "${edit_prompt}".
-  2. **Upgrade Quality**: If the original was vague, make it specific.
-  3. **Preserve Variables**: Do NOT remove \`[field_name]\` placeholders unless asked.
-  4. **No Fluff**: Keep instructions concise but potent.
-  5. **No PII Disclaimers**: Remove any "safety disclaimers" about phone/email (e.g. "Note: you included a phone number...") from the instructions.
-  6. **No Missing Info Placeholders**: Ensure the instructions do NOT tell the model to output \`[bracketed_placeholders]\` for missing information.
-
-  ## Output
-Return ONLY the refined instructions text. No explanations, no markdown formatting around the response.`;
+    return WORKFLOW_INSTRUCTIONS_REFINE_PROMPT
+      .replace('{{edit_prompt}}', edit_prompt)
+      .replace('{{current_instructions}}', current_instructions);
   }
 
   /**

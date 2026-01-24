@@ -8,6 +8,7 @@ import { retryWithBackoff } from '@utils/errorHandling';
 import {
   getPromptOverridesForTenant,
   resolvePromptOverride,
+  type PromptOverride,
   type PromptOverrides,
 } from '@services/promptOverrides';
 
@@ -60,6 +61,7 @@ type WorkflowAIStreamHandlers = {
 };
 
 import { AVAILABLE_MODELS } from './workflow/modelDescriptions';
+import { WORKFLOW_AI_SYSTEM_PROMPT } from '@config/prompts';
 
 const AVAILABLE_TOOLS = [
   'web_search',
@@ -75,111 +77,47 @@ const VALID_SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'scale', 'priori
 const VALID_REASONING_EFFORTS = new Set(['none', 'low', 'medium', 'high', 'xhigh']);
 const VALID_TEXT_VERBOSITIES = new Set(['low', 'medium', 'high']);
 
+type WorkflowAIContextParams = Pick<
+  WorkflowAIEditRequest,
+  'workflowContext' | 'executionHistory' | 'referenceExamples' | 'reviewerUser'
+>;
+
+type ResolvedWorkflowAISettings = {
+  resolvedDefaultToolChoice: ToolChoice;
+  resolvedDefaultServiceTier?: string;
+  resolvedDefaultTextVerbosity?: string;
+  shouldOverrideServiceTier: boolean;
+  resolvedReviewServiceTier: string;
+  resolvedReviewReasoningEffort: string;
+};
+
 export const buildWorkflowAiSystemPrompt = (
   defaultToolChoice: ToolChoice,
   defaultServiceTier?: string,
   defaultTextVerbosity?: string,
-) => `You are an expert AI Lead Magnet Architect and Workflow Optimizer. Your task is to refine, restructure, and optimize the user's lead magnet generation workflow.
-
-## Your Goal
-Translate the user's natural language request into a precise, optimized JSON configuration. You should not just make the change, but *improve* the workflow where possible while respecting the user's intent.
-
-## Available Models
-${AVAILABLE_MODELS.join(', ')}
-
-## Available Tools
-- **web_search**: Essential for research, verification, and gathering live data.
-- **code_interpreter**: For data analysis, complex math, or file processing.
-- **image_generation**: For creating custom visuals.
-- **computer_use_preview**: (Rare) Only for browser automation.
-- **shell**: For advanced system operations (use sparingly).
-
-## Modification Guidelines
-
-1. **Understand Intent**:
-   - "Make it better" -> Improve instructions, ensure all steps use GPT-5.2, add research steps.
-   - "Fix the error" -> Analyze the execution history (if provided) and adjust instructions or tools.
-   - "Add X" -> Insert the step logically, updating \`depends_on\` for subsequent steps.
-
-2. **Optimize Quality**:
-   - Upgrade vague instructions to be specific and persona-driven.
-   - Ensure \`gpt-5.2\` is used for high-value creation steps.
-   - Ensure \`web_search\` is enabled for research steps.
-
-3. **Manage Dependencies (CRITICAL)**:
-   - **\`depends_on\` is REQUIRED for every step** - never omit it.
-   - \`depends_on\` uses 0-based indices (first step = 0).
-   - **CRITICAL RULE**: If a step uses output from previous steps, it MUST list those step indices in \`depends_on\`.
-   - If a step is the first step or doesn't use any previous outputs, use \`depends_on: []\`.
-   - **If the user specifies dependency changes for specific step(s) only, update \`depends_on\` only for those steps and keep all other steps unchanged.**
-   - If adding a step at index 0, shift all other indices in \`depends_on\` arrays.
-   - If steps are added, removed, or reordered, update \`depends_on\` across all steps to match new indices.
-   - **When editing workflows**: If steps are missing \`depends_on\` or have incorrect dependencies, you MUST add or correct them based on the logical flow.
-   - Ensure the flow is logical: Research -> Analysis -> Creation -> Formatting.
-   - **Example**: If Step 2 uses output from Step 0 and Step 1, then Step 2 must have \`depends_on: [0, 1]\`.
-
-4. **Autonomy (No Human-in-the-Loop)**:
-   - The workflow runs end-to-end without pausing for user interaction.
-   - Do **NOT** ask for confirmation, ask follow-up questions, or say things like "Let me know if you'd like me to continue".
-   - If information is missing, make reasonable assumptions and proceed.
-
-5. **Per-Step Output Controls**:
-   - Choose \`reasoning_effort\` per step ("low" for simple transforms, "high/xhigh" for deep strategy/research/synthesis).
-   - Choose \`text_verbosity\` per step ("low" for concise outputs, "high" for detailed reports).
-   - Choose \`service_tier\` per step when you need speed or cost control.
-
-## Default Tool Choice
-- Use \`${defaultToolChoice}\` as the default \`tool_choice\` when tools are present unless the user specifies otherwise.
-
-## Default Service Tier
-- Use \`${defaultServiceTier || "auto"}\` for each step unless the user explicitly asks for a different tier.
-
-## Default Output Verbosity
-- Use \`${defaultTextVerbosity || "model default"}\` verbosity unless the user explicitly asks for a different level.
-
-## Response Format
-Return a JSON object:
-{
-  "workflow_name": string (optional update),
-  "workflow_description": string (optional update),
-  "steps": [
-    {
-      "step_name": string,
-      "step_description": string,
-      "model": string,
-      "service_tier": "auto" | "default" | "flex" | "scale" | "priority",
-      "reasoning_effort": "none" | "low" | "medium" | "high" | "xhigh",
-      "text_verbosity": "low" | "medium" | "high",
-      "max_output_tokens": number (optional),
-      "instructions": string,
-      "tools": string[],
-      "tool_choice": "auto" | "required" | "none",
-      "depends_on": number[] (REQUIRED - 0-based indices of steps this step depends on. Use [] for first step or steps that don't use previous outputs)
-    }
-  ],
-  "changes_summary": string (Clear, professional summary of what was improved)
-}
-`;
+) => {
+  return WORKFLOW_AI_SYSTEM_PROMPT
+    .replace('{{defaultToolChoice}}', defaultToolChoice)
+    .replace('{{defaultServiceTier}}', defaultServiceTier || "auto")
+    .replace('{{defaultTextVerbosity}}', defaultTextVerbosity || "model default");
+};
 
 export class WorkflowAIService {
   constructor(private openaiClient: OpenAI) {}
 
-  async editWorkflow(request: WorkflowAIEditRequest): Promise<WorkflowAIEditResponse> {
+  private resolveRequestSettings(
+    request: WorkflowAIEditRequest,
+  ): ResolvedWorkflowAISettings {
     const {
-      userPrompt,
-      workflowContext,
-      executionHistory,
-      referenceExamples,
       defaultToolChoice,
       defaultServiceTier,
       defaultTextVerbosity,
       reviewServiceTier,
       reviewReasoningEffort,
-      reviewerUser,
-      tenantId,
-      promptOverrides,
     } = request;
-    const resolvedDefaultToolChoice = VALID_TOOL_CHOICES.has(defaultToolChoice as ToolChoice)
+    const resolvedDefaultToolChoice = VALID_TOOL_CHOICES.has(
+      defaultToolChoice as ToolChoice,
+    )
       ? (defaultToolChoice as ToolChoice)
       : DEFAULT_TOOL_CHOICE;
     const resolvedDefaultServiceTier =
@@ -202,11 +140,28 @@ export class WorkflowAIService {
         ? reviewReasoningEffort
         : "high";
 
-    // Build context message for AI
+    return {
+      resolvedDefaultToolChoice,
+      resolvedDefaultServiceTier,
+      resolvedDefaultTextVerbosity,
+      shouldOverrideServiceTier,
+      resolvedReviewServiceTier,
+      resolvedReviewReasoningEffort,
+    };
+  }
+
+  private buildContextMessage({
+    workflowContext,
+    executionHistory,
+    referenceExamples,
+    reviewerUser,
+  }: WorkflowAIContextParams): string {
     const contextParts: string[] = [
       `Current Workflow: ${workflowContext.workflow_name}`,
       `Description: ${workflowContext.workflow_description || '(none)'}`,
-      workflowContext.template_id ? `Template: Configured (ID: ${workflowContext.template_id})` : 'Template: Not configured',
+      workflowContext.template_id
+        ? `Template: Configured (ID: ${workflowContext.template_id})`
+        : 'Template: Not configured',
       '',
       'Current Steps:',
     ];
@@ -215,9 +170,14 @@ export class WorkflowAIService {
       contextParts.push('(No steps yet)');
     } else {
       workflowContext.current_steps.forEach((step, index) => {
-        const tools = step.tools && Array.isArray(step.tools) && step.tools.length > 0 
-          ? ` [Tools: ${step.tools.map((t: any) => typeof t === 'string' ? t : (t?.type || 'unknown')).join(', ')}]`
-          : '';
+        const tools =
+          step.tools && Array.isArray(step.tools) && step.tools.length > 0
+            ? ` [Tools: ${step.tools
+                .map((t: any) =>
+                  typeof t === 'string' ? t : (t?.type || 'unknown'),
+                )
+                .join(', ')}]`
+            : '';
         const deps = Array.isArray(step.depends_on)
           ? ` [depends_on: ${step.depends_on.length > 0 ? step.depends_on.join(', ') : '[]'}]`
           : ' [depends_on: []]';
@@ -226,14 +186,16 @@ export class WorkflowAIService {
             ? ` [order: ${step.step_order}]`
             : '';
         contextParts.push(
-          `Index ${index} (Step ${index + 1}): ${step.step_name} (${step.model})${tools}${deps}${orderSuffix}`
+          `Index ${index} (Step ${index + 1}): ${step.step_name} (${step.model})${tools}${deps}${orderSuffix}`,
         );
         if (step.step_description) {
           contextParts.push(`   ${step.step_description}`);
         }
       });
       contextParts.push('');
-      contextParts.push('IMPORTANT: Every step MUST have a depends_on array. If a step uses output from previous steps, it must list their indices in depends_on. If a step is the first step or doesn\'t use previous outputs, use depends_on: [].');
+      contextParts.push(
+        "IMPORTANT: Every step MUST have a depends_on array. If a step uses output from previous steps, it must list their indices in depends_on. If a step is the first step or doesn't use previous outputs, use depends_on: [].",
+      );
     }
 
     if (reviewerUser) {
@@ -251,13 +213,13 @@ export class WorkflowAIService {
       );
     }
 
-    // Add Reference Examples (Few-Shot Learning)
     if (referenceExamples && referenceExamples.length > 0) {
       contextParts.push('', '---', 'REFERENCE EXAMPLES (Past Successful Jobs):');
-      contextParts.push('Use these examples to understand how different inputs should be handled.');
+      contextParts.push(
+        'Use these examples to understand how different inputs should be handled.',
+      );
       referenceExamples.forEach((ex, idx) => {
         const inputSummary = JSON.stringify(ex.submissionData || {}, null, 2);
-        // Truncate output summary if too long (only add truncation marker when we actually truncate)
         const fullOutcome = String(ex.finalArtifactSummary || "");
         const outputSummary =
           fullOutcome.length > 1000
@@ -269,48 +231,81 @@ export class WorkflowAIService {
       });
     }
 
-    // Add Current Execution Context
     if (executionHistory) {
-      contextParts.push('', '---', 'CURRENT JOB CONTEXT (The run we are improving):');
+      contextParts.push(
+        '',
+        '---',
+        'CURRENT JOB CONTEXT (The run we are improving):',
+      );
       
       if (executionHistory.submissionData) {
-        contextParts.push(`Original Input:\n${JSON.stringify(executionHistory.submissionData, null, 2)}`);
+        contextParts.push(
+          `Original Input:\n${JSON.stringify(
+            executionHistory.submissionData,
+            null,
+            2,
+          )}`,
+        );
       }
 
-      if (executionHistory.stepExecutionResults && executionHistory.stepExecutionResults.length > 0) {
+      if (
+        executionHistory.stepExecutionResults &&
+        executionHistory.stepExecutionResults.length > 0
+      ) {
         contextParts.push('\nStep Execution Results:');
         executionHistory.stepExecutionResults.forEach((step: any, idx: number) => {
           const status = step._status || step.status || 'unknown';
           const output = step.output 
             ? (typeof step.output === 'string' ? step.output : JSON.stringify(step.output))
             : '(no output)';
-          // Limit output length to avoid token limits, but give enough context
-          // Using 4000 chars (~1000 tokens) per step is generous but safe for modern models
-          const truncatedOutput = output.length > 4000 ? output.slice(0, 4000) + '... [truncated]' : output;
+          const truncatedOutput =
+            output.length > 4000 ? output.slice(0, 4000) + '... [truncated]' : output;
           
-          contextParts.push(`Step ${step.step_order || idx + 1} (${status}):\n${truncatedOutput}\n`);
+          contextParts.push(
+            `Step ${step.step_order || idx + 1} (${status}):\n${truncatedOutput}\n`,
+          );
         });
       }
 
       if (executionHistory.finalArtifactSummary) {
-        const finalDoc = executionHistory.finalArtifactSummary.length > 15000 
-          ? executionHistory.finalArtifactSummary.slice(0, 15000) + '... [truncated]' 
-          : executionHistory.finalArtifactSummary;
+        const finalDoc =
+          executionHistory.finalArtifactSummary.length > 15000
+            ? executionHistory.finalArtifactSummary.slice(0, 15000) +
+              '... [truncated]'
+            : executionHistory.finalArtifactSummary;
         contextParts.push(`\nFinal Deliverable:\n${finalDoc}`);
       }
     }
 
-    const contextMessage = contextParts.join('\n');
+    return contextParts.join('\n');
+  }
 
-    const userMessage = `${contextMessage}
+  private buildUserMessage(contextMessage: string, userPrompt: string): string {
+    return `${contextMessage}
 
 User Request: ${userPrompt}
 
 Please generate the updated workflow configuration with all necessary changes.`;
+  }
+
+  private async resolveWorkflowEditPrompt(
+    request: WorkflowAIEditRequest,
+    contextMessage: string,
+    settings: ResolvedWorkflowAISettings,
+  ): Promise<PromptOverride> {
+    const { workflowContext, userPrompt, tenantId, promptOverrides } = request;
+    const {
+      resolvedDefaultToolChoice,
+      resolvedDefaultServiceTier,
+      resolvedDefaultTextVerbosity,
+      resolvedReviewServiceTier,
+      resolvedReviewReasoningEffort,
+    } = settings;
+    const userMessage = this.buildUserMessage(contextMessage, userPrompt);
 
     const overrides =
       promptOverrides ?? (tenantId ? await getPromptOverridesForTenant(tenantId) : undefined);
-    const resolved = resolvePromptOverride({
+    return resolvePromptOverride({
       key: "workflow_edit",
       defaults: {
         instructions: buildWorkflowAiSystemPrompt(
@@ -333,58 +328,100 @@ Please generate the updated workflow configuration with all necessary changes.`;
         default_text_verbosity: resolvedDefaultTextVerbosity,
       },
     });
+  }
+
+  private buildResponsePayload(
+    resolved: PromptOverride,
+    request: WorkflowAIEditRequest,
+    stream = false,
+  ): Record<string, unknown> {
+    const { reviewReasoningEffort, reviewServiceTier } = request;
+    return {
+      model: resolved.model || 'gpt-5.2',
+      instructions: resolved.instructions,
+      input: resolved.prompt,
+      reasoning: {
+        effort:
+          reviewReasoningEffort && VALID_REASONING_EFFORTS.has(reviewReasoningEffort)
+            ? reviewReasoningEffort
+            : (resolved.reasoning_effort || 'high'),
+      },
+      service_tier:
+        reviewServiceTier && VALID_SERVICE_TIERS.has(reviewServiceTier)
+          ? reviewServiceTier
+          : (resolved.service_tier || 'priority'),
+      ...(stream ? { stream: true } : {}),
+    };
+  }
+
+  private getErrorStatus(error: any): number | undefined {
+    return typeof error?.status === 'number'
+      ? error.status
+      : typeof error?.statusCode === 'number'
+        ? error.statusCode
+        : typeof error?.response?.status === 'number'
+          ? error.response.status
+          : undefined;
+  }
+
+  private isRetryableError(error: any): boolean {
+    const status = this.getErrorStatus(error);
+    if (status === 429 || status === 503) return true;
+    if (typeof status === 'number' && status >= 500) return true;
+    const msg = String(error?.message || '').toLowerCase();
+    return (
+      msg.includes('timeout') ||
+      msg.includes('overloaded') ||
+      msg.includes('service unavailable') ||
+      msg.includes('rate limit')
+    );
+  }
+
+  async editWorkflow(request: WorkflowAIEditRequest): Promise<WorkflowAIEditResponse> {
+    const {
+      userPrompt,
+      workflowContext,
+      executionHistory,
+      referenceExamples,
+      reviewerUser,
+    } = request;
+    const settings = this.resolveRequestSettings(request);
+    const contextMessage = this.buildContextMessage({
+      workflowContext,
+      executionHistory,
+      referenceExamples,
+      reviewerUser,
+    });
+    const resolved = await this.resolveWorkflowEditPrompt(
+      request,
+      contextMessage,
+      settings,
+    );
 
     logger.info('[WorkflowAI] Editing workflow', {
       workflow: workflowContext.workflow_name,
       userPrompt: userPrompt.substring(0, 100),
       currentStepCount: workflowContext.current_steps.length,
       hasContext: !!executionHistory,
-      referenceCount: referenceExamples?.length || 0
+      referenceCount: referenceExamples?.length || 0,
     });
 
     try {
-      // Helper to check if error is retryable (503, 429, timeouts, etc.)
-      const isRetryableError = (err: any): boolean => {
-        const status =
-          typeof err.status === 'number'
-            ? err.status
-            : typeof err.statusCode === 'number'
-              ? err.statusCode
-              : typeof err.response?.status === 'number'
-                ? err.response.status
-                : undefined;
-        if (status === 429 || status === 503) return true;
-        if (typeof status === 'number' && status >= 500) return true;
-        const msg = String(err?.message || '').toLowerCase();
-        return (
-          msg.includes('timeout') ||
-          msg.includes('overloaded') ||
-          msg.includes('service unavailable') ||
-          msg.includes('rate limit')
-        );
-      };
-
       // Use the Responses API with retry logic for reliability (no timeout - can take up to 5 minutes)
       const completion = await retryWithBackoff(
         () =>
           callResponsesWithTimeout(
             () =>
-              (this.openaiClient as any).responses.create({
-                model: 'gpt-5.2',
-                instructions: resolved.instructions,
-                input: resolved.prompt,
-                reasoning: { effort: resolvedReviewReasoningEffort },
-                ...(resolvedReviewServiceTier !== "auto"
-                  ? { service_tier: resolvedReviewServiceTier }
-                  : {}),
-              }),
+              (this.openaiClient as any).responses.create(
+                this.buildResponsePayload(resolved, request),
+              ),
             'Workflow AI Edit',
             0, // No timeout - allow up to 5 minutes for complex workflow edits
           ),
         {
           maxAttempts: 3,
           initialDelayMs: 1000,
-          retryableErrors: isRetryableError,
+          retryableErrors: (error) => this.isRetryableError(error),
           onRetry: (attempt, error) => {
             logger.warn('[WorkflowAI] Retrying OpenAI call', {
               attempt,
@@ -406,24 +443,16 @@ Please generate the updated workflow configuration with all necessary changes.`;
         workflowContext.current_steps,
       );
       return this.normalizeWorkflowResponse(parsedResponse, {
-        resolvedDefaultToolChoice,
-        resolvedDefaultServiceTier,
-        resolvedDefaultTextVerbosity,
-        shouldOverrideServiceTier,
+        resolvedDefaultToolChoice: settings.resolvedDefaultToolChoice,
+        resolvedDefaultServiceTier: settings.resolvedDefaultServiceTier,
+        resolvedDefaultTextVerbosity: settings.resolvedDefaultTextVerbosity,
+        shouldOverrideServiceTier: settings.shouldOverrideServiceTier,
         dependencyUpdate,
       });
     } catch (error: any) {
-      // Check if this is a service unavailable error
-      const status =
-        typeof error.status === 'number'
-          ? error.status
-          : typeof error.statusCode === 'number'
-            ? error.statusCode
-            : typeof error.response?.status === 'number'
-              ? error.response.status
-              : undefined;
-      
-      const isServiceUnavailable = status === 503 || 
+      const status = this.getErrorStatus(error);
+      const isServiceUnavailable =
+        status === 503 ||
         String(error?.message || '').toLowerCase().includes('service unavailable');
 
       logger.error('[WorkflowAI] Error editing workflow', {
@@ -453,165 +482,20 @@ Please generate the updated workflow configuration with all necessary changes.`;
       workflowContext,
       executionHistory,
       referenceExamples,
-      defaultToolChoice,
-      defaultServiceTier,
-      defaultTextVerbosity,
-      reviewServiceTier,
-      reviewReasoningEffort,
       reviewerUser,
-      tenantId,
-      promptOverrides,
     } = request;
-    const resolvedDefaultToolChoice = VALID_TOOL_CHOICES.has(defaultToolChoice as ToolChoice)
-      ? (defaultToolChoice as ToolChoice)
-      : DEFAULT_TOOL_CHOICE;
-    const resolvedDefaultServiceTier =
-      defaultServiceTier && VALID_SERVICE_TIERS.has(defaultServiceTier)
-        ? defaultServiceTier
-        : undefined;
-    const resolvedDefaultTextVerbosity =
-      defaultTextVerbosity && VALID_TEXT_VERBOSITIES.has(defaultTextVerbosity)
-        ? defaultTextVerbosity
-        : undefined;
-    const shouldOverrideServiceTier =
-      resolvedDefaultServiceTier !== undefined &&
-      resolvedDefaultServiceTier !== "auto";
-    const resolvedReviewServiceTier =
-      reviewServiceTier && VALID_SERVICE_TIERS.has(reviewServiceTier)
-        ? reviewServiceTier
-        : "priority";
-    const resolvedReviewReasoningEffort =
-      reviewReasoningEffort && VALID_REASONING_EFFORTS.has(reviewReasoningEffort)
-        ? reviewReasoningEffort
-        : "high";
-
-    const contextParts: string[] = [
-      `Current Workflow: ${workflowContext.workflow_name}`,
-      `Description: ${workflowContext.workflow_description || '(none)'}`,
-      workflowContext.template_id
-        ? `Template: Configured (ID: ${workflowContext.template_id})`
-        : 'Template: Not configured',
-      '',
-      'Current Steps:',
-    ];
-
-    if (workflowContext.current_steps.length === 0) {
-      contextParts.push('(No steps yet)');
-    } else {
-      workflowContext.current_steps.forEach((step, index) => {
-        const tools = step.tools && Array.isArray(step.tools) && step.tools.length > 0 
-          ? ` [Tools: ${step.tools.map((t: any) => typeof t === 'string' ? t : (t?.type || 'unknown')).join(', ')}]`
-          : '';
-        const deps = Array.isArray(step.depends_on)
-          ? ` [depends_on: ${step.depends_on.length > 0 ? step.depends_on.join(', ') : '[]'}]`
-          : ' [depends_on: []]';
-        const orderSuffix =
-          typeof step.step_order === "number" && step.step_order !== index
-            ? ` [order: ${step.step_order}]`
-            : '';
-        contextParts.push(
-          `Index ${index} (Step ${index + 1}): ${step.step_name} (${step.model})${tools}${deps}${orderSuffix}`
-        );
-        if (step.step_description) {
-          contextParts.push(`   ${step.step_description}`);
-        }
-      });
-      contextParts.push('');
-      contextParts.push('IMPORTANT: Every step MUST have a depends_on array. If a step uses output from previous steps, it must list their indices in depends_on. If a step is the first step or doesn\'t use previous outputs, use depends_on: [].');
-    }
-
-    if (reviewerUser) {
-      const reviewerLabel =
-        reviewerUser.name || reviewerUser.email || reviewerUser.user_id;
-      const reviewerMeta = [
-        reviewerUser.role ? `Role: ${reviewerUser.role}` : null,
-        reviewerUser.email ? `Email: ${reviewerUser.email}` : null,
-      ]
-        .filter(Boolean)
-        .join(" • ");
-      contextParts.push("", "Reviewer Context:");
-      contextParts.push(
-        reviewerMeta ? `${reviewerLabel} (${reviewerMeta})` : reviewerLabel,
-      );
-    }
-
-    if (referenceExamples && referenceExamples.length > 0) {
-      contextParts.push('', '---', 'REFERENCE EXAMPLES (Past Successful Jobs):');
-      contextParts.push('Use these examples to understand how different inputs should be handled.');
-      referenceExamples.forEach((ex, idx) => {
-        const inputSummary = JSON.stringify(ex.submissionData || {}, null, 2);
-        const fullOutcome = String(ex.finalArtifactSummary || "");
-        const outputSummary =
-          fullOutcome.length > 1000
-            ? fullOutcome.slice(0, 1000) + "... [truncated]"
-            : fullOutcome;
-        contextParts.push(`\nExample #${idx + 1}:`);
-        contextParts.push(`Input:\n${inputSummary}`);
-        contextParts.push(`Outcome:\n${outputSummary}`);
-      });
-    }
-
-    if (executionHistory) {
-      contextParts.push('', '---', 'CURRENT JOB CONTEXT (The run we are improving):');
-      
-      if (executionHistory.submissionData) {
-        contextParts.push(`Original Input:\n${JSON.stringify(executionHistory.submissionData, null, 2)}`);
-      }
-
-      if (executionHistory.stepExecutionResults && executionHistory.stepExecutionResults.length > 0) {
-        contextParts.push('\nStep Execution Results:');
-        executionHistory.stepExecutionResults.forEach((step: any, idx: number) => {
-          const status = step._status || step.status || 'unknown';
-          const output = step.output 
-            ? (typeof step.output === 'string' ? step.output : JSON.stringify(step.output))
-            : '(no output)';
-          const truncatedOutput = output.length > 4000 ? output.slice(0, 4000) + '... [truncated]' : output;
-          
-          contextParts.push(`Step ${step.step_order || idx + 1} (${status}):\n${truncatedOutput}\n`);
-        });
-      }
-
-      if (executionHistory.finalArtifactSummary) {
-        const finalDoc = executionHistory.finalArtifactSummary.length > 15000 
-          ? executionHistory.finalArtifactSummary.slice(0, 15000) + '... [truncated]' 
-          : executionHistory.finalArtifactSummary;
-        contextParts.push(`\nFinal Deliverable:\n${finalDoc}`);
-      }
-    }
-
-    const contextMessage = contextParts.join('\n');
-
-    const userMessage = `${contextMessage}
-
-User Request: ${userPrompt}
-
-Please generate the updated workflow configuration with all necessary changes.`;
-
-    const overrides =
-      promptOverrides ?? (tenantId ? await getPromptOverridesForTenant(tenantId) : undefined);
-    const resolved = resolvePromptOverride({
-      key: "workflow_edit",
-      defaults: {
-        instructions: buildWorkflowAiSystemPrompt(
-          resolvedDefaultToolChoice,
-          resolvedDefaultServiceTier,
-          resolvedDefaultTextVerbosity,
-        ),
-        prompt: userMessage,
-      },
-      overrides,
-      variables: {
-        workflow_name: workflowContext.workflow_name,
-        workflow_description: workflowContext.workflow_description,
-        context_message: contextMessage,
-        user_prompt: userPrompt,
-        review_service_tier: resolvedReviewServiceTier,
-        review_reasoning_effort: resolvedReviewReasoningEffort,
-        default_tool_choice: resolvedDefaultToolChoice,
-        default_service_tier: resolvedDefaultServiceTier,
-        default_text_verbosity: resolvedDefaultTextVerbosity,
-      },
+    const settings = this.resolveRequestSettings(request);
+    const contextMessage = this.buildContextMessage({
+      workflowContext,
+      executionHistory,
+      referenceExamples,
+      reviewerUser,
     });
+    const resolved = await this.resolveWorkflowEditPrompt(
+      request,
+      contextMessage,
+      settings,
+    );
 
     logger.info('[WorkflowAI] Streaming workflow edit', {
       workflow: workflowContext.workflow_name,
@@ -621,16 +505,9 @@ Please generate the updated workflow configuration with all necessary changes.`;
       referenceCount: referenceExamples?.length || 0
     });
 
-    const stream = await (this.openaiClient as any).responses.create({
-      model: 'gpt-5.2',
-      instructions: resolved.instructions,
-      input: resolved.prompt,
-      reasoning: { effort: resolvedReviewReasoningEffort },
-      ...(resolvedReviewServiceTier !== "auto"
-        ? { service_tier: resolvedReviewServiceTier }
-        : {}),
-      stream: true,
-    });
+    const stream = await (this.openaiClient as any).responses.create(
+      this.buildResponsePayload(resolved, request, true),
+    );
 
     let outputText = "";
     for await (const event of stream as any) {
@@ -663,10 +540,10 @@ Please generate the updated workflow configuration with all necessary changes.`;
       workflowContext.current_steps,
     );
     return this.normalizeWorkflowResponse(parsedResponse, {
-      resolvedDefaultToolChoice,
-      resolvedDefaultServiceTier,
-      resolvedDefaultTextVerbosity,
-      shouldOverrideServiceTier,
+      resolvedDefaultToolChoice: settings.resolvedDefaultToolChoice,
+      resolvedDefaultServiceTier: settings.resolvedDefaultServiceTier,
+      resolvedDefaultTextVerbosity: settings.resolvedDefaultTextVerbosity,
+      shouldOverrideServiceTier: settings.shouldOverrideServiceTier,
       dependencyUpdate,
     });
   }
@@ -770,14 +647,14 @@ Please generate the updated workflow configuration with all necessary changes.`;
 
       if (
         step.reasoning_effort &&
-        !['none', 'low', 'medium', 'high', 'xhigh'].includes(step.reasoning_effort)
+        !VALID_REASONING_EFFORTS.has(step.reasoning_effort)
       ) {
         step.reasoning_effort = 'high';
       }
 
       if (
         step.text_verbosity &&
-        !['low', 'medium', 'high'].includes(step.text_verbosity)
+        !VALID_TEXT_VERBOSITIES.has(step.text_verbosity)
       ) {
         delete step.text_verbosity;
       }

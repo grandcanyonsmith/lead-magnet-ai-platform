@@ -1,3 +1,10 @@
+/**
+ * Prompt override utilities.
+ * 
+ * Handles merging tenant-specific prompt overrides with the system defaults.
+ * System defaults are typically imported from `@config/prompts`.
+ */
+import { ToolChoice, ToolConfig } from "../utils/types";
 import { db } from "../utils/db";
 import { env } from "../utils/env";
 
@@ -18,6 +25,8 @@ export const PROMPT_OVERRIDE_KEYS = [
   "styled_html_generation",
   "image_prompt_planner",
   "shell_tool_loop_default",
+  "workflow_ideation",
+  "workflow_ideation_followup",
 ] as const;
 
 export type PromptOverrideKey = typeof PROMPT_OVERRIDE_KEYS[number];
@@ -26,6 +35,12 @@ export type PromptOverride = {
   enabled?: boolean;
   instructions?: string;
   prompt?: string;
+  model?: string;
+  tools?: ToolConfig[];
+  tool_choice?: ToolChoice;
+  service_tier?: string;
+  reasoning_effort?: string;
+  text_verbosity?: string;
 };
 
 export type PromptOverrides = Record<string, PromptOverride>;
@@ -59,12 +74,38 @@ export const normalizePromptOverrides = (
     const prompt = coercePromptText(override.prompt);
     const enabled =
       typeof override.enabled === "boolean" ? override.enabled : undefined;
+    const model = coercePromptText(override.model);
+    const tools = Array.isArray(override.tools)
+      ? (override.tools as ToolConfig[])
+      : undefined;
+    const tool_choice = coercePromptText(override.tool_choice) as
+      | ToolChoice
+      | undefined;
+    const service_tier = coercePromptText(override.service_tier);
+    const reasoning_effort = coercePromptText(override.reasoning_effort);
+    const text_verbosity = coercePromptText(override.text_verbosity);
 
-    if (instructions || prompt || enabled !== undefined) {
+    if (
+      instructions ||
+      prompt ||
+      enabled !== undefined ||
+      model ||
+      tools ||
+      tool_choice ||
+      service_tier ||
+      reasoning_effort ||
+      text_verbosity
+    ) {
       normalized[key] = {
         ...(enabled !== undefined ? { enabled } : {}),
         ...(instructions ? { instructions } : {}),
         ...(prompt ? { prompt } : {}),
+        ...(model ? { model } : {}),
+        ...(tools ? { tools } : {}),
+        ...(tool_choice ? { tool_choice } : {}),
+        ...(service_tier ? { service_tier } : {}),
+        ...(reasoning_effort ? { reasoning_effort } : {}),
+        ...(text_verbosity ? { text_verbosity } : {}),
       };
     }
   }
@@ -94,21 +135,48 @@ export const resolvePromptOverride = ({
   variables = {},
 }: {
   key: PromptOverrideKey;
-  defaults: { instructions?: string; prompt?: string };
+  defaults: PromptOverride;
   overrides?: PromptOverrides;
   variables?: Record<string, string | undefined>;
-}): { instructions?: string; prompt?: string } => {
+}): PromptOverride => {
   const override = overrides?.[key];
   const isEnabled = override?.enabled !== false;
 
-  const instructions = isEnabled && override?.instructions
-    ? override.instructions
-    : defaults.instructions;
-  const prompt = isEnabled && override?.prompt ? override.prompt : defaults.prompt;
+  const instructions =
+    isEnabled && override?.instructions
+      ? override.instructions
+      : defaults.instructions;
+  const prompt =
+    isEnabled && override?.prompt ? override.prompt : defaults.prompt;
+  
+  const model = isEnabled && override?.model ? override.model : defaults.model;
+  const tools = isEnabled && override?.tools ? override.tools : defaults.tools;
+  const tool_choice =
+    isEnabled && override?.tool_choice
+      ? override.tool_choice
+      : defaults.tool_choice;
+  const service_tier =
+    isEnabled && override?.service_tier
+      ? override.service_tier
+      : defaults.service_tier;
+  const reasoning_effort =
+    isEnabled && override?.reasoning_effort
+      ? override.reasoning_effort
+      : defaults.reasoning_effort;
+  const text_verbosity =
+    isEnabled && override?.text_verbosity
+      ? override.text_verbosity
+      : defaults.text_verbosity;
 
   return {
     instructions: applyPromptTemplate(instructions, variables),
     prompt: applyPromptTemplate(prompt, variables),
+    model,
+    tools,
+    tool_choice,
+    service_tier,
+    reasoning_effort,
+    text_verbosity,
   };
 };
 

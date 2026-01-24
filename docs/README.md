@@ -40,6 +40,7 @@ Understand how the system works under the hood.
 Technical specifications and configuration details.
 
 - **[⚙️ Configuration](./reference/CONFIGURATION.md)** - Environment variables and config settings.
+- **[💬 Prompt Overrides](./prompt-overrides.md)** - Configuring and customizing AI system prompts.
 - **[📝 API Contracts](./reference/contracts/README.md)** - OpenAPI/Swagger definitions for the Backend API.
 - **[📊 Worker Observability](./guides/WORKER_OBSERVABILITY.md)** - Monitoring metrics and logs.
 - **[📦 Resources](./reference/RESOURCES.md)** - Inventory of AWS resources used.

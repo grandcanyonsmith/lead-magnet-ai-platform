@@ -15,6 +15,7 @@ from services.execution_step_manager import ExecutionStepManager
 from services.usage_service import UsageService
 from services.image_artifact_service import ImageArtifactService
 from utils.content_detector import detect_content_type
+from core.prompts import PROMPT_CONFIGS
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,8 @@ class AIStepProcessor:
             Tuple of (step_output, usage_info, request_details, response_details, image_artifact_ids, step_artifact_id)
         """
         step_name = step.get('step_name', f'Step {step_index + 1}')
-        step_model = step.get('model', 'gpt-5.2')
+        defaults = PROMPT_CONFIGS["ai_generation"]
+        step_model = step.get('model', defaults["model"])
         step_instructions = step.get('instructions', '')
         # Extract reasoning effort from step config, default to 'high' for GPT-5 family
         step_reasoning_effort = step.get('reasoning_effort')

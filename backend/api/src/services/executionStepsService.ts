@@ -13,6 +13,8 @@ import {
   resolvePromptOverride,
   type PromptOverrides,
 } from "./promptOverrides";
+import { EXECUTION_STEP_EDIT_INSTRUCTIONS, EXECUTION_STEP_EDIT_PROMPT } from '@config/prompts';
+
 
 const ARTIFACTS_BUCKET = env.artifactsBucket;
 const CLOUDFRONT_DOMAIN = env.cloudfrontDomain;
@@ -388,27 +390,13 @@ export class ExecutionStepsService {
       const openai = await getOpenAIClient();
 
       // Build context for AI
-      const systemPrompt = `You are an Expert Content Editor and Data Analyst.
-      
-The user will provide:
-1. The original step output (text, markdown, or JSON)
-2. A prompt describing how they want to edit it
+      const systemPrompt = EXECUTION_STEP_EDIT_INSTRUCTIONS;
 
-Your task:
-- Edit the output to satisfy the user's request while maintaining the highest quality standards.
-- **Preserve Format**: If original is JSON, return valid JSON. If Markdown, return Markdown.
-- **Improve Quality**: If the text is vague, make it clearer. If the data is messy, clean it up.
-- **No Meta-Talk**: Return ONLY the edited content. No "Here is the edited text" preambles.`;
-
-      const userMessage = `Original Step Output:
-${originalOutput}
-
-Step Name: ${step.step_name || "Unknown"}
-Step Order: ${stepOrder}
-
-User Request: ${userPrompt}
-
-Please generate the edited output based on the user's request. Return only the edited output, maintaining the same format as the original.`;
+      const userMessage = EXECUTION_STEP_EDIT_PROMPT
+        .replace('{{original_output}}', originalOutput)
+        .replace('{{step_name}}', step.step_name || "Unknown")
+        .replace('{{step_order}}', String(stepOrder))
+        .replace('{{user_prompt}}', userPrompt);
 
       const overrides =
         promptOverrides ?? (tenantId ? await getPromptOverridesForTenant(tenantId) : undefined);
@@ -429,11 +417,11 @@ Please generate the edited output based on the user's request. Return only the e
 
       // Call OpenAI (Responses API)
       const completion = await (openai as any).responses.create({
-        model: "gpt-5.2",
+        model: resolved.model || "gpt-5.2",
         instructions: resolved.instructions,
         input: resolved.prompt,
-        reasoning: { effort: "high" },
-        service_tier: "priority",
+        reasoning: { effort: resolved.reasoning_effort || "high" },
+        service_tier: resolved.service_tier || "priority",
       });
 
       const editedOutput = stripMarkdownCodeFences(

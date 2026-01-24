@@ -21,6 +21,7 @@ from services.cua.types import (
 from services.cua.environment import Environment
 from services.shell_executor_service import ShellExecutorService
 from services.tools import ToolBuilder
+from core.prompts import COMPUTER_AGENT_TOOL_GUIDANCE
 
 logger = logging.getLogger(__name__)
 
@@ -289,25 +290,7 @@ class CUAgent:
         # #endregion
 
         if has_computer_use_tool and has_shell_tool:
-            hint = (
-                "TOOL ORDER: If a subtask can be solved via command-line/network inspection "
-                "(e.g. ping, dig, nslookup, whois, curl), prefer starting with the "
-                "`shell` tool to gather facts first, then use `computer_use_preview` "
-                "to browse/verify visually.\n"
-                "CLOUD PROVIDER TASKS: To identify a site's cloud/DNS provider, first run:\n"
-                "- dig +short NS <domain>\n"
-                "- dig +short A <domain>\n"
-                "- whois <ip>\n"
-                "Then infer provider from NS/WHOIS (e.g. any NS contains 'cloudflare.com' => Cloudflare) "
-                "and navigate to the provider's homepage (e.g. https://cloudflare.com).\n"
-                "WEB NAVIGATION: When you need to open a new website, use a computer action of type "
-                "`navigate` with a full URL (e.g. https://cloudflare.com). This is more reliable than "
-                "clicking the address bar/search box. Avoid repeating clicks if the page doesn't change.\n"
-                "IMPORTANT: When you need to run shell/terminal commands, call the "
-                "`shell` tool to run commands directly on the backend server. "
-                "Do NOT try to open or click a terminal inside the browser UI. "
-                "Call it with JSON like: {\"commands\": [\"ping -c 1 coursecreator360.com\", \"ls -la\"]}."
-            )
+            hint = COMPUTER_AGENT_TOOL_GUIDANCE
             if hint not in instructions_for_model:
                 instructions_for_model = (instructions_for_model or "").rstrip()
                 instructions_for_model = (
