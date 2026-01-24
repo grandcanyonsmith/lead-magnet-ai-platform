@@ -38,8 +38,6 @@ class ImagePromptPlanner:
     def __init__(self, openai_client: OpenAIClient, image_handler: ImageHandler):
         self.openai_client = openai_client
         self.image_handler = image_handler
-        self.prompt_planner = ImagePromptPlanner(openai_client, image_handler)
-        self.images_runner = ImagesApiRunner(openai_client, image_handler)
 
     def plan(
         self,
@@ -309,6 +307,8 @@ class ImageGenerator:
     def __init__(self, openai_client: OpenAIClient, image_handler: ImageHandler):
         self.openai_client = openai_client
         self.image_handler = image_handler
+        self.prompt_planner = ImagePromptPlanner(openai_client, image_handler)
+        self.images_runner = ImagesApiRunner(openai_client, image_handler)
 
     def generate_images_via_api(
         self,
