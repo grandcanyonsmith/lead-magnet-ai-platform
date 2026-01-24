@@ -130,7 +130,7 @@ function ColorSwatch({
   );
 }
 
-function renderTextWithColorSwatches(text: string): ReactNode {
+function renderTextWithColors(text: string): ReactNode {
   if (!text || !text.includes("#")) return text;
   COLOR_HEX_REGEX.lastIndex = 0;
   const parts: ReactNode[] = [];
@@ -150,6 +150,49 @@ function renderTextWithColorSwatches(text: string): ReactNode {
   if (lastIndex < text.length) {
     parts.push(text.slice(lastIndex));
   }
+  return parts;
+}
+
+function renderTextWithHighlights(text: string): ReactNode {
+  if (!text) return text;
+  
+  // First, split by URLs
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  
+  // Reset regex
+  URL_REGEX.lastIndex = 0;
+  
+  while ((match = URL_REGEX.exec(text)) !== null) {
+    const index = match.index ?? 0;
+    if (index > lastIndex) {
+      parts.push(renderTextWithColors(text.slice(lastIndex, index)));
+    }
+    const url = match[0];
+    parts.push(
+      <a
+        key={`url-${index}`}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-400 hover:text-blue-300 hover:underline decoration-blue-400/40"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {url}
+      </a>
+    );
+    lastIndex = index + url.length;
+  }
+  
+  if (parts.length === 0) {
+    return renderTextWithColors(text);
+  }
+  
+  if (lastIndex < text.length) {
+    parts.push(renderTextWithColors(text.slice(lastIndex)));
+  }
+  
   return parts;
 }
 

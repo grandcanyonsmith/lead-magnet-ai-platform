@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
+import { Select } from "@/components/ui/Select";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { Check, Plus, Trash2 } from "lucide-react";
 import { useAIModels } from "@/hooks/api/useWorkflows";
@@ -807,9 +810,29 @@ type ContextPanelProps = {
   id: string;
   dependencyPreviews: DependencyPreview[];
   instructions?: string;
+  editPanel?: EditablePanel | null;
+  draftInstructions?: string;
+  onDraftInstructionsChange?: (value: string) => void;
+  renderEditButton?: (panel: EditablePanel) => JSX.Element | null;
+  onCancel?: () => void;
+  onSave?: () => void;
+  isUpdating?: boolean;
+  isInstructionsDirty?: boolean;
 };
 
-export function ContextPanel({ id, dependencyPreviews, instructions }: ContextPanelProps) {
+export function ContextPanel({
+  id,
+  dependencyPreviews,
+  instructions,
+  editPanel,
+  draftInstructions,
+  onDraftInstructionsChange,
+  renderEditButton,
+  onCancel,
+  onSave,
+  isUpdating,
+  isInstructionsDirty,
+}: ContextPanelProps) {
   const hasDependencies = dependencyPreviews.length > 0;
 
   return (
@@ -854,12 +877,46 @@ export function ContextPanel({ id, dependencyPreviews, instructions }: ContextPa
         </div>
       )}
       <div className="space-y-2">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Instructions
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Instructions
+          </div>
+          {renderEditButton && renderEditButton("context")}
         </div>
-        <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] whitespace-pre-wrap text-foreground/90">
-          {instructions || "No instructions available"}
-        </div>
+        {editPanel === "context" && onDraftInstructionsChange ? (
+          <div className="space-y-2">
+            <Textarea
+              value={draftInstructions}
+              onChange={(e) => onDraftInstructionsChange(e.target.value)}
+              className="min-h-[100px] text-xs font-mono"
+              placeholder="Enter instructions..."
+            />
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onCancel}
+                disabled={isUpdating}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={onSave}
+                disabled={!isInstructionsDirty || isUpdating}
+                isLoading={isUpdating}
+              >
+                Update
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] whitespace-pre-wrap text-foreground/90">
+            {instructions || "No instructions available"}
+          </div>
+        )}
       </div>
     </div>
   );

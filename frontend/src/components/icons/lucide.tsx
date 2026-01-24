@@ -33,6 +33,8 @@ import {
   SunIcon,
   UsersIcon,
   XMarkIcon,
+  CheckIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 
 export {
@@ -72,4 +74,6 @@ export {
   DocumentTextIcon as ScrollText,
   UsersIcon as Users,
   ChevronRightIcon as ChevronRight,
+  CheckIcon as Check,
+  TrashIcon as Trash2,
 };
