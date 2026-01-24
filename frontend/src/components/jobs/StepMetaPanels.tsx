@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
-import { Select } from "@/components/ui/Select";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { Textarea } from "@/components/ui/Textarea";
+import { Check, Plus, Trash2 } from "lucide-react";
 import { useAIModels } from "@/hooks/api/useWorkflows";
 import { REASONING_EFFORT_LABELS, SERVICE_TIER_LABELS } from "@/utils/stepMeta";
 import type { AIModel, ImageGenerationSettings, ServiceTier } from "@/types/workflow";
@@ -370,9 +369,64 @@ export function ReasoningDetailsPanel({
 type ToolsPanelProps = {
   id: string;
   toolDetails: ToolDetail[];
+  editPanel?: EditablePanel | null;
+  draftTools?: unknown[];
+  onDraftToolsChange?: (tools: unknown[]) => void;
+  renderEditButton?: (panel: EditablePanel) => JSX.Element | null;
+  onCancel?: () => void;
+  onSave?: () => void;
+  isUpdating?: boolean;
+  isToolsDirty?: boolean;
 };
 
-export function ToolsPanel({ id, toolDetails }: ToolsPanelProps) {
+const AVAILABLE_TOOLS = [
+  "web_search",
+  "computer_use_preview",
+  "file_search",
+  "code_interpreter",
+  "shell",
+  "image_generation",
+];
+
+export function ToolsPanel({
+  id,
+  toolDetails,
+  editPanel,
+  draftTools,
+  onDraftToolsChange,
+  renderEditButton,
+  onCancel,
+  onSave,
+  isUpdating,
+  isToolsDirty,
+}: ToolsPanelProps) {
+  const [newToolName, setNewToolName] = useState("");
+
+  const handleAddTool = () => {
+    if (!newToolName || !onDraftToolsChange) return;
+    const currentTools = draftTools || [];
+    // Check if tool already exists (simple string check)
+    if (
+      currentTools.some((t) =>
+        typeof t === "string"
+          ? t === newToolName
+          : (t as any).type === newToolName || (t as any).name === newToolName,
+      )
+    ) {
+      return;
+    }
+    onDraftToolsChange([...currentTools, newToolName]);
+    setNewToolName("");
+  };
+
+  const handleRemoveTool = (index: number) => {
+    if (!onDraftToolsChange) return;
+    const currentTools = draftTools || [];
+    const nextTools = [...currentTools];
+    nextTools.splice(index, 1);
+    onDraftToolsChange(nextTools);
+  };
+
   return (
     <div
       id={id}
@@ -382,29 +436,102 @@ export function ToolsPanel({ id, toolDetails }: ToolsPanelProps) {
         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 dark:text-slate-200">
           Tools
         </div>
+        {renderEditButton && renderEditButton("tools")}
       </div>
-      <div className="space-y-3">
-        {toolDetails.map((tool) => (
-          <div
-            key={tool.id}
-            className="rounded-lg border border-border/60 bg-background/70 px-3 py-2 space-y-2"
-          >
-            <div className="text-xs font-semibold text-foreground">
-              {tool.name}
-            </div>
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Configuration
-            </div>
-            <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] font-mono whitespace-pre-wrap break-words">
-              {tool.config ? (
-                JSON.stringify(tool.config, null, 2)
-              ) : (
-                <span className="text-muted-foreground">No configuration</span>
-              )}
-            </div>
+      
+      {editPanel === "tools" && onDraftToolsChange ? (
+        <div className="space-y-3">
+          <div className="space-y-2">
+            {(draftTools || []).map((tool, idx) => {
+              const name = typeof tool === "string" ? tool : (tool as any).type || (tool as any).name || "Unknown";
+              return (
+                <div key={idx} className="flex items-center justify-between rounded-md border border-border/60 bg-background/70 px-2 py-1.5">
+                  <span className="font-mono text-xs">{name}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTool(idx)}
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded"
+                    title="Remove tool"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+            {(draftTools || []).length === 0 && (
+              <div className="text-muted-foreground italic px-2">No tools selected</div>
+            )}
           </div>
-        ))}
-      </div>
+
+          <div className="flex gap-2">
+            <Select
+              value={newToolName}
+              onChange={(val) => setNewToolName(val)}
+              className="h-8 flex-1"
+              placeholder="Select tool to add..."
+            >
+              <option value="">Select tool...</option>
+              {AVAILABLE_TOOLS.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </Select>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleAddTool}
+              disabled={!newToolName}
+              className="h-8 px-2"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onCancel}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={onSave}
+              disabled={!isToolsDirty || isUpdating}
+              isLoading={isUpdating}
+            >
+              Update
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {toolDetails.map((tool) => (
+            <div
+              key={tool.id}
+              className="rounded-lg border border-border/60 bg-background/70 px-3 py-2 space-y-2"
+            >
+              <div className="text-xs font-semibold text-foreground">
+                {tool.name}
+              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Configuration
+              </div>
+              <div className="rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] font-mono whitespace-pre-wrap break-words">
+                {tool.config ? (
+                  JSON.stringify(tool.config, null, 2)
+                ) : (
+                  <span className="text-muted-foreground">No configuration</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

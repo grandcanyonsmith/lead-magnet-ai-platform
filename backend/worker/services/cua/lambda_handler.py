@@ -8,6 +8,7 @@ from services.cua.environment_factory import (
     resolve_cua_environment_config,
     create_async_environment,
 )
+from services.cua.streaming_request import normalize_stream_request
 from services.cua.screenshot_service import S3ScreenshotService
 from s3_service import S3Service
 from services.openai_client import OpenAIClient
@@ -34,84 +35,23 @@ class StreamingHandler:
         """
         # Explicitly reference json module to avoid UnboundLocalError
         _json = json
-        
-        job_id = event.get('job_id')
-        tenant_id = event.get('tenant_id')
-        model = event.get('model', 'computer-use-preview')
-        requested_model = model
-        instructions = event.get('instructions', '')
-        raw_instructions = instructions
-        input_text = event.get('input_text', '')
-        tools = event.get('tools', [])
-        if not isinstance(tools, list):
-            tools = [tools] if tools else []
-        tool_choice = event.get('tool_choice', 'auto')
-        params = event.get('params', {})
-        max_iterations = event.get('max_iterations', 100)
-        max_duration = event.get('max_duration_seconds', 900)
-        aws_credentials = event.get("aws_credentials") if isinstance(event, dict) else None
 
-        aws_env_overrides: Dict[str, str] = {}
-        if isinstance(aws_credentials, dict):
-            for key in (
-                "AWS_ACCESS_KEY_ID",
-                "AWS_SECRET_ACCESS_KEY",
-                "AWS_SESSION_TOKEN",
-                "AWS_REGION",
-                "AWS_DEFAULT_REGION",
-                "AWS_PROFILE",
-            ):
-                value = aws_credentials.get(key)
-                if isinstance(value, str) and value.strip():
-                    aws_env_overrides[key] = value.strip()
+        normalized = normalize_stream_request(event)
 
-        def _is_aws_task(text: str) -> bool:
-            if not text:
-                return False
-            lowered = text.lower()
-            return any(
-                token in lowered
-                for token in (
-                    "aws",
-                    "s3",
-                    "s3://",
-                    "bucket",
-                    "presigned",
-                    "iam",
-                    "aws_access_key",
-                    "aws_secret_access_key",
-                    "aws session token",
-                    "upload to s3",
-                    "s3 upload",
-                )
-            )
+        job_id = normalized.job_id
+        tenant_id = normalized.tenant_id
+        model = normalized.model
+        requested_model = normalized.requested_model
+        instructions = normalized.instructions
+        input_text = normalized.input_text
+        tools = normalized.tools
+        tool_choice = normalized.tool_choice
+        params = normalized.params
+        max_iterations = normalized.max_iterations
+        max_duration = normalized.max_duration_seconds
+        aws_env_overrides = normalized.aws_env_overrides
 
-        aws_shell_forced = False
-        if _is_aws_task(f"{raw_instructions}\n{input_text}"):
-            has_shell = any(
-                (isinstance(t, str) and t == "shell")
-                or (isinstance(t, dict) and t.get("type") == "shell")
-                for t in (tools or [])
-            )
-            had_code_interpreter = any(
-                (isinstance(t, str) and t == "code_interpreter")
-                or (isinstance(t, dict) and t.get("type") == "code_interpreter")
-                for t in (tools or [])
-            )
-            if had_code_interpreter or not has_shell:
-                tools = [
-                    t
-                    for t in (tools or [])
-                    if not (
-                        (isinstance(t, str) and t == "code_interpreter")
-                        or (isinstance(t, dict) and t.get("type") == "code_interpreter")
-                    )
-                ]
-                if not has_shell:
-                    tools.append({"type": "shell"})
-                aws_shell_forced = True
-
-        if aws_shell_forced:
+        if normalized.aws_shell_forced:
             yield _json.dumps({
                 "type": "log",
                 "timestamp": time.time(),
@@ -129,76 +69,36 @@ class StreamingHandler:
             else instructions
         )
 
-        # Validate model compatibility: computer_use_preview tool requires computer-use-preview model
-        has_computer_use = any(
-            (isinstance(t, str) and t == 'computer_use_preview') or
-            (isinstance(t, dict) and t.get('type') == 'computer_use_preview')
-            for t in tools
-        )
+        has_computer_use = normalized.has_computer_use
+        has_image_generation = normalized.has_image_generation
 
-        # #region agent log
-        try:
-            tool_types = []
-            image_tool_model = None
-            for t in tools or []:
-                if isinstance(t, dict):
-                    tt = t.get("type")
-                    tool_types.append(tt)
-                    if tt == "image_generation" and isinstance(t.get("model"), str):
-                        image_tool_model = t.get("model")
-                else:
-                    tool_types.append(t)
-            has_image_generation = any(tt == "image_generation" for tt in tool_types)
-            with open("/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log", "a") as f:
-                f.write(json.dumps({
-                    "sessionId": "debug-session",
-                    "runId": job_id or "cua-unknown",
-                    "hypothesisId": "H1",
-                    "location": "cua/lambda_handler.py:process_stream",
-                    "message": "CUA request received",
-                    "data": {
-                        "job_id": job_id,
-                        "requested_model": requested_model,
-                        "tool_choice": tool_choice,
-                        "tools_count": len(tools) if isinstance(tools, list) else None,
-                        "tool_types": tool_types,
-                        "has_computer_use": has_computer_use,
-                        "has_image_generation": has_image_generation,
-                        "image_tool_model": image_tool_model,
-                        "instructions_len": len(instructions or ""),
-                        "input_text_len": len(input_text or ""),
-                    },
-                    "timestamp": int(time.time() * 1000),
-                }) + "\n")
-        except Exception:
-            pass
-        # #endregion
+        logger.info("[CUA] Request received", extra={
+            "job_id": job_id,
+            "requested_model": requested_model,
+            "tool_choice": tool_choice,
+            "tools_count": len(tools) if isinstance(tools, list) else None,
+            "tool_types": normalized.tool_types,
+            "has_computer_use": has_computer_use,
+            "has_image_generation": has_image_generation,
+            "image_tool_model": normalized.image_tool_model,
+            "instructions_len": len(instructions or ""),
+            "input_text_len": len(input_text or ""),
+        })
 
-        if has_computer_use and model != 'computer-use-preview':
-            logger.warning(f"[CUA] Overriding model from {model} to computer-use-preview (required for computer_use_preview tool)")
-            model = 'computer-use-preview'
+        if has_computer_use and requested_model != model:
+            logger.warning(
+                "[CUA] Overriding model from %s to computer-use-preview "
+                "(required for computer_use_preview tool)",
+                requested_model,
+            )
 
-        # #region agent log
-        try:
-            with open("/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log", "a") as f:
-                f.write(json.dumps({
-                    "sessionId": "debug-session",
-                    "runId": job_id or "cua-unknown",
-                    "hypothesisId": "H2",
-                    "location": "cua/lambda_handler.py:process_stream",
-                    "message": "CUA model selection",
-                    "data": {
-                        "job_id": job_id,
-                        "requested_model": requested_model,
-                        "final_model": model,
-                        "model_overridden": bool(has_computer_use and requested_model != model),
-                        "has_computer_use": has_computer_use,
-                    },
-                    "timestamp": int(time.time() * 1000),
-                }) + "\n")
-        except Exception:
-            pass
-        # #endregion
+        logger.info("[CUA] Model selection", extra={
+            "job_id": job_id,
+            "requested_model": requested_model,
+            "final_model": model,
+            "model_overridden": bool(has_computer_use and requested_model != model),
+            "has_computer_use": has_computer_use,
+        })
 
         # Initialize deps
         env_config = resolve_cua_environment_config(tools)

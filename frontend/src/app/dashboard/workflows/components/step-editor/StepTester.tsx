@@ -32,6 +32,7 @@ export default function StepTester({ step, index }: StepTesterProps) {
   const [recentContainers, setRecentContainers] = useState<string[]>([]);
   const [selectedContainerId, setSelectedContainerId] = useState("");
   const [isLoadingContainers, setIsLoadingContainers] = useState(false);
+  const [testOverrides, setTestOverrides] = useState<Record<string, any>>({});
   const [pollInterval, setPollInterval] = useState<ReturnType<
     typeof setInterval
   > | null>(null);
@@ -676,9 +677,13 @@ export default function StepTester({ step, index }: StepTesterProps) {
                         params: vars,
                         reasoning_effort: step.reasoning_effort,
                         service_tier: step.service_tier,
-                        text_verbosity: step.text_verbosity
+                        text_verbosity: step.text_verbosity,
+                        ...testOverrides
                     };
                  })()}
+                 onUpdateSettings={(updates) => {
+                   setTestOverrides(prev => ({ ...prev, ...updates }));
+                 }}
                  onClose={() => {
                     setShowStream(false);
                     setIsTesting(false);

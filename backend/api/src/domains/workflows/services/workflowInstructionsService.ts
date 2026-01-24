@@ -8,6 +8,7 @@ import {
   getPromptOverridesForTenant,
   resolvePromptOverride,
 } from '@services/promptOverrides';
+import { WORKFLOW_INSTRUCTIONS_REFINE_PROMPT } from '@config/prompts';
 
 export interface WorkflowInstructionsRefinementRequest {
   current_instructions: string;

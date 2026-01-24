@@ -48,6 +48,8 @@ type StepMetaUpdate = {
   service_tier?: ServiceTier | null;
   reasoning_effort?: ReasoningEffort | null;
   image_generation?: ImageGenerationSettings;
+  tools?: unknown[] | null;
+  instructions?: string | null;
 };
 
 const EMPTY_TOOL_LIST: Tool[] = [];
@@ -153,6 +155,8 @@ export function StepMetaRow({
     useState<ReasoningEffortOption>("auto");
   const [draftImageSettings, setDraftImageSettings] =
     useState<ImageGenerationSettings>(() => ({ ...defaultImageSettings }));
+  const [draftInstructions, setDraftInstructions] = useState<string>("");
+  const [draftTools, setDraftTools] = useState<unknown[]>([]);
   const showContext = openPanel === "context";
   const showImageSettings = openPanel === "image";
   const showModelDetails = openPanel === "model";
@@ -347,6 +351,12 @@ export function StepMetaRow({
     if (panel === "image") {
       setDraftImageSettings(imageSettings);
     }
+    if (panel === "context") {
+      setDraftInstructions(instructions || "");
+    }
+    if (panel === "tools") {
+      setDraftTools(toolList);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -381,6 +391,12 @@ export function StepMetaRow({
             : undefined,
         input_fidelity: draftImageSettings.input_fidelity || undefined,
       };
+    }
+    if (editPanel === "context") {
+      update.instructions = draftInstructions;
+    }
+    if (editPanel === "tools") {
+      update.tools = draftTools;
     }
     await onQuickUpdateStep(stepIndex, update);
     setEditPanel(null);
@@ -547,6 +563,9 @@ export function StepMetaRow({
   const isImageSettingsDirty =
     JSON.stringify(normalizeImageSettings(draftImageSettings)) !==
     JSON.stringify(normalizeImageSettings(imageSettings));
+  const isInstructionsDirty = draftInstructions !== (instructions || "");
+  const isToolsDirty = JSON.stringify(draftTools) !== JSON.stringify(toolList);
+
   const modelBadgeClass = [
     "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium border shadow-sm transition-colors cursor-pointer group",
     showModelDetails
@@ -659,10 +678,31 @@ export function StepMetaRow({
     isUpdating,
     isImageSettingsDirty,
   };
+  const toolsPanelProps = {
+    id: toolsId,
+    toolDetails,
+    editPanel,
+    draftTools,
+    onDraftToolsChange: setDraftTools,
+    renderEditButton,
+    onCancel: handleCancelEdit,
+    onSave: handleSaveEdit,
+    isUpdating,
+    isToolsDirty,
+  };
+
   const contextPanelProps = {
     id: contextId,
     dependencyPreviews,
     instructions,
+    editPanel,
+    draftInstructions,
+    onDraftInstructionsChange: setDraftInstructions,
+    renderEditButton,
+    onCancel: handleCancelEdit,
+    onSave: handleSaveEdit,
+    isUpdating,
+    isInstructionsDirty,
   };
 
   useEffect(() => {
@@ -695,7 +735,7 @@ export function StepMetaRow({
         <ReasoningDetailsPanel {...reasoningPanelProps} />
       )}
       {hasTools && showTools && (
-        <ToolsPanel id={toolsId} toolDetails={toolDetails} />
+        <ToolsPanel {...toolsPanelProps} />
       )}
       {hasImageGenerationTool && showImageSettings && (
         <ImageSettingsPanel {...imagePanelProps} />

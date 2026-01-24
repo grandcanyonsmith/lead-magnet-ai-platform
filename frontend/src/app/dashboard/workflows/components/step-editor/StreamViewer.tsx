@@ -23,10 +23,14 @@ import toast from "react-hot-toast";
 import { FullScreenPreviewModal } from "@/components/ui/FullScreenPreviewModal";
 import { PanelHeader } from "@/components/ui/PanelHeader";
 
+import { StepMetaRow } from "@/components/jobs/StepMetaRow";
+import { MergedStep } from "@/types/job";
+
 interface StreamViewerProps {
   endpoint: string;
   requestBody: any;
   onClose: () => void;
+  onUpdateSettings?: (updates: any) => void;
 }
 
 interface LogEntry {
@@ -37,44 +41,6 @@ interface LogEntry {
 }
 
 const OUTPUT_DELTA_PREFIX = "__OUTPUT_DELTA__";
-const TOOL_LABELS: Record<string, string> = {
-  web_search: "Web Search",
-  image_generation: "Image Generation",
-  computer_use_preview: "Computer Use",
-  file_search: "File Search",
-  code_interpreter: "Code Interpreter",
-  shell: "Shell",
-};
-
-const formatModelLabel = (model?: string) => {
-  if (!model) return "Auto";
-  return model
-    .replace("gpt-", "GPT-")
-    .replace("turbo", "Turbo")
-    .replace("computer-use-preview", "Computer Use");
-};
-
-const titleCase = (value: string) =>
-  value
-    .split(/[_-]/g)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-
-const formatReasoning = (value?: string) => {
-  if (!value) return "Default";
-  if (value === "xhigh") return "Extra High";
-  return titleCase(value);
-};
-
-const formatServiceTier = (value?: string) => {
-  if (!value || value === "auto") return "Auto";
-  return titleCase(value);
-};
-
-const formatVerbosity = (value?: string) => {
-  if (!value) return "Default";
-  return titleCase(value);
-};
 
 // -----------------------------------------------------------------------------
 // Log Line Component
@@ -147,7 +113,7 @@ function LogLine({ log, searchQuery, isMatch, isCurrentMatch, index, onRef }: {
 // Main Component
 // -----------------------------------------------------------------------------
 
-export default function StreamViewer({ endpoint, requestBody, onClose }: StreamViewerProps) {
+export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateSettings }: StreamViewerProps) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [screenshotBase64, setScreenshotBase64] = useState<string | null>(null);
@@ -393,31 +359,21 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
   const hasScreenshot = Boolean(screenshotUrl || screenshotBase64);
   const currentScreenshotSrc = screenshotUrl || (screenshotBase64 ? `data:image/jpeg;base64,${screenshotBase64}` : '');
 
-  const previewMeta = useMemo(() => {
-    const modelLabel = formatModelLabel(requestBody?.model);
-    const toolTypes = Array.isArray(requestBody?.tools)
-      ? requestBody.tools
-          .map((tool: any) => {
-            if (typeof tool === "string") return tool;
-            if (tool && typeof tool === "object" && typeof tool.type === "string") {
-              return tool.type;
-            }
-            return null;
-          })
-          .filter(Boolean)
-      : [];
-    const uniqueTools = Array.from(new Set(toolTypes as string[]));
-    const toolLabels = uniqueTools.map(
-      (tool) => TOOL_LABELS[tool] || titleCase(tool),
-    );
-    return {
-      modelLabel,
-      toolsLabel: toolLabels.length > 0 ? toolLabels.join(", ") : "No tools",
-      reasoningLabel: formatReasoning(requestBody?.reasoning_effort),
-      serviceLabel: formatServiceTier(requestBody?.service_tier),
-      verbosityLabel: formatVerbosity(requestBody?.text_verbosity),
-    };
-  }, [requestBody]);
+  const fakeStep: MergedStep = useMemo(() => ({
+    step_order: 1,
+    step_type: "ai_generation",
+    _status: status === "streaming" ? "in_progress" : status === "completed" ? "completed" : status === "error" ? "failed" : "pending",
+    model: requestBody?.model,
+    tools: requestBody?.tools,
+    tool_choice: requestBody?.tool_choice,
+    instructions: requestBody?.instructions,
+    service_tier: requestBody?.service_tier,
+    reasoning_effort: requestBody?.reasoning_effort,
+    input: {
+      ...requestBody?.params,
+      input_text: requestBody?.input_text
+    }
+  } as unknown as MergedStep), [requestBody, status]);
 
   // Styling for maximized state
   const containerClasses = isMaximized
@@ -458,22 +414,17 @@ export default function StreamViewer({ endpoint, requestBody, onClose }: StreamV
                 {logs.length} events
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
-              <span className="rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 bg-white/70 dark:bg-gray-900/60">
-                Model: {previewMeta.modelLabel}
-              </span>
-              <span className="rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 bg-white/70 dark:bg-gray-900/60">
-                Tools: {previewMeta.toolsLabel}
-              </span>
-              <span className="rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 bg-white/70 dark:bg-gray-900/60">
-                Reasoning: {previewMeta.reasoningLabel}
-              </span>
-              <span className="rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 bg-white/70 dark:bg-gray-900/60">
-                Service: {previewMeta.serviceLabel}
-              </span>
-              <span className="rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 bg-white/70 dark:bg-gray-900/60">
-                Verbosity: {previewMeta.verbosityLabel}
-              </span>
+            <div className="w-full max-w-3xl">
+              <StepMetaRow 
+                step={fakeStep} 
+                status={fakeStep._status} 
+                canEdit={!!onUpdateSettings}
+                onQuickUpdateStep={async (_, update) => {
+                  if (onUpdateSettings) {
+                    onUpdateSettings(update);
+                  }
+                }}
+              />
             </div>
           </div>
 

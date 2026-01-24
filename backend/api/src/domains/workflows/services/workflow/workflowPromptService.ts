@@ -1,4 +1,3 @@
-import { formatAllModelDescriptionsMarkdown } from './modelDescriptions';
 import { ToolChoice } from '@utils/types';
 import { WORKFLOW_GENERATION_SYSTEM_PROMPT } from '@config/prompts';
 
