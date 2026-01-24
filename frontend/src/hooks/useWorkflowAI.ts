@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { parseJsonFromText } from "@/utils/jsonParsing";
 import type { WorkflowAIEditResponse } from "@/types/workflow";
 
 export interface WorkflowAIEditRequest {
@@ -10,12 +11,16 @@ type WorkflowAIEditJobStatus = "pending" | "processing" | "completed" | "failed"
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-export function useWorkflowAI(workflowId: string) {
+export function useWorkflowAI(
+  workflowId: string,
+  options?: { enableStreaming?: boolean },
+) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [proposal, setProposal] = useState<WorkflowAIEditResponse | null>(null);
   const [streamedOutput, setStreamedOutput] = useState<string>("");
   const requestSeqRef = useRef(0);
+  const enableStreaming = options?.enableStreaming ?? true;
 
   // Cancel any in-flight polling when unmounting
   useEffect(() => {
@@ -51,19 +56,7 @@ export function useWorkflowAI(workflowId: string) {
   };
 
   const parseStreamedProposal = (raw: string): WorkflowAIEditResponse | null => {
-    const cleaned = raw.trim();
-    if (!cleaned) return null;
-    try {
-      return JSON.parse(cleaned) as WorkflowAIEditResponse;
-    } catch {
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) return null;
-      try {
-        return JSON.parse(jsonMatch[0]) as WorkflowAIEditResponse;
-      } catch {
-        return null;
-      }
-    }
+    return parseJsonFromText<WorkflowAIEditResponse>(raw, { preferLast: true });
   };
 
   const generateWorkflowEdit = async (
@@ -79,6 +72,17 @@ export function useWorkflowAI(workflowId: string) {
     requestSeqRef.current = requestSeq;
 
     try {
+      if (!enableStreaming) {
+        const startResult = await api.editWorkflowWithAI(workflowId, {
+          userPrompt,
+          ...(contextJobId ? { contextJobId } : {}),
+        });
+        if (!startResult?.job_id) {
+          throw new Error(startResult?.message || "Failed to start workflow edit");
+        }
+        return await pollWorkflowEditJob(startResult.job_id, requestSeq);
+      }
+
       let streamError: string | null = null;
       let streamedText = "";
 

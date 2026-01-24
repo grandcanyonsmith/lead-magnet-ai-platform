@@ -69,6 +69,9 @@ const formatDuration = (seconds: number) => {
   return `${remainingSeconds}s`;
 };
 
+const formatElapsed = (ms: number) =>
+  formatDuration(Math.floor(Math.max(0, ms) / 1000));
+
 const ERROR_TOKENS = [
   "error",
   "failed",
@@ -144,6 +147,9 @@ function LogLine({
   showLineNumbers,
   showTimestamps,
   wrapLines,
+  isExpandable,
+  isExpanded,
+  onToggleExpand,
 }: { 
   log: LogEntry; 
   searchQuery: string;
@@ -154,6 +160,9 @@ function LogLine({
   showLineNumbers: boolean;
   showTimestamps: boolean;
   wrapLines: boolean;
+  isExpandable: boolean;
+  isExpanded: boolean;
+  onToggleExpand: (index: number) => void;
 }) {
   const levelBucket = getLogLevelBucket(log);
   const levelTextClass =
@@ -169,6 +178,7 @@ function LogLine({
       ? "border-yellow-700/70 text-yellow-200 bg-yellow-900/20"
       : "border-gray-700 text-gray-300 bg-white/5";
   const levelLabel = levelBucket === "error" ? "ERR" : levelBucket === "warn" ? "WRN" : "INF";
+  const shouldCollapse = isExpandable && !isExpanded;
 
   // Detect Shell Input/Output
   const isShellInput = log.message.startsWith("💻");
@@ -247,7 +257,22 @@ function LogLine({
             wrapLines ? "whitespace-pre-wrap break-words" : "whitespace-pre overflow-x-auto"
           }`}
         >
-          {content}
+          <div className={shouldCollapse ? "max-h-24 overflow-y-hidden" : ""}>
+            {content}
+          </div>
+          {isExpandable && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleExpand(index);
+              }}
+              className="mt-1 inline-flex items-center gap-1 text-[11px] text-blue-300 hover:text-blue-200"
+              title={isExpanded ? "Collapse log entry" : "Expand log entry"}
+            >
+              {isExpanded ? "Show less" : "Show more"}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -276,10 +301,15 @@ export function StreamViewerUI({
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [showTimestamps, setShowTimestamps] = useState(true);
   const [wrapLines, setWrapLines] = useState(true);
+  const [expandedLogs, setExpandedLogs] = useState<Set<number>>(new Set());
+  const [elapsedMs, setElapsedMs] = useState(0);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const matchRefs = useRef<(HTMLDivElement | null)[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const prevStatusRef = useRef<StreamViewerUIProps["status"]>(status);
 
   const logCounts = useMemo(() => {
     return logs.reduce(
@@ -366,6 +396,18 @@ export function StreamViewerUI({
       setAutoScroll(false);
     }
   }, [autoScroll]);
+
+  const toggleExpandLog = useCallback((logIndex: number) => {
+    setExpandedLogs((prev) => {
+      const next = new Set(prev);
+      if (next.has(logIndex)) {
+        next.delete(logIndex);
+      } else {
+        next.add(logIndex);
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!searchQuery.trim()) return;
@@ -465,6 +507,57 @@ export function StreamViewerUI({
   }, [logs, filterLevel, searchQuery, filteredLogs.length]);
 
   const hasPreview = hasScreenshot || showHtmlPreview;
+  const elapsedLabel = useMemo(() => formatElapsed(elapsedMs), [elapsedMs]);
+  const isRunning = status === "connecting" || status === "streaming";
+
+  useEffect(() => {
+    const prevStatus = prevStatusRef.current;
+    prevStatusRef.current = status;
+    if (
+      (status === "connecting" || status === "streaming") &&
+      (prevStatus === "completed" || prevStatus === "error" || prevStatus === "pending")
+    ) {
+      startTimeRef.current = Date.now();
+      setElapsedMs(0);
+    }
+    if (status === "pending" && logs.length === 0) {
+      startTimeRef.current = null;
+      setElapsedMs(0);
+    }
+  }, [status, logs.length]);
+
+  useEffect(() => {
+    if (isRunning) {
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now();
+        setElapsedMs(0);
+      }
+      if (!timerRef.current) {
+        timerRef.current = setInterval(() => {
+          if (startTimeRef.current) {
+            setElapsedMs(Date.now() - startTimeRef.current);
+          }
+        }, 1000);
+      }
+      return;
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (startTimeRef.current) {
+      setElapsedMs(Date.now() - startTimeRef.current);
+    }
+  }, [isRunning]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!hasPreview && viewMode !== "terminal") {
@@ -540,6 +633,9 @@ export function StreamViewerUI({
                      <FiTerminal /> Console Output
                    </span>
                    <span className="text-[11px] text-gray-500">{summaryText}</span>
+                   <span className="text-[11px] text-gray-500">
+                     • Elapsed {elapsedLabel}
+                   </span>
                  </div>
                  <div className="flex items-center gap-2">
                   <button
@@ -719,6 +815,11 @@ export function StreamViewerUI({
                    const originalIndex = logs.indexOf(log);
                    const isMatch = searchQuery.trim() ? matchingIndices.includes(originalIndex) : false;
                    const isCurrentMatch = isMatch && matchingIndices[currentMatchIndex] === originalIndex;
+                  const rawMessage = stripShellPrefix(log.message || "");
+                  const lineCount = rawMessage.split("\n").length;
+                  const isExpandable =
+                    rawMessage.length > 320 || lineCount > 4;
+                  const isExpanded = expandedLogs.has(originalIndex);
                    
                    return (
                      <LogLine 
@@ -731,6 +832,9 @@ export function StreamViewerUI({
                        showLineNumbers={showLineNumbers}
                        showTimestamps={showTimestamps}
                        wrapLines={wrapLines}
+                       isExpandable={isExpandable}
+                       isExpanded={isExpanded}
+                       onToggleExpand={toggleExpandLog}
                        onRef={(el) => {
                          matchRefs.current[originalIndex] = el;
                        }}

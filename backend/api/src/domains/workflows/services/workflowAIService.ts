@@ -4,6 +4,7 @@ import { ToolChoice } from '@utils/types';
 import { validateDependencies } from '@utils/dependencyResolver';
 import { logger } from '@utils/logger';
 import { stripMarkdownCodeFences, callResponsesWithTimeout } from '@utils/openaiHelpers';
+import { parseJsonFromText } from '@utils/jsonParsing';
 import { retryWithBackoff } from '@utils/errorHandling';
 import {
   getPromptOverridesForTenant,
@@ -549,15 +550,12 @@ Please generate the updated workflow configuration with all necessary changes.`;
   }
 
   private parseWorkflowResponse(cleaned: string): WorkflowAIEditResponse {
-    let parsedResponse: WorkflowAIEditResponse;
-    try {
-      parsedResponse = JSON.parse(cleaned) as WorkflowAIEditResponse;
-    } catch {
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Invalid response from OpenAI (expected JSON object)');
-      }
-      parsedResponse = JSON.parse(jsonMatch[0]) as WorkflowAIEditResponse;
+    const parsedResponse = parseJsonFromText<WorkflowAIEditResponse>(cleaned, {
+      preferLast: true,
+    });
+
+    if (!parsedResponse) {
+      throw new Error('Invalid response from OpenAI (expected JSON object)');
     }
 
     if (!parsedResponse.steps || !Array.isArray(parsedResponse.steps)) {

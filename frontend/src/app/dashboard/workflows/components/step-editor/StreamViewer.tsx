@@ -65,6 +65,9 @@ const formatDuration = (seconds: number) => {
   return `${remainingSeconds}s`;
 };
 
+const formatElapsed = (ms: number) =>
+  formatDuration(Math.floor(Math.max(0, ms) / 1000));
+
 const ERROR_TOKENS = [
   "error",
   "failed",
@@ -150,6 +153,9 @@ function LogLine({
   showLineNumbers,
   showTimestamps,
   wrapLines,
+  isExpandable,
+  isExpanded,
+  onToggleExpand,
 }: { 
   log: LogEntry; 
   searchQuery: string;
@@ -160,6 +166,9 @@ function LogLine({
   showLineNumbers: boolean;
   showTimestamps: boolean;
   wrapLines: boolean;
+  isExpandable: boolean;
+  isExpanded: boolean;
+  onToggleExpand: (index: number) => void;
 }) {
   const levelBucket = getLogLevelBucket(log);
   const levelTextClass =
@@ -175,6 +184,7 @@ function LogLine({
       ? "border-yellow-700/70 text-yellow-200 bg-yellow-900/20"
       : "border-gray-700 text-gray-300 bg-white/5";
   const levelLabel = levelBucket === "error" ? "ERR" : levelBucket === "warn" ? "WRN" : "INF";
+  const shouldCollapse = isExpandable && !isExpanded;
 
   // Detect Shell Input/Output
   const isShellInput = log.message.startsWith("💻");
@@ -253,7 +263,22 @@ function LogLine({
             wrapLines ? "whitespace-pre-wrap break-words" : "whitespace-pre overflow-x-auto"
           }`}
         >
-          {content}
+          <div className={shouldCollapse ? "max-h-24 overflow-y-hidden" : ""}>
+            {content}
+          </div>
+          {isExpandable && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleExpand(index);
+              }}
+              className="mt-1 inline-flex items-center gap-1 text-[11px] text-blue-300 hover:text-blue-200"
+              title={isExpanded ? "Collapse log entry" : "Expand log entry"}
+            >
+              {isExpanded ? "Show less" : "Show more"}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -282,11 +307,16 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [showTimestamps, setShowTimestamps] = useState(true);
   const [wrapLines, setWrapLines] = useState(true);
+  const [expandedLogs, setExpandedLogs] = useState<Set<number>>(new Set());
+  const [elapsedMs, setElapsedMs] = useState(0);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const matchRefs = useRef<(HTMLDivElement | null)[]>([]);
   const streamedOutputLogIndexRef = useRef<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const prevStatusRef = useRef<typeof status>(status);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -525,6 +555,18 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
     }
   }, [autoScroll]);
 
+  const toggleExpandLog = useCallback((logIndex: number) => {
+    setExpandedLogs((prev) => {
+      const next = new Set(prev);
+      if (next.has(logIndex)) {
+        next.delete(logIndex);
+      } else {
+        next.add(logIndex);
+      }
+      return next;
+    });
+  }, []);
+
   // Keyboard shortcuts for search navigation
   useEffect(() => {
     if (!searchQuery.trim()) return;
@@ -624,9 +666,10 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
     ? "log-preview.html"
     : `screenshot-${Date.now()}.jpg`;
   const previewContentType = showHtmlPreview ? "text/html" : "image/jpeg";
+  const elapsedLabel = useMemo(() => formatElapsed(elapsedMs), [elapsedMs]);
   const summaryMeta = useMemo(() => {
     if (!logs.length) {
-      return { base: "No events yet", details: "" };
+      return { base: "No events yet", details: elapsedLabel ? `Elapsed ${elapsedLabel}` : "" };
     }
     const base =
       filterLevel === "all" && !searchQuery.trim()
@@ -638,9 +681,10 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
         ? `Span ${formatDuration(lastLog.timestamp - logs[0].timestamp)}`
         : null;
     const lastLabel = lastLog ? `Last ${formatTimestamp(lastLog.timestamp)}` : null;
-    const details = [spanLabel, lastLabel].filter(Boolean).join(" | ");
+    const elapsedMeta = elapsedLabel ? `Elapsed ${elapsedLabel}` : null;
+    const details = [elapsedMeta, spanLabel, lastLabel].filter(Boolean).join(" | ");
     return { base, details };
-  }, [logs, filterLevel, searchQuery, filteredLogs.length]);
+  }, [logs, filterLevel, searchQuery, filteredLogs.length, elapsedLabel]);
 
   const fakeStep: MergedStep = useMemo(() => ({
     step_order: 1,
@@ -657,6 +701,60 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
       input_text: requestBody?.input_text
     }
   } as unknown as MergedStep), [requestBody, status]);
+
+  const isRunning = status === "connecting" || status === "streaming";
+
+  useEffect(() => {
+    const prevStatus = prevStatusRef.current;
+    prevStatusRef.current = status;
+    if (
+      (status === "connecting" || status === "streaming") &&
+      (prevStatus === "completed" || prevStatus === "error")
+    ) {
+      startTimeRef.current = Date.now();
+      setElapsedMs(0);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (requestBody?.job_id) {
+      startTimeRef.current = null;
+      setElapsedMs(0);
+    }
+  }, [requestBody?.job_id]);
+
+  useEffect(() => {
+    if (isRunning) {
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now();
+        setElapsedMs(0);
+      }
+      if (!timerRef.current) {
+        timerRef.current = setInterval(() => {
+          if (startTimeRef.current) {
+            setElapsedMs(Date.now() - startTimeRef.current);
+          }
+        }, 1000);
+      }
+      return;
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (startTimeRef.current) {
+      setElapsedMs(Date.now() - startTimeRef.current);
+    }
+  }, [isRunning]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
 
   // Styling for maximized state
   const containerClasses = isMaximized
@@ -694,7 +792,7 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
               <div className="h-4 w-px bg-gray-300 dark:bg-gray-700 mx-1" />
               
               <div className="text-sm text-gray-500 dark:text-gray-400 font-mono">
-                {logs.length} events
+                {logs.length} events • Elapsed {elapsedLabel}
               </div>
             </div>
             <div className="w-full max-w-3xl">
@@ -921,6 +1019,11 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
                    const originalIndex = logs.indexOf(log);
                    const isMatch = searchQuery.trim() ? matchingIndices.includes(originalIndex) : false;
                    const isCurrentMatch = isMatch && matchingIndices[currentMatchIndex] === originalIndex;
+                   const rawMessage = stripShellPrefix(log.message || "");
+                   const lineCount = rawMessage.split("\n").length;
+                   const isExpandable =
+                     rawMessage.length > 320 || lineCount > 4;
+                   const isExpanded = expandedLogs.has(originalIndex);
                    
                    return (
                      <LogLine 
@@ -933,6 +1036,9 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
                        showLineNumbers={showLineNumbers}
                        showTimestamps={showTimestamps}
                        wrapLines={wrapLines}
+                       isExpandable={isExpandable}
+                       isExpanded={isExpanded}
+                       onToggleExpand={toggleExpandLog}
                        onRef={(el) => {
                          matchRefs.current[originalIndex] = el;
                        }}

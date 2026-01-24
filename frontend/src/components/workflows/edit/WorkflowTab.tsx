@@ -75,7 +75,7 @@ export function WorkflowTab({
     error: aiError,
     proposal,
     streamedOutput,
-  } = useWorkflowAI(workflowId);
+  } = useWorkflowAI(workflowId, { enableStreaming: false });
 
   const handleGenerateAI = async () => {
     if (!aiPrompt.trim()) {

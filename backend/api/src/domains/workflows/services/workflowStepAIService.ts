@@ -6,6 +6,7 @@ import {
   type PromptOverrides,
 } from '@services/promptOverrides';
 import { stripMarkdownCodeFences } from '@utils/openaiHelpers';
+import { parseJsonFromText } from '@utils/jsonParsing';
 import { ToolChoice } from '@utils/types';
 import { WorkflowStep } from './workflow/workflowConfigSupport';
 import { AVAILABLE_MODELS } from './workflow/modelDescriptions';
@@ -172,15 +173,15 @@ Please generate the workflow step configuration.`;
 const parseResponseJson = (
   responseContent: string,
 ): AIStepGenerationResponse => {
-  try {
-    return JSON.parse(responseContent) as AIStepGenerationResponse;
-  } catch {
-    const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Invalid response from OpenAI (expected JSON object)');
-    }
-    return JSON.parse(jsonMatch[0]) as AIStepGenerationResponse;
+  const parsed = parseJsonFromText<AIStepGenerationResponse>(responseContent, {
+    preferLast: true,
+  });
+
+  if (!parsed) {
+    throw new Error('Invalid response from OpenAI (expected JSON object)');
   }
+
+  return parsed;
 };
 
 const getToolName = (tool: any): string | undefined =>
