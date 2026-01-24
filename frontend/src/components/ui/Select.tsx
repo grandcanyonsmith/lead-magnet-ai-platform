@@ -122,7 +122,10 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <Listbox.Options className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-input bg-popover py-1 text-sm shadow-md ring-1 ring-black/5 focus:outline-none">
+            <Listbox.Options
+              anchor="bottom start"
+              className="z-50 mt-1 max-h-60 w-[var(--button-width)] overflow-auto rounded-md border border-input bg-popover py-1 text-sm shadow-md ring-1 ring-black/5 focus:outline-none"
+            >
               {resolvedOptions.map((option) => (
                 <Listbox.Option
                   key={option.value}

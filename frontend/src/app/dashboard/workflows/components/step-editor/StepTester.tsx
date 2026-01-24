@@ -6,7 +6,6 @@ import {
   FiStopCircle,
   FiChevronDown,
   FiChevronUp,
-  FiRefreshCw,
   FiCheckCircle,
   FiXCircle,
   FiTrash2,
@@ -29,9 +28,6 @@ export default function StepTester({ step, index }: StepTesterProps) {
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
   const [showStream, setShowStream] = useState(false);
-  const [recentContainers, setRecentContainers] = useState<string[]>([]);
-  const [selectedContainerId, setSelectedContainerId] = useState("");
-  const [isLoadingContainers, setIsLoadingContainers] = useState(false);
   const [testOverrides, setTestOverrides] = useState<Record<string, any>>({});
   const [pollInterval, setPollInterval] = useState<ReturnType<
     typeof setInterval
@@ -57,176 +53,6 @@ export default function StepTester({ step, index }: StepTesterProps) {
       if (pollInterval) clearInterval(pollInterval);
     };
   }, [pollInterval]);
-
-  const loadRecentContainers = React.useCallback(async () => {
-    if (typeof window === "undefined") return;
-    setIsLoadingContainers(true);
-
-    const LOCAL_KEY = "lm_recent_code_interpreter_containers";
-    const maxContainers = 12;
-
-    const loadLocal = () => {
-      try {
-        const raw = window.localStorage.getItem(LOCAL_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return [];
-        return parsed.filter((value) => typeof value === "string" && value.trim());
-      } catch {
-        return [];
-      }
-    };
-
-    const extractFromArtifact = (content: string): string[] => {
-      try {
-        const payload = JSON.parse(content);
-        const logs = Array.isArray(payload?.logs) ? payload.logs : [];
-        const ids = logs
-          .map((log: any) => {
-            if (!log || typeof log !== "object") return null;
-            if (typeof log.container_id === "string" && log.container_id.trim()) {
-              return log.container_id.trim();
-            }
-            if (typeof log.containerId === "string" && log.containerId.trim()) {
-              return log.containerId.trim();
-            }
-            const container = log.container;
-            if (container && typeof container === "object") {
-              const id =
-                (container as any).id ||
-                (container as any).container_id ||
-                (container as any).containerId;
-              if (typeof id === "string" && id.trim()) return id.trim();
-            }
-            return null;
-          })
-          .filter(Boolean) as string[];
-        return ids;
-      } catch {
-        return [];
-      }
-    };
-
-    const localIds = loadLocal();
-    const remoteIds: string[] = [];
-
-    try {
-      const result = await api.artifacts.getArtifacts({
-        artifact_type: "code_executor_logs",
-        limit: 15,
-      });
-      const artifacts = Array.isArray((result as any)?.artifacts)
-        ? (result as any).artifacts
-        : [];
-      const recent = artifacts.slice(0, 6);
-
-      await Promise.all(
-        recent.map(async (artifact: any) => {
-          const id = artifact?.artifact_id || artifact?.id;
-          if (!id) return;
-          try {
-            const content = await api.artifacts.getArtifactContent(id);
-            remoteIds.push(...extractFromArtifact(content));
-          } catch {
-            // ignore per-item fetch errors
-          }
-        }),
-      );
-    } catch {
-      // ignore list errors; fall back to local only
-    }
-
-    const merged = Array.from(
-      new Set([...remoteIds, ...localIds].map((value) => value.trim())),
-    ).filter(Boolean);
-
-    const trimmed = merged.slice(0, maxContainers);
-    setRecentContainers(trimmed);
-
-    try {
-      window.localStorage.setItem(LOCAL_KEY, JSON.stringify(trimmed));
-    } catch {
-      // ignore storage errors
-    }
-
-    setIsLoadingContainers(false);
-  }, []);
-
-  const applyContainerIdToInput = React.useCallback(
-    (containerId: string) => {
-      let inputData: any = {};
-      try {
-        inputData = JSON.parse(testInput);
-      } catch {
-        toast.error("Invalid JSON input. Fix it before selecting a container.");
-        return;
-      }
-
-      if (!containerId) {
-        delete inputData.code_interpreter_container_id;
-        delete inputData.code_interpreter_container;
-        delete inputData.code_interpreter_memory_limit;
-      } else {
-        inputData.code_interpreter_container_id = containerId;
-      }
-
-      setTestInput(JSON.stringify(inputData, null, 2));
-
-      if (containerId) {
-        const LOCAL_KEY = "lm_recent_code_interpreter_containers";
-        try {
-          const raw = window.localStorage.getItem(LOCAL_KEY);
-          const parsed = raw ? JSON.parse(raw) : [];
-          const existing = Array.isArray(parsed)
-            ? parsed.filter((value) => typeof value === "string")
-            : [];
-          const next = [containerId, ...existing.filter((id) => id !== containerId)].slice(
-            0,
-            12,
-          );
-          window.localStorage.setItem(LOCAL_KEY, JSON.stringify(next));
-          setRecentContainers(next);
-        } catch {
-          // ignore storage errors
-        }
-      }
-    },
-    [testInput],
-  );
-
-  useEffect(() => {
-    if (!isOpen) return;
-    loadRecentContainers();
-  }, [isOpen, loadRecentContainers]);
-
-  useEffect(() => {
-    try {
-      const parsed = JSON.parse(testInput);
-      const containerId =
-        typeof parsed?.code_interpreter_container_id === "string"
-          ? parsed.code_interpreter_container_id.trim()
-          : "";
-      const containerObj = parsed?.code_interpreter_container;
-      const containerObjId =
-        containerObj && typeof containerObj === "object"
-          ? String(
-              (containerObj as any).id ||
-                (containerObj as any).container_id ||
-                (containerObj as any).containerId ||
-                "",
-            ).trim()
-          : "";
-      const id = containerId || containerObjId;
-      if (id && id !== selectedContainerId) {
-        setSelectedContainerId(id);
-      }
-      if (!id && selectedContainerId) {
-        setSelectedContainerId("");
-      }
-    } catch {
-      // ignore invalid JSON while user types
-    }
-  }, [testInput, selectedContainerId]);
 
   const handleStopTest = () => {
     if (pollInterval) {
@@ -450,52 +276,6 @@ export default function StepTester({ step, index }: StepTesterProps) {
                 <FiTrash2 className="w-3 h-3" />
                 Clear
               </button>
-            </div>
-            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/60 px-4 py-3">
-              <div className="flex items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-400">
-                <span className="font-medium">Code Interpreter Container</span>
-                <button
-                  type="button"
-                  onClick={loadRecentContainers}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900 px-2 py-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800"
-                  disabled={isLoadingContainers}
-                  title="Refresh recent containers"
-                >
-                  <FiRefreshCw className={`h-3 w-3 ${isLoadingContainers ? "animate-spin" : ""}`} />
-                  {isLoadingContainers ? "Loading..." : "Refresh"}
-                </button>
-              </div>
-              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                <select
-                  value={selectedContainerId}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setSelectedContainerId(value);
-                    applyContainerIdToInput(value);
-                  }}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 px-3 py-2 text-xs text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                >
-                  <option value="">Use default container (auto)</option>
-                  {recentContainers.map((id) => (
-                    <option key={id} value={id}>
-                      {id}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedContainerId("");
-                    applyContainerIdToInput("");
-                  }}
-                  className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                >
-                  Clear
-                </button>
-              </div>
-              <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
-                Selecting a container injects <span className="font-mono">code_interpreter_container_id</span> into the test input JSON.
-              </p>
             </div>
             <div className="relative">
               <textarea

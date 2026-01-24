@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pencil } from "lucide-react";
+import { PencilIcon } from "@heroicons/react/24/outline";
 import { DEFAULT_AI_MODEL } from "@/constants/models";
 import { MergedStep, StepStatus } from "@/types/job";
 import type {
@@ -444,7 +444,7 @@ export function StepMetaRow({
         aria-label={editDisabled ? "Editing locked" : "Edit step"}
         title={editDisabled ? "Editing locked" : "Edit step"}
       >
-        <Pencil className="h-3.5 w-3.5" />
+        <PencilIcon className="h-3.5 w-3.5" />
       </button>
     );
   };

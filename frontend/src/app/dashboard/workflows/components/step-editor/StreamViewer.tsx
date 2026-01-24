@@ -16,7 +16,8 @@ import {
   FiPlay,
   FiPause,
   FiSearch,
-  FiX
+  FiX,
+  FiArrowDown
 } from "react-icons/fi";
 import { authService } from "@/lib/auth";
 import toast from "react-hot-toast";
@@ -42,26 +43,127 @@ interface LogEntry {
 
 const OUTPUT_DELTA_PREFIX = "__OUTPUT_DELTA__";
 
+type LogLevelFilter = "all" | "info" | "warn" | "error";
+
+const formatTimestamp = (timestamp: number) =>
+  new Date(timestamp * 1000).toLocaleTimeString([], {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+
+const formatDuration = (seconds: number) => {
+  if (!Number.isFinite(seconds)) return "0s";
+  const totalSeconds = Math.max(0, Math.round(seconds));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const remainingSeconds = totalSeconds % 60;
+
+  if (hours > 0) return `${hours}h ${minutes}m ${remainingSeconds}s`;
+  if (minutes > 0) return `${minutes}m ${remainingSeconds}s`;
+  return `${remainingSeconds}s`;
+};
+
+const ERROR_TOKENS = [
+  "error",
+  "failed",
+  "exception",
+  "traceback",
+  "fatal",
+  "panic",
+  "stderr",
+];
+const WARN_TOKENS = ["warn", "warning", "⚠️"];
+
+const getLogLevelBucket = (
+  log: Pick<LogEntry, "level" | "message">,
+): Exclude<LogLevelFilter, "all"> => {
+  const levelText = (log.level || "").toLowerCase();
+  const messageText = (log.message || "").toLowerCase();
+
+  if (ERROR_TOKENS.some((token) => messageText.includes(token))) return "error";
+  if (WARN_TOKENS.some((token) => messageText.includes(token))) return "warn";
+  if (levelText.includes("error")) return "error";
+  if (levelText.includes("warn")) return "warn";
+  return "info";
+};
+
+const matchesLevel = (log: LogEntry, filterLevel: LogLevelFilter) => {
+  if (filterLevel === "all") return true;
+  return getLogLevelBucket(log) === filterLevel;
+};
+
+const matchesSearch = (log: LogEntry, query: string) => {
+  const timestamp = formatTimestamp(log.timestamp).toLowerCase();
+  return (
+    log.message.toLowerCase().includes(query) ||
+    log.level.toLowerCase().includes(query) ||
+    timestamp.includes(query)
+  );
+};
+
+const formatLogLine = (log: LogEntry) =>
+  `[${formatTimestamp(log.timestamp)}] [${getLogLevelBucket(log).toUpperCase()}] ${log.message}`;
+
 // -----------------------------------------------------------------------------
 // Log Line Component
 // -----------------------------------------------------------------------------
 
 import { formatLogMessage } from "./LogFormatter";
 
-function LogLine({ log, searchQuery, isMatch, isCurrentMatch, index, onRef }: { 
+function LogLine({
+  log,
+  searchQuery,
+  isMatch,
+  isCurrentMatch,
+  index,
+  onRef,
+  showLineNumbers,
+  showTimestamps,
+  wrapLines,
+}: { 
   log: LogEntry; 
   searchQuery: string;
   isMatch: boolean;
   isCurrentMatch: boolean;
   index: number;
   onRef: (el: HTMLDivElement | null) => void;
+  showLineNumbers: boolean;
+  showTimestamps: boolean;
+  wrapLines: boolean;
 }) {
+  const levelBucket = getLogLevelBucket(log);
+  const levelTextClass =
+    levelBucket === "error"
+      ? "text-red-300"
+      : levelBucket === "warn"
+      ? "text-yellow-300"
+      : "text-gray-300";
+  const levelBadgeClass =
+    levelBucket === "error"
+      ? "border-red-700/70 text-red-200 bg-red-900/30"
+      : levelBucket === "warn"
+      ? "border-yellow-700/70 text-yellow-200 bg-yellow-900/20"
+      : "border-gray-700 text-gray-300 bg-white/5";
+  const levelLabel = levelBucket === "error" ? "ERR" : levelBucket === "warn" ? "WRN" : "INF";
+
+  // Detect Shell Input/Output
+  const isShellInput = log.message.startsWith("💻");
+  const isShellOutput = log.message.startsWith("📤");
+  const isShellError = log.message.startsWith("⚠️");
+
+  // Strip prefixes for display if it's shell input/output
+  const displayMessage = (isShellInput || isShellOutput || isShellError) 
+    ? log.message.substring(2).trim() 
+    : log.message;
+
   // If searching, use the highlighter logic
   const content = useMemo(() => {
     if (searchQuery && isMatch) {
-      const parts = log.message.split(new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+      const parts = displayMessage.split(new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
       return (
-        <span className={log.level === 'error' ? 'text-red-300' : log.level === 'warn' ? 'text-yellow-300' : 'text-gray-300'}>
+        <span className={levelTextClass}>
           {parts.map((part, i) => 
             part.toLowerCase() === searchQuery.toLowerCase() ? (
               <mark key={i} className={`bg-yellow-400 text-gray-900 px-0.5 rounded ${isCurrentMatch ? 'ring-2 ring-yellow-300 ring-offset-1 ring-offset-[#0d1117]' : ''}`}>
@@ -77,31 +179,52 @@ function LogLine({ log, searchQuery, isMatch, isCurrentMatch, index, onRef }: {
     
     // Otherwise use the rich formatter
     return (
-      <div className={log.level === 'error' ? 'text-red-300' : log.level === 'warn' ? 'text-yellow-300' : 'text-gray-300'}>
-        {formatLogMessage(log.message)}
+      <div className={levelTextClass}>
+        {formatLogMessage(displayMessage)}
       </div>
     );
-  }, [log.message, log.level, searchQuery, isMatch, isCurrentMatch]);
+  }, [displayMessage, searchQuery, isMatch, isCurrentMatch, levelTextClass]);
+
+  // Determine background class based on type
+  let bgClass = "";
+  if (log.level === 'error') bgClass = "bg-red-500/10";
+  else if (log.level === 'warn') bgClass = "bg-yellow-500/10";
+  else if (isShellInput) bgClass = "bg-blue-900/20 border-l-2 border-blue-500/50";
+  else if (isShellOutput) bgClass = "bg-emerald-900/10 border-l-2 border-emerald-500/30";
+  else if (isShellError) bgClass = "bg-red-900/10 border-l-2 border-red-500/30";
+  
+  if (isCurrentMatch) bgClass = "bg-blue-500/40";
+  else if (isMatch && !isCurrentMatch) bgClass = "bg-yellow-500/20";
 
   return (
     <div 
       ref={onRef}
       className={`
         flex items-start gap-3 py-0.5 px-4 hover:bg-white/5 transition-colors font-mono text-[13px] leading-6 group
-        ${log.level === 'error' ? 'bg-red-500/10' : ''}
-        ${log.level === 'warn' ? 'bg-yellow-500/10' : ''}
-        ${isCurrentMatch ? 'bg-blue-500/20' : ''}
-        ${isMatch && !isCurrentMatch ? 'bg-yellow-500/10' : ''}
+        ${bgClass}
       `}
     >
-      <div className="flex select-none text-gray-600 text-right w-[24px] shrink-0 opacity-50 group-hover:opacity-100 transition-opacity">
-        {index + 1}
-      </div>
       <div className="flex gap-3 w-full">
-        <span className="text-gray-500 select-none shrink-0 w-[60px] opacity-70">
-          {new Date(log.timestamp * 1000).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' })}
-        </span>
-        <div className="break-all whitespace-pre-wrap w-full border-l border-gray-800 pl-3 min-h-[1.5em]">
+        <div className="flex items-start gap-3 shrink-0">
+          {showLineNumbers && (
+            <div className="flex select-none text-gray-600 text-right w-[28px] opacity-50 group-hover:opacity-100 transition-opacity">
+              {index + 1}
+            </div>
+          )}
+          {showTimestamps && (
+            <span className="text-gray-500 select-none shrink-0 w-[64px] opacity-70">
+              {formatTimestamp(log.timestamp)}
+            </span>
+          )}
+          <span className={`text-[10px] uppercase tracking-[0.1em] border px-1.5 py-0.5 rounded ${levelBadgeClass}`}>
+            {levelLabel}
+          </span>
+        </div>
+        <div
+          className={`w-full border-l border-gray-800 pl-3 min-h-[1.5em] ${
+            wrapLines ? "whitespace-pre-wrap break-words" : "whitespace-pre overflow-x-auto"
+          }`}
+        >
           {content}
         </div>
       </div>
@@ -121,16 +244,21 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
   const [error, setError] = useState<string | null>(null);
   
   // UI State
-  const viewMode: 'split' | 'terminal' | 'preview' = 'split';
+  const [viewMode, setViewMode] = useState<'split' | 'terminal' | 'preview'>('split');
   const [autoScroll, setAutoScroll] = useState(true);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+  const [filterLevel, setFilterLevel] = useState<LogLevelFilter>("all");
+  const [showLineNumbers, setShowLineNumbers] = useState(true);
+  const [showTimestamps, setShowTimestamps] = useState(true);
+  const [wrapLines, setWrapLines] = useState(true);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const matchRefs = useRef<(HTMLDivElement | null)[]>([]);
   const streamedOutputLogIndexRef = useRef<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Connection Logic
   useEffect(() => {
@@ -267,16 +395,29 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
     }
   };
 
-  // Filter logs based on search query
-  const filteredLogs = useMemo(() => {
-    if (!searchQuery.trim()) return logs;
-    const query = searchQuery.toLowerCase();
-    return logs.filter(log => 
-      log.message.toLowerCase().includes(query) ||
-      log.level.toLowerCase().includes(query) ||
-      new Date(log.timestamp * 1000).toLocaleTimeString().toLowerCase().includes(query)
+  const logCounts = useMemo(() => {
+    return logs.reduce(
+      (acc, log) => {
+        acc.all += 1;
+        const bucket = getLogLevelBucket(log);
+        acc[bucket] += 1;
+        return acc;
+      },
+      { all: 0, info: 0, warn: 0, error: 0 }
     );
-  }, [logs, searchQuery]);
+  }, [logs]);
+
+  const levelFilteredLogs = useMemo(() => {
+    if (filterLevel === "all") return logs;
+    return logs.filter((log) => matchesLevel(log, filterLevel));
+  }, [logs, filterLevel]);
+
+  // Filter logs based on level + search query
+  const filteredLogs = useMemo(() => {
+    if (!searchQuery.trim()) return levelFilteredLogs;
+    const query = searchQuery.toLowerCase();
+    return levelFilteredLogs.filter((log) => matchesSearch(log, query));
+  }, [levelFilteredLogs, searchQuery]);
 
   // Find all matching log indices
   const matchingIndices = useMemo(() => {
@@ -285,12 +426,10 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
     return logs
       .map((log, index) => ({ log, index }))
       .filter(({ log }) => 
-        log.message.toLowerCase().includes(query) ||
-        log.level.toLowerCase().includes(query) ||
-        new Date(log.timestamp * 1000).toLocaleTimeString().toLowerCase().includes(query)
+        matchesLevel(log, filterLevel) && matchesSearch(log, query)
       )
       .map(({ index }) => index);
-  }, [logs, searchQuery]);
+  }, [logs, filterLevel, searchQuery]);
 
   // Navigate to next/previous match
   const navigateMatch = useCallback((direction: 'next' | 'prev') => {
@@ -304,10 +443,10 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
     });
   }, [matchingIndices.length]);
 
-  // Reset current match index when search changes
+  // Reset current match index when search or filters change
   useEffect(() => {
     setCurrentMatchIndex(0);
-  }, [searchQuery]);
+  }, [searchQuery, filterLevel]);
 
   // Scroll to current match
   useEffect(() => {
@@ -326,6 +465,28 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
     }
   }, [logs, autoScroll, searchQuery]);
 
+  const scrollToBottom = useCallback(() => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    setAutoScroll(true);
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    const atBottom = distanceFromBottom <= 12;
+
+    if (atBottom && !autoScroll) {
+      setAutoScroll(true);
+      return;
+    }
+
+    if (!atBottom && autoScroll) {
+      setAutoScroll(false);
+    }
+  }, [autoScroll]);
+
   // Keyboard shortcuts for search navigation
   useEffect(() => {
     if (!searchQuery.trim()) return;
@@ -333,6 +494,8 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
       }
       if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey || e.metaKey)) {
         e.preventDefault();
@@ -345,9 +508,34 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
   }, [searchQuery, navigateMatch]);
 
   const copyLogs = () => {
-    const text = logs.map(l => `[${new Date(l.timestamp * 1000).toLocaleTimeString()}] ${l.message}`).join('\n');
+    if (!filteredLogs.length) {
+      toast.error("No logs to copy");
+      return;
+    }
+    const text = filteredLogs.map(formatLogLine).join("\n");
     navigator.clipboard.writeText(text);
-    toast.success("Logs copied");
+    toast.success(`Copied ${filteredLogs.length} log${filteredLogs.length === 1 ? "" : "s"}`);
+  };
+
+  const downloadLogs = (format: "txt" | "json") => {
+    if (!filteredLogs.length) {
+      toast.error("No logs to download");
+      return;
+    }
+    const content =
+      format === "json"
+        ? JSON.stringify(filteredLogs, null, 2)
+        : filteredLogs.map(formatLogLine).join("\n");
+    const blob = new Blob([content], {
+      type: format === "json" ? "application/json" : "text/plain",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    link.href = url;
+    link.download = `stream-logs-${timestamp}.${format}`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const clearLogs = () => {
@@ -358,6 +546,20 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
 
   const hasScreenshot = Boolean(screenshotUrl || screenshotBase64);
   const currentScreenshotSrc = screenshotUrl || (screenshotBase64 ? `data:image/jpeg;base64,${screenshotBase64}` : '');
+  const summaryText = useMemo(() => {
+    if (!logs.length) return "No events yet";
+    const base =
+      filterLevel === "all" && !searchQuery.trim()
+        ? `${logs.length} events`
+        : `Showing ${filteredLogs.length} of ${logs.length}`;
+    const lastLog = logs[logs.length - 1];
+    const spanLabel =
+      logs.length > 1
+        ? `Span ${formatDuration(lastLog.timestamp - logs[0].timestamp)}`
+        : null;
+    const lastLabel = lastLog ? `Last ${formatTimestamp(lastLog.timestamp)}` : null;
+    return [base, spanLabel, lastLabel].filter(Boolean).join(" | ");
+  }, [logs, filterLevel, searchQuery, filteredLogs.length]);
 
   const fakeStep: MergedStep = useMemo(() => ({
     step_order: 1,
@@ -448,83 +650,179 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
               viewMode === 'terminal' ? 'w-full' : 'hidden'
           }`}>
              {/* Console Toolbar */}
-             <div className="flex flex-col gap-2 px-3 py-2 bg-[#161b22] border-b border-gray-800 text-xs select-none">
-               <div className="flex items-center justify-between">
-                 <span className="font-mono font-semibold text-gray-400 flex items-center gap-2">
-                   <FiTerminal /> Console Output
-                 </span>
-                 <div className="flex items-center gap-1">
-                   <button 
-                      onClick={() => setAutoScroll(!autoScroll)}
-                      className={`flex items-center gap-1.5 px-2 py-1 rounded transition-colors ${autoScroll ? 'text-green-400 bg-green-900/20' : 'text-gray-500 hover:text-gray-300'}`}
+             <div className="flex flex-col gap-3 px-3 py-2 bg-[#161b22] border-b border-gray-800 text-xs select-none">
+               <div className="flex flex-wrap items-center justify-between gap-2">
+                 <div className="flex items-center gap-3">
+                   <span className="font-mono font-semibold text-gray-300 flex items-center gap-2">
+                     <FiTerminal /> Console Output
+                   </span>
+                   <span className="text-[11px] text-gray-500">{summaryText}</span>
+                 </div>
+                 <div className="flex items-center gap-2">
+                   <button
+                      onClick={() => setViewMode(viewMode === 'terminal' ? 'split' : 'terminal')}
+                      className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
+                      title={viewMode === 'terminal' ? "Minimize Console" : "Maximize Console"}
                    >
-                     {autoScroll ? <FiPlay className="w-3 h-3" /> : <FiPause className="w-3 h-3" />}
-                     Auto-scroll
+                      {viewMode === 'terminal' ? <FiMinimize2 className="w-3.5 h-3.5" /> : <FiMaximize2 className="w-3.5 h-3.5" />}
                    </button>
                    <div className="w-px h-3 bg-gray-700 mx-1" />
-                   <button onClick={copyLogs} className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Copy Logs">
-                     <FiCopy className="w-3.5 h-3.5" />
+                   <button 
+                      onClick={() => setAutoScroll(!autoScroll)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-colors ${
+                        autoScroll
+                          ? "text-emerald-300 bg-emerald-900/20 border-emerald-800/70"
+                          : "text-gray-400 border-gray-700 hover:text-gray-200 hover:border-gray-600"
+                      }`}
+                      title={autoScroll ? "Stick to bottom" : "Manual scroll"}
+                   >
+                     {autoScroll ? <FiPlay className="w-3 h-3" /> : <FiPause className="w-3 h-3" />}
+                     {autoScroll ? "Stick to bottom" : "Manual scroll"}
                    </button>
-                   <button onClick={clearLogs} className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors" title="Clear Logs">
-                     <FiTrash2 className="w-3.5 h-3.5" />
-                   </button>
+                  {!autoScroll && (
+                    <button
+                      onClick={scrollToBottom}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600 transition-colors"
+                      title="Jump to latest"
+                    >
+                      <FiArrowDown className="w-3 h-3" />
+                      Jump to latest
+                    </button>
+                  )}
+                   <div className="flex items-center gap-1 rounded-md border border-gray-700/70 bg-[#0d1117] px-1 py-0.5">
+                     <button onClick={copyLogs} className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Copy visible logs">
+                       <FiCopy className="w-3.5 h-3.5" />
+                     </button>
+                     <button onClick={() => downloadLogs("txt")} className="flex items-center gap-1 px-2 py-1 text-[11px] text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Download visible logs (.txt)">
+                       <FiDownload className="w-3.5 h-3.5" />
+                       TXT
+                     </button>
+                     <button onClick={() => downloadLogs("json")} className="px-2 py-1 text-[11px] font-mono text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors" title="Download visible logs (.json)">
+                       JSON
+                     </button>
+                     <button onClick={clearLogs} className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors" title="Clear Logs">
+                       <FiTrash2 className="w-3.5 h-3.5" />
+                     </button>
+                   </div>
                  </div>
                </div>
                
-               {/* Search Bar */}
-               <div className="flex items-center gap-2">
-                 <div className="relative flex-1">
-                   <FiSearch className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-                   <input
-                     type="text"
-                     value={searchQuery}
-                     onChange={(e) => setSearchQuery(e.target.value)}
-                     placeholder="Search logs..."
-                     className="w-full pl-8 pr-8 py-1.5 bg-[#0d1117] border border-gray-700 rounded text-gray-200 placeholder-gray-500 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                   />
-                   {searchQuery && (
+               <div className="flex flex-wrap items-center gap-2">
+                 <div className="flex items-center gap-1">
+                   {[
+                     { value: "all", label: "All", count: logCounts.all, accent: "text-gray-300" },
+                     { value: "info", label: "Info", count: logCounts.info, accent: "text-blue-300" },
+                     { value: "warn", label: "Warn", count: logCounts.warn, accent: "text-yellow-300" },
+                     { value: "error", label: "Error", count: logCounts.error, accent: "text-red-300" },
+                   ].map((option) => (
                      <button
-                       onClick={() => setSearchQuery("")}
-                       className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-500 hover:text-gray-300 rounded"
-                       title="Clear search"
+                       key={option.value}
+                       onClick={() => setFilterLevel(option.value as LogLevelFilter)}
+                       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] transition-colors ${
+                         filterLevel === option.value
+                           ? "border-blue-500/70 text-blue-200 bg-blue-500/10"
+                           : "border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600"
+                       }`}
+                       title={`Show ${option.label.toLowerCase()} logs`}
                      >
-                       <FiX className="w-3.5 h-3.5" />
+                       <span className={option.accent}>{option.label}</span>
+                       <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[10px] text-gray-300">
+                         {option.count}
+                       </span>
                      </button>
+                   ))}
+                 </div>
+
+                 {/* Search Bar */}
+                <div className="flex items-center gap-2 ml-auto">
+                  <div className="flex items-center gap-1 rounded-md border border-gray-700 bg-[#0d1117] px-1 py-0.5 text-[11px] text-gray-400">
+                    <span className="px-1 text-gray-500">View</span>
+                    <button
+                      onClick={() => setWrapLines((prev) => !prev)}
+                      aria-pressed={wrapLines}
+                      className={`px-2 py-1 rounded transition-colors ${
+                        wrapLines ? "text-blue-200 bg-blue-500/10" : "text-gray-400 hover:text-gray-200"
+                      }`}
+                      title={wrapLines ? "Disable line wrapping" : "Enable line wrapping"}
+                    >
+                      Wrap
+                    </button>
+                    <button
+                      onClick={() => setShowTimestamps((prev) => !prev)}
+                      aria-pressed={showTimestamps}
+                      className={`px-2 py-1 rounded transition-colors ${
+                        showTimestamps ? "text-blue-200 bg-blue-500/10" : "text-gray-400 hover:text-gray-200"
+                      }`}
+                      title={showTimestamps ? "Hide timestamps" : "Show timestamps"}
+                    >
+                      Time
+                    </button>
+                    <button
+                      onClick={() => setShowLineNumbers((prev) => !prev)}
+                      aria-pressed={showLineNumbers}
+                      className={`px-2 py-1 rounded transition-colors ${
+                        showLineNumbers ? "text-blue-200 bg-blue-500/10" : "text-gray-400 hover:text-gray-200"
+                      }`}
+                      title={showLineNumbers ? "Hide line numbers" : "Show line numbers"}
+                    >
+                      Line #
+                    </button>
+                  </div>
+                  <div className="relative min-w-[220px]">
+                     <FiSearch className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                     <input
+                      ref={searchInputRef}
+                       type="text"
+                       value={searchQuery}
+                       onChange={(e) => setSearchQuery(e.target.value)}
+                       placeholder="Search logs, levels, timestamps..."
+                       className="w-full pl-8 pr-8 py-1.5 bg-[#0d1117] border border-gray-700 rounded text-gray-200 placeholder-gray-500 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                     />
+                     {searchQuery && (
+                       <button
+                         onClick={() => setSearchQuery("")}
+                         className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-500 hover:text-gray-300 rounded"
+                         title="Clear search"
+                       >
+                         <FiX className="w-3.5 h-3.5" />
+                       </button>
+                     )}
+                   </div>
+                   {searchQuery.trim() && matchingIndices.length > 0 && (
+                     <div className="flex items-center gap-1 text-gray-500">
+                       <button
+                         onClick={() => navigateMatch('prev')}
+                         className="px-2 py-1 hover:bg-white/10 rounded transition-colors"
+                         title="Previous match (Shift+Enter)"
+                       >
+                         ↑
+                       </button>
+                       <span className="text-[10px] min-w-[45px] text-center">
+                         {currentMatchIndex + 1}/{matchingIndices.length}
+                       </span>
+                       <button
+                         onClick={() => navigateMatch('next')}
+                         className="px-2 py-1 hover:bg-white/10 rounded transition-colors"
+                         title="Next match (Enter)"
+                       >
+                         ↓
+                       </button>
+                     </div>
+                   )}
+                   {searchQuery.trim() && matchingIndices.length === 0 && (
+                     <span className="text-[10px] text-gray-500">No matches</span>
                    )}
                  </div>
-                 {searchQuery.trim() && matchingIndices.length > 0 && (
-                   <div className="flex items-center gap-1 text-gray-500">
-                     <button
-                       onClick={() => navigateMatch('prev')}
-                       className="px-2 py-1 hover:bg-white/10 rounded transition-colors"
-                       title="Previous match (Shift+Enter)"
-                     >
-                       ↑
-                     </button>
-                     <span className="text-[10px] min-w-[45px] text-center">
-                       {currentMatchIndex + 1}/{matchingIndices.length}
-                     </span>
-                     <button
-                       onClick={() => navigateMatch('next')}
-                       className="px-2 py-1 hover:bg-white/10 rounded transition-colors"
-                       title="Next match (Enter)"
-                     >
-                       ↓
-                     </button>
-                   </div>
-                 )}
-                 {searchQuery.trim() && matchingIndices.length === 0 && (
-                   <span className="text-[10px] text-gray-500">No matches</span>
-                 )}
                </div>
              </div>
              
              <div 
                ref={scrollRef}
+              onScroll={handleScroll}
                className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
              >
                <div className="space-y-0.5">
-                 {(searchQuery.trim() ? filteredLogs : logs).map((log, i) => {
+                {filteredLogs.map((log) => {
                    const originalIndex = logs.indexOf(log);
                    const isMatch = searchQuery.trim() ? matchingIndices.includes(originalIndex) : false;
                    const isCurrentMatch = isMatch && matchingIndices[currentMatchIndex] === originalIndex;
@@ -537,6 +835,9 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
                        isMatch={isMatch}
                        isCurrentMatch={isCurrentMatch}
                        index={originalIndex}
+                       showLineNumbers={showLineNumbers}
+                       showTimestamps={showTimestamps}
+                       wrapLines={wrapLines}
                        onRef={(el) => {
                          matchRefs.current[originalIndex] = el;
                        }}
@@ -549,10 +850,14 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
                      <span className="text-sm">Ready to connect...</span>
                    </div>
                  )}
-                {logs.length > 0 && searchQuery.trim() && filteredLogs.length === 0 && (
+                {logs.length > 0 && filteredLogs.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-40 text-gray-600 gap-2">
                     <FiSearch className="w-8 h-8 opacity-20" />
-                    <span className="text-sm">No logs match &quot;{searchQuery}&quot;</span>
+                    {searchQuery.trim() ? (
+                      <span className="text-sm">No logs match &quot;{searchQuery}&quot;</span>
+                    ) : (
+                      <span className="text-sm">No {filterLevel === "all" ? "" : `${filterLevel} `}logs in view</span>
+                    )}
                   </div>
                 )}
                </div>
@@ -578,6 +883,14 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
                </div>
                {hasScreenshot && (
                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setViewMode(viewMode === 'preview' ? 'split' : 'preview')}
+                      className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                      title={viewMode === 'preview' ? "Split View" : "Expand Preview"}
+                    >
+                      {viewMode === 'preview' ? <FiMinimize2 className="w-3.5 h-3.5" /> : <FiMaximize2 className="w-3.5 h-3.5" />}
+                    </button>
+                    <div className="w-px h-3 bg-gray-200 dark:bg-gray-700 mx-1" />
                     <button
                       onClick={() => setIsPreviewOpen(true)}
                       className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"

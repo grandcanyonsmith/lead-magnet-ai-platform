@@ -6,7 +6,7 @@ import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
-import { Check, Plus, Trash2 } from "lucide-react";
+import { FiPlus, FiTrash2 } from "react-icons/fi";
 import { useAIModels } from "@/hooks/api/useWorkflows";
 import { REASONING_EFFORT_LABELS, SERVICE_TIER_LABELS } from "@/utils/stepMeta";
 import type { AIModel, ImageGenerationSettings, ServiceTier } from "@/types/workflow";
@@ -456,7 +456,7 @@ export function ToolsPanel({
                     className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded"
                     title="Remove tool"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <FiTrash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               );
@@ -466,11 +466,11 @@ export function ToolsPanel({
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Select
               value={newToolName}
               onChange={(val) => setNewToolName(val)}
-              className="h-8 flex-1"
+              className="h-8 w-full sm:flex-1"
               placeholder="Select tool to add..."
             >
               <option value="">Select tool...</option>
@@ -484,9 +484,9 @@ export function ToolsPanel({
               variant="outline"
               onClick={handleAddTool}
               disabled={!newToolName}
-              className="h-8 px-2"
+              className="h-8 w-full sm:w-auto px-2"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <FiPlus className="w-3.5 h-3.5" />
             </Button>
           </div>
 
