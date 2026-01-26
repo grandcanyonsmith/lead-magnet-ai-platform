@@ -31,7 +31,7 @@ from services.workflow_orchestrator import WorkflowOrchestrator
 from services.job_completion_service import JobCompletionService
 from services.job_error_handler import JobErrorHandler
 from services.data_loader_service import DataLoaderService
-from dependency_resolver import resolve_execution_groups, validate_dependencies
+from services.dependency_resolver import DependencyResolver
 from core import log_context
 
 logger = logging.getLogger(__name__)
@@ -133,7 +133,7 @@ class JobProcessor:
         """
         try:
             # Validate dependencies first
-            is_valid, errors = validate_dependencies(steps)
+            is_valid, errors = DependencyResolver.validate_dependencies(steps)
             if not is_valid:
                 error_preview = errors[:10]
                 logger.error(
@@ -148,7 +148,7 @@ class JobProcessor:
                 # Continue anyway for backward compatibility
             
             # Resolve execution groups
-            execution_plan = resolve_execution_groups(steps)
+            execution_plan = DependencyResolver.resolve_execution_groups(steps)
             
             logger.info(f"[JobProcessor] Resolved execution plan", extra={
                 'total_steps': execution_plan['totalSteps'],
@@ -316,7 +316,7 @@ class JobProcessor:
             
             # Validate workflow has steps and valid dependencies
             self._validate_workflow_steps(workflow)
-            is_valid, errors = validate_dependencies(workflow.get('steps', []))
+            is_valid, errors = DependencyResolver.validate_dependencies(workflow.get('steps', []))
             if not is_valid:
                 error_msg = f"Invalid workflow dependencies: {'; '.join(errors)}"
                 logger.error(error_msg)
@@ -438,7 +438,7 @@ class JobProcessor:
         
         # Validate dependencies if steps are present
         if steps:
-            is_valid, errors = validate_dependencies(steps)
+            is_valid, errors = DependencyResolver.validate_dependencies(steps)
             if not is_valid:
                 error_msg = f"Invalid workflow dependencies: {'; '.join(errors)}"
                 logger.error(error_msg)

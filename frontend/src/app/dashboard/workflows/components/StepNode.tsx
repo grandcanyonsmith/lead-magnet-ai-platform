@@ -1,0 +1,295 @@
+"use client";
+
+import { memo } from "react";
+import { Handle, Position, NodeProps } from "reactflow";
+import { WorkflowStep } from "@/types/workflow";
+import {
+  FiZap,
+  FiSearch,
+  FiImage,
+  FiCode,
+  FiFile,
+  FiMonitor,
+  FiAlertCircle,
+  FiMove,
+  FiCheckCircle,
+  FiArrowRightCircle,
+  FiLayers,
+} from "react-icons/fi";
+
+export interface StepNodeData {
+  step: WorkflowStep;
+  index: number;
+  onClick: () => void;
+  onHover?: (isHovering: boolean) => void;
+  isActive?: boolean;
+  isHovered?: boolean;
+  isDropTarget?: boolean;
+  isDragging?: boolean;
+  warnings?: string[];
+  animateIn?: boolean;
+  subSteps?: WorkflowStep[]; // For recursive rendering
+}
+
+const MODEL_STYLES: Record<
+  string,
+  {
+    badge: string;
+    accent: string;
+  }
+> = {
+  "gpt-5": {
+    badge: "bg-blue-100 text-blue-800 border-blue-300",
+    accent: "from-blue-100/70",
+  },
+  "gpt-5.2": {
+    badge: "bg-blue-100 text-blue-800 border-blue-300",
+    accent: "from-blue-100/70",
+  },
+  "gpt-4.1": {
+    badge: "bg-indigo-100 text-indigo-800 border-indigo-300",
+    accent: "from-indigo-100/70",
+  },
+  "gpt-4-turbo": {
+    badge: "bg-teal-100 text-teal-800 border-teal-300",
+    accent: "from-teal-100/70",
+  },
+  "gpt-3.5-turbo": {
+    badge: "bg-slate-100 text-slate-800 border-slate-300",
+    accent: "from-slate-100/70",
+  },
+  "computer-use-preview": {
+    badge: "bg-amber-100 text-amber-800 border-amber-300",
+    accent: "from-amber-100/70",
+  },
+  "o4-mini-deep-research": {
+    badge: "bg-purple-100 text-purple-800 border-purple-300",
+    accent: "from-purple-100/70",
+  },
+};
+
+const TOOL_ICONS: Record<
+  string,
+  { icon: typeof FiZap; label: string; tint: string }
+> = {
+  web_search: {
+    icon: FiSearch,
+    label: "Web Search",
+    tint: "bg-blue-100 text-blue-600",
+  },
+  image_generation: {
+    icon: FiImage,
+    label: "Image Generation",
+    tint: "bg-violet-100 text-violet-600",
+  },
+  computer_use_preview: {
+    icon: FiMonitor,
+    label: "Computer Use",
+    tint: "bg-amber-100 text-amber-600",
+  },
+  file_search: {
+    icon: FiFile,
+    label: "File Search",
+    tint: "bg-emerald-100 text-emerald-600",
+  },
+  code_interpreter: {
+    icon: FiCode,
+    label: "Code Interpreter",
+    tint: "bg-slate-100 text-slate-600",
+  },
+};
+
+function StepNode({ data }: NodeProps<StepNodeData>) {
+  const {
+    step,
+    index,
+    onClick,
+    onHover,
+    isActive,
+    isHovered,
+    isDropTarget,
+    isDragging,
+    warnings = [],
+    animateIn,
+    subSteps,
+  } = data;
+
+  const modelStyle = MODEL_STYLES[step.model] || MODEL_STYLES["gpt-5.2"];
+  const tools = step.tools || [];
+  const hasTools = tools.length > 0;
+  const hasWarnings = warnings.length > 0;
+  const isHandoff = Boolean(step.handoff_workflow_id);
+
+  const handleKeyPress = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onClick();
+    }
+  };
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={isActive}
+      onClick={onClick}
+      onKeyDown={handleKeyPress}
+      onMouseEnter={() => onHover?.(true)}
+      onMouseLeave={() => onHover?.(false)}
+      className={[
+        "group relative w-[260px] max-w-[280px] cursor-pointer select-none rounded-2xl border transition-all duration-200",
+        "bg-white/90 dark:bg-card/90 backdrop-blur-sm px-4 pb-4 pt-3 shadow-[0_12px_30px_-15px_rgba(30,64,175,0.45)] dark:shadow-[0_12px_30px_-15px_rgba(0,0,0,0.6)]",
+        isActive
+          ? "border-primary-200 dark:border-primary/50 ring-2 ring-primary-300 dark:ring-primary/40 shadow-primary-200/70 dark:shadow-primary/30"
+          : "border-slate-200 dark:border-border hover:border-primary-200 dark:hover:border-primary/50 hover:ring-1 hover:ring-primary-200/70 dark:hover:ring-primary/30",
+        isHovered ? "translate-y-[-2px]" : "",
+        isDropTarget
+          ? "border-dashed border-primary-400 dark:border-primary shadow-[0_0_35px_-20px,#2563eb] dark:shadow-[0_0_35px_-20px,rgba(59,130,246,0.6)]"
+          : "",
+        isDragging
+          ? "scale-[1.02] shadow-xl shadow-primary-200/60 dark:shadow-primary/40 opacity-95"
+          : "",
+        animateIn ? "flow-node-animate-in" : "",
+      ].join(" ")}
+    >
+      <div
+        className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${modelStyle.accent} to-white dark:to-card opacity-70 dark:opacity-50`}
+      />
+
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="h-3 w-3 rounded-full border-2 border-white bg-primary-500"
+      />
+
+      <div className="relative z-10 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-muted-foreground">
+            Step {index + 1}
+            {isActive && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 dark:bg-primary/20 px-2 py-0.5 text-[10px] font-semibold text-primary-700 dark:text-primary-300">
+                <FiCheckCircle className="h-3 w-3" aria-hidden />
+                Active
+              </span>
+            )}
+            {isDropTarget && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                Drop Here
+              </span>
+            )}
+          </span>
+          <button
+            className="flow-node-drag-handle inline-flex items-center gap-1 rounded-full bg-white/70 dark:bg-card/70 px-2 py-1 text-[11px] font-medium text-slate-500 dark:text-muted-foreground shadow-sm transition-colors hover:text-slate-700 dark:hover:text-foreground"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+            aria-label={`Drag step ${index + 1}`}
+          >
+            <FiMove className="h-4 w-4" aria-hidden />
+            <span className="sr-only">Drag</span>
+          </button>
+        </div>
+
+        <div className="space-y-1">
+          <h3 className="line-clamp-1 text-base font-semibold text-slate-900 dark:text-foreground">
+            {step.step_name || `Step ${index + 1}`}
+          </h3>
+          <p className="line-clamp-1 text-sm text-slate-500 dark:text-muted-foreground">
+            {step.step_description || "No description provided yet."}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${modelStyle.badge} dark:opacity-80`}
+          >
+            {step.model === "computer-use-preview"
+              ? "Computer Use Preview"
+              : step.model.replace("gpt-", "GPT-").replace("turbo", "Turbo")}
+          </span>
+        </div>
+
+        {hasTools && (
+          <div className="flex items-center gap-1 rounded-xl bg-slate-50/80 dark:bg-secondary/50 px-2.5 py-2 text-[11px] text-slate-500 dark:text-muted-foreground">
+            {tools.slice(0, 4).map((tool, idx) => {
+              const toolKey = typeof tool === "string" ? tool : tool.type;
+              const toolMeta = TOOL_ICONS[toolKey] || {
+                icon: FiZap,
+                label: toolKey,
+                tint: "bg-slate-100 text-slate-600",
+              };
+              const Icon = toolMeta.icon;
+              return (
+                <span
+                  key={`${toolKey}-${idx}`}
+                  className={`inline-flex items-center justify-center rounded-full px-2 py-1 font-medium ${toolMeta.tint}`}
+                  title={toolMeta.label}
+                >
+                  <Icon className="h-3.5 w-3.5" aria-hidden />
+                </span>
+              );
+            })}
+            {tools.length > 4 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-200/70 dark:bg-secondary px-2 py-1 font-medium text-slate-600 dark:text-muted-foreground">
+                +{tools.length - 4}
+              </span>
+            )}
+          </div>
+        )}
+
+        {isHandoff && (
+          <div className="flex items-center gap-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 px-3 py-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/30">
+            <FiArrowRightCircle className="h-4 w-4" />
+            <span>Handoff to Workflow</span>
+          </div>
+        )}
+
+        {/* Recursive Sub-steps Visualization */}
+        {subSteps && subSteps.length > 0 && (
+          <div className="mt-2 rounded-xl bg-slate-100/50 dark:bg-slate-800/50 p-2 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
+              <FiLayers className="h-3 w-3" />
+              Nested Steps ({subSteps.length})
+            </div>
+            <div className="flex gap-1 overflow-hidden">
+              {subSteps.slice(0, 3).map((subStep, i) => (
+                <div
+                  key={i}
+                  className="h-1.5 flex-1 rounded-full bg-slate-300 dark:bg-slate-600"
+                  title={subStep.step_name}
+                />
+              ))}
+              {subSteps.length > 3 && (
+                <div className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
+              )}
+            </div>
+          </div>
+        )}
+
+        {hasWarnings && (
+          <div className="space-y-1 rounded-xl bg-rose-50 dark:bg-rose-900/20 px-3 py-2 text-[11px] text-rose-600 dark:text-rose-400 shadow-inner shadow-rose-100/60 dark:shadow-rose-900/30">
+            <div className="flex items-center gap-2 font-semibold uppercase tracking-wide text-rose-500 dark:text-rose-400">
+              <FiAlertCircle className="h-4 w-4" aria-hidden />
+              Attention Needed
+            </div>
+            <p className="text-[11px]">{warnings[0]}</p>
+            {warnings.length > 1 && (
+              <p className="text-[10px] text-rose-400">
+                +{warnings.length - 1} more
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/30 shadow-inner shadow-white/30 transition-opacity group-hover:opacity-100" />
+
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="h-3 w-3 rounded-full border-2 border-white bg-primary-500"
+      />
+    </div>
+  );
+}
+
+export default memo(StepNode);

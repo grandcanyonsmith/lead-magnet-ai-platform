@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAIGeneration } from "@/hooks/useAIGeneration";
 import { useWorkflowForm } from "@/hooks/useWorkflowForm";
@@ -9,29 +9,26 @@ import { useWorkflowGenerationStatus } from "@/hooks/useWorkflowGenerationStatus
 import { useSettings, useUpdateSettings } from "@/hooks/api/useSettings";
 import { useWorkflowIdeation } from "@/hooks/useWorkflowIdeation";
 import { useAIModels } from "@/hooks/api/useWorkflows";
-import { api } from "@/lib/api";
-import {
-  AIModel,
-  ICPProfile,
-  WorkflowIdeationMessage,
-} from "@/types";
+import { AIModel, ICPProfile, WorkflowIdeationMessage } from "@/types";
 import { DEFAULT_AI_MODEL } from "@/constants/models";
-import {
-  ChatMessage,
-  createChatId,
-  createInitialChatMessages,
-  createIcpId,
-  IdeationDraft,
-  IdeationDraftKey,
-  DEFAULT_IDEATION_DRAFT,
-  IDEATION_STEPS,
-} from "../constants";
+import { ChatMessage, createChatId, createIcpId, IDEATION_STEPS } from "../constants";
+
+import { useWizardState } from "./useWizardState";
+import { useChatState } from "./useChatState";
+import { useIcpState } from "./useIcpState";
+import { useMockupState } from "./useMockupState";
 
 export type WizardStep = "choice" | "prompt" | "chat" | "form" | "creating";
 
 export function useNewWorkflowState() {
   const router = useRouter();
   
+  // Sub-hooks
+  const wizard = useWizardState();
+  const chat = useChatState();
+  const icp = useIcpState();
+  const mockups = useMockupState();
+
   // UI State
   const [step, setStep] = useState<WizardStep>("choice");
   const [prompt, setPrompt] = useState("");
@@ -40,37 +37,12 @@ export function useNewWorkflowState() {
   // Generation State
   const [generationJobId, setGenerationJobId] = useState<string | null>(null);
   const [generatedTemplateId, setGeneratedTemplateId] = useState<string | null>(null);
-  
-  // Chat & Ideation State
-  const [chatInput, setChatInput] = useState("");
-  const [isChatSetupComplete, setIsChatSetupComplete] = useState(false);
-  const [chatSetupStep, setChatSetupStep] = useState(0);
-  const [ideationDraft, setIdeationDraft] = useState<IdeationDraft>(DEFAULT_IDEATION_DRAFT);
-  const [chatSetupError, setChatSetupError] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => createInitialChatMessages());
-  const [selectedDeliverableId, setSelectedDeliverableId] = useState<string | null>(null);
-  
-  // Mockups State
-  const [mockupImages, setMockupImages] = useState<string[]>([]);
-  const [isGeneratingMockups, setIsGeneratingMockups] = useState(false);
-  const [mockupError, setMockupError] = useState<string | null>(null);
-  
-  // ICP State
-  const [selectedIcpProfileId, setSelectedIcpProfileId] = useState<string>("");
-  const [icpProfileName, setIcpProfileName] = useState("");
-  const [icpProfileError, setIcpProfileError] = useState<string | null>(null);
-  const [isIcpResearching, setIsIcpResearching] = useState(false);
-  const [icpResearchError, setIcpResearchError] = useState<string | null>(null);
-
-  // Refs
-  const chatScrollRef = useRef<HTMLDivElement | null>(null);
-  const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Hooks
   const aiGeneration = useAIGeneration();
   const ideation = useWorkflowIdeation();
   const workflowForm = useWorkflowForm();
-  const { settings, refetch: refetchSettings } = useSettings();
+  const { settings } = useSettings();
   const { updateSettings, loading: isUpdatingSettings } = useUpdateSettings();
   const { models: aiModels } = useAIModels();
   
@@ -101,42 +73,18 @@ export function useNewWorkflowState() {
     return (aiModels[0]?.id || DEFAULT_AI_MODEL) as AIModel;
   }, [aiModels, settings?.default_ai_model]);
 
-  const totalWizardSteps = IDEATION_STEPS.length;
-  const isWizardReview = chatSetupStep >= totalWizardSteps;
-  const currentWizardStep = IDEATION_STEPS[chatSetupStep];
-  const wizardProgress = totalWizardSteps === 0 ? 0 : Math.min(chatSetupStep + 1, totalWizardSteps) / totalWizardSteps;
+  const chatErrors = [wizard.chatSetupError, ideation.error].filter(Boolean) as string[];
   
-  const hasWizardCore = Boolean(ideationDraft.icp.trim() && ideationDraft.pain.trim() && ideationDraft.outcome.trim());
-  
-  const chatErrors = [chatSetupError, ideation.error].filter(Boolean) as string[];
-  
-  const icpProfiles = useMemo(() => 
-    Array.isArray(settings?.icp_profiles) ? settings.icp_profiles : [], 
-    [settings?.icp_profiles]
-  );
-  
-  const selectedIcpProfile = useMemo(() => 
-    icpProfiles.find((profile) => profile.id === selectedIcpProfileId),
-    [icpProfiles, selectedIcpProfileId]
-  );
-  
-  const selectedIcpResearchStatus = selectedIcpProfile?.research_status || 
-    (selectedIcpProfile?.research_report ? "completed" : undefined);
-
-  const wizardStepValue = !isWizardReview && currentWizardStep ? ideationDraft[currentWizardStep.key] : "";
-  
-  const showWizardHint = Boolean(!isWizardReview && currentWizardStep?.hint && wizardStepValue.toLowerCase().includes("not sure"));
-
   const contextItems = useMemo(() => {
     const items: Array<{ label: string; value: string }> = [];
-    if (ideationDraft.icp.trim()) items.push({ label: "ICP", value: ideationDraft.icp });
-    if (ideationDraft.pain.trim()) items.push({ label: "Pain", value: ideationDraft.pain });
-    if (ideationDraft.outcome.trim()) items.push({ label: "Outcome", value: ideationDraft.outcome });
-    if (ideationDraft.offer.trim()) items.push({ label: "Offer", value: ideationDraft.offer });
-    if (ideationDraft.constraints.trim()) items.push({ label: "Constraints", value: ideationDraft.constraints });
-    if (ideationDraft.examples.trim()) items.push({ label: "Examples", value: ideationDraft.examples });
+    if (wizard.ideationDraft.icp.trim()) items.push({ label: "ICP", value: wizard.ideationDraft.icp });
+    if (wizard.ideationDraft.pain.trim()) items.push({ label: "Pain", value: wizard.ideationDraft.pain });
+    if (wizard.ideationDraft.outcome.trim()) items.push({ label: "Outcome", value: wizard.ideationDraft.outcome });
+    if (wizard.ideationDraft.offer.trim()) items.push({ label: "Offer", value: wizard.ideationDraft.offer });
+    if (wizard.ideationDraft.constraints.trim()) items.push({ label: "Constraints", value: wizard.ideationDraft.constraints });
+    if (wizard.ideationDraft.examples.trim()) items.push({ label: "Examples", value: wizard.ideationDraft.examples });
     return items;
-  }, [ideationDraft]);
+  }, [wizard.ideationDraft]);
 
   // Effects
   useEffect(() => {
@@ -150,73 +98,9 @@ export function useNewWorkflowState() {
   }, [generationStatus.status, generationStatus.workflowId, generationStatus.error]);
 
   // Actions
-  const updateDraftField = (key: IdeationDraftKey, value: string) => {
-    setIdeationDraft((prev) => ({ ...prev, [key]: value }));
-    setChatSetupError(null);
-  };
-
-  const appendDraftValue = (key: IdeationDraftKey, value: string) => {
-    setIdeationDraft((prev) => {
-      const current = prev[key].trim();
-      if (!current || value.toLowerCase() === "not sure") {
-        return { ...prev, [key]: value };
-      }
-      if (current.toLowerCase().includes(value.toLowerCase())) {
-        return prev;
-      }
-      return { ...prev, [key]: `${current}, ${value}` };
-    });
-    setChatSetupError(null);
-  };
-
-  const setDraftPreset = (key: IdeationDraftKey, value: string) => {
-    setIdeationDraft((prev) => ({ ...prev, [key]: value }));
-    setChatSetupError(null);
-  };
-
-  const focusChatInput = () => {
-    requestAnimationFrame(() => {
-      chatInputRef.current?.focus();
-    });
-  };
-
-  const applyChatSuggestion = (value: string) => {
-    setChatInput((prev) => {
-      const trimmed = prev.trim();
-      if (!trimmed) return value;
-      if (trimmed.endsWith(value)) return trimmed;
-      return `${trimmed} ${value}`;
-    });
-    focusChatInput();
-  };
-
-  const applyStarterPrompt = (value: string) => {
-    setChatInput(value);
-    focusChatInput();
-  };
-
-  const handleWizardNext = () => {
-    if (isWizardReview) return;
-    const currentKey = currentWizardStep.key;
-    const currentValue = ideationDraft[currentKey].trim();
-    if (!currentValue) {
-      if (["icp", "pain", "outcome"].includes(currentKey)) {
-        setChatSetupError("Please provide an answer or select 'Not sure'");
-        return;
-      }
-    }
-    setChatSetupError(null);
-    setChatSetupStep((prev) => prev + 1);
-  };
-
-  const handleWizardBack = () => {
-    setChatSetupError(null);
-    setChatSetupStep((prev) => Math.max(0, prev - 1));
-  };
-
   const handleSkipWizard = () => {
-    setChatSetupError(null);
-    setIsChatSetupComplete(true);
+    wizard.setChatSetupError(null);
+    wizard.setIsChatSetupComplete(true);
     const context = contextItems.map((item) => `${item.label}: ${item.value}`).join("\n");
     if (context.trim()) {
       const contextMsg: ChatMessage = {
@@ -224,7 +108,7 @@ export function useNewWorkflowState() {
         role: "user",
         content: `Here is my context:\n${context}`,
       };
-      setChatMessages((prev) => {
+      chat.setChatMessages((prev) => {
         if (prev.some((m) => m.content.includes("Here is my context"))) return prev;
         return [...prev, contextMsg];
       });
@@ -232,11 +116,11 @@ export function useNewWorkflowState() {
   };
 
   const handleGenerateFromWizard = async () => {
-    if (!hasWizardCore) {
-      setChatSetupError("Please complete the ICP, Pain, and Outcome steps first");
+    if (!wizard.hasWizardCore) {
+      wizard.setChatSetupError("Please complete the ICP, Pain, and Outcome steps first");
       return;
     }
-    setIsChatSetupComplete(true);
+    wizard.setIsChatSetupComplete(true);
 
     const context = contextItems.map((item) => `${item.label}: ${item.value}`).join("\n");
     const prompt = `Based on this context:\n${context}\n\nSuggest 3 distinct lead magnet ideas that would work well.`;
@@ -252,22 +136,22 @@ export function useNewWorkflowState() {
       content: "",
     };
 
-    setChatMessages((prev) => [...prev, userMessage, assistantMessage]);
+    chat.setChatMessages((prev) => [...prev, userMessage, assistantMessage]);
 
-    const requestMessages: WorkflowIdeationMessage[] = [...chatMessages, userMessage];
+    const requestMessages: WorkflowIdeationMessage[] = [...chat.chatMessages, userMessage];
 
     const result = await ideation.ideate(requestMessages, resolvedModel, {
       mode: "ideation",
     });
 
     if (!result) {
-      setChatMessages((prev) => prev.filter((message) => message.id !== assistantMessage.id));
+      chat.setChatMessages((prev) => prev.filter((message) => message.id !== assistantMessage.id));
       return;
     }
 
     if (result.assistant_message || (Array.isArray(result.deliverables) && result.deliverables.length > 0)) {
       const assistantContent = result.assistant_message || "Here are a few options to consider.";
-      setChatMessages((prev) => {
+      chat.setChatMessages((prev) => {
         return prev.map((message) => {
           if (message.id !== assistantMessage.id) return message;
           const deliverables = Array.isArray(result.deliverables) ? result.deliverables : undefined;
@@ -282,14 +166,14 @@ export function useNewWorkflowState() {
   };
 
   const handleSendChatMessage = async () => {
-    if (!chatInput.trim()) return;
+    if (!chat.chatInput.trim()) return;
 
-    const selectedDeliverable = chatMessages
+    const selectedDeliverable = chat.chatMessages
       .flatMap((m) => m.deliverables || [])
-      .find((d) => d.id === selectedDeliverableId);
+      .find((d) => d.id === chat.selectedDeliverableId);
 
     const isFollowup = Boolean(selectedDeliverable);
-    const trimmedInput = chatInput.trim();
+    const trimmedInput = chat.chatInput.trim();
     const userMessage: ChatMessage = {
       id: createChatId(),
       role: "user",
@@ -301,13 +185,13 @@ export function useNewWorkflowState() {
       content: "",
     };
 
-    setChatMessages((prev) => [...prev, userMessage, assistantMessage]);
-    setChatInput("");
+    chat.setChatMessages((prev) => [...prev, userMessage, assistantMessage]);
+    chat.setChatInput("");
     if (!isFollowup) {
-      setSelectedDeliverableId(null);
+      chat.setSelectedDeliverableId(null);
     }
 
-    const result = await ideation.ideate([...chatMessages, userMessage], resolvedModel, {
+    const result = await ideation.ideate([...chat.chatMessages, userMessage], resolvedModel, {
       mode: isFollowup ? "followup" : "ideation",
       selectedDeliverable: selectedDeliverable
         ? {
@@ -320,13 +204,13 @@ export function useNewWorkflowState() {
     });
 
     if (!result) {
-      setChatMessages((prev) => prev.filter((message) => message.id !== assistantMessage.id));
+      chat.setChatMessages((prev) => prev.filter((message) => message.id !== assistantMessage.id));
       return;
     }
 
     if (result.assistant_message || (!isFollowup && Array.isArray(result.deliverables) && result.deliverables.length > 0)) {
       const assistantContent = result.assistant_message || "Here are a few options to consider.";
-      setChatMessages((prev) => {
+      chat.setChatMessages((prev) => {
         return prev.map((message) => {
           if (message.id !== assistantMessage.id) return message;
           const deliverables = !isFollowup && Array.isArray(result.deliverables) ? result.deliverables : undefined;
@@ -341,44 +225,19 @@ export function useNewWorkflowState() {
   };
 
   const handleGenerateMockups = async () => {
-    const selectedDeliverable = chatMessages
+    const selectedDeliverable = chat.chatMessages
       .flatMap((m) => m.deliverables || [])
-      .find((d) => d.id === selectedDeliverableId);
+      .find((d) => d.id === chat.selectedDeliverableId);
 
-    if (!selectedDeliverable || isGeneratingMockups) return;
-
-    setIsGeneratingMockups(true);
-    setMockupError(null);
-    setMockupImages([]);
-
-    try {
-      const response = await api.generateDeliverableMockups({
-        deliverable: {
-          title: selectedDeliverable.title,
-          description: selectedDeliverable.description,
-          deliverable_type: selectedDeliverable.deliverable_type,
-          build_description: selectedDeliverable.build_description,
-        },
-        count: 4,
-      });
-
-      const urls = (response.images || []).map((image) => image.url).filter(Boolean);
-      if (urls.length === 0) {
-        setMockupError("No mockups returned. Try again in a moment.");
-        return;
-      }
-      setMockupImages(urls);
-    } catch (err: any) {
-      setMockupError(err.message || "Failed to generate mockups");
-    } finally {
-      setIsGeneratingMockups(false);
-    }
+    if (!selectedDeliverable) return;
+    
+    await mockups.generateMockups(selectedDeliverable);
   };
 
   const handleCreateWorkflow = async () => {
-    const selectedDeliverable = chatMessages
+    const selectedDeliverable = chat.chatMessages
       .flatMap((m) => m.deliverables || [])
-      .find((d) => d.id === selectedDeliverableId);
+      .find((d) => d.id === chat.selectedDeliverableId);
 
     if (!selectedDeliverable) return;
 
@@ -390,92 +249,49 @@ export function useNewWorkflowState() {
     setStep("form");
   };
 
-  const handleEditWizard = () => {
-    setIsChatSetupComplete(false);
-    setChatSetupStep(IDEATION_STEPS.length);
-  };
-
   const handleResetChat = () => {
-    setChatMessages(createInitialChatMessages());
-    setIdeationDraft(DEFAULT_IDEATION_DRAFT);
-    setChatSetupStep(0);
-    setIsChatSetupComplete(false);
-    setSelectedDeliverableId(null);
-    setMockupImages([]);
+    chat.resetChat();
+    wizard.resetWizard();
+    mockups.resetMockups();
   };
 
   const handleSaveIcpProfile = async () => {
-    if (!hasWizardCore) {
-      setIcpProfileError("Please complete ICP, Pain, and Outcome first");
+    if (!wizard.hasWizardCore) {
+      icp.setIcpProfileError("Please complete ICP, Pain, and Outcome first");
       return;
     }
-    if (!icpProfileName.trim()) {
-      setIcpProfileError("Please give this profile a name");
+    if (!icp.icpProfileName.trim()) {
+      icp.setIcpProfileError("Please give this profile a name");
       return;
     }
 
-    setIcpProfileError(null);
+    icp.setIcpProfileError(null);
     try {
       const newProfile: ICPProfile = {
         id: createIcpId(),
-        name: icpProfileName.trim(),
-        icp: ideationDraft.icp,
-        pain: ideationDraft.pain,
-        outcome: ideationDraft.outcome,
-        offer: ideationDraft.offer,
-        constraints: ideationDraft.constraints,
-        examples: ideationDraft.examples,
+        name: icp.icpProfileName.trim(),
+        icp: wizard.ideationDraft.icp,
+        pain: wizard.ideationDraft.pain,
+        outcome: wizard.ideationDraft.outcome,
+        offer: wizard.ideationDraft.offer,
+        constraints: wizard.ideationDraft.constraints,
+        examples: wizard.ideationDraft.examples,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
 
-      const updatedProfiles = [...icpProfiles, newProfile];
+      const updatedProfiles = [...icp.icpProfiles, newProfile];
       await updateSettings({ icp_profiles: updatedProfiles });
-      setIcpProfileName("");
-      setSelectedIcpProfileId(newProfile.id);
-      await refetchSettings();
+      icp.setIcpProfileName("");
+      icp.setSelectedIcpProfileId(newProfile.id);
+      await icp.refetchSettings();
     } catch (err: any) {
-      setIcpProfileError(err.message || "Failed to save ICP profile");
-    }
-  };
-
-  const runIcpResearch = async (profileId: string, force = false) => {
-    const profile = icpProfiles.find((p) => p.id === profileId);
-    if (!profile) return;
-
-    if (!force && (profile.research_status === "completed" || profile.research_status === "pending")) {
-      return;
-    }
-
-    setIsIcpResearching(true);
-    setIcpResearchError(null);
-
-    try {
-      const updatedProfiles = icpProfiles.map((p) =>
-        p.id === profileId ? { ...p, research_status: "pending" as const, research_error: undefined } : p
-      );
-      await updateSettings({ icp_profiles: updatedProfiles });
-
-      const result = await api.settings.generateIcpResearch({ profile_id: profileId, force });
-
-      const completedProfiles = icpProfiles.map((p) => (p.id === profileId ? result.profile : p));
-      await updateSettings({ icp_profiles: completedProfiles });
-      await refetchSettings();
-    } catch (err: any) {
-      setIcpResearchError(err.message || "Research failed");
-      const failedProfiles = icpProfiles.map((p) =>
-        p.id === profileId
-          ? { ...p, research_status: "failed" as const, research_error: err.message || "Research failed" }
-          : p
-      );
-      await updateSettings({ icp_profiles: failedProfiles });
-    } finally {
-      setIsIcpResearching(false);
+      icp.setIcpProfileError(err.message || "Failed to save ICP profile");
     }
   };
 
   const applyIcpProfile = (profile: ICPProfile) => {
-    setIdeationDraft((prev) => ({
+    wizard.setIdeationDraft((prev) => ({
       ...prev,
       icp: profile.icp || "",
       pain: profile.pain || "",
@@ -484,7 +300,7 @@ export function useNewWorkflowState() {
       constraints: profile.constraints || "",
       examples: profile.examples || "",
     }));
-    setChatSetupError(null);
+    wizard.setChatSetupError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -517,25 +333,28 @@ export function useNewWorkflowState() {
     error, setError,
     generationJobId, setGenerationJobId,
     generatedTemplateId, setGeneratedTemplateId,
-    chatInput, setChatInput,
-    isChatSetupComplete, setIsChatSetupComplete,
-    chatSetupStep, setChatSetupStep,
-    ideationDraft, setIdeationDraft,
-    chatSetupError, setChatSetupError,
-    chatMessages, setChatMessages,
-    selectedDeliverableId, setSelectedDeliverableId,
-    mockupImages, setMockupImages,
-    isGeneratingMockups, setIsGeneratingMockups,
-    mockupError, setMockupError,
-    selectedIcpProfileId, setSelectedIcpProfileId,
-    icpProfileName, setIcpProfileName,
-    icpProfileError, setIcpProfileError,
-    isIcpResearching, setIsIcpResearching,
-    icpResearchError, setIcpResearchError,
     
-    // Refs
-    chatScrollRef,
-    chatInputRef,
+    // Sub-hooks exposed directly
+    ...wizard,
+    ...chat,
+    ...icp,
+    ...mockups,
+    
+    // Computed Overrides/Additions
+    chatErrors,
+    contextItems,
+    isUpdatingSettings,
+    
+    // Actions
+    handleSkipWizard,
+    handleGenerateFromWizard,
+    handleSendChatMessage,
+    handleGenerateMockups,
+    handleCreateWorkflow,
+    handleResetChat,
+    handleSaveIcpProfile,
+    applyIcpProfile,
+    handleSubmit,
     
     // Hooks & Data
     aiGeneration,
@@ -546,41 +365,5 @@ export function useNewWorkflowState() {
     submission,
     generationStatus,
     resolvedModel,
-    icpProfiles,
-    selectedIcpProfile,
-    
-    // Computed
-    totalWizardSteps,
-    isWizardReview,
-    currentWizardStep,
-    wizardProgress,
-    hasWizardCore,
-    chatErrors,
-    selectedIcpResearchStatus,
-    wizardStepValue,
-    showWizardHint,
-    contextItems,
-    isUpdatingSettings,
-    
-    // Actions
-    updateDraftField,
-    appendDraftValue,
-    setDraftPreset,
-    focusChatInput,
-    applyChatSuggestion,
-    applyStarterPrompt,
-    handleWizardNext,
-    handleWizardBack,
-    handleSkipWizard,
-    handleGenerateFromWizard,
-    handleSendChatMessage,
-    handleGenerateMockups,
-    handleCreateWorkflow,
-    handleEditWizard,
-    handleResetChat,
-    handleSaveIcpProfile,
-    runIcpResearch,
-    applyIcpProfile,
-    handleSubmit,
   };
 }
