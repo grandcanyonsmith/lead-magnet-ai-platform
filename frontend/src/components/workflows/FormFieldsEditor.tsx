@@ -5,6 +5,7 @@ import { FiEye, FiPlus, FiTrash2 } from "react-icons/fi";
 import { FormFieldsData } from "@/hooks/useWorkflowForm";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { RecursiveForm, FieldSchema } from "@/components/ui/recursive/RecursiveForm";
 
 interface FormFieldsEditorProps {
   formFieldsData: FormFieldsData;
@@ -22,6 +23,19 @@ export function FormFieldsEditor({
   onRemoveField,
 }: FormFieldsEditorProps) {
   const [showFormPreview, setShowFormPreview] = useState(false);
+
+  // Convert form fields to RecursiveForm schema
+  const previewSchema: FieldSchema[] = formFieldsData.form_fields_schema.fields.map(
+    (field: any, index: number) => ({
+      id: field.field_id || `field-${index}`,
+      type: field.field_type || "text",
+      label: field.label || `Field ${index + 1}`,
+      name: field.field_id || `field-${index}`,
+      placeholder: field.placeholder,
+      required: field.required,
+      options: field.options,
+    })
+  );
 
   return (
     <div className="space-y-6 pt-6 border-t">
@@ -93,69 +107,16 @@ export function FormFieldsEditor({
               <h3 className="text-lg font-semibold mb-4">
                 {formFieldsData.form_name || "Form Preview"}
               </h3>
-              <div className="space-y-4">
-                {formFieldsData.form_fields_schema.fields.map(
-                  (field: any, index: number) => (
-                    <div key={field.field_id || index}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {field.label || `Field ${index + 1}`}
-                        {field.required && (
-                          <span className="text-red-500 ml-1">*</span>
-                        )}
-                      </label>
-                      {field.field_type === "textarea" ? (
-                        <textarea
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          placeholder={field.placeholder || ""}
-                          rows={4}
-                          disabled
-                        />
-                      ) : field.field_type === "select" && field.options ? (
-                        <Select
-                          value=""
-                          onChange={() => {}}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          disabled
-                          placeholder={`Select ${field.label}`}
-                        >
-                          {field.options.map(
-                            (option: string, optIndex: number) => (
-                              <option key={optIndex} value={option}>
-                                {option}
-                              </option>
-                            ),
-                          )}
-                        </Select>
-                      ) : field.field_type === "file" ? (
-                        <input
-                          type="file"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          disabled
-                        />
-                      ) : (
-                        <input
-                          type={
-                            field.field_type === "email"
-                              ? "email"
-                              : field.field_type === "tel"
-                                ? "tel"
-                                : field.field_type === "number"
-                                  ? "number"
-                                  : field.field_type === "url"
-                                    ? "url"
-                                  : "text"
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          placeholder={field.placeholder || ""}
-                          disabled
-                        />
-                      )}
-                    </div>
-                  ),
-                )}
+              <RecursiveForm
+                schema={previewSchema}
+                values={{}}
+                onChange={() => {}}
+                readOnly={true}
+              />
+              <div className="mt-4">
                 <button
                   type="button"
-                  className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors opacity-50 cursor-not-allowed"
                   disabled
                 >
                   Submit
@@ -172,23 +133,23 @@ export function FormFieldsEditor({
           Questions ({formFieldsData.form_fields_schema.fields.length})
         </label>
         <div className="space-y-4">
-            {formFieldsData.form_fields_schema.fields.map(
-              (field: any, index: number) => (
-                <div
-                  key={field.field_id || index}
-                  className="border border-gray-200 rounded-lg p-4 relative group"
-                >
-                  {onRemoveField && (
-                    <button
-                      type="button"
-                      onClick={() => onRemoveField(index)}
-                      className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors p-1"
-                      title="Remove field"
-                    >
-                      <FiTrash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3 pr-8">
+          {formFieldsData.form_fields_schema.fields.map(
+            (field: any, index: number) => (
+              <div
+                key={field.field_id || index}
+                className="border border-gray-200 rounded-lg p-4 relative group"
+              >
+                {onRemoveField && (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveField(index)}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors p-1"
+                    title="Remove field"
+                  >
+                    <FiTrash2 className="w-4 h-4" />
+                  </button>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3 pr-8">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Question Label
@@ -281,7 +242,7 @@ export function FormFieldsEditor({
             ),
           )}
         </div>
-        
+
         {onAddField && (
           <button
             type="button"

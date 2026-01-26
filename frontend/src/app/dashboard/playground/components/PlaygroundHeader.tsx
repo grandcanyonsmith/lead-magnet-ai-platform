@@ -1,4 +1,4 @@
-import React, { ComponentType } from "react";
+import React from "react";
 import {
   FiCode,
   FiUpload,
@@ -7,37 +7,45 @@ import {
   FiSkipForward,
   FiLoader,
   FiRotateCcw,
+  FiAlertCircle,
+  FiCheckCircle,
 } from "react-icons/fi";
+import { usePlaygroundContext } from "../context/PlaygroundContext";
 
-interface PlaygroundHeaderProps {
-  handleImport: () => void;
-  handleExport: () => void;
-  isExecuting: boolean;
-  stepsCount: number;
-  selectedStepLabel: string | null;
-  handleRunAll: () => void;
-  handleRunNextStep: () => void;
-  handleStop: () => void;
-  handleReset: () => void;
-  statusTone: string;
-  statusLabel: string;
-  StatusIcon: ComponentType<{ className?: string }>;
-}
+export const PlaygroundHeader: React.FC = () => {
+  const {
+    handleImport,
+    handleExport,
+    isExecuting,
+    stepsCount,
+    selectedStepLabel,
+    handleRunAll,
+    handleRunNextStep,
+    handleStop,
+    handleReset,
+    activeStepNumber,
+  } = usePlaygroundContext();
 
-export const PlaygroundHeader: React.FC<PlaygroundHeaderProps> = ({
-  handleImport,
-  handleExport,
-  isExecuting,
-  stepsCount,
-  selectedStepLabel,
-  handleRunAll,
-  handleRunNextStep,
-  handleStop,
-  handleReset,
-  statusTone,
-  statusLabel,
-  StatusIcon,
-}) => {
+  const statusLabel = isExecuting
+    ? activeStepNumber && stepsCount
+      ? `Running step ${activeStepNumber} of ${stepsCount}`
+      : "Running workflow"
+    : stepsCount === 0
+    ? "Add your first step"
+    : "Ready";
+
+  const StatusIcon = isExecuting
+    ? FiLoader
+    : stepsCount === 0
+    ? FiAlertCircle
+    : FiCheckCircle;
+
+  const statusTone = isExecuting
+    ? "bg-primary/10 text-primary dark:text-primary-300"
+    : stepsCount === 0
+    ? "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+    : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300";
+
   return (
     <div className="flex flex-col gap-4 px-4 py-4 bg-background border-b border-border shadow-sm z-10 shrink-0 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
