@@ -154,13 +154,19 @@ class S3ContextService:
         # Prefer explicit s3://bucket form
         m = re.search(r"s3://([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])", lower)
         if m:
-            bucket = m.group(1)
+            candidate = m.group(1)
+            # Reject placeholder bucket names
+            disallowed_buckets = {"bucket", "my-bucket", "your-bucket", "example-bucket", "test-bucket"}
+            if candidate.lower() not in disallowed_buckets:
+                bucket = candidate
         else:
             # Fallback: "bucket <name>"
             m2 = re.search(r"\bbucket\s+([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])\b", lower)
             if m2:
                 candidate = m2.group(1)
-                if candidate not in ["not", "is", "in", "to", "for", "with", "on", "at", "by", "from", "of", "and", "or", "but", "the", "a", "an"]:
+                # Extended stop word list including placeholder bucket names
+                stop_words = ["not", "is", "in", "to", "for", "with", "on", "at", "by", "from", "of", "and", "or", "but", "the", "a", "an", "bucket", "my-bucket", "your-bucket", "example-bucket", "test-bucket"]
+                if candidate not in stop_words:
                     bucket = candidate
 
         if not bucket:
@@ -170,8 +176,16 @@ class S3ContextService:
             )
             if m2b:
                 candidate = m2b.group(1)
-                if candidate not in ["not", "is", "in", "to", "for", "with", "on", "at", "by", "from", "of", "and", "or", "but", "the", "a", "an"]:
+                # Extended stop word list including placeholder bucket names
+                stop_words = ["not", "is", "in", "to", "for", "with", "on", "at", "by", "from", "of", "and", "or", "but", "the", "a", "an", "bucket", "my-bucket", "your-bucket", "example-bucket", "test-bucket"]
+                if candidate not in stop_words:
                     bucket = candidate
+
+        # Final validation: reject placeholder bucket names
+        disallowed_buckets = {"bucket", "my-bucket", "your-bucket", "example-bucket", "test-bucket"}
+        if bucket and bucket.lower() in disallowed_buckets:
+            logger.warning(f"Rejected placeholder bucket name: '{bucket}'")
+            return None
 
         if not bucket:
             return None

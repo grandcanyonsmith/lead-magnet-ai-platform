@@ -335,7 +335,7 @@ def discover_bucket():
         best_bucket = max(bucket_counts, key=bucket_counts.get)
         
     # Check if disallowed
-    if best_bucket and (best_bucket in DISALLOWED_BUCKETS or "example" in best_bucket):
+    if best_bucket and (best_bucket.lower() in DISALLOWED_BUCKETS or "example" in best_bucket.lower()):
         print(f"Discovered bucket '{best_bucket}' is disallowed.")
         best_bucket = None
         
@@ -343,7 +343,7 @@ def discover_bucket():
     if not best_bucket:
         env_bucket = os.environ.get("S3_BUCKET") or os.environ.get("AWS_S3_BUCKET")
         if env_bucket:
-            if env_bucket not in DISALLOWED_BUCKETS:
+            if env_bucket.lower() not in DISALLOWED_BUCKETS:
                 best_bucket = env_bucket
             else:
                 print(f"Environment bucket '{env_bucket}' is disallowed.")
