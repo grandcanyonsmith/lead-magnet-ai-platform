@@ -3,6 +3,7 @@ import { FiLoader, FiCpu } from "react-icons/fi";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { Artifact } from "@/types/artifact";
 import { MergedStep } from "@/types/job";
+import { getStepInput } from "@/utils/stepInput";
 import { renderToolBadges, truncateUrl } from "@/utils/stepUtils";
 
 interface GeneratedImagesListProps {
@@ -30,10 +31,11 @@ export function GeneratedImagesList({
   }
 
   // Get model and tools for display
-  const modelValue = step.model || step.input?.model;
+  const stepInput = getStepInput(step.input);
+  const modelValue = step.model || stepInput?.model;
   const modelString: string | undefined =
     typeof modelValue === "string" ? modelValue : undefined;
-  const tools = step.input?.tools || step.tools || [];
+  const tools = stepInput?.tools || step.tools || [];
   const hasTools = tools && Array.isArray(tools) && tools.length > 0;
 
   return (
@@ -49,7 +51,7 @@ export function GeneratedImagesList({
           )}
           {hasTools && (
             <div className="flex items-center gap-1.5">
-              {renderToolBadges(step.input?.tools || step.tools)}
+              {renderToolBadges(stepInput?.tools || step.tools)}
             </div>
           )}
         </div>

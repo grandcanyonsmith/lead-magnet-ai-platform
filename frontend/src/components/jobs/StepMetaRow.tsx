@@ -42,6 +42,7 @@ import {
   resolveImageSettingsDefaults,
   type ResolvedImageSettings,
 } from "@/utils/imageSettings";
+import { getStepInput } from "@/utils/stepInput";
 
 type StepMetaUpdate = {
   model?: AIModel | null;
@@ -190,9 +191,10 @@ export function StepMetaRow({
   const modelDetailsId = `step-model-details-${stepOrderId}`;
   const speedDetailsId = `step-speed-details-${stepOrderId}`;
   const reasoningDetailsId = `step-reasoning-details-${stepOrderId}`;
-  const inputRecord = isRecord(step.input) ? step.input : null;
-  const tools = Array.isArray(step.input?.tools)
-    ? step.input?.tools
+  const stepInput = getStepInput(step.input);
+  const inputRecord = stepInput ?? null;
+  const tools = Array.isArray(stepInput?.tools)
+    ? stepInput.tools
     : step.tools;
   const toolList = Array.isArray(tools) ? tools : EMPTY_TOOL_LIST;
   const imageTool = toolList.find(
@@ -214,7 +216,7 @@ export function StepMetaRow({
     step.step_order !== undefined ? step.step_order - 1 : null;
   const isUpdating = stepIndex !== null && updatingStepIndex === stepIndex;
   const toolChoice =
-    getStringValue(step.input?.tool_choice) || getStringValue(step.tool_choice);
+    getStringValue(stepInput?.tool_choice) || getStringValue(step.tool_choice);
   const modelFromStep = getStringValue(step.model);
   const modelFromInput = getStringValue(inputRecord?.model);
   const usageModel = getStringValue(step.usage_info?.model);

@@ -1,6 +1,7 @@
 import React from "react";
 import type { MergedStep } from "@/types/job";
 import type { Artifact } from "@/types/artifact";
+import { getStepInput } from "@/utils/stepInput";
 
 // Type for tool - can be a string or an object with a type property
 export type Tool = string | { type: string; [key: string]: unknown };
@@ -33,7 +34,8 @@ export function hasImageGeneration(
   const hasImageArtifacts = imageArtifacts.length > 0;
 
   // Check if step tools include image generation
-  const tools = step.input?.tools || step.tools || [];
+  const stepInput = getStepInput(step.input);
+  const tools = stepInput?.tools || step.tools || [];
   const hasImageGenerationTool =
     Array.isArray(tools) &&
     tools.some((tool) => {

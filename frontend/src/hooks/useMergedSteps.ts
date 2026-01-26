@@ -6,6 +6,7 @@
 import { useMemo } from "react";
 import { Job, ExecutionStep, MergedStep, StepStatus } from "@/types";
 import { Workflow } from "@/types/workflow";
+import { getStepInput } from "@/utils/stepInput";
 
 interface UseMergedStepsParams {
   job: Job | null;
@@ -189,14 +190,15 @@ export function useMergedSteps({
       if (existingStep) {
         // Step has been executed - enrich with workflow step info
         // Get tools from workflow step, execution step input, or execution step directly
+        const existingStepInput = getStepInput(existingStep.input);
         const mergedTools =
           workflowStep.tools ||
-          existingStep.input?.tools ||
+          existingStepInput?.tools ||
           existingStep.tools ||
           [];
         const mergedToolChoice =
           workflowStep.tool_choice ||
-          existingStep.input?.tool_choice ||
+          existingStepInput?.tool_choice ||
           existingStep.tool_choice ||
           "required";
 
@@ -212,7 +214,7 @@ export function useMergedSteps({
           instructions: workflowStep.instructions || existingStep.instructions,
           // Ensure input object is properly populated
           input: {
-            ...existingStep.input,
+            ...(existingStepInput ?? {}),
             tools: mergedTools,
             tool_choice: mergedToolChoice,
             ...(workflowStep.service_tier !== undefined
@@ -268,14 +270,15 @@ export function useMergedSteps({
         // If step exists but has no output, use its data; otherwise create new pending step
         if (executingStep) {
           // Get tools from workflow step, execution step input, or execution step directly
+          const executingStepInput = getStepInput(executingStep.input);
           const mergedTools =
             workflowStep.tools ||
-            executingStep.input?.tools ||
+            executingStepInput?.tools ||
             executingStep.tools ||
             [];
           const mergedToolChoice =
             workflowStep.tool_choice ||
-            executingStep.input?.tool_choice ||
+            executingStepInput?.tool_choice ||
             executingStep.tool_choice ||
             "required";
 
@@ -291,7 +294,7 @@ export function useMergedSteps({
               workflowStep.instructions || executingStep.instructions,
             // Ensure input object is properly populated
             input: {
-              ...executingStep.input,
+              ...(executingStepInput ?? {}),
               tools: mergedTools,
               tool_choice: mergedToolChoice,
               ...(workflowStep.service_tier !== undefined
@@ -332,14 +335,15 @@ export function useMergedSteps({
 
           // If we found an execution step for this order, use its data (duration, cost, artifacts, etc.)
           if (executionStepForOrder) {
+            const executionStepInput = getStepInput(executionStepForOrder.input);
             const mergedTools =
               workflowStep.tools ||
-              executionStepForOrder.input?.tools ||
+              executionStepInput?.tools ||
               executionStepForOrder.tools ||
               [];
             const mergedToolChoice =
               workflowStep.tool_choice ||
-              executionStepForOrder.input?.tool_choice ||
+              executionStepInput?.tool_choice ||
               executionStepForOrder.tool_choice ||
               "required";
 
@@ -354,7 +358,7 @@ export function useMergedSteps({
               instructions:
                 workflowStep.instructions || executionStepForOrder.instructions,
               input: {
-                ...executionStepForOrder.input,
+                ...(executionStepInput ?? {}),
                 tools: mergedTools,
                 tool_choice: mergedToolChoice,
                 ...(workflowStep.service_tier !== undefined

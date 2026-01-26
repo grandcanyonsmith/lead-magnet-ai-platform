@@ -4,7 +4,7 @@ Handles processing of individual workflow steps using delegated handlers.
 """
 
 import logging
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 from ai_service import AIService
 from artifact_service import ArtifactService
@@ -254,40 +254,49 @@ class StepProcessor:
 
         def _is_execution_step_completed(exec_step: Dict[str, Any]) -> bool:
             # Ignore internal steps that shouldn't gate workflow execution.
-            if exec_step.get("step_type") == "s3_upload":
+            step_type = exec_step.get("step_type")
+            if step_type in {"s3_upload", "form_submission", "html_generation", "final_output"}:
                 return False
 
-            # If the handler explicitly reports success/failure, honor it.
+            # If the handler explicitly reports success/failure, treat it as "executed".
+            # We still want downstream steps to run even if a dependency failed.
             if exec_step.get("success") is True:
                 return True
             if exec_step.get("success") is False:
-                return False
+                return True
 
             # Fall back to "did this step actually run" heuristics.
             status = exec_step.get("status")
-            if status in {"completed", "succeeded", "success"}:
+            if status in {"completed", "succeeded", "success", "failed", "error"}:
                 return True
-            if status in {"failed", "error"}:
-                return False
 
             return bool(exec_step.get("timestamp") or exec_step.get("completed_at"))
+
+        def _resolve_completed_index(exec_step: Dict[str, Any]) -> Optional[int]:
+            # Prefer execution order (1-indexed) -> workflow index (0-based).
+            exec_order = normalize_step_order(exec_step)
+            if exec_order <= 0:
+                return None
+            candidate_index = exec_order - 1
+            if 0 <= candidate_index < len(steps):
+                return candidate_index
+
+            # Fallback: treat exec_step.step_order as workflow step_order if it doesn't map by index.
+            if exec_order in order_to_index:
+                return order_to_index[exec_order]
+
+            return None
 
         completed_step_indices: List[int] = []
         for exec_step in execution_steps:
             if not _is_execution_step_completed(exec_step):
                 continue
 
-            exec_order = normalize_step_order(exec_step)
-
-            # Primary: treat exec_step.step_order as workflow step_order.
-            if exec_order in order_to_index:
-                completed_step_indices.append(order_to_index[exec_order])
+            resolved_index = _resolve_completed_index(exec_step)
+            if resolved_index is None:
                 continue
 
-            # Fallback: some producers store workflow step numbers (1-based) instead of step_order.
-            one_based_index = exec_order - 1
-            if 0 <= one_based_index < len(steps):
-                completed_step_indices.append(one_based_index)
+            completed_step_indices.append(resolved_index)
 
         completed_step_indices = sorted(set(completed_step_indices))
 

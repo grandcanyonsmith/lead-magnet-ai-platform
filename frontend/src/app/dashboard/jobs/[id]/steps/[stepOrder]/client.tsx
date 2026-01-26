@@ -43,6 +43,7 @@ import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { LiveOutputRenderer } from "@/components/jobs/LiveOutputRenderer";
 import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
 
+import { getStepInput } from "@/utils/stepInput";
 import type { MergedStep, StepStatus } from "@/types/job";
 import type { Artifact } from "@/types/artifact";
 import type { WorkflowStep } from "@/types";
@@ -535,9 +536,10 @@ export default function StepDetailClient() {
       : null,
   ].filter(Boolean) as { label: string; value: string }[];
 
-  const toolChoice = step.input?.tool_choice ?? step.tool_choice;
-  const rawTools = Array.isArray(step.input?.tools)
-    ? step.input.tools
+  const stepInput = getStepInput(step.input);
+  const toolChoice = stepInput?.tool_choice ?? step.tool_choice;
+  const rawTools = Array.isArray(stepInput?.tools)
+    ? stepInput.tools
     : Array.isArray(step.tools)
       ? step.tools
       : [];
