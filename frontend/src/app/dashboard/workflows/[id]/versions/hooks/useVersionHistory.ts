@@ -88,7 +88,7 @@ export function useVersionHistory() {
   const currentVersion = workflow?.version ?? null;
   const selectedVersionSummary = useMemo(() => {
     if (!selectedVersion) return null;
-    return sortedVersions.find((version) => version.version === selectedVersion);
+    return sortedVersions.find((version) => version.version === selectedVersion) ?? null;
   }, [sortedVersions, selectedVersion]);
 
   const selectedVersionRecord = useMemo(() => {

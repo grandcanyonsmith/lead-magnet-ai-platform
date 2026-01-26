@@ -1,11 +1,11 @@
 import React from "react";
 import { CollapsibleSectionCard } from "@/components/ui/CollapsibleSectionCard";
 import { StepStatsCard } from "@/components/jobs/detail/StepStatsCard";
-import type { WorkflowStep } from "@/types";
+import type { MergedStep } from "@/types/job";
 
 interface StepStatsProps {
   statsPreview: string;
-  step: WorkflowStep | null;
+  step: MergedStep | null;
   stepTypeLabel: string;
   toolChoice: any;
   toolLabels: string[];

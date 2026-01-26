@@ -1,6 +1,6 @@
 import React from "react";
 import { Select } from "@/components/ui/Select";
-import type { AIModel } from "@/types/workflow";
+import type { AIModel, ReasoningEffort } from "@/types/workflow";
 
 interface AiSettingsPopoverProps {
   aiModel: AIModel;
@@ -10,8 +10,8 @@ interface AiSettingsPopoverProps {
   aiModelsError: string | null;
   aiSpeed: "normal" | "fast" | "turbo";
   setAiSpeed: (speed: "normal" | "fast" | "turbo") => void;
-  aiReasoningEffort: "low" | "medium" | "high";
-  setAiReasoningEffort: (effort: "low" | "medium" | "high") => void;
+  aiReasoningEffort: ReasoningEffort;
+  setAiReasoningEffort: (effort: ReasoningEffort) => void;
 }
 
 export function AiSettingsPopover({

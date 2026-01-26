@@ -8,7 +8,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import type { WorkflowStep } from "@/types";
+import type { MergedStep, StepStatus } from "@/types/job";
+import type { Status } from "@/types/common";
 
 interface StepHeaderProps {
   jobHref: string;
@@ -16,10 +17,10 @@ interface StepHeaderProps {
   stepLabel: string;
   heading: string;
   description: string;
-  stepStatus: string;
+  stepStatus: Status | StepStatus;
   isLiveStep: boolean;
   stepTypeLabel: string;
-  step: WorkflowStep | null;
+  step: MergedStep | null;
   toolLabels: string[];
   canEditStep: boolean;
   handleEditStep: () => void;

@@ -8,7 +8,7 @@ import {
 } from "react-icons/fi";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { AiSettingsPopover } from "./AiSettingsPopover";
-import type { AIModel } from "@/types/workflow";
+import type { AIModel, ReasoningEffort } from "@/types/workflow";
 
 interface EditorFooterProps {
   selectedElement: string | null;
@@ -36,8 +36,8 @@ interface EditorFooterProps {
   aiModelsError: string | null;
   aiSpeed: "normal" | "fast" | "turbo";
   setAiSpeed: (speed: "normal" | "fast" | "turbo") => void;
-  aiReasoningEffort: "low" | "medium" | "high";
-  setAiReasoningEffort: (effort: "low" | "medium" | "high") => void;
+  aiReasoningEffort: ReasoningEffort;
+  setAiReasoningEffort: (effort: ReasoningEffort) => void;
 }
 
 export function EditorFooter({
