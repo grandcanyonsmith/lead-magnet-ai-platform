@@ -11,6 +11,7 @@ export type AIModel =
   | "gpt-5.2"
   | "gpt-5"
   | "gpt-4.1"
+  | "gpt-4o"
   | "gpt-4-turbo"
   | "gpt-3.5-turbo"
   | "computer-use-preview"
@@ -230,6 +231,11 @@ export interface WorkflowStep {
   handoff_bypass_required_inputs?: boolean;
   handoff_include_submission_data?: boolean;
   handoff_include_context?: boolean;
+
+  /**
+   * When true, the workflow trigger form data will be included in this step's input context.
+   */
+  include_form_data?: boolean;
 }
 
 export type WorkflowTriggerType = "form" | "webhook";

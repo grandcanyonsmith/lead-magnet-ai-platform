@@ -7,6 +7,7 @@ import { CardHeaderIntro } from "@/components/ui/CardHeaderIntro";
 import { Button } from "@/components/ui/Button";
 import { PromptOverrideCard } from "@/components/settings/PromptOverrideCard";
 import { PromptOverridesJsonEditor } from "@/components/settings/PromptOverridesJsonEditor";
+import { SearchInput } from "@/components/ui/SearchInput";
 import { PROMPT_OVERRIDE_DEFINITIONS } from "@/constants/promptOverrides";
 import { usePromptDefaults } from "@/hooks/api/useSettings";
 import type { PromptDefault, PromptOverrides } from "@/types/settings";
@@ -48,6 +49,17 @@ export function PromptOverridesSettings({
 
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [draft, setDraft] = useState<OverrideDraft | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredDefinitions = useMemo(() => {
+    if (!searchQuery.trim()) return PROMPT_OVERRIDE_DEFINITIONS;
+    const query = searchQuery.toLowerCase();
+    return PROMPT_OVERRIDE_DEFINITIONS.filter(
+      (item) =>
+        item.key.toLowerCase().includes(query) ||
+        item.label.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
 
   const startEdit = (key: string) => {
     const override = previewOverrides[key];
@@ -56,6 +68,10 @@ export function PromptOverridesSettings({
       enabled: override?.enabled !== false,
       instructions: override?.instructions ?? "",
       prompt: override?.prompt ?? "",
+      output_verbosity: override?.output_verbosity ?? "",
+      model: override?.model ?? "",
+      reasoning_effort: override?.reasoning_effort ?? "",
+      service_tier: override?.service_tier ?? "",
     });
   };
 
@@ -70,6 +86,9 @@ export function PromptOverridesSettings({
       ...draft,
       instructions: defaults?.instructions ?? "",
       prompt: defaults?.prompt ?? "",
+      model: defaults?.model ?? "",
+      reasoning_effort: defaults?.reasoning_effort ?? "",
+      service_tier: defaults?.service_tier ?? "",
     });
   };
 
@@ -127,6 +146,15 @@ export function PromptOverridesSettings({
               }
             />
           )}
+          
+          <div className="flex justify-end">
+            <SearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder="Search prompt keys..."
+              className="w-full sm:max-w-xs"
+            />
+          </div>
         </CardContent>
       </Card>
 
@@ -151,27 +179,33 @@ export function PromptOverridesSettings({
           )}
 
           <div className="space-y-4">
-            {PROMPT_OVERRIDE_DEFINITIONS.map((item) => {
-              const defaultsForKey = promptDefaults?.[item.key];
-              const isEditing = editingKey === item.key;
-              return (
-                <PromptOverrideCard
-                  key={item.key}
-                  item={item}
-                  override={previewOverrides[item.key]}
-                  defaultsForKey={defaultsForKey}
-                  defaultsLoading={defaultsLoading}
-                  isEditing={isEditing}
-                  draft={draft}
-                  setDraft={setDraft}
-                  onStartEdit={startEdit}
-                  onCancelEdit={cancelEdit}
-                  onApplyDefaults={applyDefaults}
-                  onSave={saveOverride}
-                  onDelete={deleteOverride}
-                />
-              );
-            })}
+            {filteredDefinitions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                No prompt keys match your search.
+              </div>
+            ) : (
+              filteredDefinitions.map((item) => {
+                const defaultsForKey = promptDefaults?.[item.key];
+                const isEditing = editingKey === item.key;
+                return (
+                  <PromptOverrideCard
+                    key={item.key}
+                    item={item}
+                    override={previewOverrides[item.key]}
+                    defaultsForKey={defaultsForKey}
+                    defaultsLoading={defaultsLoading}
+                    isEditing={isEditing}
+                    draft={draft}
+                    setDraft={setDraft}
+                    onStartEdit={startEdit}
+                    onCancelEdit={cancelEdit}
+                    onApplyDefaults={applyDefaults}
+                    onSave={saveOverride}
+                    onDelete={deleteOverride}
+                  />
+                );
+              })
+            )}
           </div>
         </CardContent>
       </Card>

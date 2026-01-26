@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/Button";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { FormField } from "@/components/settings/FormField";
 import { Switch } from "@/components/ui/Switch";
+import { Select } from "@/components/ui/Select";
 import { cn } from "@/lib/utils";
 import type { PromptDefault, PromptOverride } from "@/types/settings";
+import type { TextVerbosity, AIModel, ReasoningEffort, ServiceTier } from "@/types/workflow";
 import {
   getEmptyFieldLabel,
   getOverrideStatus,
@@ -28,6 +30,37 @@ type PromptOverrideCardProps = {
   onSave: (key: string) => void;
   onDelete: (key: string) => void;
 };
+
+const AI_MODEL_OPTIONS = [
+  { value: "", label: "Use default" },
+  { value: "gpt-5.1", label: "GPT 5.1" },
+  { value: "gpt-5.1-codex", label: "GPT 5.1 Codex" },
+  { value: "gpt-5.2", label: "GPT 5.2" },
+  { value: "gpt-5", label: "GPT 5" },
+  { value: "gpt-4.1", label: "GPT 4.1" },
+  { value: "gpt-4-turbo", label: "GPT 4 Turbo" },
+  { value: "gpt-3.5-turbo", label: "GPT 3.5 Turbo" },
+  { value: "computer-use-preview", label: "Computer Use Preview" },
+  { value: "o4-mini-deep-research", label: "o4 Mini Deep Research" },
+];
+
+const REASONING_EFFORT_OPTIONS = [
+  { value: "", label: "Use default" },
+  { value: "none", label: "None" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "xhigh", label: "Extra High" },
+];
+
+const SERVICE_TIER_OPTIONS = [
+  { value: "", label: "Use default" },
+  { value: "auto", label: "Auto" },
+  { value: "default", label: "Default" },
+  { value: "flex", label: "Flex" },
+  { value: "scale", label: "Scale" },
+  { value: "priority", label: "Priority" },
+];
 
 const PromptPreviewCard = ({
   title,
@@ -101,6 +134,11 @@ export function PromptOverrideCard({
   const isDisabled = override?.enabled === false;
   const defaultInstructions = defaultsForKey?.instructions;
   const defaultPrompt = defaultsForKey?.prompt;
+  
+  // Only show override cards if they have actual content or if override is explicitly disabled
+  // Hide them when they would just show "Using default..." messages
+  const hasOverrideContent = hasText || isDisabled;
+  
   const previewCards = [
     {
       id: `${item.key}-default-instructions`,
@@ -116,18 +154,24 @@ export function PromptOverrideCard({
       emptyLabel: "No default prompt available.",
       loading: defaultsLoading,
     },
-    {
-      id: `${item.key}-override-instructions`,
-      title: "Override Instructions",
-      content: instructions,
-      emptyLabel: getEmptyFieldLabel(isDisabled, "instructions"),
-    },
-    {
-      id: `${item.key}-override-prompt`,
-      title: "Override Prompt",
-      content: prompt,
-      emptyLabel: getEmptyFieldLabel(isDisabled, "prompt"),
-    },
+    // Only include override cards if there's actual override content
+    // Hide them when they would just show "Using default..." messages
+    ...(hasOverrideContent
+      ? [
+          {
+            id: `${item.key}-override-instructions`,
+            title: "Override Instructions",
+            content: instructions,
+            emptyLabel: getEmptyFieldLabel(isDisabled, "instructions"),
+          },
+          {
+            id: `${item.key}-override-prompt`,
+            title: "Override Prompt",
+            content: prompt,
+            emptyLabel: getEmptyFieldLabel(isDisabled, "prompt"),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -167,14 +211,71 @@ export function PromptOverrideCard({
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground break-words">
-        {status.description}
-        {typeof override?.enabled === "boolean" && (
-          <span className="ml-2">
-            Enabled: {override.enabled ? "true" : "false"}
-          </span>
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground break-words">
+          {status.description}
+          {typeof override?.enabled === "boolean" && (
+            <span className="ml-2">
+              Enabled: {override.enabled ? "true" : "false"}
+            </span>
+          )}
+        </p>
+        {(defaultsForKey?.model || defaultsForKey?.reasoning_effort || defaultsForKey?.service_tier) && (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-muted-foreground font-medium">Defaults:</span>
+            {defaultsForKey?.model && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 border border-border/50">
+                <span className="text-muted-foreground">Model:</span>
+                <span className="font-mono text-foreground">{defaultsForKey.model}</span>
+              </span>
+            )}
+            {defaultsForKey?.reasoning_effort && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 border border-border/50">
+                <span className="text-muted-foreground">Reasoning:</span>
+                <span className="font-medium text-foreground capitalize">{defaultsForKey.reasoning_effort}</span>
+              </span>
+            )}
+            {defaultsForKey?.service_tier && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/50 border border-border/50">
+                <span className="text-muted-foreground">Service:</span>
+                <span className="font-medium text-foreground capitalize">{defaultsForKey.service_tier}</span>
+              </span>
+            )}
+          </div>
         )}
-      </p>
+        {override?.output_verbosity && (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-muted-foreground font-medium">Override:</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20">
+              <span className="text-muted-foreground">Output Verbosity:</span>
+              <span className="font-medium text-foreground capitalize">{override.output_verbosity}</span>
+            </span>
+          </div>
+        )}
+        {(override?.model || override?.reasoning_effort || override?.service_tier) && (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-muted-foreground font-medium">Overrides:</span>
+            {override?.model && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20">
+                <span className="text-muted-foreground">Model:</span>
+                <span className="font-mono text-foreground">{override.model}</span>
+              </span>
+            )}
+            {override?.reasoning_effort && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20">
+                <span className="text-muted-foreground">Reasoning:</span>
+                <span className="font-medium text-foreground capitalize">{override.reasoning_effort}</span>
+              </span>
+            )}
+            {override?.service_tier && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20">
+                <span className="text-muted-foreground">Service:</span>
+                <span className="font-medium text-foreground capitalize">{override.service_tier}</span>
+              </span>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {previewCards.map((card) => (
@@ -239,6 +340,100 @@ export function PromptOverrideCard({
             placeholder="Add a custom prompt template..."
             className="min-h-[160px] sm:min-h-[180px]"
           />
+
+          <div className="space-y-2">
+            <label
+              htmlFor={`output_verbosity_${item.key}`}
+              className="text-sm font-medium text-foreground"
+            >
+              Output Verbosity
+            </label>
+            <Select
+              id={`output_verbosity_${item.key}`}
+              name={`output_verbosity_${item.key}`}
+              value={draft.output_verbosity || ""}
+              onChange={(value) =>
+                setDraft((prev) =>
+                  prev ? { ...prev, output_verbosity: value || undefined } : prev,
+                )
+              }
+              placeholder="Use default"
+              options={[
+                { value: "", label: "Use default" },
+                { value: "low", label: "Low" },
+                { value: "medium", label: "Medium" },
+                { value: "high", label: "High" },
+              ]}
+            />
+            <p className="text-xs text-muted-foreground">
+              Control the verbosity level of the output for this prompt override.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label
+                htmlFor={`model_${item.key}`}
+                className="text-sm font-medium text-foreground"
+              >
+                AI Model
+              </label>
+              <Select
+                id={`model_${item.key}`}
+                name={`model_${item.key}`}
+                value={draft.model || ""}
+                onChange={(value) =>
+                  setDraft((prev) =>
+                    prev ? { ...prev, model: value || undefined } : prev,
+                  )
+                }
+                placeholder="Use default"
+                options={AI_MODEL_OPTIONS}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor={`reasoning_effort_${item.key}`}
+                className="text-sm font-medium text-foreground"
+              >
+                Reasoning Effort
+              </label>
+              <Select
+                id={`reasoning_effort_${item.key}`}
+                name={`reasoning_effort_${item.key}`}
+                value={draft.reasoning_effort || ""}
+                onChange={(value) =>
+                  setDraft((prev) =>
+                    prev ? { ...prev, reasoning_effort: value || undefined } : prev,
+                  )
+                }
+                placeholder="Use default"
+                options={REASONING_EFFORT_OPTIONS}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor={`service_tier_${item.key}`}
+                className="text-sm font-medium text-foreground"
+              >
+                Service Tier
+              </label>
+              <Select
+                id={`service_tier_${item.key}`}
+                name={`service_tier_${item.key}`}
+                value={draft.service_tier || ""}
+                onChange={(value) =>
+                  setDraft((prev) =>
+                    prev ? { ...prev, service_tier: value || undefined } : prev,
+                  )
+                }
+                placeholder="Use default"
+                options={SERVICE_TIER_OPTIONS}
+              />
+            </div>
+          </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
             {override && (

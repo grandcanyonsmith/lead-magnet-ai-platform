@@ -160,6 +160,7 @@ export const workflowStepSchema = z
     handoff_bypass_required_inputs: z.boolean().optional(),
     handoff_include_submission_data: z.boolean().optional(),
     handoff_include_context: z.boolean().optional(),
+    include_form_data: z.boolean().optional(),
   })
   .refine(
     (data) => {

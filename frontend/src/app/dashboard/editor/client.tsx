@@ -27,6 +27,7 @@ import { ApiError } from "@/lib/api/errors";
 import type { Job } from "@/types/job";
 import type { Workflow, AIModel } from "@/types/workflow";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { Select } from "@/components/ui/Select";
 import { useAIModelOptions } from "@/hooks/useAIModelOptions";
 
 import { useEditorHistory } from "./hooks/useEditorHistory";
@@ -817,32 +818,22 @@ export default function EditorClient() {
                       <div className="text-xs text-gray-400 mb-2 font-medium">
                         AI Model
                       </div>
-                      <div className="grid grid-cols-1 gap-1 bg-black/20 p-1 rounded-lg border border-white/5">
-                        {aiModelsLoading && (
-                          <div className="px-2 py-1.5 text-[11px] text-gray-500">
-                            Loading models...
-                          </div>
-                        )}
-                        {aiModelsError && !aiModelsLoading && (
-                          <div className="px-2 py-1.5 text-[11px] text-amber-300/80">
-                            Unable to load models. Showing current selection.
-                          </div>
-                        )}
-                        {aiModelOptions.map((model) => (
-                          <button
-                            key={model.value}
-                            onClick={() => setAiModel(model.value as AIModel)}
-                            className={`text-xs py-1.5 rounded-md transition-colors font-medium ${
-                              aiModel === model.value
-                                ? "bg-zinc-700 text-white shadow-sm"
-                                : "text-gray-500 hover:text-gray-300"
-                            }`}
-                            title={model.label}
-                          >
-                            {model.label}
-                          </button>
-                        ))}
-                      </div>
+                      <Select
+                        value={aiModel}
+                        onChange={(value) => setAiModel(value as AIModel)}
+                        options={aiModelOptions}
+                        searchable={true}
+                        searchPlaceholder="Search models..."
+                        className="w-full bg-black/20 border-white/5 text-xs"
+                        disabled={aiModelsLoading || !!aiModelsError}
+                        placeholder={
+                          aiModelsLoading
+                            ? "Loading models..."
+                            : aiModelsError
+                              ? "Error loading models"
+                              : "Select model"
+                        }
+                      />
                     </div>
 
                     <div>

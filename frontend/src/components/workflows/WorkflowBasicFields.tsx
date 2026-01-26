@@ -4,12 +4,17 @@ import { WorkflowFormData } from "@/hooks/useWorkflowForm";
 
 interface WorkflowBasicFieldsProps {
   formData: WorkflowFormData;
-  onChange: (field: keyof WorkflowFormData, value: any) => void;
+  onChange: (
+    fieldOrUpdates: keyof WorkflowFormData | Partial<WorkflowFormData>,
+    value?: any,
+  ) => void;
+  errors?: Record<string, string>;
 }
 
 export function WorkflowBasicFields({
   formData,
   onChange,
+  errors,
 }: WorkflowBasicFieldsProps) {
   return (
     <div className="space-y-6">

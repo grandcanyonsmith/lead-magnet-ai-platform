@@ -7,7 +7,10 @@ import { stripTemplatePlaceholders } from "@/utils/templateUtils";
 
 interface TemplateEditorProps {
   templateData: TemplateData;
-  onChange: (field: keyof TemplateData, value: any) => void;
+  onChange: (
+    fieldOrUpdates: keyof TemplateData | Partial<TemplateData>,
+    value?: any,
+  ) => void;
 }
 
 export function TemplateEditor({

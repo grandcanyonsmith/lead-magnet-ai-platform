@@ -215,6 +215,7 @@ export function MarkdownRenderer({
     ...(components ?? {}),
   };
 
+  // Fallback to plain text rendering if remarkGfm isn't loaded yet
   if (!remarkGfm) {
     return (
       <pre className={fallbackClassName ?? className}>

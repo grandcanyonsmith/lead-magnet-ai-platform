@@ -8,9 +8,10 @@ import { logger } from '@utils/logger';
 import { getOpenAIClient } from '@services/openaiService';
 import { workflowGenerationJobService } from '@domains/workflows/services/workflowGenerationJobService';
 import { workflowAIEditJobService } from '@domains/workflows/services/workflowAIEditJobService';
-import { ulid } from 'ulid';
 import { getPromptOverridesFromSettings } from '@services/promptOverrides';
 import { workflowIdeationService } from '@domains/workflows/services/workflowIdeationService';
+import { handleStream } from './helpers/streamHelper';
+import { testJobService } from '@domains/workflows/services/workflow/testJobService';
 
 /**
  * Controller for AI-powered workflow operations.
@@ -97,66 +98,12 @@ export class WorkflowAIController {
     body: any,
     context?: RequestContext,
   ): Promise<RouteResponse> {
-    const res = (context as any)?.res;
-    if (!res) {
-      return await this.ideateWorkflow(tenantId, body);
-    }
-
-    res.writeHead(200, {
-      "Content-Type": "application/x-ndjson",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    });
-    if (typeof res.flushHeaders === "function") {
-      res.flushHeaders();
-    }
-
-    try {
-      const result = await workflowIdeationService.ideateWorkflowStream(
-        tenantId,
-        body,
-        {
-          onDelta: (text) => {
-            try {
-              res.write(JSON.stringify({ type: "delta", text }) + "\n");
-            } catch (e) {
-              logger.error("[Workflow Ideation] Failed to serialize delta", {
-                error: String(e),
-              });
-            }
-          },
-        },
-      );
-
-      // Ensure result is serializable before sending
-      try {
-        const serialized = JSON.stringify({ type: "done", result });
-        res.write(serialized + "\n");
-      } catch (e) {
-        logger.error("[Workflow Ideation] Failed to serialize result", {
-          error: String(e),
-        });
-        res.write(
-          JSON.stringify({
-            type: "error",
-            message: "Failed to serialize ideation result",
-          }) + "\n",
-        );
-      }
-    } catch (error: any) {
-      res.write(
-        JSON.stringify({
-          type: "error",
-          message: error?.message || "Failed to stream ideation",
-        }) + "\n",
-      );
-    } finally {
-      if (!res.writableEnded) {
-        res.end();
-      }
-    }
-
-    return { statusCode: 200, body: { handled: true } };
+    return handleStream(
+      context,
+      (options) => workflowIdeationService.ideateWorkflowStream(tenantId, body, options),
+      () => this.ideateWorkflow(tenantId, body),
+      '[Workflow Ideation]'
+    );
   }
 
   /**
@@ -180,332 +127,72 @@ export class WorkflowAIController {
    * Test a single workflow step.
    */
   async testStep(tenantId: string, body: any, context?: any): Promise<RouteResponse> {
-    const { db } = await import('@utils/db');
-    const { env } = await import('@utils/env');
-    const { JobProcessingUtils } = await import('@domains/workflows/services/workflow/workflowJobProcessingService');
-    
-    const WORKFLOWS_TABLE = env.workflowsTable;
-    const SUBMISSIONS_TABLE = env.submissionsTable;
-    const JOBS_TABLE = env.jobsTable;
-
     const { step, input } = body;
 
     if (!step) {
       throw new ApiError('Step configuration is required', 400);
     }
 
-    const testId = ulid();
-    const workflowId = `test-workflow-${testId}`;
-    const submissionId = `test-submission-${testId}`;
-    const jobId = `test-job-${testId}`;
-
-    logger.info('[Test Step] Starting step test', {
+    const result = await testJobService.createAndRunTestJob(
       tenantId,
-      jobId,
-      stepName: step.step_name
-    });
-
-    try {
-      // 1. Create temporary workflow
-      const workflow = {
-        workflow_id: workflowId,
-        tenant_id: tenantId,
+      {
         workflow_name: 'Test Step Workflow',
         workflow_description: 'Temporary workflow for testing a step',
-        steps: [step],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_test: true // Marker for cleanup
-      };
-      await db.put(WORKFLOWS_TABLE, workflow);
+        steps: [step]
+      },
+      input,
+      0, // stepIndex 0
+      context
+    );
 
-      // 2. Create temporary submission
-      const submission = {
-        submission_id: submissionId,
-        tenant_id: tenantId,
-        form_id: 'test-form', // Dummy
-        submission_data: input || {}, // User provided input
-        created_at: new Date().toISOString()
-      };
-      await db.put(SUBMISSIONS_TABLE, submission);
-
-      // 3. Create job
-      const job = {
-        job_id: jobId,
-        tenant_id: tenantId,
-        workflow_id: workflowId,
-        submission_id: submissionId,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_test: true
-      };
-      await db.put(JOBS_TABLE, job);
-
-      // 4. Trigger worker for single step
-      if (env.isDevelopment()) {
-        const res = context?.res;
-        if (res) {
-            // Streaming mode
-            res.writeHead(200, {
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-            });
-            
-            res.write(`data: ${JSON.stringify({ type: 'init', job_id: jobId })}\n\n`);
-
-            await this.triggerLocalWorker(jobId, '0', (log) => {
-                res.write(`data: ${JSON.stringify({ type: 'log', content: log })}\n\n`);
-            });
-            
-            res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-            res.end();
-            return { statusCode: 200, body: { handled: true } };
-        } else {
-            // Non-streaming (fire and forget)
-            this.triggerLocalWorker(jobId, '0');
-        }
-      } else {
-        await JobProcessingUtils.triggerAsyncProcessing(
-            jobId,
-            tenantId,
-            {
-            job_id: jobId,
-            step_index: 0,
-            step_type: 'workflow_step'
-            }
-        );
-      }
-
-      return {
-        statusCode: 202,
-        body: {
-          job_id: jobId,
-          status: 'pending',
-          message: 'Step test started'
-        }
-      };
-
-    } catch (error: any) {
-      logger.error('[Test Step] Failed to start test', {
-        error: error.message,
-        stack: error.stack
-      });
-      throw new ApiError(`Failed to start step test: ${error.message}`, 500);
+    if (result.handled) {
+        return { statusCode: 200, body: { handled: true } };
     }
+
+    return {
+      statusCode: 202,
+      body: {
+        job_id: result.jobId,
+        status: result.status,
+        message: result.message
+      }
+    };
   }
 
   /**
    * Test a full temporary workflow.
    */
   async testWorkflow(tenantId: string, body: any, context?: any): Promise<RouteResponse> {
-    const { db } = await import('@utils/db');
-    const { env } = await import('@utils/env');
-    const { JobProcessingUtils } = await import('@domains/workflows/services/workflow/workflowJobProcessingService');
-    
-    const WORKFLOWS_TABLE = env.workflowsTable;
-    const SUBMISSIONS_TABLE = env.submissionsTable;
-    const JOBS_TABLE = env.jobsTable;
-
     const { steps, input } = body;
 
     if (!steps || !Array.isArray(steps) || steps.length === 0) {
       throw new ApiError('Steps array is required', 400);
     }
 
-    const testId = ulid();
-    const workflowId = `test-workflow-${testId}`;
-    const submissionId = `test-submission-${testId}`;
-    const jobId = `test-job-${testId}`;
-
-    logger.info('[Test Workflow] Starting workflow test', {
+    const result = await testJobService.createAndRunTestJob(
       tenantId,
-      jobId,
-      stepCount: steps.length
-    });
-
-    try {
-      // 1. Create temporary workflow
-      const workflow = {
-        workflow_id: workflowId,
-        tenant_id: tenantId,
+      {
         workflow_name: 'Test Workflow Playground',
         workflow_description: 'Temporary playground workflow',
-        steps: steps,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_test: true // Marker for cleanup
-      };
-      await db.put(WORKFLOWS_TABLE, workflow);
+        steps: steps
+      },
+      input,
+      undefined, // full workflow
+      context
+    );
 
-      // 2. Create temporary submission
-      const submission = {
-        submission_id: submissionId,
-        tenant_id: tenantId,
-        form_id: 'test-form', // Dummy
-        submission_data: input || {}, // User provided input
-        created_at: new Date().toISOString()
-      };
-      await db.put(SUBMISSIONS_TABLE, submission);
+    if (result.handled) {
+        return { statusCode: 200, body: { handled: true } };
+    }
 
-      // 3. Create job
-      const job = {
-        job_id: jobId,
-        tenant_id: tenantId,
-        workflow_id: workflowId,
-        submission_id: submissionId,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_test: true
-      };
-      await db.put(JOBS_TABLE, job);
-
-      // 4. Trigger worker for full workflow
-      if (env.isDevelopment()) {
-        const res = context?.res;
-        if (res) {
-            // Streaming mode
-            res.writeHead(200, {
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-            });
-            
-            res.write(`data: ${JSON.stringify({ type: 'init', job_id: jobId })}\n\n`);
-
-            await this.triggerLocalWorker(jobId, undefined, (log) => {
-                res.write(`data: ${JSON.stringify({ type: 'log', content: log })}\n\n`);
-            });
-            
-            res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-            res.end();
-            return { statusCode: 200, body: { handled: true } };
-        } else {
-            // Non-streaming
-            this.triggerLocalWorker(jobId);
-        }
-      } else {
-        await JobProcessingUtils.triggerAsyncProcessing(
-            jobId,
-            tenantId,
-            {
-              job_id: jobId,
-              step_index: 0,
-              step_type: 'workflow_step'
-            }
-        );
+    return {
+      statusCode: 202,
+      body: {
+        job_id: result.jobId,
+        status: result.status,
+        message: result.message
       }
-
-      return {
-        statusCode: 202,
-        body: {
-          job_id: jobId,
-          status: 'pending',
-          message: 'Workflow test started'
-        }
-      };
-
-    } catch (error: any) {
-      logger.error('[Test Workflow] Failed to start test', {
-        error: error.message,
-        stack: error.stack
-      });
-      throw new ApiError(`Failed to start workflow test: ${error.message}`, 500);
-    }
-  }
-
-  /**
-   * Helper to trigger local worker process
-   */
-  private async triggerLocalWorker(jobId: string, stepIndex?: string, onLog?: (log: string) => void): Promise<number> {
-    const { spawn } = await import('child_process');
-    const path = await import('path');
-    const { env } = await import('@utils/env');
-    const { db } = await import('@utils/db');
-    const JOBS_TABLE = env.jobsTable;
-    
-    // Determine worker path - assume running from backend/api
-    // Try multiple paths to be safe
-    let workerScript = path.resolve(process.cwd(), '../worker/worker.py');
-    const fs = await import('fs');
-    if (!fs.existsSync(workerScript)) {
-       // Try relative to this file? No, too hard with TS build.
-       // Try project root assumption
-       workerScript = path.resolve(process.cwd(), 'backend/worker/worker.py');
-    }
-    
-    if (!fs.existsSync(workerScript)) {
-        logger.error('[Local Worker] Could not find worker script', { searchPath: workerScript });
-        return 1;
-    }
-
-    const envVars = {
-      ...process.env,
-      JOB_ID: jobId,
-      ...(stepIndex ? { STEP_INDEX: stepIndex } : {}),
-      PYTHONUNBUFFERED: '1',
-      LOG_FORMAT: 'json' // Force JSON logging for structured parsing in Playground
     };
-
-    logger.info('[Local Worker] Spawning local worker', { script: workerScript, jobId, stepIndex });
-    
-    // Mark job as processing for better UX while the local worker runs.
-    try {
-      await db.update(JOBS_TABLE, { job_id: jobId }, { status: 'processing', updated_at: new Date().toISOString() });
-    } catch (e: any) {
-      logger.warn('[Local Worker] Failed to mark job as processing', { jobId, error: e?.message || String(e) });
-    }
-
-    return new Promise((resolve) => {
-        const worker = spawn('python3', [workerScript], { env: envVars });
-
-        let stderrTail = '';
-        
-        worker.stdout.on('data', (data: Buffer) => {
-          const str = data.toString();
-          logger.info(`[Worker Output] ${str}`);
-          if (onLog) onLog(str);
-        });
-        
-        worker.stderr.on('data', (data: Buffer) => {
-          const str = data.toString();
-          try {
-            stderrTail = (stderrTail + str).slice(-2000);
-          } catch {
-            // ignore
-          }
-          logger.error(`[Worker Error] ${str}`);
-          if (onLog) onLog(str);
-        });
-        
-        worker.on('close', (code: number) => {
-          logger.info('[Local Worker] Worker finished', { code });
-
-          // Update job status based on local worker completion
-          void (async () => {
-            const now = new Date().toISOString();
-            try {
-              if (code === 0) {
-                await db.update(JOBS_TABLE, { job_id: jobId }, { status: 'completed', updated_at: now, completed_at: now });
-              } else {
-                await db.update(JOBS_TABLE, { job_id: jobId }, {
-                  status: 'failed',
-                  updated_at: now,
-                  completed_at: now,
-                  error_message: stderrTail ? stderrTail.slice(-1000) : 'Local worker exited non-zero',
-                  error_type: 'LocalWorkerError',
-                });
-              }
-            } catch (e: any) {
-              logger.error('[Local Worker] Failed to update test job status after worker finished', { jobId, code, error: e?.message || String(e) });
-            }
-          })();
-          
-          resolve(code);
-        });
-    });
   }
 
   /**
@@ -842,97 +529,73 @@ export class WorkflowAIController {
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
-    const res = (context as any)?.res;
-    if (!res) {
-      return await this.aiGenerateStep(tenantId, workflowId, body);
-    }
+    return handleStream(
+      context,
+      async (options) => {
+        logger.info('[AI Step Generation] Starting streamed generation', {
+          workflowId,
+          workflowName: workflow.workflow_name,
+          userPrompt: body.userPrompt.substring(0, 100),
+          action: body.action,
+          currentStepIndex: body.currentStepIndex,
+        });
 
-    logger.info('[AI Step Generation] Starting streamed generation', {
-      workflowId,
-      workflowName: workflow.workflow_name,
-      userPrompt: body.userPrompt.substring(0, 100),
-      action: body.action,
-      currentStepIndex: body.currentStepIndex,
-    });
+        const settings = USER_SETTINGS_TABLE
+          ? await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId })
+          : null;
+        const defaultToolChoice =
+          settings?.default_tool_choice === 'auto' ||
+          settings?.default_tool_choice === 'required' ||
+          settings?.default_tool_choice === 'none'
+            ? settings.default_tool_choice
+            : undefined;
+        const defaultServiceTier =
+          settings?.default_service_tier &&
+          ["auto", "default", "flex", "scale", "priority"].includes(
+            settings.default_service_tier,
+          )
+            ? settings.default_service_tier
+            : undefined;
+        const defaultTextVerbosity =
+          settings?.default_text_verbosity &&
+          ["low", "medium", "high"].includes(settings.default_text_verbosity)
+            ? settings.default_text_verbosity
+            : undefined;
+        const promptOverrides = getPromptOverridesFromSettings(settings || undefined);
 
-    const settings = USER_SETTINGS_TABLE
-      ? await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId })
-      : null;
-    const defaultToolChoice =
-      settings?.default_tool_choice === 'auto' ||
-      settings?.default_tool_choice === 'required' ||
-      settings?.default_tool_choice === 'none'
-        ? settings.default_tool_choice
-        : undefined;
-    const defaultServiceTier =
-      settings?.default_service_tier &&
-      ["auto", "default", "flex", "scale", "priority"].includes(
-        settings.default_service_tier,
-      )
-        ? settings.default_service_tier
-        : undefined;
-    const defaultTextVerbosity =
-      settings?.default_text_verbosity &&
-      ["low", "medium", "high"].includes(settings.default_text_verbosity)
-        ? settings.default_text_verbosity
-        : undefined;
-    const promptOverrides = getPromptOverridesFromSettings(settings || undefined);
+        const aiRequest: AIStepGenerationRequest = {
+          userPrompt: body.userPrompt,
+          action: body.action,
+          defaultToolChoice,
+          defaultServiceTier,
+          defaultTextVerbosity,
+          tenantId,
+          promptOverrides,
+          workflowContext: {
+            workflow_id: workflowId,
+            workflow_name: workflow.workflow_name || 'Untitled Workflow',
+            workflow_description: workflow.workflow_description || '',
+            current_steps: (workflow.steps || []).map((step: any) => ({
+              step_name: step.step_name,
+              step_description: step.step_description,
+              model: step.model,
+              tools: step.tools,
+              depends_on: step.depends_on,
+              step_order: step.step_order,
+            })),
+          },
+          currentStep: body.currentStep,
+          currentStepIndex: body.currentStepIndex,
+        };
 
-    const aiRequest: AIStepGenerationRequest = {
-      userPrompt: body.userPrompt,
-      action: body.action,
-      defaultToolChoice,
-      defaultServiceTier,
-      defaultTextVerbosity,
-      tenantId,
-      promptOverrides,
-      workflowContext: {
-        workflow_id: workflowId,
-        workflow_name: workflow.workflow_name || 'Untitled Workflow',
-        workflow_description: workflow.workflow_description || '',
-        current_steps: (workflow.steps || []).map((step: any) => ({
-          step_name: step.step_name,
-          step_description: step.step_description,
-          model: step.model,
-          tools: step.tools,
-          depends_on: step.depends_on,
-          step_order: step.step_order,
-        })),
+        const openai = await getOpenAIClient();
+        const aiService = new WorkflowStepAIService(openai);
+
+        return await aiService.streamGenerateStep(aiRequest, options);
       },
-      currentStep: body.currentStep,
-      currentStepIndex: body.currentStepIndex,
-    };
-
-    res.writeHead(200, {
-      'Content-Type': 'application/x-ndjson',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    });
-    if (typeof res.flushHeaders === 'function') {
-      res.flushHeaders();
-    }
-
-    try {
-      const openai = await getOpenAIClient();
-      const aiService = new WorkflowStepAIService(openai);
-
-      const result = await aiService.streamGenerateStep(aiRequest, {
-        onDelta: (text) => {
-          res.write(JSON.stringify({ type: 'delta', text }) + '\n');
-        },
-      });
-
-      res.write(JSON.stringify({ type: 'done', result }) + '\n');
-    } catch (error: any) {
-      const message = error?.message || 'Failed to stream step generation';
-      res.write(JSON.stringify({ type: 'error', message }) + '\n');
-    } finally {
-      if (!res.writableEnded) {
-        res.end();
-      }
-    }
-
-    return { statusCode: 200, body: { handled: true } };
+      () => this.aiGenerateStep(tenantId, workflowId, body),
+      '[AI Step Generation]'
+    );
   }
 
   /**
@@ -1035,104 +698,80 @@ export class WorkflowAIController {
       throw new ApiError('You don\'t have permission to access this lead magnet', 403);
     }
 
-    const res = (context as any)?.res;
-    if (!res) {
-      return await this.aiEditWorkflow(tenantId, workflowId, body, context);
-    }
+    return handleStream(
+      context,
+      async (options) => {
+        logger.info('[AI Workflow Edit] Starting streamed edit', {
+          workflowId,
+          workflowName: workflow.workflow_name,
+          userPrompt: userPrompt.substring(0, 100),
+          currentStepCount: workflow.steps?.length || 0,
+          contextJobId,
+        });
 
-    logger.info('[AI Workflow Edit] Starting streamed edit', {
-      workflowId,
-      workflowName: workflow.workflow_name,
-      userPrompt: userPrompt.substring(0, 100),
-      currentStepCount: workflow.steps?.length || 0,
-      contextJobId,
-    });
+        const settings = USER_SETTINGS_TABLE
+          ? await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId })
+          : null;
+        const defaultToolChoice =
+          settings?.default_tool_choice === 'auto' ||
+          settings?.default_tool_choice === 'required' ||
+          settings?.default_tool_choice === 'none'
+            ? settings.default_tool_choice
+            : undefined;
+        const defaultServiceTier =
+          settings?.default_service_tier &&
+          ["auto", "default", "flex", "scale", "priority"].includes(
+            settings.default_service_tier,
+          )
+            ? settings.default_service_tier
+            : undefined;
+        const defaultTextVerbosity =
+          settings?.default_text_verbosity &&
+          ["low", "medium", "high"].includes(settings.default_text_verbosity)
+            ? settings.default_text_verbosity
+            : undefined;
+        const reviewServiceTier =
+          settings?.default_workflow_improvement_service_tier &&
+          ["auto", "default", "flex", "scale", "priority"].includes(
+            settings.default_workflow_improvement_service_tier,
+          )
+            ? settings.default_workflow_improvement_service_tier
+            : "priority";
+        const reviewReasoningEffort =
+          settings?.default_workflow_improvement_reasoning_effort &&
+          ["none", "low", "medium", "high", "xhigh"].includes(
+            settings.default_workflow_improvement_reasoning_effort,
+          )
+            ? settings.default_workflow_improvement_reasoning_effort
+            : "high";
+        const promptOverrides = getPromptOverridesFromSettings(settings || undefined);
 
-    const settings = USER_SETTINGS_TABLE
-      ? await db.get(USER_SETTINGS_TABLE, { tenant_id: tenantId })
-      : null;
-    const defaultToolChoice =
-      settings?.default_tool_choice === 'auto' ||
-      settings?.default_tool_choice === 'required' ||
-      settings?.default_tool_choice === 'none'
-        ? settings.default_tool_choice
-        : undefined;
-    const defaultServiceTier =
-      settings?.default_service_tier &&
-      ["auto", "default", "flex", "scale", "priority"].includes(
-        settings.default_service_tier,
-      )
-        ? settings.default_service_tier
-        : undefined;
-    const defaultTextVerbosity =
-      settings?.default_text_verbosity &&
-      ["low", "medium", "high"].includes(settings.default_text_verbosity)
-        ? settings.default_text_verbosity
-        : undefined;
-    const reviewServiceTier =
-      settings?.default_workflow_improvement_service_tier &&
-      ["auto", "default", "flex", "scale", "priority"].includes(
-        settings.default_workflow_improvement_service_tier,
-      )
-        ? settings.default_workflow_improvement_service_tier
-        : "priority";
-    const reviewReasoningEffort =
-      settings?.default_workflow_improvement_reasoning_effort &&
-      ["none", "low", "medium", "high", "xhigh"].includes(
-        settings.default_workflow_improvement_reasoning_effort,
-      )
-        ? settings.default_workflow_improvement_reasoning_effort
-        : "high";
-    const promptOverrides = getPromptOverridesFromSettings(settings || undefined);
+        const aiRequest: WorkflowAIEditRequest = {
+          userPrompt,
+          defaultToolChoice,
+          defaultServiceTier,
+          defaultTextVerbosity,
+          reviewServiceTier,
+          reviewReasoningEffort,
+          tenantId,
+          promptOverrides,
+          workflowContext: {
+            workflow_id: workflowId,
+            workflow_name: workflow.workflow_name || 'Untitled Workflow',
+            workflow_description: workflow.workflow_description || '',
+            template_id: workflow.template_id,
+            current_steps: workflow.steps || [],
+          },
+        };
 
-    const aiRequest: WorkflowAIEditRequest = {
-      userPrompt,
-      defaultToolChoice,
-      defaultServiceTier,
-      defaultTextVerbosity,
-      reviewServiceTier,
-      reviewReasoningEffort,
-      tenantId,
-      promptOverrides,
-      workflowContext: {
-        workflow_id: workflowId,
-        workflow_name: workflow.workflow_name || 'Untitled Workflow',
-        workflow_description: workflow.workflow_description || '',
-        template_id: workflow.template_id,
-        current_steps: workflow.steps || [],
+        const openai = await getOpenAIClient();
+        const aiService = new WorkflowAIService(openai);
+
+        return await aiService.streamEditWorkflow(aiRequest, options);
       },
-    };
-
-    res.writeHead(200, {
-      'Content-Type': 'application/x-ndjson',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    });
-    if (typeof res.flushHeaders === 'function') {
-      res.flushHeaders();
-    }
-
-    try {
-      const openai = await getOpenAIClient();
-      const aiService = new WorkflowAIService(openai);
-
-      const result = await aiService.streamEditWorkflow(aiRequest, {
-        onDelta: (text) => {
-          res.write(JSON.stringify({ type: 'delta', text }) + '\n');
-        },
-      });
-
-      res.write(JSON.stringify({ type: 'done', result }) + '\n');
-    } catch (error: any) {
-      const message = error?.message || 'Failed to stream workflow edit';
-      res.write(JSON.stringify({ type: 'error', message }) + '\n');
-    } finally {
-      if (!res.writableEnded) {
-        res.end();
-      }
-    }
-
-    return { statusCode: 200, body: { handled: true } };
+      () => this.aiEditWorkflow(tenantId, workflowId, body, context),
+      '[AI Workflow Edit]'
+    );
   }
 }
 

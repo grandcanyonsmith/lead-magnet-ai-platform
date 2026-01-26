@@ -10,6 +10,10 @@ export type OverrideDraft = {
   enabled: boolean;
   instructions: string;
   prompt: string;
+  output_verbosity?: string;
+  model?: string;
+  reasoning_effort?: string;
+  service_tier?: string;
 };
 
 export const parsePromptOverrides = (value: string): ParsedOverrides => {
@@ -93,6 +97,22 @@ export const buildOverridePayload = (draft: OverrideDraft): PromptOverride | nul
   }
   if (prompt) {
     next.prompt = draft.prompt;
+  }
+  const outputVerbosity = draft.output_verbosity?.trim();
+  if (outputVerbosity && (outputVerbosity === "low" || outputVerbosity === "medium" || outputVerbosity === "high")) {
+    next.output_verbosity = outputVerbosity;
+  }
+  const model = draft.model?.trim();
+  if (model) {
+    next.model = model;
+  }
+  const reasoningEffort = draft.reasoning_effort?.trim();
+  if (reasoningEffort) {
+    next.reasoning_effort = reasoningEffort as any;
+  }
+  const serviceTier = draft.service_tier?.trim();
+  if (serviceTier) {
+    next.service_tier = serviceTier as any;
   }
   if (!draft.enabled) {
     next.enabled = false;

@@ -102,6 +102,10 @@ export interface PromptOverride {
   enabled?: boolean;
   instructions?: string;
   prompt?: string;
+  output_verbosity?: TextVerbosity;
+  model?: string;
+  reasoning_effort?: ReasoningEffort;
+  service_tier?: ServiceTier;
 }
 
 export type PromptOverrides = Record<string, PromptOverride>;
@@ -109,6 +113,9 @@ export type PromptOverrides = Record<string, PromptOverride>;
 export interface PromptDefault {
   instructions?: string;
   prompt?: string;
+  model?: string;
+  reasoning_effort?: string;
+  service_tier?: string;
 }
 
 export type PromptDefaults = Record<string, PromptDefault>;
