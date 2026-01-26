@@ -7,22 +7,16 @@ import { toast } from "react-hot-toast";
 import { useJobDetail } from "@/hooks/useJobDetail";
 import { useJobExecutionSteps } from "@/hooks/useJobExecutionSteps";
 import { useMergedSteps } from "@/hooks/useMergedSteps";
-import { useStepArtifacts } from "@/hooks/useStepArtifacts";
-import { useJobAutoUploads } from "@/hooks/useJobAutoUploads";
 import { usePreviewModal } from "@/hooks/usePreviewModal";
 import { useJobBreadcrumbs } from "@/hooks/useJobBreadcrumbs";
 import { useJobRelatedData } from "@/hooks/useJobRelatedData";
 import { useBreadcrumbs } from "@/contexts/BreadcrumbsContext";
 
 import { api } from "@/lib/api";
-import { buildArtifactGalleryItems } from "@/utils/jobs/artifacts";
 import { summarizeStepProgress } from "@/utils/jobs/steps";
 import { formatDuration } from "@/utils/date";
 
 import { JobHeader } from "@/components/jobs/JobHeader";
-import { ResubmitModal } from "@/components/jobs/ResubmitModal";
-import { RerunStepDialog } from "@/components/jobs/RerunStepDialog";
-import { FullScreenPreviewModal } from "@/components/ui/FullScreenPreviewModal";
 import { JobDetailSkeleton } from "@/components/jobs/detail/JobDetailSkeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
@@ -32,7 +26,9 @@ import {
   JobTabId,
 } from "@/components/jobs/detail/JobTabs";
 
-import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
+import { JobDetailModals } from "./components/JobDetailModals";
+import { useJobArtifactsData } from "./hooks/useJobArtifactsData";
+
 import type { TrackingStats } from "@/lib/api/tracking.client";
 import type {
   ArtifactGalleryItem,
@@ -142,24 +138,18 @@ export default function JobDetailClient() {
   const { expandedSteps, toggleStep, expandAll, collapseAll } =
     useJobExecutionSteps(mergedSteps);
 
+  // Use new hook for artifacts
   const {
     imageArtifactsByStep,
     fileArtifactsByStep,
-    artifacts: jobArtifacts,
-    loading: loadingArtifacts,
-  } = useStepArtifacts({
-    jobId: job?.job_id,
-    steps: mergedSteps,
-    enabled: shouldLoadExecutionSteps,
+    jobArtifacts,
+    artifactGalleryItems,
+    loadingOutputs,
+  } = useJobArtifactsData({
+    job,
+    mergedSteps,
+    shouldLoadExecutionSteps,
   });
-
-  const { items: autoUploads, loading: loadingAutoUploads } = useJobAutoUploads(
-    {
-      jobId: job?.job_id,
-      enabled: shouldLoadExecutionSteps,
-      jobStatus: job?.status,
-    },
-  );
 
   const buildTabHref = (tabId: JobTabId) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -175,34 +165,38 @@ export default function JobDetailClient() {
   const { previewItem, openPreview, closePreview } =
     usePreviewModal<ArtifactGalleryItem>();
 
-  const jobOutputContext = useMemo(
-    () =>
-      job
-        ? {
-            job_id: job.job_id,
-            output_url: job.output_url,
-            completed_at: job.completed_at,
-            failed_at: job.failed_at,
-          }
-        : null,
-    [job],
-  );
+  const previewObjectUrl =
+    previewItem?.artifact?.object_url ||
+    previewItem?.artifact?.public_url ||
+    previewItem?.url;
 
-  const artifactGalleryItems = useMemo(() => {
-    if (!shouldLoadExecutionSteps) return [];
-    return buildArtifactGalleryItems({
-      job: jobOutputContext,
-      artifacts: jobArtifacts,
-      steps: mergedSteps,
-      autoUploads,
-    });
-  }, [
-    autoUploads,
-    jobArtifacts,
-    mergedSteps,
-    shouldLoadExecutionSteps,
-    jobOutputContext,
-  ]);
+  const previewContentType =
+    previewItem?.artifact?.content_type ||
+    (previewItem?.kind === "imageUrl" ? "image/png" : undefined);
+
+  const previewFileName =
+    previewItem?.artifact?.file_name ||
+    previewItem?.artifact?.artifact_name ||
+    previewItem?.label;
+
+  const currentPreviewIndex = useMemo(() => {
+    if (!previewItem) return -1;
+    return artifactGalleryItems.findIndex((item) => item.id === previewItem.id);
+  }, [previewItem, artifactGalleryItems]);
+
+  const handleNextPreview = () => {
+    if (
+      currentPreviewIndex === -1 ||
+      currentPreviewIndex === artifactGalleryItems.length - 1
+    )
+      return;
+    openPreview(artifactGalleryItems[currentPreviewIndex + 1]);
+  };
+
+  const handlePreviousPreview = () => {
+    if (currentPreviewIndex <= 0) return;
+    openPreview(artifactGalleryItems[currentPreviewIndex - 1]);
+  };
 
   const stepsSummary = useMemo<JobStepSummary>(
     () => summarizeStepProgress(mergedSteps),
@@ -286,7 +280,6 @@ export default function JobDetailClient() {
     return sum;
   }, [job?.execution_steps, shouldLoadExecutionSteps]);
 
-  const loadingOutputs = loadingArtifacts || loadingAutoUploads;
   const jobDuration = useMemo(() => getJobDuration(job), [job]);
 
   const workflowJobsByNewest = useMemo(() => {
@@ -368,39 +361,6 @@ export default function JobDetailClient() {
       nextJobHref: nextJob?.job_id ? buildJobHref(nextJob.job_id) : null,
     };
   }, [buildJobHref, job?.job_id, workflowJobs]);
-
-  const previewObjectUrl =
-    previewItem?.artifact?.object_url ||
-    previewItem?.artifact?.public_url ||
-    previewItem?.url;
-
-  const previewContentType =
-    previewItem?.artifact?.content_type ||
-    (previewItem?.kind === "imageUrl" ? "image/png" : undefined);
-
-  const previewFileName =
-    previewItem?.artifact?.file_name ||
-    previewItem?.artifact?.artifact_name ||
-    previewItem?.label;
-
-  const currentPreviewIndex = useMemo(() => {
-    if (!previewItem) return -1;
-    return artifactGalleryItems.findIndex((item) => item.id === previewItem.id);
-  }, [previewItem, artifactGalleryItems]);
-
-  const handleNextPreview = () => {
-    if (
-      currentPreviewIndex === -1 ||
-      currentPreviewIndex === artifactGalleryItems.length - 1
-    )
-      return;
-    openPreview(artifactGalleryItems[currentPreviewIndex + 1]);
-  };
-
-  const handlePreviousPreview = () => {
-    if (currentPreviewIndex <= 0) return;
-    openPreview(artifactGalleryItems[currentPreviewIndex - 1]);
-  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -698,49 +658,33 @@ export default function JobDetailClient() {
         />
         <div id="job-edit-subheader" className="w-full" />
 
-        <ResubmitModal
-          isOpen={showResubmitModal}
-          onClose={() => setShowResubmitModal(false)}
-          onConfirm={handleResubmitConfirm}
-          isResubmitting={resubmitting}
-        />
-
-        {editingStepIndex !== null && workflow?.steps?.[editingStepIndex] && (
-          <FlowchartSidePanel
-            step={workflow.steps[editingStepIndex]}
-            index={editingStepIndex}
-            totalSteps={workflow.steps.length}
-            allSteps={workflow.steps}
-            isOpen={isSidePanelOpen}
-            onClose={handleCancelEdit}
-            onChange={(index, updatedStep) => {
-              latestStepUpdateRef.current = updatedStep;
-            }}
-            onDelete={() =>
-              toast.error("Cannot delete steps from execution viewer.")
-            }
-            onMoveUp={() =>
-              toast.error("Cannot reorder steps from execution viewer.")
-            }
-            onMoveDown={() =>
-              toast.error("Cannot reorder steps from execution viewer.")
-            }
-            workflowId={workflow.workflow_id}
-          />
-        )}
-
-        <RerunStepDialog
-          isOpen={showRerunDialog}
-          onClose={handleCloseRerunDialog}
-          onRerunOnly={handleRerunOnly}
-          onRerunAndContinue={handleRerunAndContinue}
-          stepNumber={stepIndexForRerun !== null ? stepIndexForRerun + 1 : 0}
-          stepName={
-            stepIndexForRerun !== null
-              ? mergedSteps[stepIndexForRerun]?.step_name
-              : undefined
-          }
-          isRerunning={rerunningStep !== null}
+        <JobDetailModals
+          showResubmitModal={showResubmitModal}
+          setShowResubmitModal={setShowResubmitModal}
+          handleResubmitConfirm={handleResubmitConfirm}
+          resubmitting={resubmitting}
+          editingStepIndex={editingStepIndex}
+          workflow={workflow}
+          isSidePanelOpen={isSidePanelOpen}
+          handleCancelEdit={handleCancelEdit}
+          latestStepUpdateRef={latestStepUpdateRef}
+          showRerunDialog={showRerunDialog}
+          handleCloseRerunDialog={handleCloseRerunDialog}
+          handleRerunOnly={handleRerunOnly}
+          handleRerunAndContinue={handleRerunAndContinue}
+          stepIndexForRerun={stepIndexForRerun}
+          mergedSteps={mergedSteps}
+          rerunningStep={rerunningStep}
+          previewItem={previewItem}
+          closePreview={closePreview}
+          previewContentType={previewContentType}
+          previewObjectUrl={previewObjectUrl}
+          previewFileName={previewFileName}
+          handleNextPreview={handleNextPreview}
+          handlePreviousPreview={handlePreviousPreview}
+          hasNextPreview={currentPreviewIndex < artifactGalleryItems.length - 1}
+          hasPreviousPreview={currentPreviewIndex > 0}
+          artifactGalleryItems={artifactGalleryItems}
         />
 
         <div className="flex-1 min-h-0">
@@ -783,23 +727,6 @@ export default function JobDetailClient() {
             onEditExit={handleEditExit}
           />
         </div>
-
-        {previewItem && previewObjectUrl && (
-          <FullScreenPreviewModal
-            isOpen={!!previewItem}
-            onClose={closePreview}
-            contentType={previewContentType}
-            objectUrl={previewObjectUrl}
-            fileName={previewFileName}
-            artifactId={previewItem?.artifact?.artifact_id}
-            jobId={previewItem?.jobId || previewItem?.artifact?.job_id}
-            autoUploadKey={previewItem?.autoUploadKey}
-            onNext={handleNextPreview}
-            onPrevious={handlePreviousPreview}
-            hasNext={currentPreviewIndex < artifactGalleryItems.length - 1}
-            hasPrevious={currentPreviewIndex > 0}
-          />
-        )}
       </div>
     </ErrorBoundary>
   );

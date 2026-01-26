@@ -1,7 +1,10 @@
-import { SubHeaderTabs } from "@/components/ui/SubHeaderTabs";
-import type { ComponentProps } from "react";
+"use client";
+
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { JobSummaryTab } from "@/components/jobs/detail/JobSummaryTab";
+import { RecursiveTabs, TabNode } from "@/components/ui/recursive/RecursiveTabs";
 import type {
   ArtifactGalleryItem,
   Job,
@@ -12,6 +15,7 @@ import type { Workflow } from "@/types/workflow";
 import type { Form, FormSubmission } from "@/types/form";
 import type { Artifact } from "@/types/artifact";
 import type { TrackingStats } from "@/lib/api/tracking.client";
+import type { ComponentProps } from "react";
 
 type TabGroupId = "general" | "workflow" | "insights" | "advanced";
 
@@ -225,101 +229,127 @@ export function JobTabs({
   onTrackingStatsLoadingChange,
   onEditExit,
 }: JobTabsProps) {
+  const router = useRouter();
+  
   const stepsBadge = stepsSummary.total;
   const artifactsBadge = artifactGalleryItems.length;
   const trackingBadge =
     trackingSessionsLoading && trackingSessionCount === null
-      ? "…"
-      : trackingSessionCount;
-  const badgeValues: Partial<Record<JobTabId, number | string | null>> = {
+      ? 0 // Use 0 or undefined for loading state in generic tabs
+      : trackingSessionCount ?? 0;
+      
+  const badgeValues: Partial<Record<JobTabId, number>> = {
     overview: artifactsBadge,
     execution: stepsBadge,
-    tracking: trackingBadge,
+    tracking: typeof trackingBadge === 'number' ? trackingBadge : 0,
   };
 
-  const formatBadgeText = (value: number | string | null | undefined) => {
-    if (value === null || value === undefined) return null;
-    return String(value);
-  };
+  const tabs: TabNode[] = useMemo(() => [
+    {
+      id: "overview",
+      label: "Overview",
+      badge: badgeValues.overview,
+      content: (
+        <JobSummaryTab
+          artifactGalleryItems={artifactGalleryItems}
+          loadingArtifacts={loadingArtifacts}
+          onPreview={openPreview}
+        />
+      ),
+    },
+    {
+      id: "execution",
+      label: "Execution",
+      badge: badgeValues.execution,
+      content: (
+        <JobExecutionTab
+          job={job}
+          mergedSteps={mergedSteps}
+          expandedSteps={expandedSteps}
+          onToggleStep={toggleStep}
+          onExpandAllSteps={expandAllSteps}
+          onCollapseAllSteps={collapseAllSteps}
+          executionStepsError={executionStepsError}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
+          onCopy={onCopy}
+          imageArtifactsByStep={imageArtifactsByStep}
+          fileArtifactsByStep={fileArtifactsByStep}
+          loadingArtifacts={loadingArtifacts}
+          submission={submission}
+          onResubmit={onResubmit}
+          resubmitting={resubmitting}
+          onEditStep={onEditStep}
+          onQuickUpdateStep={onQuickUpdateStep}
+          updatingStepIndex={updatingStepIndex}
+          onRerunStepClick={onRerunStepClick}
+          rerunningStep={rerunningStep}
+          artifactGalleryItems={artifactGalleryItems}
+          onPreview={openPreview}
+        />
+      ),
+    },
+    {
+      id: "improve",
+      label: "Improve",
+      content: (
+        <JobImproveTab
+          job={job}
+          workflow={workflow}
+          mergedSteps={mergedSteps}
+          artifacts={artifacts}
+        />
+      ),
+    },
+    {
+      id: "edit",
+      label: "Edit",
+      content: <JobEditTab workflow={workflow} onExit={onEditExit} />,
+    },
+    {
+      id: "tracking",
+      label: "Activity",
+      badge: badgeValues.tracking,
+      content: (
+        <JobTrackingTab
+          jobId={job.job_id}
+          onSessionsLoaded={onTrackingSessionsLoaded}
+          onSessionsLoadingChange={onTrackingSessionsLoadingChange}
+          onStatsLoaded={onTrackingStatsLoaded}
+          onStatsLoadingChange={onTrackingStatsLoadingChange}
+        />
+      ),
+    },
+    {
+      id: "technical",
+      label: "Technical",
+      content: <JobTechnicalTab job={job} form={form} submission={submission} />,
+    },
+  ], [
+    activeTab, // Re-render when active tab changes (though content might not need it, but to be safe)
+    artifactGalleryItems, loadingArtifacts, openPreview,
+    job, mergedSteps, expandedSteps, toggleStep, expandAllSteps, collapseAllSteps, executionStepsError, onRefresh, refreshing, onCopy, imageArtifactsByStep, fileArtifactsByStep, submission, onResubmit, resubmitting, onEditStep, onQuickUpdateStep, updatingStepIndex, onRerunStepClick, rerunningStep,
+    workflow, artifacts,
+    onEditExit,
+    onTrackingSessionsLoaded, onTrackingSessionsLoadingChange, onTrackingStatsLoaded, onTrackingStatsLoadingChange,
+    badgeValues
+  ]);
 
-  const tabs = TAB_CONFIG.map((tab) => ({
-    id: tab.id,
-    label: tab.label,
-    href: buildTabHref(tab.id),
-    badge:
-      "badgeLabel" in tab ? formatBadgeText(badgeValues[tab.id]) : null,
-  }));
+  const handleTabChange = (id: string) => {
+    const href = buildTabHref(id as JobTabId);
+    router.push(href);
+  };
 
   return (
     <section className="mt-4 sm:mt-5 flex flex-1 min-h-0 flex-col">
-      <SubHeaderTabs
+      <RecursiveTabs
         tabs={tabs}
-        activeId={activeTab}
-        portalTargetId="dashboard-subheader"
-        enableOverflowMenu
-        mobileMaxVisible={3}
-        compactMaxVisible={2}
-        compactBreakpointPx={420}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        className="h-full"
+        tabListClassName="bg-transparent border-b border-border mb-4"
+        tabContentClassName="flex-1 overflow-hidden"
       />
-      <div className="min-w-0 pt-2 sm:pt-3 flex flex-1 min-h-0 flex-col overflow-hidden">
-        {activeTab === "overview" && (
-          <JobSummaryTab
-            artifactGalleryItems={artifactGalleryItems}
-            loadingArtifacts={loadingArtifacts}
-            onPreview={openPreview}
-          />
-        )}
-        {activeTab === "execution" && (
-          <JobExecutionTab
-            job={job}
-            mergedSteps={mergedSteps}
-            expandedSteps={expandedSteps}
-            onToggleStep={toggleStep}
-            onExpandAllSteps={expandAllSteps}
-            onCollapseAllSteps={collapseAllSteps}
-            executionStepsError={executionStepsError}
-            onRefresh={onRefresh}
-            refreshing={refreshing}
-            onCopy={onCopy}
-            imageArtifactsByStep={imageArtifactsByStep}
-            fileArtifactsByStep={fileArtifactsByStep}
-            loadingArtifacts={loadingArtifacts}
-            submission={submission}
-            onResubmit={onResubmit}
-            resubmitting={resubmitting}
-            onEditStep={onEditStep}
-            onQuickUpdateStep={onQuickUpdateStep}
-            updatingStepIndex={updatingStepIndex}
-            onRerunStepClick={onRerunStepClick}
-            rerunningStep={rerunningStep}
-            artifactGalleryItems={artifactGalleryItems}
-            onPreview={openPreview}
-          />
-        )}
-        {activeTab === "improve" && (
-          <JobImproveTab
-            job={job}
-            workflow={workflow}
-            mergedSteps={mergedSteps}
-            artifacts={artifacts}
-          />
-        )}
-        {activeTab === "edit" && (
-          <JobEditTab workflow={workflow} onExit={onEditExit} />
-        )}
-        {activeTab === "tracking" && (
-          <JobTrackingTab
-            jobId={job.job_id}
-            onSessionsLoaded={onTrackingSessionsLoaded}
-            onSessionsLoadingChange={onTrackingSessionsLoadingChange}
-            onStatsLoaded={onTrackingStatsLoaded}
-            onStatsLoadingChange={onTrackingStatsLoadingChange}
-          />
-        )}
-        {activeTab === "technical" && (
-          <JobTechnicalTab job={job} form={form} submission={submission} />
-        )}
-      </div>
     </section>
   );
 }

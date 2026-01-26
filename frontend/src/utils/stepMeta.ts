@@ -33,13 +33,22 @@ export const REASONING_EFFORT_LABELS: Record<string, string> = {
   xhigh: "Extra High",
 };
 
-const getRecord = (value: unknown): Record<string, unknown> | null =>
+export const getRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
 
-const getString = (value: unknown): string | null =>
+export const getString = (value: unknown): string | null =>
   typeof value === "string" && value.trim() ? value : null;
+
+export const getNumber = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
 
 const getReasoningEffortFromValue = (value: unknown): string | null => {
   const direct = getString(value);

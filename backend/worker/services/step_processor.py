@@ -14,7 +14,7 @@ from services.usage_service import UsageService
 from services.image_artifact_service import ImageArtifactService
 from services.context_builder import ContextBuilder
 from utils.step_utils import normalize_step_order
-from dependency_resolver import build_dependency_graph, get_ready_steps, get_step_status
+from services.dependency_resolver import DependencyResolver
 from core import log_context
 
 from services.steps.registry import StepRegistry
@@ -248,7 +248,7 @@ class StepProcessor:
         # This handles:
         # - explicit `depends_on` specified as step_order or indices
         # - implicit dependencies via step_order ordering
-        dependency_graph = build_dependency_graph(steps)
+        dependency_graph = DependencyResolver.build_dependency_graph(steps)
         step_deps = dependency_graph.get(step_index, [])
 
         # Build a mapping of workflow step_order -> workflow array index.
@@ -323,7 +323,7 @@ class StepProcessor:
         Resolve dependency indices for a step using the shared dependency graph logic.
         """
         try:
-            dependency_graph = build_dependency_graph(steps)
+            dependency_graph = DependencyResolver.build_dependency_graph(steps)
         except Exception as exc:
             logger.warning(
                 f"[StepProcessor] Failed to build dependency graph, defaulting to empty deps: {exc}"
