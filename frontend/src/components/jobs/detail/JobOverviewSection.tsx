@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { OutputCard } from "@/components/jobs/detail/OutputCard";
+import { PreviewCard } from "@/components/artifacts/PreviewCard";
+import { OutputCardActions } from "@/components/jobs/detail/OutputCardActions";
+import { OutputPreview } from "@/components/jobs/detail/OutputPreview";
 import { SecondaryNavigation } from "@/components/ui/SecondaryNavigation";
 import type { ArtifactGalleryItem } from "@/types/job";
 import {
@@ -107,16 +109,22 @@ export function JobOverviewSection({
                         const displayLabel = getOutputLabel(item, activeGroup.key);
                         const outputUrl = getOutputUrl(item);
                         return (
-                          <OutputCard
+                          <PreviewCard
                             key={item.id}
-                            item={item}
-                            groupKey={activeGroup.key}
-                            preview={preview}
-                            displayLabel={displayLabel}
+                            title={displayLabel}
                             description={item.description}
                             showDescription={showDescription}
-                            outputUrl={outputUrl || undefined}
-                            onPreview={onPreview}
+                            preview={
+                              <OutputPreview
+                                groupKey={activeGroup.key}
+                                preview={preview}
+                                className="h-full w-full"
+                              />
+                            }
+                            actions={
+                              outputUrl ? <OutputCardActions url={outputUrl} /> : null
+                            }
+                            onClick={onPreview ? () => onPreview(item) : undefined}
                             className={outputCardClassName}
                             previewClassName={previewSizeClass}
                           />

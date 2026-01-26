@@ -22,12 +22,15 @@ import {
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import { PreviewCard } from "@/components/artifacts/PreviewCard";
+import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Select } from "@/components/ui/Select";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { OutputCardActions } from "@/components/jobs/detail/OutputCardActions";
+import { FullScreenPreviewModal } from "@/components/ui/FullScreenPreviewModal";
 
 import type { Artifact } from "@/types/artifact";
 import type { Job, MergedStep } from "@/types/job";
@@ -138,6 +141,56 @@ const isHtmlArtifact = (artifact: Artifact): boolean => {
 
 const filterHtmlArtifacts = (list: Artifact[]) =>
   list.filter((artifact) => isHtmlArtifact(artifact));
+
+const HtmlPreviewCard = ({ artifact }: { artifact: Artifact }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const fileName =
+    artifact.file_name || artifact.artifact_name || "HTML output";
+  const contentType = artifact.content_type || artifact.mime_type || "text/html";
+  const objectUrl = artifact.object_url || artifact.public_url;
+  const description = artifact.artifact_type
+    ? artifact.artifact_type.replace(/_/g, " ")
+    : "HTML output";
+
+  return (
+    <>
+      <PreviewCard
+        title={fileName}
+        description={description}
+        showDescription={Boolean(description)}
+        preview={
+          <PreviewRenderer
+            contentType={contentType}
+            objectUrl={objectUrl}
+            fileName={fileName}
+            className="h-full w-full"
+            artifactId={artifact.artifact_id}
+          />
+        }
+        actions={objectUrl ? <OutputCardActions url={objectUrl} /> : null}
+        overlayTopRight={
+          <Badge
+            variant="secondary"
+            className="font-bold text-[11px] shadow-sm bg-background/90 backdrop-blur-sm"
+          >
+            HTML
+          </Badge>
+        }
+        onClick={() => setIsOpen(true)}
+        className="group flex w-full flex-col text-left"
+        previewClassName="aspect-video bg-muted/60"
+      />
+      <FullScreenPreviewModal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        contentType={contentType}
+        objectUrl={objectUrl}
+        fileName={fileName}
+        artifactId={artifact.artifact_id}
+      />
+    </>
+  );
+};
 
 const buildContextRows = (steps: unknown[]): StepContextRow[] => {
   if (!Array.isArray(steps)) return [];
@@ -1258,7 +1311,7 @@ export function WorkflowImprovePanel({
                   key={artifact.artifact_id}
                   className="min-w-[280px] sm:min-w-[340px] lg:min-w-[420px] max-w-[420px] snap-start"
                 >
-                  <PreviewCard artifact={artifact} />
+                  <HtmlPreviewCard artifact={artifact} />
                 </div>
               ))}
             </div>
