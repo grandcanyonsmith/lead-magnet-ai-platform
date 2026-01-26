@@ -316,7 +316,7 @@ class JobProcessor:
             
             # Validate workflow has steps and valid dependencies
             self._validate_workflow_steps(workflow)
-            is_valid, errors = validate_dependencies(workflow.get('steps', []))
+            is_valid, errors = DependencyResolver.validate_dependencies(workflow.get('steps', []))
             if not is_valid:
                 error_msg = f"Invalid workflow dependencies: {'; '.join(errors)}"
                 logger.error(error_msg)
