@@ -38,26 +38,16 @@ export function JobOverviewSection({
   const isLogsGroup = activeGroup.key === "logs";
   const outputsRowClassName = isHtmlGroup
     ? "grid gap-4"
-    : "flex gap-3 overflow-x-auto pb-2 pl-3 pr-1 sm:-mx-1 sm:px-1 snap-x snap-mandatory scrollbar-hide";
-  const outputCardClassName = isHtmlGroup
-    ? "group flex w-full flex-col text-left"
-    : "group flex w-64 flex-shrink-0 snap-start flex-col text-left";
+    : "grid grid-cols-2 gap-2 sm:gap-3";
+  const outputCardClassName = "group flex w-full flex-col text-left";
   const previewSizeClass = isHtmlGroup
     ? "min-h-[50vh] sm:min-h-[55vh] lg:min-h-[60vh]"
-    : "aspect-[3/4]";
+    : "aspect-[1/1] sm:aspect-[3/4]";
   const outputsAriaLabel = isLogsGroup
     ? "Logs"
     : `${activeGroup.label} outputs`;
-  const outputRows = isHtmlGroup
-    ? [activeGroup.items]
-    : activeGroup.items.reduce<ArtifactGalleryItem[][]>(
-        (rows, item, index) => {
-          rows[index % 2].push(item);
-          return rows;
-        },
-        [[], []],
-      );
-  const visibleRows = isHtmlGroup ? outputRows : outputRows.filter((row) => row.length);
+  const outputRows = [activeGroup.items];
+  const visibleRows = outputRows.filter((row) => row.length);
   const emptyStateLabel = isLogsGroup
     ? "logs"
     : `${activeGroup.label.toLowerCase()} outputs`;
@@ -67,13 +57,13 @@ export function JobOverviewSection({
       {showOutputsRow && (
         <div className="space-y-2">
           {loadingArtifacts && !hasOutputs ? (
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="grid grid-cols-2 gap-2 pb-2 sm:gap-3">
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={`output-skeleton-${index}`}
-                  className="w-56 flex-shrink-0 animate-pulse space-y-2"
+                  className="w-full animate-pulse space-y-2"
                 >
-                  <div className="aspect-[3/4] w-full rounded-xl bg-muted/60" />
+                  <div className="aspect-[1/1] w-full rounded-xl bg-muted/60 sm:aspect-[3/4]" />
                   <div className="h-3 w-3/4 rounded bg-muted/60" />
                   <div className="h-2.5 w-1/2 rounded bg-muted/50" />
                 </div>
@@ -96,7 +86,7 @@ export function JobOverviewSection({
               </div>
 
               {activeGroup.items.length > 0 ? (
-                <div className={isHtmlGroup ? undefined : "space-y-3"}>
+                <div>
                   {visibleRows.map((row, rowIndex) => (
                     <div
                       key={`outputs-row-${rowIndex}`}
