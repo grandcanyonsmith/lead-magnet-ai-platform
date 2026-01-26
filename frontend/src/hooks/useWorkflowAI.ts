@@ -72,7 +72,7 @@ export function useWorkflowAI(
     requestSeqRef.current = requestSeq;
 
     try {
-      if (!enableStreaming) {
+      const startNonStreaming = async () => {
         const startResult = await api.editWorkflowWithAI(workflowId, {
           userPrompt,
           ...(contextJobId ? { contextJobId } : {}),
@@ -81,6 +81,17 @@ export function useWorkflowAI(
           throw new Error(startResult?.message || "Failed to start workflow edit");
         }
         return await pollWorkflowEditJob(startResult.job_id, requestSeq);
+      };
+
+      const shouldFallbackToPolling = (message?: string | null) =>
+        Boolean(
+          message &&
+            (message.includes("Failed to start streaming: 503") ||
+              /service unavailable/i.test(message)),
+        );
+
+      if (!enableStreaming) {
+        return await startNonStreaming();
       }
 
       let streamError: string | null = null;
@@ -112,6 +123,9 @@ export function useWorkflowAI(
       );
 
       if (streamError) {
+        if (shouldFallbackToPolling(streamError)) {
+          return await startNonStreaming();
+        }
         throw new Error(streamError);
       }
 

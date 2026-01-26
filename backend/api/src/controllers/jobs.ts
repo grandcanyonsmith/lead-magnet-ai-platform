@@ -65,6 +65,7 @@ class JobsController {
         job_id: job.job_id,
         status: job.status,
         updated_at: job.updated_at,
+        started_at: job.started_at || null,
         completed_at: job.completed_at || null,
         failed_at: job.failed_at || null,
         live_step: job.live_step ?? null,

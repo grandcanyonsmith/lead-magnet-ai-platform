@@ -74,6 +74,7 @@ export interface JobStatusResponse {
   job_id: string;
   status: Status;
   updated_at?: string;
+  started_at?: string | null;
   completed_at?: string | null;
   failed_at?: string | null;
   live_step?: JobLiveStep | null;

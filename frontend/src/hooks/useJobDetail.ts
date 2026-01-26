@@ -542,7 +542,10 @@ export function useJobExecution({
       return;
     }
 
-    const shouldPoll = job.status === "processing" || rerunningStep !== null;
+    const shouldPoll =
+      job.status === "processing" ||
+      job.status === "pending" ||
+      rerunningStep !== null;
     if (!shouldPoll) {
       return;
     }
@@ -558,6 +561,7 @@ export function useJobExecution({
                 ...prevJob,
                 status: data.status,
                 updated_at: data.updated_at ?? prevJob.updated_at,
+                started_at: data.started_at ?? prevJob.started_at,
                 completed_at: data.completed_at ?? prevJob.completed_at,
                 failed_at: data.failed_at ?? prevJob.failed_at,
                 live_step: data.live_step ?? null,

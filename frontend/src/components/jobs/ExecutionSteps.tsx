@@ -256,7 +256,7 @@ const CompactTextPreview = ({
       className="relative w-full h-full bg-gray-50 dark:bg-gray-900 p-2 group/preview"
       style={{ contain: "layout style paint", minHeight: 0 }}
     >
-      <div className="h-full w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-md relative">
+        <div className="h-full w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-md relative">
         <div className="absolute top-2 right-2 z-10 flex items-center gap-1 opacity-0 transition-opacity group-hover/preview:opacity-100 bg-white/90 dark:bg-gray-950/90 backdrop-blur-sm rounded-lg p-1 border border-gray-200 dark:border-gray-800 shadow-lg">
           {onCopy && (
             <button
@@ -285,16 +285,16 @@ const CompactTextPreview = ({
             </button>
           )}
         </div>
-        <div className="h-full overflow-y-auto p-3 text-[10px] leading-relaxed text-foreground scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800 hover:scrollbar-thumb-gray-300 dark:hover:scrollbar-thumb-gray-700">
+        <div className="h-full overflow-y-auto p-3 text-[11px] leading-relaxed text-gray-900 dark:text-gray-100 scrollbar-hide">
           {shouldRenderMarkdown ? (
-            <div className="prose prose-sm max-w-none dark:prose-invert text-[10px] leading-relaxed prose-p:my-2 prose-headings:my-3 prose-headings:font-bold prose-headings:text-gray-900 dark:prose-headings:text-gray-100 prose-h2:text-base prose-h3:text-sm prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-pre:my-2 prose-table:w-full prose-table:border-collapse prose-th:border prose-th:border-gray-300 dark:prose-th:border-gray-700 prose-th:bg-gray-50 dark:prose-th:bg-gray-900 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-semibold prose-th:text-gray-900 dark:prose-th:text-gray-100 prose-td:border prose-td:border-gray-200 dark:prose-td:border-gray-800 prose-td:px-3 prose-td:py-2 prose-td:text-gray-700 dark:prose-td:text-gray-300 prose-code:bg-gray-100 dark:prose-code:bg-gray-900 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[9px] prose-code:font-mono prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-strong:font-semibold">
+            <div className="prose prose-sm max-w-none dark:prose-invert text-[11px] leading-relaxed prose-p:my-2 prose-p:text-gray-800 dark:prose-p:text-gray-100 prose-headings:my-2.5 prose-headings:font-bold prose-headings:text-gray-900 dark:prose-headings:text-gray-100 prose-h2:text-[13px] prose-h3:text-[12px] prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-li:text-gray-800 dark:prose-li:text-gray-100 prose-pre:my-2 prose-table:w-full prose-table:border-collapse prose-th:border prose-th:border-gray-300 dark:prose-th:border-gray-700 prose-th:bg-gray-50 dark:prose-th:bg-gray-900 prose-th:px-3 prose-th:py-2 prose-th:text-left prose-th:font-semibold prose-th:text-gray-900 dark:prose-th:text-gray-100 prose-td:border prose-td:border-gray-200 dark:prose-td:border-gray-800 prose-td:px-3 prose-td:py-2 prose-td:text-gray-700 dark:prose-td:text-gray-200 prose-code:bg-gray-100 dark:prose-code:bg-gray-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[10px] prose-code:font-mono prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-strong:font-semibold">
               <MarkdownRenderer
                 value={markdownContent}
                 fallbackClassName="whitespace-pre-wrap break-words"
               />
             </div>
           ) : (
-            <div className="whitespace-pre-wrap break-words text-gray-700 dark:text-gray-300">
+            <div className="whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100">
               {text}
             </div>
           )}
@@ -629,7 +629,7 @@ export function ExecutionSteps({
                         />
                       }
                       className="group flex w-full flex-col text-left"
-                      previewClassName="aspect-[4/3] sm:aspect-[16/9]"
+                      previewClassName="aspect-[3/2] sm:aspect-[8/5]"
                     />,
                   ]
                 : [];
@@ -727,65 +727,59 @@ export function ExecutionSteps({
                         )}
                       </div>
                     ) : (
-                      <>
-                        <button
-                          type="button"
-                          className="w-full flex justify-center py-2 border-t border-border/60 hover:bg-muted/40 transition-colors text-xs font-medium text-muted-foreground"
-                          onClick={() => onToggleStep(stepOrder)}
-                          aria-expanded={isExpanded}
-                        >
-                          {isExpanded ? (
-                            <span className="flex items-center gap-1">
-                              Hide details <ChevronUpIcon className="w-3 h-3" />
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1">
-                              Show details <ChevronDownIcon className="w-3 h-3" />
-                            </span>
-                          )}
-                        </button>
-                        {isExpanded && (
-                          <div className="border-t border-border/60 bg-muted/30">
-                            <StepInputOutput
-                              step={step}
-                              status={stepStatus}
-                              onCopy={onCopy}
-                              liveOutput={liveOutputForStep}
-                              liveUpdatedAt={liveUpdatedAtForStep}
-                              imageArtifacts={
-                                imageArtifactsByStep.get(stepOrder) || []
-                              }
-                              fileArtifacts={
-                                fileArtifactsByStep.get(stepOrder) || []
-                              }
-                              loadingImageArtifacts={loadingImageArtifacts}
-                              onEditStep={onEditStep}
-                              canEdit={canEdit}
-                              variant={variant}
-                            />
+                      <button
+                        type="button"
+                        className="w-full flex justify-center py-2 border-t border-border/60 hover:bg-muted/40 transition-colors text-xs font-medium text-muted-foreground"
+                        onClick={() => onToggleStep(stepOrder)}
+                        aria-expanded={isExpanded}
+                      >
+                        {isExpanded ? (
+                          <span className="flex items-center gap-1">
+                            Hide details <ChevronUpIcon className="w-3 h-3" />
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1">
+                            Show details <ChevronDownIcon className="w-3 h-3" />
+                          </span>
+                        )}
+                      </button>
+                    )}
+                    {isExpanded && (
+                      <div className="border-t border-border/60 bg-muted/30">
+                        <StepInputOutput
+                          step={step}
+                          status={stepStatus}
+                          onCopy={onCopy}
+                          liveOutput={liveOutputForStep}
+                          liveUpdatedAt={liveUpdatedAtForStep}
+                          imageArtifacts={imageArtifactsByStep.get(stepOrder) || []}
+                          fileArtifacts={fileArtifactsByStep.get(stepOrder) || []}
+                          loadingImageArtifacts={loadingImageArtifacts}
+                          onEditStep={onEditStep}
+                          canEdit={canEdit}
+                          variant={variant}
+                        />
 
-                            {stepImageFiles.length > 0 && (
-                              <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-muted/20">
-                                {stepImageFiles.map((file) =>
-                                  file.type === "imageArtifact" ? (
-                                    <ImagePreview
-                                      key={file.key}
-                                      artifact={file.data}
-                                      {...imagePreviewProps}
-                                    />
-                                  ) : (
-                                    <ImagePreview
-                                      key={file.key}
-                                      imageUrl={file.data}
-                                      {...imagePreviewProps}
-                                    />
-                                  ),
-                                )}
-                              </div>
+                        {stepImageFiles.length > 0 && (
+                          <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-muted/20">
+                            {stepImageFiles.map((file) =>
+                              file.type === "imageArtifact" ? (
+                                <ImagePreview
+                                  key={file.key}
+                                  artifact={file.data}
+                                  {...imagePreviewProps}
+                                />
+                              ) : (
+                                <ImagePreview
+                                  key={file.key}
+                                  imageUrl={file.data}
+                                  {...imagePreviewProps}
+                                />
+                              ),
                             )}
                           </div>
                         )}
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>

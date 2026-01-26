@@ -439,7 +439,10 @@ Please generate the updated workflow configuration with all necessary changes.`;
         throw new Error('No response from OpenAI');
       }
 
-      const parsedResponse = this.parseWorkflowResponse(cleaned);
+      const parsedResponse = this.parseWorkflowResponse(
+        cleaned,
+        workflowContext.current_steps,
+      );
       const dependencyUpdate = this.getDependencyOnlyUpdate(
         userPrompt,
         workflowContext.current_steps,
@@ -537,7 +540,10 @@ Please generate the updated workflow configuration with all necessary changes.`;
       throw new Error('No response from OpenAI');
     }
 
-    const parsedResponse = this.parseWorkflowResponse(cleaned);
+    const parsedResponse = this.parseWorkflowResponse(
+      cleaned,
+      workflowContext.current_steps,
+    );
     const dependencyUpdate = this.getDependencyOnlyUpdate(
       userPrompt,
       workflowContext.current_steps,
@@ -552,8 +558,11 @@ Please generate the updated workflow configuration with all necessary changes.`;
     });
   }
 
-  private parseWorkflowResponse(cleaned: string): WorkflowAIEditResponse {
-    const parsedResponse = parseJsonFromText<WorkflowAIEditResponse>(cleaned, {
+  private parseWorkflowResponse(
+    cleaned: string,
+    fallbackSteps?: WorkflowStep[],
+  ): WorkflowAIEditResponse {
+    const parsedResponse = parseJsonFromText<any>(cleaned, {
       preferLast: true,
     });
 
@@ -561,11 +570,141 @@ Please generate the updated workflow configuration with all necessary changes.`;
       throw new Error('Invalid response from OpenAI (expected JSON object)');
     }
 
-    if (!parsedResponse.steps || !Array.isArray(parsedResponse.steps)) {
+    return this.normalizeWorkflowAiResponse(parsedResponse, fallbackSteps);
+  }
+
+  private normalizeWorkflowAiResponse(
+    parsedResponse: any,
+    fallbackSteps?: WorkflowStep[],
+  ): WorkflowAIEditResponse {
+    const candidates = this.collectResponseCandidates(parsedResponse);
+    const steps = this.extractStepsFromCandidates(candidates);
+    const { workflow_name, workflow_description } =
+      this.extractWorkflowMeta(candidates);
+    const changes_summary = this.extractChangesSummary(candidates);
+    const resolvedSteps =
+      steps ||
+      (Array.isArray(fallbackSteps) && fallbackSteps.length > 0
+        ? fallbackSteps
+        : null);
+
+    if (!resolvedSteps) {
       throw new Error('Invalid response structure from AI - missing steps array');
     }
 
-    return parsedResponse;
+    if (!steps && resolvedSteps === fallbackSteps) {
+      logger.warn('[WorkflowAI] Missing steps array; using current workflow steps');
+    }
+
+    return {
+      workflow_name,
+      workflow_description,
+      steps: resolvedSteps,
+      changes_summary,
+    };
+  }
+
+  private collectResponseCandidates(parsedResponse: any): any[] {
+    const candidates: any[] = [parsedResponse];
+    if (!parsedResponse || typeof parsedResponse !== 'object') {
+      return candidates;
+    }
+
+    const nestedKeys = [
+      'workflow',
+      'updated_workflow',
+      'workflow_config',
+      'workflowConfig',
+      'result',
+      'data',
+      'payload',
+    ];
+
+    nestedKeys.forEach((key) => {
+      const value = (parsedResponse as any)[key];
+      if (value && typeof value === 'object') {
+        candidates.push(value);
+      }
+    });
+
+    return candidates;
+  }
+
+  private extractStepsFromCandidates(candidates: any[]): WorkflowStep[] | null {
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate)) {
+        return candidate as WorkflowStep[];
+      }
+      if (!candidate || typeof candidate !== 'object') {
+        continue;
+      }
+
+      const arrays = [
+        candidate.steps,
+        candidate.workflow_steps,
+        candidate.updated_steps,
+        candidate.current_steps,
+      ];
+
+      for (const arr of arrays) {
+        if (Array.isArray(arr)) {
+          return arr as WorkflowStep[];
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private extractWorkflowMeta(candidates: any[]): {
+    workflow_name?: string;
+    workflow_description?: string;
+  } {
+    for (const candidate of candidates) {
+      if (!candidate || typeof candidate !== 'object') {
+        continue;
+      }
+      const workflowName =
+        typeof candidate.workflow_name === 'string'
+          ? candidate.workflow_name.trim()
+          : '';
+      const workflowDescription =
+        typeof candidate.workflow_description === 'string'
+          ? candidate.workflow_description.trim()
+          : '';
+      if (workflowName || workflowDescription) {
+        return {
+          workflow_name: workflowName || undefined,
+          workflow_description: workflowDescription || undefined,
+        };
+      }
+    }
+
+    return {};
+  }
+
+  private extractChangesSummary(candidates: any[]): string {
+    const summaryKeys = [
+      'changes_summary',
+      'change_summary',
+      'summary',
+      'changes',
+      'message',
+    ];
+
+    for (const candidate of candidates) {
+      if (!candidate || typeof candidate !== 'object') {
+        continue;
+      }
+      for (const key of summaryKeys) {
+        const value = (candidate as any)[key];
+        if (typeof value === 'string' && value.trim()) {
+          return value.trim();
+        }
+      }
+    }
+
+    return 'Updated workflow configuration based on the request.';
   }
 
   private normalizeWorkflowResponse(

@@ -54,6 +54,13 @@ export function useWorkflowStepAI(workflowId?: string) {
       let streamError: string | null = null;
       let streamResult: AIStepGenerationResult | undefined;
 
+      const shouldFallbackToNonStreaming = (message?: string | null) =>
+        Boolean(
+          message &&
+            (message.includes("Failed to start streaming: 503") ||
+              /service unavailable/i.test(message)),
+        );
+
       const streamResponse = await api.streamGenerateStepWithAI(
         workflowId,
         {
@@ -76,7 +83,17 @@ export function useWorkflowStepAI(workflowId?: string) {
       );
 
       if (streamError) {
-        throw new Error(streamError);
+        if (shouldFallbackToNonStreaming(streamError)) {
+          const fallbackResult = await api.generateStepWithAI(workflowId, {
+            userPrompt,
+            action: suggestedAction,
+            currentStep,
+            currentStepIndex,
+          });
+          streamResult = fallbackResult as AIStepGenerationResult;
+        } else {
+          throw new Error(streamError);
+        }
       }
 
       const result = (streamResult || streamResponse?.result) as

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { EyeIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
+import { EyeIcon, PencilSquareIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import { PreviewCard } from "@/components/artifacts/PreviewCard";
 import { OutputPreview } from "@/components/jobs/detail/OutputPreview";
 import { OutputCardActions } from "@/components/jobs/detail/OutputCardActions";
@@ -7,6 +7,7 @@ import { openJobDocumentInNewTab } from "@/utils/jobs/openJobDocument";
 import type { ArtifactGalleryItem } from "@/types/job";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import Link from "next/link";
 import {
