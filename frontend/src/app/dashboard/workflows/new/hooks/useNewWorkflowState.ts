@@ -125,7 +125,7 @@ export function useNewWorkflowState() {
 
   const wizardStepValue = !isWizardReview && currentWizardStep ? ideationDraft[currentWizardStep.key] : "";
   
-  const showWizardHint = !isWizardReview && currentWizardStep?.hint && wizardStepValue.toLowerCase().includes("not sure");
+  const showWizardHint = Boolean(!isWizardReview && currentWizardStep?.hint && wizardStepValue.toLowerCase().includes("not sure"));
 
   const contextItems = useMemo(() => {
     const items: Array<{ label: string; value: string }> = [];
