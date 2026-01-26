@@ -81,9 +81,9 @@ def test_parse_s3_upload_target_ignores_stop_words():
     result = service._parse_s3_upload_target_from_instructions("do not upload to bucket not allowed")
     assert result is None
 
-    # "bucket my-bucket" SHOULD match "my-bucket"
-    result = service._parse_s3_upload_target_from_instructions("upload to bucket my-bucket on s3")
-    assert result == {"bucket": "my-bucket", "region": "us-east-1"}
+    # "bucket custom-data-bucket" SHOULD match "custom-data-bucket"
+    result = service._parse_s3_upload_target_from_instructions("upload to bucket custom-data-bucket on s3")
+    assert result == {"bucket": "custom-data-bucket", "region": "us-east-1"}
 
 
 def test_process_step_upload_renames_on_existing_key(monkeypatch):
