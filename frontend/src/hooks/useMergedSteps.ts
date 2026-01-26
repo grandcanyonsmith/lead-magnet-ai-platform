@@ -93,7 +93,27 @@ export function useMergedSteps({
   return useMemo(() => {
     if (!job) return [];
 
-    const executionSteps = job.execution_steps || [];
+    const normalizeStepOrder = (value: unknown): number | null => {
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return value;
+      }
+      if (typeof value === "string") {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+      return null;
+    };
+
+    const executionSteps = (job.execution_steps || []).map((step) => {
+      const normalizedOrder = normalizeStepOrder(step.step_order);
+      if (normalizedOrder === null) {
+        return step;
+      }
+      return {
+        ...step,
+        step_order: normalizedOrder,
+      };
+    });
     const workflowSteps = workflow?.steps || [];
     const getDependencyLabels = (dependsOn?: number[]) => {
       if (!dependsOn || dependsOn.length === 0) return undefined;

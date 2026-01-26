@@ -71,10 +71,15 @@ class OpenAIResponseService:
 
         tool_outputs = OpenAIResponseService._extract_tool_outputs(response)
         tool_output_text = OpenAIResponseService._format_tool_outputs_text(tool_outputs)
+        tool_output_plain = OpenAIResponseService._format_tool_outputs_text(
+            tool_outputs, include_marker=False
+        )
         if tool_output_text:
             tool_output_text = redact_tool_secrets_text(tool_output_text) or tool_output_text
-        if (not content or not str(content).strip()) and tool_output_text:
-            content = tool_output_text
+        if tool_output_plain:
+            tool_output_plain = redact_tool_secrets_text(tool_output_plain) or tool_output_plain
+        if (not content or not str(content).strip()) and tool_output_plain:
+            content = tool_output_plain
         
         usage = response.usage if hasattr(response, "usage") and response.usage else None
         input_tokens = getattr(usage, "input_tokens", 0) if usage else getattr(usage, "prompt_tokens", 0) if usage else 0
@@ -413,22 +418,28 @@ class OpenAIResponseService:
         return tool_outputs
 
     @staticmethod
-    def _format_tool_outputs_text(tool_outputs: List[Dict[str, Any]]) -> str:
+    def _format_tool_outputs_text(
+        tool_outputs: List[Dict[str, Any]],
+        include_marker: bool = True,
+    ) -> str:
         if not tool_outputs:
             return ""
 
-        lines = ["[Tool output]"]
+        lines: List[str] = []
+        if include_marker:
+            lines.append("[Tool output]")
         for entry in tool_outputs:
             output_text = entry.get("output_text")
             if not output_text:
                 continue
-            tool_name = entry.get("tool_name")
-            call_id = entry.get("call_id")
-            if tool_name or call_id:
-                label = tool_name or "tool"
-                if call_id:
-                    label = f"{label} ({call_id})"
-                lines.append(f"{label}:")
+            if include_marker:
+                tool_name = entry.get("tool_name")
+                call_id = entry.get("call_id")
+                if tool_name or call_id:
+                    label = tool_name or "tool"
+                    if call_id:
+                        label = f"{label} ({call_id})"
+                    lines.append(f"{label}:")
             lines.append(str(output_text).rstrip())
         return "\n".join(lines).strip()
 
