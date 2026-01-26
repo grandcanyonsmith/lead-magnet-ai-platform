@@ -22,6 +22,7 @@ import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatLiveOutputText } from "@/utils/jobFormatting";
+import { getStepInput } from "@/utils/stepInput";
 import { Button } from "@/components/ui/Button";
 import { parseLogs } from "@/utils/logParsing";
 import { StreamViewerUI, type LogEntry } from "@/components/ui/StreamViewerUI";
@@ -425,8 +426,9 @@ export function ExecutionSteps({
                 jobId && step.step_order !== undefined
                   ? `/dashboard/jobs/${jobId}/steps/${step.step_order}`
                   : undefined;
-              const stepTools = step.input?.tools || step.tools;
-              const stepToolChoice = step.input?.tool_choice || step.tool_choice;
+              const stepInput = getStepInput(step.input);
+              const stepTools = stepInput?.tools || step.tools;
+              const stepToolChoice = stepInput?.tool_choice || step.tool_choice;
               const hasComputerUse =
                 Array.isArray(stepTools) &&
                 stepTools.some(
