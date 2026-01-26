@@ -33,6 +33,7 @@ interface StepInputOutputProps {
   onEditStep?: (stepIndex: number) => void;
   canEdit?: boolean;
   variant?: "compact" | "expanded";
+  showInput?: boolean;
 }
 
 export function StepInputOutput({
@@ -47,6 +48,7 @@ export function StepInputOutput({
   onEditStep,
   canEdit = false,
   variant = "compact",
+  showInput = true,
 }: StepInputOutputProps) {
   const inputScrollRef = useRef<HTMLDivElement>(null);
   const outputScrollRef = useRef<HTMLDivElement>(null);
@@ -254,76 +256,76 @@ export function StepInputOutput({
         ) : (
           /* For completed/in-progress steps, show Input and Output side by side on desktop, stacked on mobile */
           <div className={layoutClass}>
-            {/* Input Section */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
-              <div className="bg-gray-50 dark:bg-gray-900/50 px-3 py-2 md:px-3 md:py-1.5 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between gap-2">
-                  <span
-                    className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300"
-                    title={inputLabelTitle}
-                  >
-                    {inputLabel}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    {canEdit &&
-                      onEditStep &&
-                      (step.step_type === "workflow_step" ||
-                        step.step_type === "ai_generation" ||
-                        step.step_type === "webhook") &&
-                      step.step_order !== undefined &&
-                      step.step_order > 0 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const workflowStepIndex = step.step_order - 1;
-                            onEditStep(workflowStepIndex);
-                          }}
-                          className="flex items-center gap-1 px-1.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-                          title="Edit workflow step"
-                        >
-                          <FiEdit className="w-3 h-3" />
-                          <span className="hidden sm:inline">Edit</span>
-                        </button>
-                      )}
-                    <button
-                      onClick={() => {
-                        let text: string;
-                        if (formattedInput.type === "json") {
-                          text = JSON.stringify(formattedInput.content, null, 2);
-                        } else if (typeof formattedInput.content === "string") {
-                          text = formattedInput.content;
-                        } else if (
-                          typeof formattedInput.content === "object" &&
-                          formattedInput.content !== null &&
-                          "input" in formattedInput.content
-                        ) {
-                          const contentObj = formattedInput.content as {
-                            input?: unknown;
-                          };
-                          text = contentObj.input
-                            ? String(contentObj.input)
-                            : JSON.stringify(formattedInput.content, null, 2);
-                        } else {
-                          text = JSON.stringify(formattedInput.content, null, 2);
-                        }
-                        onCopy(text);
-                      }}
-                      className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 active:text-gray-900 dark:active:text-white flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600 touch-target min-h-[44px] sm:min-h-0"
+            {showInput && (
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
+                <div className="bg-gray-50 dark:bg-gray-900/50 px-3 py-2 md:px-3 md:py-1.5 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300"
+                      title={inputLabelTitle}
                     >
-                      <FiCopy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                      <span className="hidden sm:inline">Copy</span>
-                    </button>
+                      {inputLabel}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {canEdit &&
+                        onEditStep &&
+                        (step.step_type === "workflow_step" ||
+                          step.step_type === "ai_generation" ||
+                          step.step_type === "webhook") &&
+                        step.step_order !== undefined &&
+                        step.step_order > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const workflowStepIndex = step.step_order - 1;
+                              onEditStep(workflowStepIndex);
+                            }}
+                            className="flex items-center gap-1 px-1.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                            title="Edit workflow step"
+                          >
+                            <FiEdit className="w-3 h-3" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </button>
+                        )}
+                      <button
+                        onClick={() => {
+                          let text: string;
+                          if (formattedInput.type === "json") {
+                            text = JSON.stringify(formattedInput.content, null, 2);
+                          } else if (typeof formattedInput.content === "string") {
+                            text = formattedInput.content;
+                          } else if (
+                            typeof formattedInput.content === "object" &&
+                            formattedInput.content !== null &&
+                            "input" in formattedInput.content
+                          ) {
+                            const contentObj = formattedInput.content as {
+                              input?: unknown;
+                            };
+                            text = contentObj.input
+                              ? String(contentObj.input)
+                              : JSON.stringify(formattedInput.content, null, 2);
+                          } else {
+                            text = JSON.stringify(formattedInput.content, null, 2);
+                          }
+                          onCopy(text);
+                        }}
+                        className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 active:text-gray-900 dark:active:text-white flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600 touch-target min-h-[44px] sm:min-h-0"
+                      >
+                        <FiCopy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                        <span className="hidden sm:inline">Copy</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
+                <div
+                  ref={inputScrollRef}
+                  className={`p-3 md:p-2.5 bg-white dark:bg-card ${contentHeightClass} overflow-y-auto scrollbar-hide-until-hover`}
+                >
+                  <StepContent formatted={formattedInput} />
+                </div>
               </div>
-              <div
-                ref={inputScrollRef}
-                className={`p-3 md:p-2.5 bg-white dark:bg-card ${contentHeightClass} overflow-y-auto scrollbar-hide-until-hover`}
-              >
-                {/* Current Step Input */}
-                <StepContent formatted={formattedInput} />
-              </div>
-            </div>
+            )}
 
             {/* Output Section */}
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">

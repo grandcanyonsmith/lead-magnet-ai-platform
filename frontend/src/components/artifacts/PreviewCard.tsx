@@ -58,7 +58,7 @@ export function PreviewCard({
     >
       <div
         className={cn(
-          "flex w-full flex-col overflow-hidden rounded-xl border border-border bg-muted/40 shadow-sm transition group-hover:shadow-md",
+          "flex w-full flex-col overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-md transition group-hover:shadow-lg",
           cardClassName,
         )}
       >
@@ -73,20 +73,20 @@ export function PreviewCard({
         </div>
         <div
           className={cn(
-            "border-t border-border/60 bg-background/80 px-2 py-1.5 sm:px-3 sm:py-2",
+            "border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 px-3 py-2.5",
             footerClassName,
           )}
         >
           {footerContent ? (
             footerContent
           ) : (
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[11px] font-medium text-foreground line-clamp-1 sm:text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
                   {title}
                 </p>
                 {shouldShowDescription ? (
-                  <p className="text-[10px] text-muted-foreground line-clamp-1 sm:text-[11px]">
+                  <p className="text-[10px] text-gray-600 dark:text-gray-400 line-clamp-1 mt-0.5">
                     {description}
                   </p>
                 ) : null}

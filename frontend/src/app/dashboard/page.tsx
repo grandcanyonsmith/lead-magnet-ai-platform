@@ -92,12 +92,13 @@ export default function DashboardPage() {
         heading={`${greeting}, ${firstName}`}
         description="Here's what's happening with your lead magnets today."
       >
-        <Link href="/dashboard/workflows/new">
-          <Button className="gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow">
-            <Sparkles className="h-4 w-4" />
-            Create Lead Magnet
-          </Button>
-        </Link>
+        <Button 
+          onClick={() => router.push("/dashboard/workflows/new")}
+          className="gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow"
+        >
+          <Sparkles className="h-4 w-4" />
+          Create Lead Magnet
+        </Button>
       </PageHeader>
 
       {/* Stats Grid */}

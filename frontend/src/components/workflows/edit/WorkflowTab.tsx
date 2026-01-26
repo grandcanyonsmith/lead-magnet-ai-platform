@@ -116,17 +116,23 @@ export function WorkflowTab({
         throw new Error("Invalid proposal: steps must be an array");
       }
 
-      // Validate each step has required fields
-      for (let i = 0; i < proposal.steps.length; i++) {
-        const step = proposal.steps[i];
-        if (!step.step_name || !step.instructions) {
-          throw new Error(
-            `Invalid step ${i + 1}: missing required fields (step_name or instructions)`,
-          );
-        }
-        // Model is required but backend will default to 'gpt-5.2' if missing
-        // We don't need to validate it here as the backend handles defaults
-      }
+      const normalizedSteps = proposal.steps.map((step, index) => {
+        const baseStep = steps[index];
+        const stepName =
+          (typeof step.step_name === "string" && step.step_name.trim()) ||
+          baseStep?.step_name ||
+          `Step ${index + 1}`;
+        const instructions =
+          (typeof step.instructions === "string" && step.instructions.trim()) ||
+          baseStep?.instructions ||
+          "Generate content based on form submission data.";
+
+        return {
+          ...step,
+          step_name: stepName,
+          instructions,
+        };
+      });
 
       // Apply workflow metadata changes
       if (proposal.workflow_name) {
@@ -137,7 +143,7 @@ export function WorkflowTab({
       }
 
       // Apply validated step changes
-      onStepsChange(normalizeDeliverableSteps(proposal.steps));
+      onStepsChange(normalizeDeliverableSteps(normalizedSteps));
 
       toast.success("AI changes applied! Don't forget to save.");
       clearProposal();

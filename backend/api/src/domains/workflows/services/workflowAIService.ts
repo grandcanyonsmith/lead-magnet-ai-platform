@@ -77,6 +77,7 @@ const VALID_TOOL_CHOICES = new Set<ToolChoice>(['auto', 'required', 'none']);
 const VALID_SERVICE_TIERS = new Set(['auto', 'default', 'flex', 'scale', 'priority']);
 const VALID_REASONING_EFFORTS = new Set(['none', 'low', 'medium', 'high', 'xhigh']);
 const VALID_TEXT_VERBOSITIES = new Set(['low', 'medium', 'high']);
+const DEFAULT_STEP_INSTRUCTIONS = 'Generate content based on form submission data.';
 
 type WorkflowAIContextParams = Pick<
   WorkflowAIEditRequest,
@@ -449,6 +450,7 @@ Please generate the updated workflow configuration with all necessary changes.`;
         resolvedDefaultTextVerbosity: settings.resolvedDefaultTextVerbosity,
         shouldOverrideServiceTier: settings.shouldOverrideServiceTier,
         dependencyUpdate,
+        originalSteps: workflowContext.current_steps,
       });
     } catch (error: any) {
       const status = this.getErrorStatus(error);
@@ -546,6 +548,7 @@ Please generate the updated workflow configuration with all necessary changes.`;
       resolvedDefaultTextVerbosity: settings.resolvedDefaultTextVerbosity,
       shouldOverrideServiceTier: settings.shouldOverrideServiceTier,
       dependencyUpdate,
+      originalSteps: workflowContext.current_steps,
     });
   }
 
@@ -577,6 +580,7 @@ Please generate the updated workflow configuration with all necessary changes.`;
         targetIndices: number[];
         originalSteps: WorkflowStep[];
       };
+      originalSteps?: WorkflowStep[];
     },
   ): WorkflowAIEditResponse {
     const {
@@ -585,7 +589,11 @@ Please generate the updated workflow configuration with all necessary changes.`;
       resolvedDefaultTextVerbosity,
       shouldOverrideServiceTier,
       dependencyUpdate,
+      originalSteps,
     } = options;
+
+    const fallbackSteps =
+      dependencyUpdate?.originalSteps ?? originalSteps ?? [];
 
     if (dependencyUpdate?.enabled && dependencyUpdate.targetIndices.length > 0) {
       const baseSteps = dependencyUpdate.originalSteps.map((step) => ({
@@ -611,9 +619,21 @@ Please generate the updated workflow configuration with all necessary changes.`;
     }
 
     const validatedSteps = parsedResponse.steps.map((step: any, index: number) => {
-      if (!step.step_name || !step.instructions) {
-        throw new Error(`Step ${index + 1} is missing required fields (step_name or instructions)`);
-      }
+      const baseStep = fallbackSteps[index];
+      const baseStepName =
+        typeof baseStep?.step_name === 'string' ? baseStep.step_name.trim() : '';
+      const baseInstructions =
+        typeof baseStep?.instructions === 'string'
+          ? baseStep.instructions.trim()
+          : '';
+      const rawStepName =
+        typeof step.step_name === 'string' ? step.step_name.trim() : '';
+      const rawInstructions =
+        typeof step.instructions === 'string' ? step.instructions.trim() : '';
+
+      step.step_name = rawStepName || baseStepName || `Step ${index + 1}`;
+      step.instructions =
+        rawInstructions || baseInstructions || DEFAULT_STEP_INSTRUCTIONS;
 
       if (!step.model) {
         step.model = 'gpt-5.2';
