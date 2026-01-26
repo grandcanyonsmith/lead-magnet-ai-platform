@@ -4,12 +4,15 @@ import { useEffect, useState, useMemo } from "react";
 import { api } from "@/lib/api";
 import { FiRefreshCw, FiInbox, FiClock, FiHardDrive } from "react-icons/fi";
 import { PreviewCard } from "@/components/artifacts/PreviewCard";
+import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { FiltersBar } from "@/components/artifacts/FiltersBar";
 import { PaginationControls } from "@/components/artifacts/PaginationControls";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { OutputCardActions } from "@/components/jobs/detail/OutputCardActions";
+import { FullScreenPreviewModal } from "@/components/ui/FullScreenPreviewModal";
 import { logger } from "@/utils/logger";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -33,6 +36,47 @@ type Artifact = {
 
 const ITEMS_PER_PAGE = 12;
 
+const formatBytes = (bytes?: number) => {
+  if (!bytes && bytes !== 0) return "-";
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+};
+
+const formatDate = (dateString?: string) => {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const getFileExtension = (fileName?: string, contentType?: string) => {
+  if (fileName && fileName.includes(".")) {
+    return fileName.split(".").pop()?.toUpperCase() || "FILE";
+  }
+  if (contentType) {
+    const type = contentType.split("/")[1];
+    return type.toUpperCase();
+  }
+  return "FILE";
+};
+
 export default function ArtifactsPage() {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +86,7 @@ export default function ArtifactsPage() {
   const [selectedType, setSelectedType] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
+  const [previewArtifact, setPreviewArtifact] = useState<Artifact | null>(null);
 
   useEffect(() => {
     loadArtifacts();
@@ -254,9 +299,56 @@ export default function ArtifactsPage() {
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {paginatedArtifacts.map((artifact) => (
-                  <PreviewCard key={artifact.artifact_id} artifact={artifact} />
-                ))}
+                {paginatedArtifacts.map((artifact) => {
+                  const fileName =
+                    artifact.file_name || artifact.artifact_name || "Artifact";
+                  const contentType = artifact.content_type;
+                  const downloadUrl = artifact.object_url || artifact.public_url;
+                  const sizeBytes =
+                    artifact.size_bytes || artifact.file_size_bytes || undefined;
+                  const description = artifact.artifact_type
+                    ? artifact.artifact_type.replace(/_/g, " ")
+                    : undefined;
+
+                  return (
+                    <PreviewCard
+                      key={artifact.artifact_id}
+                      title={fileName}
+                      description={description}
+                      showDescription={Boolean(description)}
+                      preview={
+                        <PreviewRenderer
+                          contentType={contentType}
+                          objectUrl={downloadUrl}
+                          fileName={fileName}
+                          className="h-full w-full"
+                          artifactId={artifact.artifact_id}
+                        />
+                      }
+                      actions={
+                        downloadUrl ? <OutputCardActions url={downloadUrl} /> : null
+                      }
+                      meta={
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                          <span>{formatDate(artifact.created_at)}</span>
+                          <span>•</span>
+                          <span className="font-mono">{formatBytes(sizeBytes)}</span>
+                        </div>
+                      }
+                      overlayTopRight={
+                        <Badge
+                          variant="secondary"
+                          className="font-bold text-[11px] shadow-sm bg-background/90 backdrop-blur-sm"
+                        >
+                          {getFileExtension(fileName, contentType)}
+                        </Badge>
+                      }
+                      onClick={() => setPreviewArtifact(artifact)}
+                      className="group flex w-full flex-col text-left"
+                      previewClassName="aspect-video bg-muted/60"
+                    />
+                  );
+                })}
               </div>
 
               <div className="border-t pt-6">
@@ -272,6 +364,14 @@ export default function ArtifactsPage() {
           )}
         </div>
       </div>
+      <FullScreenPreviewModal
+        isOpen={Boolean(previewArtifact)}
+        onClose={() => setPreviewArtifact(null)}
+        contentType={previewArtifact?.content_type}
+        objectUrl={previewArtifact?.object_url || previewArtifact?.public_url}
+        fileName={previewArtifact?.file_name || previewArtifact?.artifact_name}
+        artifactId={previewArtifact?.artifact_id}
+      />
     </div>
   );
 }

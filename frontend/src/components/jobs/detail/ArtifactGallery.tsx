@@ -1,24 +1,22 @@
 import { useState } from "react";
-import {
-  ClipboardDocumentIcon,
-  ArrowTopRightOnSquareIcon,
-  ArrowDownTrayIcon,
-  ArrowsPointingOutIcon,
-  EyeIcon,
-  CodeBracketIcon,
-  PhotoIcon,
-  DocumentIcon,
-  PencilSquareIcon,
-} from "@heroicons/react/24/outline";
-import toast from "react-hot-toast";
-import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
+import { EyeIcon, PencilSquareIcon, PhotoIcon } from "@heroicons/react/24/outline";
+import { PreviewCard } from "@/components/artifacts/PreviewCard";
+import { OutputPreview } from "@/components/jobs/detail/OutputPreview";
+import { OutputCardActions } from "@/components/jobs/detail/OutputCardActions";
 import { openJobDocumentInNewTab } from "@/utils/jobs/openJobDocument";
 import type { ArtifactGalleryItem } from "@/types/job";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import Link from "next/link";
+import {
+  getOutputGroupKey,
+  getOutputLabel,
+  getOutputPreviewMeta,
+  getOutputUrl,
+  shouldShowOutputDescription,
+} from "@/utils/jobs/outputs";
 
 interface ArtifactGalleryProps {
   items: ArtifactGalleryItem[];
@@ -131,8 +129,7 @@ interface ArtifactCardProps {
 }
 
 function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
-  const artifactUrl =
-    item.artifact?.object_url || item.artifact?.public_url || item.url;
+  const artifactUrl = getOutputUrl(item);
   const fileName =
     item.artifact?.file_name ||
     item.artifact?.artifact_name ||
@@ -165,19 +162,6 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
     normalizedUrlPath.endsWith(".html") ||
     normalizedUrlPath.endsWith(".htm");
 
-  const handleCopy = async (value: string, successMessage: string) => {
-    try {
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(value);
-      } else {
-        throw new Error("Clipboard API not available");
-      }
-      toast.success(successMessage);
-    } catch {
-      toast.error("Unable to copy to clipboard");
-    }
-  };
-
   const handleViewJobOutput = async () => {
     if (!item.jobId || openingJobOutput) return;
 
@@ -204,159 +188,94 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
     fileName.endsWith(".json") ||
     fileName.endsWith(".md");
 
-  return (
-    <Card className="group relative flex flex-col overflow-hidden transition-all hover:shadow-md" style={{ contentVisibility: 'auto' }}>
-      {/* Preview Area */}
-      <div className="aspect-[4/3] bg-muted/60 relative overflow-hidden group/preview" style={{ minHeight: 0 }}>
-        {artifactUrl && item.kind !== "jobOutput" ? (
-          <div className="relative h-full w-full" style={{ contain: 'layout style paint', minHeight: 0 }}>
-            <PreviewRenderer
-              contentType={
-                item.artifact?.content_type ||
-                (item.kind === "imageUrl" ? "image/png" : undefined)
-              }
-              objectUrl={artifactUrl}
-              fileName={fileName}
-              className="h-full w-full object-cover"
-              artifactId={item.artifact?.artifact_id}
-              jobId={item.jobId || item.artifact?.job_id}
-              autoUploadKey={item.autoUploadKey}
-            />
-            <div
-              className="absolute inset-0 cursor-pointer z-10"
-              onClick={() => onPreview(item)}
-            />
-          </div>
-        ) : (
-          <div
-            className="flex h-full w-full cursor-pointer items-center justify-center bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500"
-            onClick={() => onPreview(item)}
-          >
-            {item.kind === "jobOutput" ? (
-              <DocumentIcon className="h-12 w-12" />
-            ) : isCode ? (
-              <CodeBracketIcon className="h-12 w-12" />
-            ) : (
-              <PhotoIcon className="h-12 w-12" />
-            )}
-          </div>
-        )}
+  const groupKey = getOutputGroupKey(item);
+  const preview = getOutputPreviewMeta(item);
+  const displayLabel = getOutputLabel(item, groupKey);
+  const showDescription = shouldShowOutputDescription(groupKey, item.description);
 
-        {/* Overlay AI Editor button (restored) */}
-        {isHtml && editorHref && (
+  const footerMeta =
+    item.kind === "jobOutput" && item.jobId ? (
+      <Button
+        type="button"
+        size="sm"
+        variant="secondary"
+        onClick={(event) => {
+          event.stopPropagation();
+          void handleViewJobOutput();
+        }}
+        disabled={openingJobOutput}
+        className="h-7 px-2.5 text-xs"
+      >
+        {openingJobOutput ? (
+          <span className="animate-pulse">Opening...</span>
+        ) : (
+          <>
+            <EyeIcon className="h-3.5 w-3.5" />
+            View Output
+          </>
+        )}
+      </Button>
+    ) : null;
+
+  const footerActions = artifactUrl ? (
+    <div className="flex items-center gap-1">
+      {isHtml && editorHref ? (
+        <Tooltip content="Open in AI Editor" position="top">
+          <Link
+            href={editorHref}
+            onClick={(event) => event.stopPropagation()}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <PencilSquareIcon className="h-4 w-4" />
+          </Link>
+        </Tooltip>
+      ) : null}
+      <OutputCardActions url={artifactUrl} />
+    </div>
+  ) : isHtml && editorHref ? (
+    <Tooltip content="Open in AI Editor" position="top">
+      <Link
+        href={editorHref}
+        onClick={(event) => event.stopPropagation()}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+      >
+        <PencilSquareIcon className="h-4 w-4" />
+      </Link>
+    </Tooltip>
+  ) : null;
+
+  return (
+    <PreviewCard
+      title={displayLabel}
+      description={item.description}
+      showDescription={showDescription}
+      preview={
+        <OutputPreview groupKey={groupKey} preview={preview} className="h-full w-full" />
+      }
+      actions={footerActions}
+      meta={footerMeta}
+      overlayTopLeft={
+        <span className="inline-flex items-center rounded-md bg-background/90 px-2 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm">
+          {isImage ? "Image" : isCode ? "Code" : "Document"}
+        </span>
+      }
+      overlayTopRight={
+        isHtml && editorHref ? (
           <Tooltip content="Open in AI Editor" position="top">
             <Link
               href={editorHref}
-              onClick={(e) => e.stopPropagation()}
-              className="absolute right-3 top-3 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-gray-900/80 text-white shadow-lg transition-colors hover:bg-gray-900"
+              onClick={(event) => event.stopPropagation()}
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-900/80 text-white shadow-lg transition-colors hover:bg-gray-900"
               aria-label="Open in AI Editor"
             >
               <PencilSquareIcon className="h-5 w-5" />
             </Link>
           </Tooltip>
-        )}
-
-        {/* Type Badge */}
-        <div className="absolute left-3 top-3">
-          <span className="inline-flex items-center rounded-md bg-background/90 px-2 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm">
-            {isImage ? "Image" : isCode ? "Code" : "Document"}
-          </span>
-        </div>
-      </div>
-
-      {/* Content Area */}
-      <div className="flex flex-1 flex-col p-4">
-        <div className="mb-4">
-          <h3
-            className="text-sm font-semibold text-foreground line-clamp-1"
-            title={item.label}
-          >
-            {item.label}
-          </h3>
-          {item.description && (
-            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-              {item.description}
-            </p>
-          )}
-          {item.stepOrder !== undefined && (
-            <p className="mt-2 text-xs font-medium text-muted-foreground/80">
-              Step {item.stepOrder}
-            </p>
-          )}
-        </div>
-
-        {/* Footer Actions */}
-        <div className="mt-auto flex items-center justify-between border-t border-border/60 pt-3">
-          <div className="flex items-center gap-1">
-            {item.kind === "jobOutput" && item.jobId ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={handleViewJobOutput}
-                disabled={openingJobOutput}
-                className="h-7 px-2.5 text-xs"
-              >
-                {openingJobOutput ? (
-                  <span className="animate-pulse">Opening...</span>
-                ) : (
-                  <>
-                    <EyeIcon className="h-3.5 w-3.5" />
-                    View Output
-                  </>
-                )}
-              </Button>
-            ) : null}
-          </div>
-
-          <div className="flex items-center gap-1">
-            {artifactUrl && (
-              <Tooltip content="Open in new tab" position="top">
-                <a
-                  href={artifactUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                >
-                  <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-                </a>
-              </Tooltip>
-            )}
-            {isHtml && editorHref && (
-              <Tooltip content="Open in AI Editor" position="top">
-                <Link
-                  href={editorHref}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                >
-                  <PencilSquareIcon className="h-4 w-4" />
-                </Link>
-              </Tooltip>
-            )}
-            {artifactUrl && (
-              <Tooltip content="Copy Link" position="top">
-                <button
-                  onClick={() => handleCopy(artifactUrl, "Link copied")}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                >
-                  <ClipboardDocumentIcon className="h-4 w-4" />
-                </button>
-              </Tooltip>
-            )}
-            {item.kind === "jobOutput" && item.url && (
-              <Tooltip content="Download" position="top">
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                >
-                  <ArrowDownTrayIcon className="h-4 w-4" />
-                </a>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-      </div>
-    </Card>
+        ) : null
+      }
+      onClick={() => onPreview(item)}
+      className="group flex w-full flex-col text-left"
+      previewClassName="aspect-[4/3] bg-muted/60"
+    />
   );
 }

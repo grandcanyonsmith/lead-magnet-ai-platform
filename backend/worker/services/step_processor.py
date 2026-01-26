@@ -127,7 +127,7 @@ class StepProcessor:
                 step_outputs=step_outputs,
                 sorted_steps=sorted_steps,
                 dependency_indices=dependency_indices,
-                include_form_submission=(step_index == 0)
+                include_form_submission=True
             )
             
             # Execute handler
@@ -211,7 +211,7 @@ class StepProcessor:
                 execution_steps=execution_steps,
                 current_step_order=step_index + 1,
                 dependency_indices=dependency_indices,
-                include_form_submission=(step_index == 0)
+                include_form_submission=True
             )
             
             # Execute handler

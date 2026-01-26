@@ -917,6 +917,65 @@ export function PreviewRenderer({
     );
   };
 
+  const COMPACT_MARKDOWN_PREVIEW_CHARS = 700;
+
+  const buildCompactMarkdownPreview = (value?: string | null): string | null => {
+    if (!value) return null;
+    const normalized = value
+      .replace(/\r\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    if (!normalized) return null;
+    if (normalized.length > COMPACT_MARKDOWN_PREVIEW_CHARS) {
+      return `${normalized.slice(0, COMPACT_MARKDOWN_PREVIEW_CHARS)}\n\n_(truncated)_`;
+    }
+    return normalized;
+  };
+
+  const renderCompactMarkdownPreview = (params: {
+    markdown?: string | null;
+    icon: ReactNode;
+    emptyLabel: string;
+    loadingLabel?: string;
+  }) => {
+    const markdown = buildCompactMarkdownPreview(params.markdown);
+    const label = params.loadingLabel ?? params.emptyLabel;
+    return (
+      <CompactPreviewFrame>
+        {isInView ? (
+          markdown ? (
+            <div className="h-full w-full overflow-hidden p-2">
+              <div className="prose prose-sm max-w-none dark:prose-invert text-[10px] leading-snug prose-p:my-1 prose-headings:my-1 prose-li:my-0 prose-pre:my-2">
+                <MarkdownRenderer
+                  value={markdown}
+                  fallbackClassName="whitespace-pre-wrap break-words"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+              <div className="text-center">
+                {params.icon}
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                  {label}
+                </p>
+              </div>
+            </div>
+          )
+        ) : (
+          <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+            <div className="text-center">
+              {params.icon}
+              <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                {params.emptyLabel}
+              </p>
+            </div>
+          </div>
+        )}
+      </CompactPreviewFrame>
+    );
+  };
+
   const renderJsonViewToggle = ({
     size = "default",
     className = "",
@@ -1043,37 +1102,14 @@ export function PreviewRenderer({
     }
 
       if (isCompactPreview) {
-        return (
-          <CompactPreviewFrame>
-            {isInView ? (
-              <div className="flex h-full flex-col">
-                <div className="px-2 pt-2">
-                  {renderJsonViewToggle({
-                    size: "compact",
-                    className: "justify-end",
-                  })}
-                </div>
-                <CompactScaledContent>
-                  <div className="prose prose-sm max-w-none dark:prose-invert text-[10px] leading-snug prose-p:my-1 prose-headings:my-1 prose-li:my-0" style={{ contain: 'layout style paint' }}>
-                    <MarkdownRenderer
-                      value={markdownValue}
-                      fallbackClassName="whitespace-pre-wrap break-words"
-                    />
-                  </div>
-                </CompactScaledContent>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
-                <div className="text-center">
-                  <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                    Markdown Preview
-                  </p>
-                </div>
-              </div>
-            )}
-          </CompactPreviewFrame>
-        );
+        return renderCompactMarkdownPreview({
+          markdown: markdownValue,
+          icon: (
+            <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+          ),
+          emptyLabel: "Markdown Preview",
+          loadingLabel: "Loading markdown...",
+        });
       }
 
     return (
@@ -1405,59 +1441,21 @@ export function PreviewRenderer({
       }
 
       if (isCompactPreview) {
-        return (
-          <CompactPreviewFrame>
-            {isInView ? (
-              jsonError && !jsonRaw ? (
-                <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
-                  <div className="text-center">
-                    <FiCode className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                      Failed to load JSON
-                    </p>
-                  </div>
-                </div>
-              ) : jsonContent || jsonRaw ? (
-                <div className="flex h-full flex-col" style={{ minHeight: 0 }}>
-                  <div className="px-2 pt-2 flex-shrink-0">
-                    {renderJsonViewToggle({
-                      size: "compact",
-                      className: "justify-end",
-                    })}
-                  </div>
-                  <div className="flex-1 min-h-0 overflow-hidden">
-                    <CompactScaledContent
-                      scale={0.82}
-                      textClassName="text-[11px] leading-normal"
-                    >
-                      <div style={{ contain: 'layout style paint', minHeight: 0 }}>
-                        <JsonViewer
-                          value={jsonContent}
-                          raw={jsonRaw || ""}
-                          defaultMode="tree"
-                          defaultExpandedDepth={1}
-                        />
-                      </div>
-                    </CompactScaledContent>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
-                  <div className="text-center">
-                    <FiCode className="w-10 h-10 text-blue-400 dark:text-blue-300 mx-auto mb-2 animate-pulse" />
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                      Loading JSON...
-                    </p>
-                  </div>
-                </div>
-              )
-            ) : (
-              <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
-                <FiCode className="w-10 h-10 text-blue-400 dark:text-blue-300" />
-              </div>
-            )}
-          </CompactPreviewFrame>
-        );
+        const jsonPreviewText =
+          jsonMarkdownPreview ||
+          (typeof jsonRaw === "string"
+            ? `\`\`\`json\n${jsonRaw}\n\`\`\``
+            : jsonContent
+              ? `\`\`\`json\n${JSON.stringify(jsonContent, null, 2)}\n\`\`\``
+              : null);
+        return renderCompactMarkdownPreview({
+          markdown: jsonPreviewText,
+          icon: (
+            <FiCode className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+          ),
+          emptyLabel: jsonError ? "Failed to load JSON" : "JSON Preview",
+          loadingLabel: jsonError ? "Failed to load JSON" : "Loading JSON...",
+        });
       }
 
       if (isInView) {
@@ -1649,29 +1647,17 @@ export function PreviewRenderer({
 
         // Regular (non-fullscreen) view
         if (isCompactPreview) {
-          return (
-            <CompactPreviewFrame>
-              <div className="flex h-full flex-col">
-                <div className="px-2 pt-2">
-                  {renderJsonViewToggle({
-                    size: "compact",
-                    className: "justify-end",
-                  })}
-                </div>
-                <CompactScaledContent
-                  scale={0.82}
-                  textClassName="text-[11px] leading-normal"
-                >
-                  <JsonViewer
-                    value={parsedMarkdownJson}
-                    raw={cleanRaw}
-                    defaultMode="tree"
-                    defaultExpandedDepth={1}
-                  />
-                </CompactScaledContent>
-              </div>
-            </CompactPreviewFrame>
-          );
+          const jsonPreviewText =
+            parsedMarkdownJsonMarkdown ||
+            `\`\`\`json\n${cleanRaw || JSON.stringify(parsedMarkdownJson, null, 2)}\n\`\`\``;
+          return renderCompactMarkdownPreview({
+            markdown: jsonPreviewText,
+            icon: (
+              <FiCode className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+            ),
+            emptyLabel: "JSON Preview",
+            loadingLabel: "Loading JSON...",
+          });
         }
 
         return (
@@ -1793,49 +1779,14 @@ export function PreviewRenderer({
 
       // Regular markdown rendering
       if (isCompactPreview) {
-        return (
-          <CompactPreviewFrame>
-            {isInView ? (
-              markdownError ? (
-                <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
-                  <div className="text-center">
-                    <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                      Failed to load markdown
-                    </p>
-                  </div>
-                </div>
-              ) : markdownContent ? (
-                <CompactScaledContent>
-                  <div className="prose prose-sm max-w-none dark:prose-invert text-[10px] leading-snug prose-p:my-1 prose-headings:my-1 prose-li:my-0">
-                    <MarkdownRenderer
-                      value={markdownContent}
-                      fallbackClassName="whitespace-pre-wrap break-words"
-                    />
-                  </div>
-                </CompactScaledContent>
-              ) : (
-                <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
-                  <div className="text-center">
-                    <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2 animate-pulse" />
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                      Loading markdown...
-                    </p>
-                  </div>
-                </div>
-              )
-            ) : (
-              <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
-                <div className="text-center">
-                  <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                    Markdown File
-                  </p>
-                </div>
-              </div>
-            )}
-          </CompactPreviewFrame>
-        );
+        return renderCompactMarkdownPreview({
+          markdown: markdownContent ?? undefined,
+          icon: (
+            <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+          ),
+          emptyLabel: markdownError ? "Failed to load markdown" : "Markdown File",
+          loadingLabel: markdownError ? "Failed to load markdown" : "Loading markdown...",
+        });
       }
 
       return (

@@ -1,5 +1,6 @@
 import React from "react";
 import { FiLoader, FiCpu } from "react-icons/fi";
+import { PreviewCard } from "@/components/artifacts/PreviewCard";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { Artifact } from "@/types/artifact";
 import { MergedStep } from "@/types/job";
@@ -71,84 +72,82 @@ export function GeneratedImagesList({
 
       {/* Render from image_urls if available */}
       {hasImageUrls && step.image_urls ? (
-        <div className="grid grid-cols-1 gap-2.5 md:gap-2">
+        <div className="grid grid-cols-1 gap-2.5 md:gap-2 sm:grid-cols-2">
           {step.image_urls.map((imageUrl: string, imgIdx: number) => (
-            <div
+            <PreviewCard
               key={`url-${imgIdx}`}
-              className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"
-            >
-              <div className="aspect-video bg-gray-100 dark:bg-gray-800">
+              title={`Generated image ${imgIdx + 1}`}
+              preview={
                 <PreviewRenderer
                   contentType="image/png"
                   objectUrl={imageUrl}
                   fileName={`Generated image ${imgIdx + 1}`}
-                  className="w-full h-full"
+                  className="h-full w-full"
                 />
-              </div>
-              <div className="p-3 md:p-2 bg-gray-100 dark:bg-gray-800">
-                <div className="flex items-center justify-between gap-2">
-                  <a
-                    href={imageUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm md:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 break-all touch-target py-2 md:py-1 min-h-[44px] md:min-h-0 flex-1 min-w-0"
-                    title={imageUrl}
-                  >
-                    {truncateUrl(imageUrl)}
-                  </a>
-                  {renderCopyButton(imageUrl)}
-                </div>
-              </div>
-            </div>
+              }
+              meta={
+                <a
+                  href={imageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] text-muted-foreground hover:text-foreground truncate"
+                  title={imageUrl}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {truncateUrl(imageUrl)}
+                </a>
+              }
+              actions={renderCopyButton(imageUrl)}
+              className="group flex w-full flex-col text-left"
+              previewClassName="aspect-video bg-muted/60"
+            />
           ))}
         </div>
       ) : (
         /* Fallback: Render from artifacts */
         hasImageArtifacts && (
-          <div className="grid grid-cols-1 gap-2.5 md:gap-2">
+          <div className="grid grid-cols-1 gap-2.5 md:gap-2 sm:grid-cols-2">
             {imageArtifacts.map((artifact: Artifact, imgIdx: number) => {
               const artifactUrl = artifact.object_url || artifact.public_url;
               if (!artifactUrl) return null;
+              const fileLabel =
+                artifact.file_name ||
+                artifact.artifact_name ||
+                `Image ${imgIdx + 1}`;
 
               return (
-                <div
+                <PreviewCard
                   key={`artifact-${artifact.artifact_id || imgIdx}`}
-                  className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
-                >
-                  <div className="aspect-video bg-gray-100 dark:bg-gray-800">
+                  title={fileLabel}
+                  description={artifact.content_type}
+                  showDescription={Boolean(artifact.content_type)}
+                  preview={
                     <PreviewRenderer
                       contentType={artifact.content_type || "image/png"}
                       objectUrl={artifactUrl}
-                      fileName={
-                        artifact.file_name ||
-                        artifact.artifact_name ||
-                        `Image ${imgIdx + 1}`
-                      }
-                      className="w-full h-full"
+                      fileName={fileLabel}
+                      className="h-full w-full"
                       artifactId={artifact.artifact_id}
                     />
-                  </div>
-                  <div className="p-3 md:p-2 bg-gray-100 dark:bg-gray-800">
-                    <div className="flex items-center justify-between gap-2">
-                      <a
-                        href={artifactUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs md:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 truncate flex-1 min-w-0"
-                        title={
-                          artifact.file_name ||
-                          artifact.artifact_name ||
-                          artifactUrl
-                        }
-                      >
-                        {artifact.file_name ||
-                          artifact.artifact_name ||
-                          truncateUrl(artifactUrl)}
-                      </a>
-                      {renderCopyButton(artifactUrl)}
-                    </div>
-                  </div>
-                </div>
+                  }
+                  meta={
+                    <a
+                      href={artifactUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-muted-foreground hover:text-foreground truncate"
+                      title={fileLabel}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {artifact.file_name ||
+                        artifact.artifact_name ||
+                        truncateUrl(artifactUrl)}
+                    </a>
+                  }
+                  actions={renderCopyButton(artifactUrl)}
+                  className="group flex w-full flex-col text-left"
+                  previewClassName="aspect-video bg-muted/60"
+                />
               );
             })}
           </div>

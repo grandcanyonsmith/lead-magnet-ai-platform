@@ -31,8 +31,10 @@ export function useJobPolling({
       refetchInterval: (query) => {
         const jobData = query.state.data;
         if (!enabled || !jobData) return false;
-        // Only poll if job is processing
-        return jobData.status === "processing" ? interval : false;
+        // Poll while the job is queued or processing
+        return jobData.status === "processing" || jobData.status === "pending"
+          ? interval
+          : false;
       },
     },
   );
