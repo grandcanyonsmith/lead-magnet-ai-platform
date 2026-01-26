@@ -14,7 +14,7 @@ export function useJobExecutionSteps(steps?: MergedStep[]) {
   useEffect(() => {
     if (!steps || steps.length === 0 || hasAutoExpanded) return;
 
-    const failedStep = steps.find(step => step.status === "failed");
+    const failedStep = steps.find((step) => step._status === "failed");
     if (failedStep && failedStep.step_order !== undefined) {
       setExpandedSteps(new Set([failedStep.step_order]));
       setHasAutoExpanded(true);

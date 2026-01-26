@@ -1,7 +1,17 @@
 "use client";
 
 import { WorkflowStep } from "@/types/workflow";
-import { FiCheck, FiX, FiArrowRight } from "react-icons/fi";
+import { 
+  FiCheck, 
+  FiX, 
+  FiActivity, 
+  FiCpu, 
+  FiType, 
+  FiSettings, 
+  FiLayers,
+  FiFileText
+} from "react-icons/fi";
+import { useState } from "react";
 
 interface StepDiffPreviewProps {
   original?: WorkflowStep;
@@ -12,6 +22,40 @@ interface StepDiffPreviewProps {
   isLoading?: boolean;
   allSteps?: WorkflowStep[];
 }
+
+const DiffValue = ({ value, type, label }: { value: string; type: "old" | "new"; label?: string }) => {
+  const isLong = value.length > 150;
+  const [expanded, setExpanded] = useState(false);
+
+  const displayValue = expanded ? value : (isLong ? value.substring(0, 150) + "..." : value);
+
+  return (
+    <div className={`group relative rounded-md p-3 text-sm font-mono whitespace-pre-wrap transition-colors ${
+      type === "old" 
+        ? "bg-red-50/50 text-red-900 border border-red-100 hover:bg-red-50 hover:border-red-200" 
+        : "bg-green-50/50 text-green-900 border border-green-100 hover:bg-green-50 hover:border-green-200"
+    }`}>
+      {label && (
+        <div className={`absolute top-2 right-2 text-[10px] font-bold uppercase tracking-wider select-none opacity-50 group-hover:opacity-100 transition-opacity ${
+          type === "old" ? "text-red-500" : "text-green-500"
+        }`}>
+          {label}
+        </div>
+      )}
+      <div className="break-words">{displayValue}</div>
+      {isLong && (
+        <button 
+          onClick={() => setExpanded(!expanded)}
+          className={`mt-2 text-xs font-medium hover:underline focus:outline-none ${
+            type === "old" ? "text-red-600" : "text-green-600"
+          }`}
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      )}
+    </div>
+  );
+};
 
 export default function StepDiffPreview({
   original,
@@ -33,125 +77,68 @@ export default function StepDiffPreview({
       .join(", ");
   };
 
+  const getFieldIcon = (field: string) => {
+    switch (field) {
+      case "step_name": return <FiType className="w-4 h-4" />;
+      case "step_description": return <FiFileText className="w-4 h-4" />;
+      case "model": return <FiCpu className="w-4 h-4" />;
+      case "service_tier": return <FiActivity className="w-4 h-4" />;
+      case "instructions": return <FiFileText className="w-4 h-4" />;
+      case "tools": return <FiSettings className="w-4 h-4" />;
+      case "tool_choice": return <FiSettings className="w-4 h-4" />;
+      case "depends_on": return <FiLayers className="w-4 h-4" />;
+      default: return <FiSettings className="w-4 h-4" />;
+    }
+  };
+
   const getFieldDiffs = (): Array<{
     field: string;
     label: string;
     from: any;
     to: any;
   }> => {
+    const fields = [
+      { key: "step_name", label: "Step Name" },
+      { key: "step_description", label: "Description" },
+      { key: "model", label: "Model" },
+      { key: "service_tier", label: "Service Tier" },
+      { key: "instructions", label: "Instructions" },
+      { key: "tools", label: "Tools" },
+      { key: "tool_choice", label: "Tool Choice" },
+      { key: "depends_on", label: "Dependencies" },
+    ];
+
     if (action === "add") {
-      return [
-        {
-          field: "step_name",
-          label: "Step Name",
+      return fields
+        .map(f => ({
+          field: f.key,
+          label: f.label,
           from: null,
-          to: proposed.step_name,
-        },
-        {
-          field: "step_description",
-          label: "Description",
-          from: null,
-          to: proposed.step_description,
-        },
-        { field: "model", label: "Model", from: null, to: proposed.model },
-        {
-          field: "service_tier",
-          label: "Service Tier",
-          from: null,
-          to: proposed.service_tier,
-        },
-        {
-          field: "instructions",
-          label: "Instructions",
-          from: null,
-          to: proposed.instructions,
-        },
-        { field: "tools", label: "Tools", from: null, to: proposed.tools },
-        {
-          field: "tool_choice",
-          label: "Tool Choice",
-          from: null,
-          to: proposed.tool_choice,
-        },
-        {
-          field: "depends_on",
-          label: "Dependencies",
-          from: null,
-          to: proposed.depends_on,
-        },
-      ].filter((diff) => diff.to);
+          to: proposed[f.key as keyof WorkflowStep]
+        }))
+        .filter(diff => diff.to !== undefined && diff.to !== null && diff.to !== "");
     }
 
-    const diffs: Array<{ field: string; label: string; from: any; to: any }> =
-      [];
+    const diffs: Array<{ field: string; label: string; from: any; to: any }> = [];
 
-    if (original?.step_name !== proposed.step_name) {
-      diffs.push({
-        field: "step_name",
-        label: "Step Name",
-        from: original?.step_name,
-        to: proposed.step_name,
-      });
-    }
-    if (original?.step_description !== proposed.step_description) {
-      diffs.push({
-        field: "step_description",
-        label: "Description",
-        from: original?.step_description,
-        to: proposed.step_description,
-      });
-    }
-    if (original?.model !== proposed.model) {
-      diffs.push({
-        field: "model",
-        label: "Model",
-        from: original?.model,
-        to: proposed.model,
-      });
-    }
-    if (original?.service_tier !== proposed.service_tier) {
-      diffs.push({
-        field: "service_tier",
-        label: "Service Tier",
-        from: original?.service_tier,
-        to: proposed.service_tier,
-      });
-    }
-    if (original?.instructions !== proposed.instructions) {
-      diffs.push({
-        field: "instructions",
-        label: "Instructions",
-        from: original?.instructions,
-        to: proposed.instructions,
-      });
-    }
-    if (JSON.stringify(original?.tools) !== JSON.stringify(proposed.tools)) {
-      diffs.push({
-        field: "tools",
-        label: "Tools",
-        from: original?.tools,
-        to: proposed.tools,
-      });
-    }
-    if (original?.tool_choice !== proposed.tool_choice) {
-      diffs.push({
-        field: "tool_choice",
-        label: "Tool Choice",
-        from: original?.tool_choice,
-        to: proposed.tool_choice,
-      });
-    }
-    if (
-      JSON.stringify(original?.depends_on) !==
-      JSON.stringify(proposed.depends_on)
-    ) {
-      diffs.push({
-        field: "depends_on",
-        label: "Dependencies",
-        from: original?.depends_on,
-        to: proposed.depends_on,
-      });
-    }
+    fields.forEach(f => {
+      const key = f.key as keyof WorkflowStep;
+      const fromVal = original?.[key];
+      const toVal = proposed[key];
+      
+      // Simple equality check (JSON stringify for objects/arrays)
+      const fromStr = typeof fromVal === 'object' ? JSON.stringify(fromVal) : String(fromVal);
+      const toStr = typeof toVal === 'object' ? JSON.stringify(toVal) : String(toVal);
+
+      if (fromStr !== toStr) {
+        diffs.push({
+          field: f.key,
+          label: f.label,
+          from: fromVal,
+          to: toVal
+        });
+      }
+    });
 
     return diffs;
   };
@@ -172,7 +159,6 @@ export default function StepDiffPreview({
     }
     if (typeof value === "string") {
       if (value.trim() === "") return "(empty)";
-      if (value.length > 100) return value.substring(0, 100) + "...";
       return value;
     }
     return String(value);
@@ -181,15 +167,15 @@ export default function StepDiffPreview({
   const diffs = getFieldDiffs();
 
   return (
-    <div className="border-2 border-primary-200 rounded-lg bg-primary-50 p-3 sm:p-4">
-      <div className="flex items-start justify-between mb-4">
+    <div className="rounded-xl border border-primary-200 bg-white shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="bg-primary-50/50 border-b border-primary-100 px-4 py-3 flex items-start justify-between">
         <div>
-          <h4 className="text-sm font-semibold text-primary-900 mb-1">
-            {action === "add"
-              ? "✨ New Step Proposed"
-              : "✨ Changes Proposed by AI"}
+          <h4 className="text-sm font-bold text-primary-900 flex items-center gap-2">
+            <span className="text-lg">✨</span>
+            {action === "add" ? "New Step Proposed" : "Changes Proposed by AI"}
           </h4>
-          <p className="text-xs text-primary-700">
+          <p className="text-xs text-primary-600 mt-0.5 ml-7">
             {action === "add"
               ? "Review the proposed step configuration below"
               : `${diffs.length} field${diffs.length === 1 ? "" : "s"} will be updated`}
@@ -197,50 +183,45 @@ export default function StepDiffPreview({
         </div>
       </div>
 
-      {diffs.length === 0 && action === "update" && (
-        <div className="text-sm text-primary-700 mb-4">No changes detected</div>
-      )}
+      {/* Content */}
+      <div className="p-4 space-y-4">
+        {diffs.length === 0 && action === "update" && (
+          <div className="text-sm text-gray-500 italic text-center py-4">No changes detected</div>
+        )}
 
-      {diffs.length > 0 && (
-        <div className="space-y-3 mb-4">
-          {diffs.map((diff, index) => (
-            <div
-              key={index}
-              className="bg-white rounded border border-primary-200 p-3"
-            >
-              <div className="text-xs font-semibold text-gray-600 uppercase mb-2">
-                {diff.label}
-              </div>
-
-              {action === "update" && diff.from !== null && (
-                <div className="flex flex-col gap-1 text-sm mb-1 sm:flex-row sm:items-start sm:gap-2">
-                  <span className="text-red-600 font-medium sm:min-w-[60px]">
-                    Before:
-                  </span>
-                  <span className="text-red-700 bg-red-50 px-2 py-1 rounded break-words sm:flex-1">
-                    {renderValue(diff.from, diff.field)}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-start sm:gap-2">
-                <span className="text-green-600 font-medium sm:min-w-[60px]">
-                  {action === "add" ? "Value:" : "After:"}
-                </span>
-                <span className="text-green-700 bg-green-50 px-2 py-1 rounded break-words sm:flex-1">
-                  {renderValue(diff.to, diff.field)}
-                </span>
-              </div>
+        {diffs.map((diff, index) => (
+          <div key={index} className="space-y-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-gray-700 uppercase tracking-wide">
+              <span className="p-1.5 rounded-md bg-gray-100 text-gray-500">
+                {getFieldIcon(diff.field)}
+              </span>
+              {diff.label}
             </div>
-          ))}
-        </div>
-      )}
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <div className="ml-8 space-y-2">
+              {action === "update" && diff.from !== null && (
+                <DiffValue 
+                  value={renderValue(diff.from, diff.field)} 
+                  type="old" 
+                  label="Before"
+                />
+              )}
+              <DiffValue 
+                value={renderValue(diff.to, diff.field)} 
+                type="new" 
+                label={action === "add" ? "Value" : "After"}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Actions */}
+      <div className="bg-gray-50 px-4 py-3 border-t border-gray-100 flex flex-col sm:flex-row gap-3">
         <button
           onClick={onAccept}
           disabled={isLoading}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-all shadow-sm hover:shadow active:scale-[0.98]"
         >
           <FiCheck className="w-4 h-4" />
           {action === "add" ? "Add This Step" : "Apply Changes"}
@@ -248,7 +229,7 @@ export default function StepDiffPreview({
         <button
           onClick={onReject}
           disabled={isLoading}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-all shadow-sm hover:shadow active:scale-[0.98]"
         >
           <FiX className="w-4 h-4" />
           Reject

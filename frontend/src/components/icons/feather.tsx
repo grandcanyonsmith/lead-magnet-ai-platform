@@ -75,6 +75,7 @@ import {
   UsersIcon,
   VariableIcon,
   ViewColumnsIcon,
+  WrenchScrewdriverIcon,
   XCircleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
@@ -163,4 +164,5 @@ export {
   ArrowsUpDownIcon as FiMove,
   ArrowUturnRightIcon as FiRotateCw,
   ServerStackIcon as FiHardDrive,
+  WrenchScrewdriverIcon as FiPenTool,
 };
