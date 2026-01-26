@@ -3,6 +3,7 @@ import { toast } from "react-hot-toast";
 import { JsonViewer } from "@/components/ui/JsonViewer";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Button } from "@/components/ui/Button";
+import { buildExecutionJsonSummary } from "@/utils/jobs/rawExecutionJson";
 
 interface JobDebugTabProps {
   data: unknown;
@@ -13,7 +14,10 @@ export function JobDebugTab({ data }: JobDebugTabProps) {
 }
 
 function RawJsonPanel({ data }: { data: unknown }) {
-  const hasData = Array.isArray(data) ? data.length > 0 : Boolean(data);
+  const filteredData = buildExecutionJsonSummary(data);
+  const hasData = Array.isArray(filteredData)
+    ? filteredData.length > 0
+    : Boolean(filteredData);
 
   if (!hasData) {
     return (
@@ -23,7 +27,7 @@ function RawJsonPanel({ data }: { data: unknown }) {
     );
   }
 
-  const jsonString = JSON.stringify(data, null, 2);
+  const jsonString = JSON.stringify(filteredData, null, 2);
 
   const handleCopy = async () => {
     try {
@@ -37,7 +41,7 @@ function RawJsonPanel({ data }: { data: unknown }) {
   return (
     <SectionCard
       title="Raw execution JSON"
-      description="Full payload captured for this run."
+      description="Filtered execution steps (instructions, tools, step info, outputs)."
       actions={
         <Button type="button" size="sm" variant="outline" onClick={handleCopy}>
           <ClipboardDocumentIcon className="h-4 w-4" />
@@ -45,7 +49,12 @@ function RawJsonPanel({ data }: { data: unknown }) {
         </Button>
       }
     >
-      <JsonViewer value={data} raw={jsonString} defaultMode="tree" defaultExpandedDepth={2} />
+      <JsonViewer
+        value={filteredData}
+        raw={jsonString}
+        defaultMode="tree"
+        defaultExpandedDepth={2}
+      />
     </SectionCard>
   );
 }
