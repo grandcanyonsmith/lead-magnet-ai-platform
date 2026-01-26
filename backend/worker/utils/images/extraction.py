@@ -1,5 +1,5 @@
 import re
-from typing import List, Any, Set
+from typing import List, Any, Set, Optional
 from urllib.parse import urlparse
 import logging
 
