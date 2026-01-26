@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useMemo } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
 
@@ -10,16 +10,14 @@ import { useMergedSteps } from "@/hooks/useMergedSteps";
 import { useStepArtifacts } from "@/hooks/useStepArtifacts";
 import { useJobAutoUploads } from "@/hooks/useJobAutoUploads";
 import { usePreviewModal } from "@/hooks/usePreviewModal";
+import { useJobBreadcrumbs } from "@/hooks/useJobBreadcrumbs";
+import { useJobRelatedData } from "@/hooks/useJobRelatedData";
+import { useBreadcrumbs } from "@/contexts/BreadcrumbsContext";
 
 import { api } from "@/lib/api";
 import { buildArtifactGalleryItems } from "@/utils/jobs/artifacts";
 import { summarizeStepProgress } from "@/utils/jobs/steps";
-import { formatDuration, formatRelativeTime } from "@/utils/date";
-import {
-  getJobSubmissionPreview,
-  getStatusLabel,
-  getSubmissionPreview,
-} from "@/utils/jobs/listHelpers";
+import { formatDuration } from "@/utils/date";
 
 import { JobHeader } from "@/components/jobs/JobHeader";
 import { ResubmitModal } from "@/components/jobs/ResubmitModal";
@@ -31,15 +29,18 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import {
   JobTabs,
   resolveJobTabId,
-  type JobTabId,
+  JobTabId,
 } from "@/components/jobs/detail/JobTabs";
 
 import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
 import type { TrackingStats } from "@/lib/api/tracking.client";
-import type { ArtifactGalleryItem, Job, JobDurationInfo, JobStepSummary } from "@/types/job";
+import type {
+  ArtifactGalleryItem,
+  Job,
+  JobDurationInfo,
+  JobStepSummary,
+} from "@/types/job";
 import type { WorkflowStep } from "@/types";
-import type { Workflow } from "@/types/workflow";
-import { useBreadcrumbs } from "@/contexts/BreadcrumbsContext";
 import type {
   ImageGenerationSettings,
   ImageGenerationToolConfig,
@@ -53,9 +54,33 @@ type QuickUpdateStepInput = {
   tools?: WorkflowStep["tools"] | null;
 };
 
-// ---------------------------------------------------------------------------
-// Main Component
-// ---------------------------------------------------------------------------
+function getJobDuration(job?: Job | null): JobDurationInfo | null {
+  const shouldFallbackToCreatedAt =
+    job?.status === "processing" ||
+    job?.status === "completed" ||
+    job?.status === "failed";
+
+  const startTime =
+    job?.started_at || (shouldFallbackToCreatedAt ? job?.created_at : null);
+
+  if (!startTime) return null;
+
+  const start = new Date(startTime).getTime();
+  const endTime = job?.completed_at || job?.failed_at;
+  const endTimestamp = endTime ? new Date(endTime).getTime() : Date.now();
+
+  const seconds = Math.max(0, Math.round((endTimestamp - start) / 1000));
+
+  return {
+    seconds,
+    label: formatDuration(seconds),
+    isLive:
+      !job?.completed_at &&
+      !job?.failed_at &&
+      !job?.error_message &&
+      job?.status === "processing",
+  };
+}
 
 export default function JobDetailClient() {
   const router = useRouter();
@@ -66,24 +91,20 @@ export default function JobDetailClient() {
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [showRerunDialog, setShowRerunDialog] = useState(false);
-  const [trackingSessionCount, setTrackingSessionCount] = useState<number | null>(
+  const [trackingSessionCount, setTrackingSessionCount] = useState<
+    number | null
+  >(null);
+  const [trackingSessionsLoading, setTrackingSessionsLoading] = useState(false);
+  const [trackingStats, setTrackingStats] = useState<TrackingStats | null>(
     null,
   );
-  const [trackingSessionsLoading, setTrackingSessionsLoading] = useState(false);
-  const [trackingStats, setTrackingStats] = useState<TrackingStats | null>(null);
   const [trackingStatsLoading, setTrackingStatsLoading] = useState(false);
-  const [totalWorkflowRuns, setTotalWorkflowRuns] = useState<number | null>(null);
-  const [loadingTotalWorkflowRuns, setLoadingTotalWorkflowRuns] = useState(false);
-  const [versionRunCount, setVersionRunCount] = useState<number | null>(null);
-  const [loadingVersionRunCount, setLoadingVersionRunCount] = useState(false);
-  const [workflowJobs, setWorkflowJobs] = useState<Job[]>([]);
-  const [workflowJobsLoading, setWorkflowJobsLoading] = useState(false);
-  const [workflowOptions, setWorkflowOptions] = useState<Workflow[]>([]);
-  const [workflowOptionsLoading, setWorkflowOptionsLoading] = useState(false);
   const [stepIndexForRerun, setStepIndexForRerun] = useState<number | null>(
     null,
   );
-  const [updatingStepIndex, setUpdatingStepIndex] = useState<number | null>(null);
+  const [updatingStepIndex, setUpdatingStepIndex] = useState<number | null>(
+    null,
+  );
 
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -132,14 +153,13 @@ export default function JobDetailClient() {
     enabled: shouldLoadExecutionSteps,
   });
 
-  const {
-    items: autoUploads,
-    loading: loadingAutoUploads,
-  } = useJobAutoUploads({
-    jobId: job?.job_id,
-    enabled: shouldLoadExecutionSteps,
-    jobStatus: job?.status,
-  });
+  const { items: autoUploads, loading: loadingAutoUploads } = useJobAutoUploads(
+    {
+      jobId: job?.job_id,
+      enabled: shouldLoadExecutionSteps,
+      jobStatus: job?.status,
+    },
+  );
 
   const buildTabHref = (tabId: JobTabId) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -206,92 +226,19 @@ export default function JobDetailClient() {
         ? job.workflow_version
         : null;
 
-  React.useEffect(() => {
-    let isActive = true;
-    setWorkflowOptionsLoading(true);
-    api
-      .getWorkflows()
-      .then((data) => {
-        if (!isActive) return;
-        setWorkflowOptions(Array.isArray(data.workflows) ? data.workflows : []);
-      })
-      .catch((error) => {
-        if (!isActive) return;
-        console.error("Failed to load lead magnets:", error);
-        setWorkflowOptions([]);
-      })
-      .finally(() => {
-        if (!isActive) return;
-        setWorkflowOptionsLoading(false);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
-  React.useEffect(() => {
-    let isActive = true;
-    const workflowId = job?.workflow_id;
-    if (!workflowId) {
-      setTotalWorkflowRuns(null);
-      setLoadingTotalWorkflowRuns(false);
-      setVersionRunCount(null);
-      setLoadingVersionRunCount(false);
-      setWorkflowJobs([]);
-      setWorkflowJobsLoading(false);
-      return;
-    }
-
-    setLoadingTotalWorkflowRuns(true);
-    setLoadingVersionRunCount(true);
-    setWorkflowJobsLoading(true);
-    api
-      .getJobs({ workflow_id: workflowId, all: true })
-      .then((data) => {
-        if (!isActive) return;
-        const jobs = Array.isArray(data.jobs) ? data.jobs : [];
-        const sortedJobs = [...jobs].sort((a, b) => {
-          const aTime = new Date(a.created_at || 0).getTime();
-          const bTime = new Date(b.created_at || 0).getTime();
-          if (aTime !== bTime) return aTime - bTime;
-          return a.job_id.localeCompare(b.job_id);
-        });
-        setWorkflowJobs(sortedJobs);
-        const total =
-          typeof data.total === "number"
-            ? data.total
-            : typeof data.count === "number"
-              ? data.count
-              : jobs.length;
-        setTotalWorkflowRuns(total);
-        if (typeof activeWorkflowVersion === "number") {
-          const versionCount = jobs.filter(
-            (jobItem) => jobItem.workflow_version === activeWorkflowVersion,
-          ).length;
-          setVersionRunCount(versionCount);
-        } else {
-          setVersionRunCount(null);
-        }
-      })
-      .catch((error) => {
-        if (!isActive) return;
-        console.error("Failed to load workflow run count:", error);
-        setTotalWorkflowRuns(null);
-        setVersionRunCount(null);
-        setWorkflowJobs([]);
-      })
-      .finally(() => {
-        if (!isActive) return;
-        setLoadingTotalWorkflowRuns(false);
-        setLoadingVersionRunCount(false);
-        setWorkflowJobsLoading(false);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [job?.workflow_id, activeWorkflowVersion]);
+  const {
+    totalWorkflowRuns,
+    loadingTotalWorkflowRuns,
+    versionRunCount,
+    loadingVersionRunCount,
+    workflowJobs,
+    workflowJobsLoading,
+    workflowOptions,
+    workflowOptionsLoading,
+  } = useJobRelatedData({
+    job,
+    activeWorkflowVersion,
+  });
 
   const totalCost = useMemo(() => {
     if (!shouldLoadExecutionSteps) {
@@ -364,113 +311,16 @@ export default function JobDetailClient() {
     [jobQueryString],
   );
 
-  const breadcrumbItems = useMemo(() => {
-    if (!job) return null;
-
-    const leadMagnetLabel =
-      workflow?.workflow_name || job.workflow_id || "Lead magnet";
-    const jobPreview = getJobSubmissionPreview(job);
-    const submissionPreview = submission
-      ? getSubmissionPreview(submission)
-      : null;
-    const submissionLabel =
-      submissionPreview ||
-      (jobPreview && !jobPreview.startsWith("Submission ")
-        ? jobPreview
-        : null) ||
-      jobPreview;
-    const jobLabel = submissionLabel || `Job ${job.job_id.slice(0, 8)}`;
-
-    const workflowMenuItems = workflowOptions.map((workflowItem) => {
-      const workflowLabel =
-        workflowItem.workflow_name || workflowItem.workflow_id;
-      return {
-        id: workflowItem.workflow_id,
-        label: workflowLabel,
-        href: `/dashboard/jobs?workflow_id=${workflowItem.workflow_id}`,
-        isActive: workflowItem.workflow_id === job.workflow_id,
-      };
-    });
-
-    if (
-      job.workflow_id &&
-      !workflowMenuItems.some((item) => item.id === job.workflow_id)
-    ) {
-      workflowMenuItems.unshift({
-        id: job.workflow_id,
-        label: leadMagnetLabel,
-        href: `/dashboard/jobs?workflow_id=${job.workflow_id}`,
-        isActive: true,
-      });
-    }
-
-    const jobMenuItems = workflowJobsByNewest.map((jobItem) => {
-      const label =
-        getJobSubmissionPreview(jobItem) || `Job ${jobItem.job_id.slice(0, 8)}`;
-      const statusLabel = getStatusLabel(jobItem.status);
-      const timeLabel = jobItem.created_at
-        ? formatRelativeTime(jobItem.created_at)
-        : null;
-      const description = [statusLabel, timeLabel].filter(Boolean).join(" · ");
-      return {
-        id: jobItem.job_id,
-        label,
-        href: buildJobHref(jobItem.job_id),
-        description,
-        isActive: jobItem.job_id === job.job_id,
-      };
-    });
-
-    if (!jobMenuItems.some((item) => item.id === job.job_id)) {
-      const currentStatus = getStatusLabel(job.status);
-      const currentTime = job.created_at
-        ? formatRelativeTime(job.created_at)
-        : null;
-      jobMenuItems.unshift({
-        id: job.job_id,
-        label: jobLabel,
-        href: buildJobHref(job.job_id),
-        description: [currentStatus, currentTime].filter(Boolean).join(" · "),
-        isActive: true,
-      });
-    }
-
-    return [
-      {
-        id: "lead-magnet",
-        label: leadMagnetLabel,
-        href: job.workflow_id
-          ? `/dashboard/jobs?workflow_id=${job.workflow_id}`
-          : "/dashboard/jobs",
-        menuItems: workflowMenuItems,
-        menuLabel: "Lead magnets",
-        menuSearchPlaceholder: "Find lead magnet...",
-        menuEmptyLabel: workflowOptionsLoading
-          ? "Loading lead magnets..."
-          : "No lead magnets found.",
-      },
-      {
-        id: "job",
-        label: jobLabel,
-        href: buildJobHref(job.job_id),
-        menuItems: jobMenuItems,
-        menuLabel: "Jobs",
-        menuSearchPlaceholder: "Find job...",
-        menuEmptyLabel: workflowJobsLoading
-          ? "Loading jobs..."
-          : "No jobs found.",
-      },
-    ];
-  }, [
-    buildJobHref,
+  const breadcrumbItems = useJobBreadcrumbs({
     job,
-    submission,
     workflow,
-    workflowJobsByNewest,
+    submission,
     workflowOptions,
+    workflowJobsByNewest,
     workflowOptionsLoading,
     workflowJobsLoading,
-  ]);
+    buildJobHref,
+  });
 
   const workflowSelector = breadcrumbItems?.[0] ?? null;
   const runSelector = breadcrumbItems?.[1] ?? null;
@@ -533,7 +383,6 @@ export default function JobDetailClient() {
     previewItem?.artifact?.artifact_name ||
     previewItem?.label;
 
-  // Navigation handlers
   const currentPreviewIndex = useMemo(() => {
     if (!previewItem) return -1;
     return artifactGalleryItems.findIndex((item) => item.id === previewItem.id);
@@ -552,10 +401,6 @@ export default function JobDetailClient() {
     if (currentPreviewIndex <= 0) return;
     openPreview(artifactGalleryItems[currentPreviewIndex - 1]);
   };
-
-  // ---------------------------------------------------------------------------
-  // Handlers
-  // ---------------------------------------------------------------------------
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -593,7 +438,6 @@ export default function JobDetailClient() {
         ...updatedStep,
       };
 
-      // Update workflow
       await api.updateWorkflow(workflow.workflow_id, {
         steps: updatedSteps,
       });
@@ -749,7 +593,7 @@ export default function JobDetailClient() {
         try {
           await handleSaveStep(latestStepUpdateRef.current);
         } catch (error) {
-          throw error; // Re-throw to let the error propagate
+          throw error;
         }
       }
 
@@ -786,10 +630,6 @@ export default function JobDetailClient() {
     setStepIndexForRerun(null);
   };
 
-  // ---------------------------------------------------------------------------
-  // Loading / Error States
-  // ---------------------------------------------------------------------------
-
   if (loading) {
     return <JobDetailSkeleton />;
   }
@@ -810,13 +650,11 @@ export default function JobDetailClient() {
     return null;
   }
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-
   const errorFallback = (
     <div className="border border-red-300 dark:border-red-900 rounded-lg p-6 bg-red-50 dark:bg-red-900/20">
-      <p className="text-red-800 dark:text-red-200 font-medium">Error loading job details</p>
+      <p className="text-red-800 dark:text-red-200 font-medium">
+        Error loading job details
+      </p>
       <p className="text-red-600 dark:text-red-300 text-sm mt-1">
         Please refresh the page or try again.
       </p>
@@ -867,10 +705,6 @@ export default function JobDetailClient() {
           isResubmitting={resubmitting}
         />
 
-        {/* -------------------------------------- */}
-        {/* Step Edit Side Panel */}
-        {/* -------------------------------------- */}
-
         {editingStepIndex !== null && workflow?.steps?.[editingStepIndex] && (
           <FlowchartSidePanel
             step={workflow.steps[editingStepIndex]}
@@ -895,7 +729,6 @@ export default function JobDetailClient() {
           />
         )}
 
-        {/* Rerun dialog */}
         <RerunStepDialog
           isOpen={showRerunDialog}
           onClose={handleCloseRerunDialog}
@@ -910,7 +743,6 @@ export default function JobDetailClient() {
           isRerunning={rerunningStep !== null}
         />
 
-        {/* Tabs */}
         <div className="flex-1 min-h-0">
           <JobTabs
             job={job}
@@ -952,7 +784,6 @@ export default function JobDetailClient() {
           />
         </div>
 
-        {/* Artifact Preview Modal */}
         {previewItem && previewObjectUrl && (
           <FullScreenPreviewModal
             isOpen={!!previewItem}
@@ -973,36 +804,3 @@ export default function JobDetailClient() {
     </ErrorBoundary>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getJobDuration(job?: Job | null): JobDurationInfo | null {
-  const shouldFallbackToCreatedAt =
-    job?.status === "processing" ||
-    job?.status === "completed" ||
-    job?.status === "failed";
-
-  const startTime =
-    job?.started_at || (shouldFallbackToCreatedAt ? job?.created_at : null);
-
-  if (!startTime) return null;
-
-  const start = new Date(startTime).getTime();
-  const endTime = job?.completed_at || job?.failed_at;
-  const endTimestamp = endTime ? new Date(endTime).getTime() : Date.now();
-
-  const seconds = Math.max(0, Math.round((endTimestamp - start) / 1000));
-
-  return {
-    seconds,
-    label: formatDuration(seconds),
-    isLive:
-      !job?.completed_at &&
-      !job?.failed_at &&
-      !job?.error_message &&
-      job?.status === "processing",
-  };
-}
-

@@ -7,7 +7,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import base64
 
 from services.cache_service import CacheService
-from .extraction import get_url_hash if 'get_url_hash' in globals() else lambda x: x # We need to import this or define it
 from .processing import validate_image_size, validate_image_format, optimize_image
 
 logger = logging.getLogger(__name__)
