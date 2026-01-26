@@ -10,10 +10,12 @@ from ai_service import AIService
 from db_service import DynamoDBService
 from s3_service import S3Service
 from services.step_processor import StepProcessor
+from services.context_builder import ContextBuilder
 from services.field_label_service import FieldLabelService
 from services.job_completion_service import JobCompletionService
 from utils.html_utils import strip_html_tags
 from utils.content_detector import detect_content_type
+from utils.step_utils import normalize_step_order
 
 logger = logging.getLogger(__name__)
 
@@ -200,10 +202,29 @@ class WorkflowOrchestrator:
         
         if template:
             # Always generate the deliverable from the template when a template is configured.
-            # This avoids treating intermediate HTML (e.g., "HTML Packaging") as the final deliverable.
-            safe_accumulated_context = strip_html_tags(accumulated_context)
+            # Use only terminal step outputs as the deliverable source to avoid leaking raw
+            # research or signup-page content into the final customer-facing artifact.
+            steps = workflow.get('steps', [])
+            sorted_steps = sorted(steps, key=normalize_step_order)
+            deliverable_context = ContextBuilder.build_deliverable_context_from_step_outputs(
+                step_outputs=step_outputs,
+                sorted_steps=sorted_steps
+            )
+            if not deliverable_context:
+                if step_outputs:
+                    deliverable_context = ContextBuilder._stringify_step_output(
+                        step_outputs[-1].get('output', '')
+                    )
+                else:
+                    logger.warning(
+                        "[WorkflowOrchestrator] Deliverable context empty; falling back to full accumulated context",
+                        extra={'job_id': job_id, 'workflow_id': workflow.get('workflow_id')}
+                    )
+                    deliverable_context = accumulated_context
+
+            safe_deliverable_context = strip_html_tags(deliverable_context)
             final_content, final_artifact_type, final_filename = self.job_completion_service.generate_html_from_accumulated_context(
-                accumulated_context=safe_accumulated_context,
+                accumulated_context=safe_deliverable_context,
                 submission_data=submission_data,
                 workflow=workflow,
                 execution_steps=execution_steps,

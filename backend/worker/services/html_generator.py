@@ -64,10 +64,10 @@ class HTMLGenerator:
         prompt_overrides: Optional[Dict] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
-        Generate styled HTML deliverable from accumulated workflow content using a template as a style reference.
+        Generate styled HTML deliverable from deliverable source content using a template as a style reference.
         """
         return self._generate_styled_html(
-            content_label="CONTENT",
+            content_label="DELIVERABLE_CONTENT",
             content=research_content or "",
             template_html=template_html,
             template_style=template_style,

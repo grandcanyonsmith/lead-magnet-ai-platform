@@ -12,7 +12,9 @@ from db_service import DynamoDBService
 from s3_service import S3Service
 from delivery_service import DeliveryService
 from services.execution_step_manager import ExecutionStepManager
-from services.html_sanitizer import strip_template_placeholders
+from services.html_sanitizer import strip_template_placeholders, strip_form_elements
+from services.pdf_generator import PDFGenerator
+from utils.html_utils import strip_html_tags
 from services.usage_service import UsageService
 from ai_service import AIService
 
@@ -81,11 +83,16 @@ class JobCompletionService:
         Raises:
             Exception: If finalization fails
         """
+        pdf_artifact_id = None
+
         # Store final artifact
         try:
+            pdf_source_html = None
             # Guarantee tracking injection for the final HTML deliverable regardless of how it was generated.
             if final_artifact_type == 'html_final' and isinstance(final_content, str) and final_content.strip():
                 final_content = strip_template_placeholders(final_content)
+                final_content = strip_form_elements(final_content)
+                pdf_source_html = final_content
                 if 'Lead Magnet Tracking Script' not in final_content:
                     from services.tracking_script_generator import TrackingScriptGenerator
                     tracking_generator = TrackingScriptGenerator()
@@ -134,6 +141,14 @@ class JobCompletionService:
             final_duration = (datetime.utcnow() - final_start_time).total_seconds() * 1000
 
             logger.info(f"Final artifact stored with URL: {public_url[:80]}...")
+
+            # Generate and store PDF deliverable alongside HTML (best-effort).
+            if pdf_source_html:
+                pdf_artifact_id = self._store_pdf_deliverable(
+                    job_id=job_id,
+                    tenant_id=job['tenant_id'],
+                    html_content=pdf_source_html
+                )
         except Exception as e:
             raise Exception(f"Failed to store final document: {str(e)}") from e
         
@@ -142,6 +157,8 @@ class JobCompletionService:
         if report_artifact_id:
             artifacts_list.append(report_artifact_id)
         artifacts_list.append(final_artifact_id)
+        if pdf_artifact_id:
+            artifacts_list.append(pdf_artifact_id)
         artifacts_list.extend(all_image_artifact_ids)
         
         # CRITICAL: Reload execution_steps from S3 to ensure we have all workflow steps
@@ -192,6 +209,43 @@ class JobCompletionService:
         self._create_completion_notification(job, workflow, submission, job_id)
         
         return public_url
+
+    def _store_pdf_deliverable(
+        self,
+        job_id: str,
+        tenant_id: str,
+        html_content: str
+    ) -> Optional[str]:
+        """
+        Best-effort PDF generation from HTML content.
+        Returns the PDF artifact ID when successful, otherwise None.
+        """
+        if not isinstance(html_content, str) or not html_content.strip():
+            return None
+
+        try:
+            pdf_generator = PDFGenerator()
+            pdf_bytes = pdf_generator.generate_pdf(html_content)
+            pdf_artifact_id = self.artifact_service.store_artifact(
+                tenant_id=tenant_id,
+                job_id=job_id,
+                artifact_type='pdf_final',
+                content=pdf_bytes,
+                filename='final.pdf',
+                public=True
+            )
+            pdf_public_url = self.artifact_service.get_artifact_public_url(pdf_artifact_id)
+            logger.info(
+                "[JobCompletionService] PDF deliverable stored",
+                extra={'job_id': job_id, 'pdf_url_preview': pdf_public_url[:80]}
+            )
+            return pdf_artifact_id
+        except Exception as pdf_error:
+            logger.warning(
+                "[JobCompletionService] Failed to generate PDF deliverable",
+                extra={'job_id': job_id, 'error': str(pdf_error)}
+            )
+            return None
     
     def _deliver_job(
         self,
@@ -296,10 +350,10 @@ class JobCompletionService:
         tenant_id: str
     ) -> Tuple[str, str, str]:
         """
-        Generate HTML from accumulated context (used during batch workflow execution).
+        Generate HTML from deliverable source content (used during batch workflow execution).
         
         Args:
-            accumulated_context: Accumulated context from all workflow steps
+            accumulated_context: Deliverable-focused context from terminal workflow steps
             submission_data: Submission data dictionary
             workflow: Workflow configuration
             execution_steps: List of execution steps (will be updated)
@@ -449,11 +503,25 @@ class JobCompletionService:
                 'error': str(e)
             })
         
-        # Build accumulated context from all workflow steps
-        accumulated_context = ContextBuilder.build_accumulated_context_for_html(
-            initial_context=initial_context,
+        # Build deliverable-only context from terminal steps (fallback to full context if needed)
+        deliverable_context = ContextBuilder.build_deliverable_context_from_execution_steps(
             execution_steps=execution_steps
         )
+        if not deliverable_context:
+            fallback_output = ""
+            for step_data in reversed(execution_steps or []):
+                if step_data.get('output'):
+                    fallback_output = ContextBuilder._stringify_step_output(step_data.get('output', '')).strip()
+                    if fallback_output:
+                        break
+            if fallback_output:
+                deliverable_context = fallback_output
+            else:
+                deliverable_context = ContextBuilder.build_accumulated_context_for_html(
+                    initial_context=initial_context,
+                    execution_steps=execution_steps
+                )
+        deliverable_context = strip_html_tags(deliverable_context)
         
         # Get model from last workflow step or default
         steps = workflow.get('steps', [])
@@ -467,7 +535,7 @@ class JobCompletionService:
         ai_service = self.ai_service
 
         final_content, html_usage_info, html_request_details, html_response_details = ai_service.generate_styled_html(
-            research_content=accumulated_context,
+            research_content=deliverable_context,
             template_html=template['html_content'],
             template_style=template.get('style_description', ''),
             submission_data=submission_data,
@@ -476,6 +544,8 @@ class JobCompletionService:
         )
 
         final_content = strip_template_placeholders(final_content)
+        final_content = strip_form_elements(final_content)
+        pdf_source_html = final_content
         
         html_duration = (datetime.utcnow() - html_start_time).total_seconds() * 1000
         self.usage_service.store_usage_record(job['tenant_id'], job_id, html_usage_info)
@@ -536,10 +606,19 @@ class JobCompletionService:
         )
         execution_steps.append(html_step_data)
         
+        # Store PDF deliverable alongside HTML (best-effort)
+        pdf_artifact_id = self._store_pdf_deliverable(
+            job_id=job_id,
+            tenant_id=job.get('tenant_id'),
+            html_content=pdf_source_html
+        )
+
         # Update job with final output
         artifacts_list = job.get('artifacts', [])
         if final_artifact_id not in artifacts_list:
             artifacts_list.append(final_artifact_id)
+        if pdf_artifact_id and pdf_artifact_id not in artifacts_list:
+            artifacts_list.append(pdf_artifact_id)
         
         self.db.update_job(job_id, {
             'execution_steps': execution_steps,

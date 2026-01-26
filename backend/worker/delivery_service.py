@@ -75,6 +75,7 @@ class DeliveryService:
         images_list = []
         html_files_list = []
         markdown_files_list = []
+        pdf_files_list = []
         
         for artifact in all_artifacts:
             # Build artifact metadata
@@ -105,6 +106,8 @@ class DeliveryService:
                 html_files_list.append(artifact_metadata)
             elif artifact_type in ('markdown_final', 'step_output', 'report_markdown') or artifact_name.endswith(('.md', '.markdown')):
                 markdown_files_list.append(artifact_metadata)
+            elif artifact_type == 'pdf_final' or artifact_name.endswith('.pdf'):
+                pdf_files_list.append(artifact_metadata)
         
         # Extract artifact content for context
         artifact_content = self._extract_artifact_content(all_artifacts, job_id)
@@ -125,6 +128,7 @@ class DeliveryService:
             'images': images_list,
             'html_files': html_files_list,
             'markdown_files': markdown_files_list,
+            'pdf_files': pdf_files_list,
         }
         
         # Build full context including submission data and artifact text
@@ -174,7 +178,8 @@ class DeliveryService:
             'artifacts_count': len(artifacts_list),
             'images_count': len(images_list),
             'html_files_count': len(html_files_list),
-            'markdown_files_count': len(markdown_files_list)
+            'markdown_files_count': len(markdown_files_list),
+            'pdf_files_count': len(pdf_files_list)
         })
         
         # Log artifact URLs for debugging

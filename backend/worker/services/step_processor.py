@@ -13,7 +13,7 @@ from s3_service import S3Service
 from services.usage_service import UsageService
 from services.image_artifact_service import ImageArtifactService
 from services.context_builder import ContextBuilder
-from utils.step_utils import normalize_step_order, normalize_dependency_list
+from utils.step_utils import normalize_step_order
 from dependency_resolver import build_dependency_graph, get_ready_steps, get_step_status
 from core import log_context
 
@@ -120,10 +120,13 @@ class StepProcessor:
             # Build context
             # For AI steps, we build full context. For webhooks, it might be unused but passed for consistency.
             # Only include form submission in the first step (step_index 0)
+            dependency_indices = self._resolve_dependency_indices(sorted_steps, step_index)
+            step["_dependency_indices"] = dependency_indices
             all_previous_context = ContextBuilder.build_previous_context_from_step_outputs(
                 initial_context=initial_context,
                 step_outputs=step_outputs,
                 sorted_steps=sorted_steps,
+                dependency_indices=dependency_indices,
                 include_form_submission=(step_index == 0)
             )
             
@@ -199,17 +202,15 @@ class StepProcessor:
             step_outputs = self._build_step_outputs_from_execution_steps(execution_steps, steps)
             
             # Dependency-aware context building
-            step_deps = normalize_dependency_list(step.get('depends_on', []))
-            if not step_deps:
-                 step_order = step.get('step_order', step_index)
-                 step_deps = [i for i, s in enumerate(steps) if s.get('step_order', i) < step_order]
+            dependency_indices = self._resolve_dependency_indices(steps, step_index)
+            step["_dependency_indices"] = dependency_indices
 
             # Only include form submission in the first step (step_index 0)
             context = ContextBuilder.build_previous_context_from_execution_steps(
                 initial_context=initial_context,
                 execution_steps=execution_steps,
                 current_step_order=step_index + 1,
-                dependency_indices=step_deps,
+                dependency_indices=dependency_indices,
                 include_form_submission=(step_index == 0)
             )
             
@@ -299,6 +300,25 @@ class StepProcessor:
                 f"Step {step_index + 1} cannot execute yet. Missing dependencies: {missing_deps}"
             )
 
+    def _resolve_dependency_indices(
+        self,
+        steps: List[Dict[str, Any]],
+        step_index: int,
+    ) -> List[int]:
+        """
+        Resolve dependency indices for a step using the shared dependency graph logic.
+        """
+        try:
+            dependency_graph = build_dependency_graph(steps)
+        except Exception as exc:
+            logger.warning(
+                f"[StepProcessor] Failed to build dependency graph, defaulting to empty deps: {exc}"
+            )
+            return []
+
+        deps = dependency_graph.get(step_index, []) or []
+        return sorted(set(deps))
+
     def _build_step_outputs_from_execution_steps(
         self,
         execution_steps: List[Dict[str, Any]],
@@ -306,6 +326,7 @@ class StepProcessor:
     ) -> List[Dict[str, Any]]:
         """
         Build step_outputs list from execution_steps.
+        These are raw step results used to build formatted context blocks.
         """
         step_outputs = []
         for exec_step in execution_steps:

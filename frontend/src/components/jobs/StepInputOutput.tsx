@@ -131,6 +131,35 @@ export function StepInputOutput({
     variant === "expanded"
       ? "grid grid-cols-1 gap-4"
       : "grid grid-cols-1 gap-3";
+  const formattedInput = formatStepInput(step);
+  const formattedOutput = formatStepOutput(step);
+  const isAiStep =
+    step.step_type === "ai_generation" ||
+    step.step_type === "workflow_step" ||
+    step.step_type === "html_generation" ||
+    formattedInput.structure === "ai_input";
+  const isWebhookStep = step.step_type === "webhook";
+  const isHandoffStep = step.step_type === "workflow_handoff";
+  const inputLabel = isWebhookStep
+    ? "Request"
+    : isHandoffStep
+      ? "Handoff Input"
+      : isAiStep
+        ? "Prompt"
+        : "Input";
+  const outputLabel = isWebhookStep
+    ? "Response"
+    : isHandoffStep
+      ? "Handoff Result"
+      : isAiStep
+        ? "Step Output"
+        : "Output";
+  const inputLabelTitle = isAiStep
+    ? "Prompt = instructions + context (form submission + dependencies)"
+    : undefined;
+  const outputLabelTitle = isAiStep
+    ? "Result produced by this step"
+    : undefined;
 
   // Show section if step is completed, in progress, failed, or pending with instructions
   const shouldShow =
@@ -213,7 +242,7 @@ export function StepInputOutput({
               {step.instructions && (
                 <div>
                   <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
-                    Instructions
+                    Step Instructions (directive)
                   </span>
                   <pre className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap font-sans bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded border border-gray-200 dark:border-gray-700">
                     {step.instructions}
@@ -229,8 +258,11 @@ export function StepInputOutput({
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
               <div className="bg-gray-50 dark:bg-gray-900/50 px-3 py-2 md:px-3 md:py-1.5 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    Input
+                  <span
+                    className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300"
+                    title={inputLabelTitle}
+                  >
+                    {inputLabel}
                   </span>
                   <div className="flex items-center gap-1.5">
                     {canEdit &&
@@ -255,25 +287,24 @@ export function StepInputOutput({
                       )}
                     <button
                       onClick={() => {
-                        const formatted = formatStepInput(step);
                         let text: string;
-                        if (formatted.type === "json") {
-                          text = JSON.stringify(formatted.content, null, 2);
-                        } else if (typeof formatted.content === "string") {
-                          text = formatted.content;
+                        if (formattedInput.type === "json") {
+                          text = JSON.stringify(formattedInput.content, null, 2);
+                        } else if (typeof formattedInput.content === "string") {
+                          text = formattedInput.content;
                         } else if (
-                          typeof formatted.content === "object" &&
-                          formatted.content !== null &&
-                          "input" in formatted.content
+                          typeof formattedInput.content === "object" &&
+                          formattedInput.content !== null &&
+                          "input" in formattedInput.content
                         ) {
-                          const contentObj = formatted.content as {
+                          const contentObj = formattedInput.content as {
                             input?: unknown;
                           };
                           text = contentObj.input
                             ? String(contentObj.input)
-                            : JSON.stringify(formatted.content, null, 2);
+                            : JSON.stringify(formattedInput.content, null, 2);
                         } else {
-                          text = JSON.stringify(formatted.content, null, 2);
+                          text = JSON.stringify(formattedInput.content, null, 2);
                         }
                         onCopy(text);
                       }}
@@ -290,7 +321,7 @@ export function StepInputOutput({
                 className={`p-3 md:p-2.5 bg-white dark:bg-card ${contentHeightClass} overflow-y-auto scrollbar-hide-until-hover`}
               >
                 {/* Current Step Input */}
-                <StepContent formatted={formatStepInput(step)} />
+                <StepContent formatted={formattedInput} />
               </div>
             </div>
 
@@ -298,8 +329,11 @@ export function StepInputOutput({
             <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
               <div className="bg-gray-50 dark:bg-gray-900/50 px-3 py-2 md:px-3 md:py-1.5 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    Output
+                  <span
+                    className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300"
+                    title={outputLabelTitle}
+                  >
+                    {outputLabel}
                   </span>
                   <div className="flex items-center gap-1.5">
                     <button
@@ -312,13 +346,12 @@ export function StepInputOutput({
                           onCopy(liveOutput);
                           return;
                         }
-                        const formatted = formatStepOutput(step);
                         const text =
-                          formatted.type === "json"
-                            ? JSON.stringify(formatted.content, null, 2)
-                            : typeof formatted.content === "string"
-                              ? formatted.content
-                              : JSON.stringify(formatted.content, null, 2);
+                          formattedOutput.type === "json"
+                            ? JSON.stringify(formattedOutput.content, null, 2)
+                            : typeof formattedOutput.content === "string"
+                              ? formattedOutput.content
+                              : JSON.stringify(formattedOutput.content, null, 2);
                         onCopy(text);
                       }}
                       className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 active:text-gray-900 dark:active:text-white flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600 touch-target min-h-[44px] sm:min-h-0"
@@ -420,7 +453,7 @@ export function StepInputOutput({
 
                         return (
                           <StepContent
-                            formatted={formatStepOutput(step)}
+                            formatted={formattedOutput}
                             imageUrls={stepImageUrls}
                           />
                         );

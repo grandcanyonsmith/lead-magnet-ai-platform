@@ -43,9 +43,10 @@ STYLED_HTML_INSTRUCTIONS = (
     "1. **Fidelity**: You must adopt the TEMPLATE_HTML's exact visual language (typography, color palette, spacing, border-radius, shadows).\n"
     "2. **Structure**: Return a valid, standalone HTML5 document (<!DOCTYPE html>...</html>).\n"
     "3. **Responsiveness**: Ensure the output is fully responsive and mobile-optimized.\n"
-    "4. **Content Integrity**: Present the CONTENT accurately. Do not summarize unless asked. Use appropriate HTML tags (h1-h6, p, ul, table, blockquote) to structure the data.\n"
-    "5. **No Template Placeholders**: Do not include {{...}} placeholder tokens. If TEMPLATE_HTML contains placeholders, replace them with real text derived from CONTENT.\n"
-    "6. **No Hallucinations**: Do not invent new content. Only format what is provided.\n\n"
+    "4. **Deliverable Focus**: Use the CONTENT as raw material to create the final lead-magnet deliverable. Do not include step labels, internal notes, or raw submission JSON. Condense or reorganize as needed to produce a clean deliverable, but do not invent facts.\n"
+    "5. **No Signup/Opt-in UI**: Do not include forms, lead-capture fields, or signup CTAs. This is the post-signup deliverable the customer receives.\n"
+    "6. **No Template Placeholders**: Do not include {{...}} placeholder tokens. If TEMPLATE_HTML contains placeholders, replace them with real text derived from CONTENT.\n"
+    "7. **No Hallucinations**: Do not invent new content. Only format what is provided.\n\n"
     "## Output Format\n"
     "Return ONLY the raw HTML code. Do not wrap it in Markdown code blocks. Do not add conversational text."
 )

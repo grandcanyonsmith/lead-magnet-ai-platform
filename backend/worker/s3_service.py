@@ -58,7 +58,7 @@ class S3Service:
     def upload_artifact(
         self,
         key: str,
-        content: str,
+        content: str | bytes,
         content_type: str = 'text/html',
         public: bool = False
     ) -> Tuple[str, str]:
@@ -67,14 +67,19 @@ class S3Service:
         
         Args:
             key: S3 object key
-            content: Content to upload
+            content: Content to upload (string or bytes)
             content_type: MIME type
             public: Whether to make object publicly accessible
             
         Returns:
             Tuple of (s3_url, public_url)
         """
-        content_size = len(content.encode('utf-8'))
+        if isinstance(content, bytes):
+            body = content
+            content_size = len(content)
+        else:
+            body = content.encode('utf-8')
+            content_size = len(body)
         logger.info(f"[S3] Uploading artifact", extra={
             'key': key,
             'content_type': content_type,
@@ -88,7 +93,7 @@ class S3Service:
             put_params = {
                 'Bucket': self.bucket_name,
                 'Key': key,
-                'Body': content.encode('utf-8'),
+                'Body': body,
                 'ContentType': content_type,
             }
             

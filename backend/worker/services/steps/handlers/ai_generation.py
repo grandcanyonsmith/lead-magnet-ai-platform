@@ -192,10 +192,15 @@ class AIStepHandler(AbstractStepHandler):
                 for tool in (step_tools or [])
             )
             
+            dependency_indices = step.get("_dependency_indices")
+            if not isinstance(dependency_indices, list):
+                dependency_indices = None
+
             previous_image_urls = (
                 ContextBuilder.collect_previous_image_urls(
                     execution_steps=execution_steps,
-                    current_step_order=step_index + 1
+                    current_step_order=step_index + 1,
+                    dependency_indices=dependency_indices,
                 )
                 if has_image_generation
                 else None

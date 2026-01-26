@@ -55,7 +55,7 @@ This platform enables businesses to create automated workflows that transform fo
 - OpenAI API (GPT-5, GPT-4.1, GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo)
 - Streaming support
 - Cost tracking
-- Multi-step workflow support with context accumulation
+- Multi-step workflow support with dependency-based context accumulation
 - Image generation support (DALL-E integration)
 - Tool support (web_search, file_search, computer_use_preview, shell_executor)
 
@@ -189,8 +189,8 @@ The `ai_service.py` module handles all OpenAI API interactions. It has been refa
 - `_clean_html_markdown()` - Remove markdown code blocks from HTML
 
 ### Multi-Step Workflow Support
-- Each step receives outputs from ALL previous steps
-- Image URLs from previous steps are included in context
+- Each step receives outputs from its dependency steps
+- Image URLs from dependency steps are included in context
 - Step order is normalized to handle DynamoDB type mismatches
 - Context accumulation ensures continuity across workflow steps
 

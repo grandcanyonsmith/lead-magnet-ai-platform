@@ -52,6 +52,16 @@ def create_mock_artifacts():
             'job_id': 'test_job_001'
         },
         {
+            'artifact_id': 'art_pdf_001',
+            'artifact_type': 'pdf_final',
+            'artifact_name': 'final.pdf',
+            'public_url': 'https://example.com/final.pdf',
+            'file_size_bytes': 65432,
+            'mime_type': 'application/pdf',
+            'created_at': datetime.utcnow().isoformat(),
+            'job_id': 'test_job_001'
+        },
+        {
             'artifact_id': 'art_md_001',
             'artifact_type': 'step_output',
             'artifact_name': 'step_1_report.md',
@@ -144,7 +154,7 @@ def test_webhook_payload_structure():
     logger.info(f"Payload keys: {list(payload.keys())}")
     
     # Check required fields
-    required_fields = ['job_id', 'status', 'output_url', 'artifacts', 'images', 'html_files', 'markdown_files']
+    required_fields = ['job_id', 'status', 'output_url', 'artifacts', 'images', 'html_files', 'markdown_files', 'pdf_files']
     missing_fields = [field for field in required_fields if field not in payload]
     
     if missing_fields:
@@ -155,8 +165,8 @@ def test_webhook_payload_structure():
     
     # Verify artifacts array
     artifacts = payload.get('artifacts', [])
-    if len(artifacts) != 4:
-        logger.error(f"Expected 4 artifacts, got {len(artifacts)}")
+    if len(artifacts) != 5:
+        logger.error(f"Expected 5 artifacts, got {len(artifacts)}")
         return False
     
     logger.info(f"✅ Artifacts array has {len(artifacts)} items")
@@ -175,10 +185,12 @@ def test_webhook_payload_structure():
     images = payload.get('images', [])
     html_files = payload.get('html_files', [])
     markdown_files = payload.get('markdown_files', [])
+    pdf_files = payload.get('pdf_files', [])
     
     logger.info(f"Images: {len(images)}")
     logger.info(f"HTML files: {len(html_files)}")
     logger.info(f"Markdown files: {len(markdown_files)}")
+    logger.info(f"PDF files: {len(pdf_files)}")
     
     if len(images) != 2:
         logger.error(f"Expected 2 images, got {len(images)}")
@@ -190,6 +202,10 @@ def test_webhook_payload_structure():
     
     if len(markdown_files) != 1:
         logger.error(f"Expected 1 markdown file, got {len(markdown_files)}")
+        return False
+
+    if len(pdf_files) != 1:
+        logger.error(f"Expected 1 PDF file, got {len(pdf_files)}")
         return False
     
     logger.info("✅ Artifact categorization correct")
@@ -220,6 +236,15 @@ def test_webhook_payload_structure():
         return False
     
     logger.info("✅ Markdown artifacts correctly identified")
+
+    # Verify PDF file
+    pdf_ids = {pdf['artifact_id'] for pdf in pdf_files}
+    expected_pdf_ids = {'art_pdf_001'}
+    if pdf_ids != expected_pdf_ids:
+        logger.error(f"PDF IDs don't match. Expected {expected_pdf_ids}, got {pdf_ids}")
+        return False
+
+    logger.info("✅ PDF artifacts correctly identified")
     
     # Print sample payload structure
     logger.info("\n" + "=" * 80)
@@ -232,6 +257,7 @@ def test_webhook_payload_structure():
         'images_count': len(payload['images']),
         'html_files_count': len(payload['html_files']),
         'markdown_files_count': len(payload['markdown_files']),
+        'pdf_files_count': len(payload['pdf_files']),
         'sample_artifact': payload['artifacts'][0] if payload['artifacts'] else None
     }
     logger.info(json.dumps(sample_payload, indent=2, default=str))
@@ -402,6 +428,10 @@ def test_empty_artifacts():
     
     if payload.get('markdown_files') != []:
         logger.error("Markdown files array should be empty")
+        return False
+
+    if payload.get('pdf_files') != []:
+        logger.error("PDF files array should be empty")
         return False
     
     logger.info("✅ Empty artifacts handled correctly")

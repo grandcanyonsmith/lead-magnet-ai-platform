@@ -137,6 +137,11 @@ A record of what actually happened during job processing. Contains:
 ### Step Dependencies
 A relationship between workflow steps where one step must complete before another can start. Steps with the same `step_order` and no dependencies can run in parallel.
 
+**Rules:**
+- `depends_on` is the source of truth for execution and context inclusion
+- `depends_on` uses **step indices (0-based)** from the workflow `steps` array
+- If `depends_on` is omitted, the system falls back to `step_order` (legacy behavior)
+
 **Example:**
 ```typescript
 // Step 0: Can run in parallel
@@ -154,6 +159,7 @@ A number indicating when a step should execute relative to other steps. Steps wi
 - Lower numbers execute first
 - Steps with the same `step_order` can run in parallel
 - Dependencies override step order (step waits for dependencies even if order is lower)
+- If `depends_on` is present, `step_order` only affects scheduling among independent steps
 
 **Example:**
 ```typescript
@@ -164,6 +170,12 @@ A number indicating when a step should execute relative to other steps. Steps wi
 // This runs after Step A and B complete
 { step_order: 1, depends_on: [0] }  // Step C (depends on order 0)
 ```
+
+### Step Output
+The result produced when a step executes. Stored in the execution step record (`execution_steps[].output`) along with metadata like artifacts and image URLs. Step outputs are the **inputs** used to build context for dependency steps.
+
+### Context Instructions (Step Instructions)
+The `instructions` field on a workflow step. This is the directive for the AI (what to do), and it is **combined with context** (form submission + dependency step outputs) to create the final prompt for that step.
 
 ### Tool Choice
 Controls whether AI must use tools (`required`), can use tools (`auto`), or cannot use tools (`none`).
@@ -317,13 +329,17 @@ Measures of AI API consumption:
 - Cost tracked per step and per job
 
 ### Context Accumulation
-The process of building context for each workflow step by including outputs from previous steps.
+The process of building context for each workflow step by including outputs from **dependency steps**.
 
 **How It Works:**
 1. Step 0 receives form submission data
-2. Step 1 receives form data + Step 0 output
-3. Step 2 receives form data + Step 0 output + Step 1 output
+2. Step 1 receives form data + outputs from its dependencies
+3. Step 2 receives form data + outputs from its dependencies
 4. And so on...
+
+**Notes:**
+- If a step does not define `depends_on`, the system uses `step_order` to infer dependencies (legacy fallback)
+- Only dependency step outputs are added to the prompt context
 
 **Benefits:**
 - Each step has full context

@@ -178,12 +178,20 @@ export interface WorkflowStep {
    */
   output_config?: StepOutputConfig;
   
+  /**
+   * Step directive (the "what to do" instruction). Combined with dependency context
+   * to form the final prompt sent to the model.
+   */
   instructions: string;
   step_order?: number;
   tools?: Tool[];
   tool_choice?: ToolChoice;
   shell_settings?: ShellSettings;
-  depends_on?: number[]; // Array of step indices this step depends on
+  /**
+   * Step indices (0-based) this step depends on.
+   * If omitted, the backend falls back to step_order (legacy behavior).
+   */
+  depends_on?: number[];
   // Webhook step fields
   webhook_url?: string;
   webhook_method?: HTTPMethod;

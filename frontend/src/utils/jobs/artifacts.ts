@@ -59,9 +59,14 @@ export function buildArtifactGalleryItems({
         return (
           artifactType === "html_final" ||
           artifactType === "markdown_final" ||
+          artifactType === "pdf_final" ||
           name === "final.html" ||
+          name === "final.pdf" ||
           (contentType === "text/html" &&
             name.endsWith(".html") &&
+            name.includes("final")) ||
+          (contentType === "application/pdf" &&
+            name.endsWith(".pdf") &&
             name.includes("final"))
         );
       })
@@ -118,10 +123,16 @@ export function buildArtifactGalleryItems({
       artifact.content_type?.toLowerCase() ||
       "";
     const isImage = typeString.includes("image");
+    const isPdfFinal =
+      typeString.includes("pdf_final") ||
+      (artifact.artifact_name || artifact.file_name || "").toLowerCase() ===
+        "final.pdf";
     const label =
-      meta?.stepOrder !== undefined || meta?.stepName
-        ? formatStepLabel(meta?.stepOrder, meta?.stepType, meta?.stepName)
-        : artifact.artifact_name || artifact.file_name || "Generated Artifact";
+      isPdfFinal
+        ? "PDF Deliverable"
+        : meta?.stepOrder !== undefined || meta?.stepName
+          ? formatStepLabel(meta?.stepOrder, meta?.stepType, meta?.stepName)
+          : artifact.artifact_name || artifact.file_name || "Generated Artifact";
 
     if (normalizedObjectUrl) {
       seen.add(normalizedObjectUrl);

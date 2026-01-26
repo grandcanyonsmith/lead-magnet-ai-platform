@@ -232,6 +232,79 @@ def test_full_flow_simulation():
         return False
 
 
+def test_dependency_context_filtering():
+    """Test that dependency indices filter context to only required steps."""
+    logger.info("Testing dependency-aware context filtering...")
+
+    try:
+        from services.context_builder import ContextBuilder
+
+        step_outputs = [
+            {"step_name": "Alpha", "step_index": 0, "output": "A", "image_urls": []},
+            {"step_name": "Beta", "step_index": 1, "output": "B", "image_urls": []},
+            {"step_name": "Gamma", "step_index": 2, "output": "C", "image_urls": []},
+        ]
+        sorted_steps = [
+            {"step_name": "Alpha"},
+            {"step_name": "Beta"},
+            {"step_name": "Gamma"},
+        ]
+
+        dependency_context = ContextBuilder.build_previous_context_from_step_outputs(
+            initial_context="",
+            step_outputs=step_outputs,
+            sorted_steps=sorted_steps,
+            dependency_indices=[0, 2],
+            include_form_submission=False,
+        )
+
+        assert "Alpha" in dependency_context, "Dependency context should include Alpha"
+        assert "Gamma" in dependency_context, "Dependency context should include Gamma"
+        assert "Beta" not in dependency_context, "Dependency context should exclude Beta"
+
+        execution_steps = [
+            {
+                "step_name": "Alpha",
+                "step_order": 1,
+                "step_type": "ai_generation",
+                "output": "A",
+                "image_urls": [],
+            },
+            {
+                "step_name": "Beta",
+                "step_order": 2,
+                "step_type": "ai_generation",
+                "output": "B",
+                "image_urls": [],
+            },
+            {
+                "step_name": "Gamma",
+                "step_order": 3,
+                "step_type": "ai_generation",
+                "output": "C",
+                "image_urls": [],
+            },
+        ]
+
+        dependency_context_exec = ContextBuilder.build_previous_context_from_execution_steps(
+            initial_context="",
+            execution_steps=execution_steps,
+            current_step_order=4,
+            dependency_indices=[0, 2],
+            include_form_submission=False,
+        )
+
+        assert "Step 1: Alpha" in dependency_context_exec, "Execution context should include Alpha"
+        assert "Step 3: Gamma" in dependency_context_exec, "Execution context should include Gamma"
+        assert "Step 2: Beta" not in dependency_context_exec, "Execution context should exclude Beta"
+
+        logger.info("✅ Dependency context filtering test PASSED")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Dependency context filtering test FAILED: {e}", exc_info=True)
+        return False
+
+
 def main():
     """Run all tests."""
     logger.info("=" * 80)
@@ -242,6 +315,7 @@ def main():
         ("Execution Step Stores Image URLs", test_execution_step_stores_image_urls),
         ("Context Builder Includes Image URLs", test_context_builder_includes_image_urls),
         ("Full Flow Simulation", test_full_flow_simulation),
+        ("Dependency Context Filtering", test_dependency_context_filtering),
     ]
     
     passed = 0

@@ -234,7 +234,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
         {formatted.content.instructions && (
           <div>
             <span className="text-xs font-semibold text-gray-700 block mb-2">
-              Instructions:
+              Step Instructions (directive):
             </span>
             <div className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg border border-gray-200 max-h-64 overflow-y-auto scrollbar-hide-until-hover">
               {formatted.content.instructions}
@@ -266,7 +266,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
           {hasMetadata && (
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-gray-700">
-                Input:
+                Context (form + dependencies):
               </span>
             </div>
           )}
@@ -399,7 +399,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
           {hasMetadata && (
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-gray-700">
-                Input:
+                Context (form + dependencies):
               </span>
             </div>
           )}

@@ -1,8 +1,12 @@
 import logging
 import re
 import os
+import io
+import uuid
+import mimetypes
 import boto3
 import requests
+from botocore.exceptions import ClientError
 from urllib.parse import urlparse
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
@@ -21,6 +25,11 @@ class S3ContextService:
         raw = (os.environ.get("SHELL_S3_UPLOAD_ALLOWED_BUCKETS") or "cc360-pages").strip()
         return [b.strip() for b in raw.split(",") if b and b.strip()]
 
+    def _get_s3_upload_object_acl(self) -> Optional[str]:
+        # Default to bucket-owner-full-control for admin access (if ACLs are enabled).
+        raw = (os.environ.get("SHELL_S3_UPLOAD_OBJECT_ACL") or "bucket-owner-full-control").strip()
+        return raw or None
+
     def _get_s3_upload_key_prefix(self, *, tenant_id: str, job_id: str) -> str:
         # Default prefix keeps uploads scoped and traceable.
         prefix = (os.environ.get("SHELL_S3_UPLOAD_KEY_PREFIX") or f"leadmagnet/{tenant_id}/{job_id}/").strip()
@@ -35,6 +44,58 @@ class S3ContextService:
         # Keep it simple/safe for S3 keys and shell usage.
         safe = re.sub(r"[^A-Za-z0-9._-]+", "_", filename.strip())
         return safe or "artifact.bin"
+
+    def _append_random_suffix_to_key(self, key: str) -> str:
+        suffix = uuid.uuid4().hex[:8]
+        if "/" in key:
+            prefix, filename = key.rsplit("/", 1)
+            prefix = f"{prefix}/"
+        else:
+            prefix, filename = "", key
+        base, ext = os.path.splitext(filename)
+        return f"{prefix}{base}_{suffix}{ext}"
+
+    def _object_exists(self, s3_client, *, bucket: str, key: str) -> bool:
+        try:
+            s3_client.head_object(Bucket=bucket, Key=key)
+            return True
+        except ClientError as exc:
+            code = str(exc.response.get("Error", {}).get("Code", "")).lower()
+            if code in ("404", "notfound", "nosuchkey"):
+                return False
+            if code == "accessdenied":
+                logger.warning(
+                    "[S3ContextService] head_object access denied; assuming not exists",
+                    extra={"bucket": bucket, "key": key},
+                )
+                return False
+            raise
+
+    def _infer_content_type(
+        self,
+        *,
+        content_type: Optional[str],
+        source_path: Optional[str],
+        dest_key: str,
+        source_type: str,
+    ) -> str:
+        if content_type:
+            if content_type.lower().startswith("text/") and "charset=" not in content_type.lower():
+                return f"{content_type}; charset=utf-8"
+            return content_type
+
+        guess = None
+        if source_path:
+            guess, _ = mimetypes.guess_type(source_path)
+        if not guess and dest_key:
+            guess, _ = mimetypes.guess_type(dest_key)
+        if not guess and source_type == "text_content":
+            guess = "text/plain"
+        if not guess:
+            guess = "application/octet-stream"
+        if guess.startswith("text/") and "charset=" not in guess.lower():
+            return f"{guess}; charset=utf-8"
+        return guess
 
     def resolve_output_config(self, step: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -217,8 +278,9 @@ class S3ContextService:
         # Determine content to upload
         content_body = None
         source_path = None
+        source_type = config.get("source_type", "text_content")
         
-        if config.get("source_type") == "file":
+        if source_type == "file":
             source_path = config.get("source_path")
             if not source_path or not os.path.exists(source_path):
                 err = f"Source file not found at: {source_path}"
@@ -228,18 +290,6 @@ class S3ContextService:
                     "step_type": "s3_upload",
                     "success": False,
                     "output": {"error": err},
-                    "timestamp": datetime.utcnow().isoformat(),
-                }
-            try:
-                with open(source_path, "rb") as f:
-                    content_body = f.read()
-            except Exception as e:
-                return {
-                    "step_name": f"{step_name} — Upload Failed",
-                    "step_order": step_index + 1,
-                    "step_type": "s3_upload",
-                    "success": False,
-                    "output": {"error": f"Failed to read source file: {e}"},
                     "timestamp": datetime.utcnow().isoformat(),
                 }
         else:
@@ -255,38 +305,80 @@ class S3ContextService:
         # Try to use configured path or fallback to sensible default
         dest_key = ""
         if config.get("destination_path"):
+            content_ext = "html"
+            if source_path:
+                _, ext = os.path.splitext(source_path)
+                if ext:
+                    content_ext = ext.lstrip(".")
             # Simple variable substitution
             dest_key = config["destination_path"].format(
                 job_id=job_id,
                 step_index=step_index,
                 date=datetime.utcnow().strftime("%Y%m%d"),
-                ext="html" # Default assumption
+                ext=content_ext
             )
         else:
             # Auto-generate key
             artifact_id = step_output_result.get("artifact_id") or f"step_{step_index}"
             ext = "bin"
-            if config.get("content_type") == "text/html": ext = "html"
-            elif config.get("content_type") == "application/pdf": ext = "pdf"
-            elif config.get("source_type") == "text_content": ext = "html" # Default for text
-            
+            if source_path:
+                _, ext_candidate = os.path.splitext(source_path)
+                if ext_candidate:
+                    ext = ext_candidate.lstrip(".")
+            elif source_type == "text_content":
+                ext = "html"
             filename = self._sanitize_s3_key_filename(f"{artifact_id}.{ext}")
             dest_key = f"{prefix}{filename}"
 
-        content_type = config.get("content_type") or "application/octet-stream"
-        if not config.get("content_type") and dest_key.endswith(".html"):
-            content_type = "text/html; charset=utf-8"
+        content_type = self._infer_content_type(
+            content_type=config.get("content_type"),
+            source_path=source_path,
+            dest_key=dest_key,
+            source_type=source_type,
+        )
 
         # Perform Upload
         publish_started_at = datetime.utcnow()
+        s3 = boto3.client("s3", region_name=region)
+        acl = self._get_s3_upload_object_acl()
+
+        # Avoid overwrites by checking if the key exists and renaming if needed
         try:
-            s3 = boto3.client("s3", region_name=region)
-            s3.put_object(
-                Bucket=bucket,
-                Key=dest_key,
-                Body=content_body,
-                ContentType=content_type,
+            if self._object_exists(s3, bucket=bucket, key=dest_key):
+                dest_key = self._append_random_suffix_to_key(dest_key)
+                logger.info(
+                    "[S3ContextService] Destination key exists; using randomized key",
+                    extra={"bucket": bucket, "key": dest_key},
+                )
+        except ClientError as exc:
+            logger.warning(
+                "[S3ContextService] Failed to check key existence; proceeding",
+                extra={"bucket": bucket, "key": dest_key, "error": str(exc)},
             )
+
+        def _upload_with_args(key: str, extra_args: Dict[str, Any]) -> None:
+            if source_type == "file":
+                s3.upload_file(
+                    Filename=source_path,
+                    Bucket=bucket,
+                    Key=key,
+                    ExtraArgs=extra_args,
+                )
+            else:
+                with io.BytesIO(content_body) as bio:
+                    s3.upload_fileobj(
+                        Fileobj=bio,
+                        Bucket=bucket,
+                        Key=key,
+                        ExtraArgs=extra_args,
+                    )
+
+        extra_args = {"ContentType": content_type}
+        if acl:
+            extra_args["ACL"] = acl
+
+        try:
+            _upload_with_args(dest_key, extra_args)
             
             duration_ms = int((datetime.utcnow() - publish_started_at).total_seconds() * 1000)
             
@@ -316,6 +408,50 @@ class S3ContextService:
                 "duration_ms": duration_ms,
             }
 
+        except ClientError as e:
+            # Single retry with randomized key if the initial upload fails
+            retry_key = self._append_random_suffix_to_key(dest_key)
+            logger.warning(
+                "[S3ContextService] Upload failed; retrying with randomized key",
+                extra={"bucket": bucket, "key": retry_key, "error": str(e)},
+            )
+            try:
+                _upload_with_args(retry_key, extra_args)
+                duration_ms = int((datetime.utcnow() - publish_started_at).total_seconds() * 1000)
+                bucket_region = "us-west-2" if bucket == "cc360-pages" else region
+                object_url = f"https://{bucket}.s3.{bucket_region}.amazonaws.com/{retry_key}"
+                publish_output = {
+                    "success": True,
+                    "bucket": bucket,
+                    "key": retry_key,
+                    "object_url": object_url,
+                    "s3_uri": f"s3://{bucket}/{retry_key}",
+                    "retry_used": True,
+                }
+                step_output_result["published_s3"] = publish_output
+                return {
+                    "step_name": f"{step_name} — Uploaded to S3",
+                    "step_order": step_index + 1,
+                    "step_type": "s3_upload",
+                    "success": True,
+                    "input": {"bucket": bucket, "key": retry_key},
+                    "output": publish_output,
+                    "timestamp": publish_started_at.isoformat(),
+                    "duration_ms": duration_ms,
+                }
+            except Exception as retry_error:
+                logger.error(
+                    "[S3ContextService] Upload retry failed",
+                    extra={"bucket": bucket, "key": retry_key, "error": str(retry_error)},
+                )
+                return {
+                    "step_name": f"{step_name} — Upload Failed",
+                    "step_order": step_index + 1,
+                    "step_type": "s3_upload",
+                    "success": False,
+                    "output": {"error": str(retry_error)},
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
         except Exception as e:
             logger.error(f"S3 Upload failed: {e}")
             return {

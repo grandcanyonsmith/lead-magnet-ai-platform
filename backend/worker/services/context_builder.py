@@ -3,8 +3,9 @@ Context Builder Service
 Handles building context for workflow steps from submission data and previous step outputs.
 """
 
+import json
 import logging
-from typing import Dict, Any, List, Set
+from typing import Dict, Any, List, Set, Optional
 from utils.image_utils import extract_image_urls, extract_image_urls_from_object
 
 logger = logging.getLogger(__name__)
@@ -12,6 +13,18 @@ logger = logging.getLogger(__name__)
 
 class ContextBuilder:
     """Service for building context strings for workflow steps."""
+
+    @staticmethod
+    def _stringify_step_output(output: Any) -> str:
+        """Convert step output to a stable string representation."""
+        if output is None:
+            return ""
+        if isinstance(output, (dict, list)):
+            try:
+                return json.dumps(output, ensure_ascii=False, indent=2)
+            except Exception:
+                return str(output)
+        return str(output)
     
     @staticmethod
     def format_submission_data_with_labels(data: Dict[str, Any], field_label_map: Dict[str, str]) -> str:
@@ -41,6 +54,7 @@ class ContextBuilder:
         initial_context: str,
         step_outputs: List[Dict[str, Any]],
         sorted_steps: List[Dict[str, Any]],
+        dependency_indices: Optional[List[int]] = None,
         include_form_submission: bool = True
     ) -> str:
         """
@@ -50,6 +64,7 @@ class ContextBuilder:
             initial_context: Formatted submission context
             step_outputs: List of step output dictionaries
             sorted_steps: List of step configurations sorted by order
+            dependency_indices: Optional list of step indices to include
             include_form_submission: Whether to include form submission (only True for first step)
             
         Returns:
@@ -59,10 +74,18 @@ class ContextBuilder:
         if include_form_submission:
             all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
         
-        # Include all previous step outputs explicitly (with image URLs if present)
+        # Include dependency step outputs explicitly (with image URLs if present)
         for prev_idx, prev_step_output in enumerate(step_outputs):
-            prev_step_name = sorted_steps[prev_idx].get('step_name', f'Step {prev_idx + 1}')
-            prev_output_text = prev_step_output['output']
+            step_index = prev_step_output.get("step_index", prev_idx)
+            if dependency_indices is not None and step_index not in dependency_indices:
+                continue
+
+            step_number = step_index + 1
+            prev_step_name = prev_step_output.get("step_name")
+            if not prev_step_name and 0 <= step_index < len(sorted_steps):
+                prev_step_name = sorted_steps[step_index].get("step_name")
+            prev_step_name = prev_step_name or f"Step {step_number}"
+            prev_output_text = prev_step_output.get('output', '')
             
             # Extract image URLs from multiple sources:
             # 1. From image_urls array in step output
@@ -87,7 +110,7 @@ class ContextBuilder:
             all_image_urls: Set[str] = set(image_urls_from_array) | set(image_urls_from_text)
             prev_image_urls = sorted(list(all_image_urls))  # Sort for consistent output
             
-            step_context = f"\n=== Step {prev_idx + 1}: {prev_step_name} ===\n{prev_output_text}"
+            step_context = f"\n=== Step {step_number}: {prev_step_name} ===\n{prev_output_text}"
             if prev_image_urls:
                 step_context += f"\n\nGenerated Images:\n" + "\n".join([f"- {url}" for url in prev_image_urls])
             all_previous_outputs.append(step_context)
@@ -100,7 +123,7 @@ class ContextBuilder:
         initial_context: str,
         execution_steps: List[Dict[str, Any]],
         current_step_order: int,
-        dependency_indices: List[int] = None,
+        dependency_indices: Optional[List[int]] = None,
         include_form_submission: bool = True
     ) -> str:
         """
@@ -113,7 +136,7 @@ class ContextBuilder:
             initial_context: Formatted submission context
             execution_steps: List of execution step dictionaries (loaded from S3)
             current_step_order: Order of current step (1-indexed)
-            dependency_indices: Optional list of step indices to include (if None, includes all previous steps)
+            dependency_indices: Optional list of step indices to include
             include_form_submission: Whether to include form submission (only True for first step)
             
         Returns:
@@ -126,10 +149,16 @@ class ContextBuilder:
             all_previous_outputs.append(f"=== Form Submission ===\n{initial_context}")
         
         # Load previous step outputs from execution_steps
-        # Filter to only include steps with step_order < current_step_order OR in dependency_indices
+        # Filter to only include workflow-relevant steps (exclude internal/system steps)
+        def _is_context_step(step_data: Dict[str, Any]) -> bool:
+            step_type = step_data.get("step_type")
+            if step_type in {"s3_upload", "form_submission"}:
+                return False
+            return True
+
         sorted_execution_steps = sorted(
-            [s for s in execution_steps if s.get('step_type') == 'ai_generation'],
-            key=normalize_step_order
+            [s for s in execution_steps if _is_context_step(s)],
+            key=normalize_step_order,
         )
         
         for prev_step_data in sorted_execution_steps:
@@ -138,7 +167,7 @@ class ContextBuilder:
             # Determine if this step should be included
             should_include = False
             if dependency_indices is not None:
-                # Include if step_order matches a dependency index (step_order is 1-indexed, so subtract 1)
+                # Include if workflow step index matches a dependency index
                 should_include = (prev_step_order - 1) in dependency_indices
             else:
                 # Default: include all steps that come before the current step
@@ -226,6 +255,71 @@ class ContextBuilder:
                     accumulated_context += f"Generated Images:\n" + "\n".join([f"- {url}" for url in image_urls]) + "\n\n"
         
         return accumulated_context
+
+    @staticmethod
+    def build_deliverable_context_from_step_outputs(
+        step_outputs: List[Dict[str, Any]],
+        sorted_steps: List[Dict[str, Any]]
+    ) -> str:
+        """
+        Build deliverable-only context from the terminal workflow steps.
+
+        This intentionally excludes earlier step outputs to avoid leaking
+        internal research, raw notes, or submission scaffolding into the
+        customer-facing deliverable.
+        """
+        from utils.step_utils import normalize_step_order
+
+        if not step_outputs or not sorted_steps:
+            return ""
+
+        max_order = max(normalize_step_order(step) for step in sorted_steps)
+        terminal_indices = [
+            idx for idx, step in enumerate(sorted_steps)
+            if normalize_step_order(step) == max_order
+        ]
+
+        deliverable_outputs: List[str] = []
+        for idx in terminal_indices:
+            if idx >= len(step_outputs):
+                continue
+            output = step_outputs[idx].get('output', '')
+            output_text = ContextBuilder._stringify_step_output(output).strip()
+            if output_text:
+                deliverable_outputs.append(output_text)
+
+        return "\n\n".join(deliverable_outputs)
+
+    @staticmethod
+    def build_deliverable_context_from_execution_steps(
+        execution_steps: List[Dict[str, Any]]
+    ) -> str:
+        """
+        Build deliverable-only context from execution steps (single-step mode).
+        """
+        from utils.step_utils import normalize_step_order
+
+        if not execution_steps:
+            return ""
+
+        ai_steps = [s for s in execution_steps if s.get('step_type') == 'ai_generation']
+        if not ai_steps:
+            return ""
+
+        max_order = max(normalize_step_order(step) for step in ai_steps)
+        terminal_steps = [
+            step for step in ai_steps
+            if normalize_step_order(step) == max_order
+        ]
+
+        deliverable_outputs: List[str] = []
+        for step in terminal_steps:
+            output = step.get('output', '')
+            output_text = ContextBuilder._stringify_step_output(output).strip()
+            if output_text:
+                deliverable_outputs.append(output_text)
+
+        return "\n\n".join(deliverable_outputs)
     
     @staticmethod
     def get_current_step_context(step_index: int, initial_context: str) -> str:
@@ -244,7 +338,8 @@ class ContextBuilder:
     @staticmethod
     def collect_previous_image_urls(
         execution_steps: List[Dict[str, Any]],
-        current_step_order: int
+        current_step_order: int,
+        dependency_indices: Optional[List[int]] = None,
     ) -> List[str]:
         """
         Collect all image URLs from previous execution steps.
@@ -256,6 +351,7 @@ class ContextBuilder:
         Args:
             execution_steps: List of all execution step dictionaries
             current_step_order: Current step order (1-indexed)
+            dependency_indices: Optional list of step indices to include
             
         Returns:
             List of unique image URLs from previous steps, sorted alphabetically
@@ -272,9 +368,13 @@ class ContextBuilder:
             
             step_order = normalize_step_order(step_data)
             
-            # Only include steps that come before the current step
-            if step_order >= current_step_order:
-                continue
+            if dependency_indices is not None:
+                if (step_order - 1) not in dependency_indices:
+                    continue
+            else:
+                # Only include steps that come before the current step
+                if step_order >= current_step_order:
+                    continue
             
             # Extract image URLs from multiple sources:
             # 1. From image_urls array in execution step

@@ -27,7 +27,7 @@ import {
  * - Dependencies: which steps each step depends on
  * - Dependents: which steps depend on each step
  *
- * Dependencies can be explicitly defined via `depends_on` or auto-detected from `step_order`.
+ * Dependencies can be explicitly defined via `depends_on` (source of truth) or auto-detected from `step_order` (legacy fallback).
  *
  * @param steps - Array of workflow steps
  * @returns Dependency graph with dependencies and dependents maps

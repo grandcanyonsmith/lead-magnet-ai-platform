@@ -29,7 +29,7 @@ class ArtifactService:
         tenant_id: str,
         job_id: str,
         artifact_type: str,
-        content: str,
+        content: str | bytes,
         filename: str,
         public: bool = True  # Default to True - all artifacts should be public
     ) -> str:
@@ -40,14 +40,17 @@ class ArtifactService:
             tenant_id: Tenant ID
             job_id: Job ID
             artifact_type: Type of artifact (e.g., 'html_final', 'markdown_final')
-            content: Content to store
+            content: Content to store (string or bytes)
             filename: Filename for the artifact
             public: Whether the artifact should be publicly accessible
             
         Returns:
             Artifact ID
         """
-        content_size = len(content.encode('utf-8'))
+        if isinstance(content, bytes):
+            content_size = len(content)
+        else:
+            content_size = len(content.encode('utf-8'))
         logger.info(f"[ArtifactService] Storing artifact", extra={
             'tenant_id': tenant_id,
             'job_id': job_id,
@@ -173,6 +176,7 @@ class ArtifactService:
             'png': 'image/png',
             'jpg': 'image/jpeg',
             'jpeg': 'image/jpeg',
+            'pdf': 'application/pdf',
         }
         return types.get(ext, 'application/octet-stream')
     

@@ -95,7 +95,7 @@ def _get_step_dependencies(step: Dict, step_index: int, steps: List[Dict]) -> Li
         # Explicit dependencies provided
         deps = normalize_dependency_list(step['depends_on'])
     else:
-        # Auto-detect from step_order
+        # Auto-detect from step_order (legacy fallback)
         step_order = normalize_step_order(step)
         for i, s in enumerate(steps):
             other_order = normalize_step_order(s)

@@ -71,7 +71,61 @@ def test_orchestrator_always_generates_template_final_even_if_last_step_is_html(
 
     assert job_completion_service.generate_html_from_accumulated_context.called
     called_ctx = job_completion_service.generate_html_from_accumulated_context.call_args.kwargs.get("accumulated_context", "")
-    assert called_ctx == "Hello world"
+    assert called_ctx == "LANDING"
+
+
+def test_orchestrator_uses_terminal_step_outputs_for_deliverable_context():
+    """
+    Deliverable context should be built from terminal step outputs only,
+    not from all accumulated step content.
+    """
+    step_processor = Mock()
+    ai_service = Mock()
+    db_service = Mock()
+    s3_service = Mock()
+    job_completion_service = Mock()
+
+    db_service.get_template.return_value = {"template_id": "tmpl_test", "html_content": "<html>tmpl</html>"}
+    job_completion_service.generate_html_from_accumulated_context.return_value = (
+        "<html>FINAL</html>",
+        "html_final",
+        "final.html",
+    )
+
+    orchestrator = WorkflowOrchestrator(
+        step_processor=step_processor,
+        ai_service=ai_service,
+        db_service=db_service,
+        s3_service=s3_service,
+        job_completion_service=job_completion_service,
+    )
+
+    workflow = {
+        "template_id": "tmpl_test",
+        "template_version": 0,
+        "steps": [
+            {"step_name": "Research", "step_order": 0},
+            {"step_name": "Deliverable Draft", "step_order": 1},
+        ],
+    }
+    step_outputs = [
+        {"output": "Research notes that should not ship."},
+        {"output": "Final deliverable content only."},
+    ]
+    accumulated_context = "Research notes that should not ship.\n\nFinal deliverable content only."
+
+    orchestrator._generate_final_content(
+        workflow=workflow,
+        step_outputs=step_outputs,
+        accumulated_context=accumulated_context,
+        submission_data={},
+        execution_steps=[],
+        job_id="job_test",
+        tenant_id="tenant_test",
+    )
+
+    called_ctx = job_completion_service.generate_html_from_accumulated_context.call_args.kwargs.get("accumulated_context", "")
+    assert called_ctx == "Final deliverable content only."
 
 
 def test_finalize_job_injects_tracking_script_for_html_final():

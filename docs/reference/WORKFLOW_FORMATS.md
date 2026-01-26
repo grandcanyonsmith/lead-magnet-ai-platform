@@ -116,7 +116,8 @@ Each step can have:
   - `"auto"`: Model decides when to use tools
   - `"required"`: Model must use tools
   - `"none"`: Model cannot use tools
-- `depends_on` (array of numbers, optional): Step indices this step depends on
+- `depends_on` (array of numbers, optional): Step indices (0-based) this step depends on
+  - If omitted, the system falls back to `step_order` to infer dependencies (legacy behavior)
 
 ### Steps Format Features
 
@@ -124,15 +125,15 @@ Each step can have:
 - **Dependencies**: Steps can depend on other steps completing first
 - **Parallel Execution**: Steps with the same `step_order` and no dependencies can run in parallel
 - **Flexible Tools**: Each step can use different tools
-- **Context Accumulation**: Each step receives context from all previous steps
+- **Context Accumulation**: Each step receives context from its dependency steps
 
 ### Steps Format Processing Flow
 
 1. **Dependency Resolution**: System builds execution plan based on dependencies
 2. **Parallel Execution**: Steps that can run in parallel are executed simultaneously
 3. **Sequential Execution**: Steps with dependencies wait for prerequisites
-4. **Context Building**: Each step receives accumulated context from previous steps
-5. **HTML Generation** (if template is configured): Final step converts output to HTML
+4. **Context Building**: Each step receives accumulated context from its dependencies
+5. **HTML Generation** (if template is configured): Terminal step outputs (highest `step_order`) are treated as the deliverable source and rendered into template-styled HTML (opt-in forms are stripped)
 
 ## Historical: Legacy Format Migration
 

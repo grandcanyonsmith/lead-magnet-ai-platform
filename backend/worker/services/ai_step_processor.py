@@ -66,7 +66,7 @@ class AIStepProcessor:
             job_id: Job ID
             tenant_id: Tenant ID
             initial_context: Initial formatted submission context
-            previous_context: Previous steps context
+            previous_context: Dependency steps context
             current_step_context: Current step context
             step_tools: List of tools for this step
             step_tool_choice: Tool choice setting

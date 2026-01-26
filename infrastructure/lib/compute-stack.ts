@@ -249,15 +249,44 @@ export class ComputeStack extends cdk.Stack {
       shellExecutorFunction.grantInvoke(this.shellWorkerLambda);
     }
 
-    // Shell tool: allow the worker to sign presigned PUT URLs for controlled uploads to an allowlisted bucket.
+    // Shell tool uploads: allow job processor + shell worker to PUT uploads to the configured upload bucket.
+    // (boto3's `upload_file` may use multipart upload APIs, so include the related permissions too).
+    const shellExecutorUploadBucketName =
+      (process.env.SHELL_EXECUTOR_UPLOAD_BUCKET ||
+        "coursecreator360-rich-snippet-booster").trim();
+    if (shellExecutorUploadBucketName) {
+      const uploadPolicy = new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "s3:PutObject",
+          "s3:AbortMultipartUpload",
+          "s3:ListMultipartUploadParts",
+          "s3:ListBucketMultipartUploads",
+        ],
+        resources: [
+          `arn:aws:s3:::${shellExecutorUploadBucketName}`,
+          `arn:aws:s3:::${shellExecutorUploadBucketName}/*`,
+        ],
+      });
+      this.jobProcessorLambda.addToRolePolicy(uploadPolicy);
+      this.shellWorkerLambda.addToRolePolicy(uploadPolicy);
+    }
+
+    // Also keep the legacy allowlist used for publishing controlled uploads to cc360-pages.
     // This is required because presigned URLs are authorized as the signing principal at request time.
-    // Scope tightly to a dedicated prefix.
     this.jobProcessorLambda.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ['s3:PutObject'],
-        resources: ['arn:aws:s3:::cc360-pages/leadmagnet/*'],
-      })
+        actions: ["s3:PutObject"],
+        resources: ["arn:aws:s3:::cc360-pages/leadmagnet/*"],
+      }),
+    );
+    this.shellWorkerLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["s3:PutObject"],
+        resources: ["arn:aws:s3:::cc360-pages/leadmagnet/*"],
+      }),
     );
 
     // Create IAM role for Step Functions
