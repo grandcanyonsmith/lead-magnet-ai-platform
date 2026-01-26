@@ -47,14 +47,17 @@ export function MarkdownPreview({
   setJsonViewMode,
 }: MarkdownPreviewProps) {
   const COMPACT_MARKDOWN_PREVIEW_CHARS = 700;
+  const isMarkdownLoading = markdownContent === null && !markdownError;
+  const isMarkdownEmpty =
+    typeof markdownContent === "string" && markdownContent.trim().length === 0;
 
   const buildCompactMarkdownPreview = (value?: string | null): string | null => {
-    if (!value) return null;
+    if (value === null || value === undefined) return null;
     const normalized = value
       .replace(/\r\n/g, "\n")
       .replace(/\n{3,}/g, "\n\n")
       .trim();
-    if (!normalized) return null;
+    if (!normalized) return "";
     if (normalized.length > COMPACT_MARKDOWN_PREVIEW_CHARS) {
       return `${normalized.slice(0, COMPACT_MARKDOWN_PREVIEW_CHARS)}\n\n_(truncated)_`;
     }
@@ -66,9 +69,13 @@ export function MarkdownPreview({
     icon: React.ReactNode;
     emptyLabel: string;
     loadingLabel?: string;
+    isLoading?: boolean;
   }) => {
     const markdown = buildCompactMarkdownPreview(params.markdown);
-    const label = params.loadingLabel ?? params.emptyLabel;
+    const isLoading =
+      params.isLoading ??
+      (params.markdown === null || params.markdown === undefined);
+    const label = isLoading ? params.loadingLabel ?? params.emptyLabel : params.emptyLabel;
     return (
       <CompactPreviewFrame>
         {isInView ? (
@@ -338,7 +345,17 @@ export function MarkdownPreview({
                   </p>
                 </div>
               </div>
-            ) : markdownContent ? (
+            ) : markdownContent !== null ? (
+              isMarkdownEmpty ? (
+                <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+                  <div className="text-center">
+                    <FiFileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      No markdown content
+                    </p>
+                  </div>
+                </div>
+              ) : (
               <div
                 className={`transition-all duration-300 ${
                   viewMode === "tablet"
@@ -355,6 +372,7 @@ export function MarkdownPreview({
                   />
                 </div>
               </div>
+              )
             ) : (
               <div className="flex items-center justify-center h-full bg-black">
                 <div className="text-center">
@@ -383,10 +401,13 @@ export function MarkdownPreview({
       icon: (
         <FiFileText className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
       ),
-      emptyLabel: markdownError ? "Failed to load markdown" : "Markdown File",
-      loadingLabel: markdownError
+      emptyLabel: markdownError
         ? "Failed to load markdown"
-        : "Loading markdown...",
+        : isMarkdownEmpty
+          ? "No markdown content"
+          : "Markdown File",
+      loadingLabel: isMarkdownLoading ? "Loading markdown..." : undefined,
+      isLoading: isMarkdownLoading,
     });
   }
 
@@ -402,13 +423,24 @@ export function MarkdownPreview({
               </p>
             </div>
           </div>
-        ) : markdownContent ? (
+        ) : markdownContent !== null ? (
+          isMarkdownEmpty ? (
+            <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+              <div className="text-center">
+                <FiFileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  No markdown content
+                </p>
+              </div>
+            </div>
+          ) : (
           <div className="p-4 prose prose-sm max-w-none dark:prose-invert">
             <MarkdownRenderer
               value={markdownContent}
               fallbackClassName="whitespace-pre-wrap break-words"
             />
           </div>
+          )
         ) : (
           <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
             <div className="text-center">

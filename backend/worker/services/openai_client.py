@@ -460,6 +460,9 @@ class OpenAIClient:
         image_handler,
     ):
         """Handle OpenAI API errors with retry logic."""
+        # Check for MCP authentication errors first
+        self._check_mcp_auth_error(error, None, None)
+        
         logger.error(f"OpenAI API error: {error}", exc_info=True)
         raise Exception(f"OpenAI API error ({type(error).__name__}): {str(error)}")
 

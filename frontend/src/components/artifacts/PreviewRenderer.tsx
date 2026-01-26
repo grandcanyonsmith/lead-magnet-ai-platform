@@ -180,7 +180,7 @@ export function PreviewRenderer({
     if (
       isInView &&
       isMarkdownLike &&
-      !markdownContent &&
+      markdownContent === null &&
       !markdownError
     ) {
       const fetchMarkdown = async () => {
@@ -226,7 +226,7 @@ export function PreviewRenderer({
       isInView &&
       (effectiveContentType === "text/html" ||
         effectiveContentType === "application/xhtml+xml") &&
-      !htmlContent &&
+      htmlContent === null &&
       !htmlError
     ) {
       const fetchHtml = async () => {
@@ -288,7 +288,7 @@ export function PreviewRenderer({
     if (
       isInView &&
       effectiveContentType === "application/json" &&
-      !jsonContent &&
+      jsonContent === null &&
       !jsonError
     ) {
       const fetchJson = async () => {
@@ -347,7 +347,7 @@ export function PreviewRenderer({
 
   // Attempt to parse markdown content as JSON if it looks like one
   const parsedMarkdownJson = useMemo(() => {
-    if (!markdownContent || !isMarkdownLike) return null;
+    if (markdownContent === null || !isMarkdownLike) return null;
     try {
       const trimmed = markdownContent.trim();
       // Check if it looks like JSON before parsing

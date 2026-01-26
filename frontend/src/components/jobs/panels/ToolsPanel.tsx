@@ -45,10 +45,26 @@ const AVAILABLE_TOOLS: ToolType[] = [
   "image_generation",
 ];
 
-const MCP_CATALOG = [
+type McpCatalogEntry = {
+  id: string;
+  label: string;
+  serverLabel: string;
+  serverUrl?: string;
+  allowedTools?: string[];
+  requireApproval?: McpRequireApproval;
+};
+
+const MCP_CATALOG: McpCatalogEntry[] = [
   { id: "browser", label: "Browser", serverLabel: "browser" },
   { id: "openai", label: "OpenAI", serverLabel: "openai" },
   { id: "openai-tools", label: "OpenAI Tools", serverLabel: "openai_tools" },
+  {
+    id: "aws-resources",
+    label: "AWS Resources (Deep Research)",
+    serverLabel: "aws_resources",
+    serverUrl: "https://deep-research-server-grandcanyonsmit.replit.app/sse/",
+    allowedTools: ["aws_resources_query_or_modify"],
+  },
 ];
 
 export function ToolsPanel({
@@ -111,6 +127,9 @@ export function ToolsPanel({
       {
         type: "mcp",
         server_label: entry.serverLabel,
+        server_url: entry.serverUrl,
+        allowed_tools: entry.allowedTools,
+        require_approval: entry.requireApproval,
       },
     ]);
     setMcpCatalogSelection("");
