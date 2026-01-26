@@ -148,7 +148,7 @@ export function StepMetaBadges({
           <Badge
             key={idx}
             label={displayName}
-            icon={onToggleTools ? <ChevronDown className={`h-3 w-3 ${showTools ? "rotate-180" : ""}`} /> : undefined}
+            icon={<ChevronDown className={`h-3 w-3 ${showTools ? "rotate-180" : ""}`} />}
             onClick={onToggleTools}
             variant="secondary"
             className="bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-800/60 border"

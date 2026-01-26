@@ -109,20 +109,28 @@ export function useMergedSteps({
       };
     };
 
+    // Helper to recursively convert ExecutionStep to MergedStep
+    const convertToMergedStep = (step: ExecutionStep, statusOverride?: StepStatus): MergedStep => {
+      const status = statusOverride || step._status || (
+        isExplicitlyFailed(step) ? "failed" :
+        hasCompleted(step) ? "completed" :
+        "pending"
+      );
+      
+      return {
+        ...step,
+        _status: status,
+        children: step.children?.map(child => convertToMergedStep(child))
+      };
+    };
+
     if (
       !workflowSteps ||
       !Array.isArray(workflowSteps) ||
       workflowSteps.length === 0
     ) {
       // Fallback to execution steps if no workflow steps available
-      return executionSteps.map((step: ExecutionStep) => ({
-        ...step,
-        _status: isExplicitlyFailed(step)
-          ? ("failed" as const)
-          : hasCompleted(step)
-            ? ("completed" as const)
-            : ("pending" as const),
-      }));
+      return executionSteps.map((step: ExecutionStep) => convertToMergedStep(step));
     }
 
     const executionStepsMap = new Map<number, ExecutionStep>();
@@ -177,6 +185,7 @@ export function useMergedSteps({
           _status: stepStatus,
           // Preserve image_urls from execution step
           image_urls: execStep.image_urls,
+          children: execStep.children?.map(child => convertToMergedStep(child))
         });
       }
     });
@@ -234,6 +243,7 @@ export function useMergedSteps({
           artifact_id: existingStep.artifact_id,
           image_urls: existingStep.image_urls,
           ...buildDependencies(workflowStep.depends_on),
+          children: existingStep.children // existingStep is already a MergedStep here so children are correct
         });
       } else {
         // Step hasn't been executed yet - check if it's currently executing
@@ -315,6 +325,7 @@ export function useMergedSteps({
             image_urls: executingStep.image_urls,
             _status: "in_progress" as const,
             ...buildDependencies(workflowStep.depends_on),
+            children: executingStep.children?.map(child => convertToMergedStep(child))
           });
         } else {
           // Step hasn't been executed yet - check if there's an execution step we can use
@@ -379,6 +390,7 @@ export function useMergedSteps({
               image_urls: executionStepForOrder.image_urls,
               _status: stepStatus,
               ...buildDependencies(workflowStep.depends_on),
+              children: executionStepForOrder.children?.map(child => convertToMergedStep(child))
             });
           } else {
             // No execution step found - create new step with workflow step data only
@@ -403,6 +415,7 @@ export function useMergedSteps({
               output: null,
               _status: stepStatus,
               ...buildDependencies(workflowStep.depends_on),
+              children: []
             });
           }
         }
@@ -430,6 +443,7 @@ export function useMergedSteps({
               execStep.output !== ""
                 ? ("completed" as const)
                 : ("pending" as const),
+            children: execStep.children?.map(child => convertToMergedStep(child))
           });
         }
       }
