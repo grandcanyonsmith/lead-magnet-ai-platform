@@ -116,7 +116,7 @@ export default function JobDetailClient() {
   });
 
   const { expandedSteps, toggleStep, expandAll, collapseAll } =
-    useJobExecutionSteps();
+    useJobExecutionSteps(mergedSteps);
 
   const mergedSteps = useMergedSteps({ job, workflow });
 

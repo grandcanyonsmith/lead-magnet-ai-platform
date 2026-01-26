@@ -43,7 +43,10 @@ class S3ContextService:
             # Fallback: "bucket <name>"
             m2 = re.search(r"\bbucket\s+([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])\b", lower)
             if m2:
-                bucket = m2.group(1)
+                candidate = m2.group(1)
+                # Filter out common stop words that might be matched erroneously
+                if candidate not in ["not", "is", "in", "to", "for", "with", "on", "at", "by", "from", "of", "and", "or", "but", "the", "a", "an"]:
+                    bucket = candidate
 
         if not bucket:
             # Fallback: "<bucket> s3 bucket" (common phrasing)
@@ -51,7 +54,10 @@ class S3ContextService:
                 r"\b([a-z0-9][a-z0-9.-]{1,61}[a-z0-9])\s+s3\s+bucket\b", lower
             )
             if m2b:
-                bucket = m2b.group(1)
+                candidate = m2b.group(1)
+                # Filter out common stop words that might be matched erroneously
+                if candidate not in ["not", "is", "in", "to", "for", "with", "on", "at", "by", "from", "of", "and", "or", "but", "the", "a", "an"]:
+                    bucket = candidate
 
         if not bucket:
             return None

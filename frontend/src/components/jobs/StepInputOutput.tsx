@@ -19,6 +19,8 @@ import { MergedStep, StepStatus } from "@/types/job";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { Artifact } from "@/types/artifact";
 import { LiveOutputRenderer } from "./LiveOutputRenderer";
+import { StreamViewerUI } from "@/components/ui/StreamViewerUI";
+import { parseLogs } from "@/utils/logParsing";
 
 interface StepInputOutputProps {
   step: MergedStep;
@@ -582,6 +584,27 @@ export function StepInputOutput({
                           step.image_urls.length > 0
                             ? step.image_urls
                             : [];
+                        
+                        // Check if output contains log markers
+                        const outputContent = typeof step.output === 'string' 
+                          ? step.output 
+                          : (step.output ? JSON.stringify(step.output, null, 2) : '');
+                          
+                        const hasLogMarkers = /\[Tool output\]|\[Code interpreter\]/.test(outputContent);
+                        
+                        if (hasLogMarkers) {
+                          const logs = parseLogs(outputContent);
+                          return (
+                            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                              <StreamViewerUI 
+                                logs={logs}
+                                status={status === 'in_progress' ? 'streaming' : status === 'failed' ? 'error' : 'completed'}
+                                className="h-[400px] border-0 rounded-none shadow-none"
+                              />
+                            </div>
+                          );
+                        }
+
                         return (
                           <StepContent
                             formatted={formatStepOutput(step)}

@@ -23,6 +23,8 @@ import {
   FiArrowRight,
   FiRotateCcw,
 } from "react-icons/fi";
+import confetti from "canvas-confetti";
+import { useEffect } from "react";
 import toast from "react-hot-toast";
 import { OnboardingChecklistProps } from "./OnboardingChecklist/types";
 import {
@@ -129,6 +131,18 @@ function OnboardingChecklistComponent({
     [handleItemClick, onItemClick, setIsMinimized],
   );
 
+  // Trigger confetti when all items are completed
+  useEffect(() => {
+    if (allCompleted && isOpen) {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        zIndex: 60, // Above the widget
+      });
+    }
+  }, [allCompleted, isOpen]);
+
   // Handle dismiss with callback
   const onDismissHandler = useCallback(() => {
     handleDismiss();
@@ -168,8 +182,8 @@ function OnboardingChecklistComponent({
     [],
   );
 
-  // Don't show if survey not completed or all items completed
-  if (!settings.onboarding_survey_completed || allCompleted) {
+  // Don't show if survey not completed
+  if (!settings.onboarding_survey_completed) {
     return null;
   }
 
@@ -273,9 +287,14 @@ function OnboardingChecklistComponent({
 
           {/* Checklist items */}
           <ul className="space-y-3" role="list">
-            {CHECKLIST_ITEMS.map((item) => {
+            {CHECKLIST_ITEMS.map((item, index) => {
               const completed = checklist[item.id] || false;
               const isUpdating = itemState.updating === item.id;
+              // Find the first incomplete item index to highlight the next step
+              const firstIncompleteIndex = CHECKLIST_ITEMS.findIndex(
+                (i) => !checklist[i.id],
+              );
+              const isNext = !completed && index === firstIncompleteIndex;
 
               return (
                 <li key={item.id} role="listitem">
@@ -285,12 +304,14 @@ function OnboardingChecklistComponent({
                       handleKeyDown(e, () => onItemClickHandler(item))
                     }
                     disabled={completed || isUpdating}
-                    className={`w-full flex items-center justify-between p-3 rounded-lg transition-all ${
+                    className={`w-full flex items-center justify-between p-3 rounded-lg transition-all border ${
                       completed
-                        ? "bg-green-50 text-green-700 cursor-default"
+                        ? "bg-green-50 border-green-100 text-green-700 cursor-default"
                         : isUpdating
-                          ? "bg-gray-50 text-gray-500 cursor-wait"
-                          : "bg-gray-50 hover:bg-primary-50 text-gray-700 hover:text-primary-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                          ? "bg-gray-50 border-gray-200 text-gray-500 cursor-wait"
+                          : isNext
+                            ? "bg-white border-primary-500 shadow-sm text-gray-900 hover:bg-primary-50 cursor-pointer ring-1 ring-primary-500"
+                            : "bg-gray-50 border-transparent hover:bg-primary-50 text-gray-700 hover:text-primary-700 cursor-pointer"
                     }`}
                     aria-label={
                       completed
@@ -310,11 +331,22 @@ function OnboardingChecklistComponent({
                         />
                       ) : (
                         <FiCircle
-                          className="w-5 h-5 text-gray-400 mr-3 flex-shrink-0"
+                          className={`w-5 h-5 mr-3 flex-shrink-0 ${
+                            isNext ? "text-primary-600" : "text-gray-400"
+                          }`}
                           aria-hidden="true"
                         />
                       )}
-                      <span className="text-sm font-medium">{item.label}</span>
+                      <div className="flex flex-col">
+                        <span className={`text-sm font-medium ${isNext ? "text-primary-900" : ""}`}>
+                          {item.label}
+                        </span>
+                        {isNext && (
+                          <span className="text-xs text-gray-500 mt-0.5">
+                            {item.description}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {!completed && !isUpdating && (
                       <FiArrowRight
@@ -332,13 +364,25 @@ function OnboardingChecklistComponent({
           {/* Completion message */}
           {allCompleted && (
             <div
-              className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200"
+              className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200 text-center animate-fade-in"
               role="status"
               aria-live="polite"
             >
-              <p className="text-sm text-green-700 font-medium text-center">
+              <div className="flex justify-center mb-2">
+                <div className="p-2 bg-green-100 rounded-full">
+                  <FiCheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+              <h4 className="text-green-800 font-semibold mb-1">Congratulations!</h4>
+              <p className="text-sm text-green-700 mb-3">
                 {COMPLETION_MESSAGES.ALL_COMPLETE}
               </p>
+              <button
+                onClick={onDismissHandler}
+                className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md transition-colors font-medium"
+              >
+                Close Checklist
+              </button>
             </div>
           )}
         </div>

@@ -40,3 +40,15 @@ def test_s3_upload_context_skips_without_previous_artifact(monkeypatch):
 
     assert result == current_context
     service.db.get_artifact.assert_not_called()
+
+
+def test_parse_s3_upload_target_ignores_stop_words():
+    service = S3ContextService(Mock(), Mock(), Mock())
+    
+    # "bucket not allowed" should NOT match "not" as bucket
+    result = service.parse_s3_upload_target_from_instructions("do not upload to bucket not allowed")
+    assert result is None
+
+    # "bucket my-bucket" SHOULD match "my-bucket"
+    result = service.parse_s3_upload_target_from_instructions("upload to bucket my-bucket on s3")
+    assert result == {"bucket": "my-bucket", "region": "us-east-1"}

@@ -164,7 +164,52 @@ class AIStepProcessor:
         self.usage_service.store_usage_record(tenant_id, job_id, usage_info)
         
         safe_step_name = step_name.lower().replace(" ", "_")
+        
+        # Append logs to step_output for visibility in frontend
+        log_text_parts = []
+        
         shell_executor_logs = response_details.get("shell_executor_logs")
+        if shell_executor_logs:
+            log_text_parts.append("\n\n[Tool output]")
+            for log_entry in shell_executor_logs:
+                commands = log_entry.get("commands", [])
+                outputs = log_entry.get("output", [])
+                for cmd in commands:
+                    log_text_parts.append(f"$ {cmd}")
+                for out in outputs:
+                    if out.get("stdout"):
+                        stdout = out['stdout'].strip()
+                        if stdout:
+                            log_text_parts.append(f"📤 {stdout}")
+                    if out.get("stderr"):
+                        stderr = out['stderr'].strip()
+                        if stderr:
+                            log_text_parts.append(f"⚠️ {stderr}")
+
+        code_executor_logs = response_details.get("code_executor_logs")
+        if code_executor_logs:
+            for log_entry in code_executor_logs:
+                status = log_entry.get("status")
+                outputs = log_entry.get("outputs", [])
+                
+                if status:
+                    log_text_parts.append(f"\n[Code interpreter] {status}")
+                else:
+                    log_text_parts.append(f"\n[Code interpreter]")
+
+                for out in outputs:
+                    logs = out.get("logs")
+                    error = out.get("error")
+                    if logs:
+                        log_text_parts.append("\n[Code interpreter logs]")
+                        log_text_parts.append(logs.strip())
+                    if error:
+                        log_text_parts.append("\n[Code interpreter error]")
+                        log_text_parts.append(error.strip())
+
+        if log_text_parts:
+             step_output += "\n".join(log_text_parts)
+
         if shell_executor_logs:
             try:
                 log_payload = {
