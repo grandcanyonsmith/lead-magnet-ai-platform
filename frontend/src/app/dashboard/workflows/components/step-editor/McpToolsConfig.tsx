@@ -16,6 +16,9 @@ type McpCatalogEntry = {
   id: string;
   label: string;
   serverLabel: string;
+  serverUrl?: string;
+  allowedTools?: string[];
+  requireApproval?: McpRequireApproval;
 };
 
 const MCP_CATALOG: McpCatalogEntry[] = [
@@ -23,6 +26,13 @@ const MCP_CATALOG: McpCatalogEntry[] = [
   { id: "notion", label: "Notion", serverLabel: "notion" },
   { id: "openai", label: "OpenAI", serverLabel: "openai" },
   { id: "openai-tools", label: "OpenAI Tools", serverLabel: "openai_tools" },
+  {
+    id: "aws-resources",
+    label: "AWS Resources (Deep Research)",
+    serverLabel: "aws_resources",
+    serverUrl: "https://deep-research-server-grandcanyonsmit.replit.app/sse/",
+    allowedTools: ["aws_resources_query_or_modify"],
+  },
 ];
 
 const isMcpTool = (tool: Tool): tool is McpToolConfig =>
@@ -105,6 +115,9 @@ export default function McpToolsConfig({
       {
         type: "mcp",
         server_label: entry.serverLabel,
+        server_url: entry.serverUrl,
+        allowed_tools: entry.allowedTools,
+        require_approval: entry.requireApproval,
       },
     ]);
     setCatalogSelection("");

@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 import time
 from typing import Optional, Dict, Any, Tuple
 
@@ -151,6 +152,8 @@ class StandardReportStrategy:
         code_delta_buffer = ""
         code_delta_flush_at = 0.0
         code_delta_flush_interval = 0.2
+        tool_call_seen: set[str] = set()
+        tool_output_seen: set[str] = set()
 
         def _truncate(text: str) -> Tuple[str, bool]:
             if len(text) <= max_chars:
@@ -159,15 +162,40 @@ class StandardReportStrategy:
 
         def _compose_preview() -> str:
             if tool_log_so_far:
+                tool_block = tool_log_so_far
                 if output_so_far:
-                    return f"{output_so_far}\n\n[Tool output]\n{tool_log_so_far}"
-                return tool_log_so_far
+                    if "[tool output]" in tool_log_so_far.lower():
+                        return f"{output_so_far}\n\n{tool_block}"
+                    return f"{output_so_far}\n\n[Tool output]\n{tool_block}"
+                return tool_block
             return output_so_far
 
         def _get_attr(obj: Any, key: str) -> Any:
             if isinstance(obj, dict):
                 return obj.get(key)
             return getattr(obj, key, None)
+
+        def _normalize_type(value: Any) -> str:
+            if value is None:
+                return ""
+            if isinstance(value, str):
+                return value
+            if hasattr(value, "value"):
+                try:
+                    return str(value.value)
+                except Exception:
+                    return str(value)
+            return str(value)
+
+        def _stringify_output(value: Any) -> str:
+            if value is None:
+                return ""
+            if isinstance(value, str):
+                return value
+            try:
+                return json.dumps(value, ensure_ascii=True, indent=2)
+            except Exception:
+                return str(value)
 
         def _persist(status: str = "streaming", error: Optional[str] = None, force: bool = False) -> None:
             nonlocal last_persist_ts, last_persist_len
@@ -202,6 +230,70 @@ class StandardReportStrategy:
                     "error_message": str(persist_err),
                 })
 
+        def _extract_tool_label(item: Any) -> Optional[str]:
+            tool_name = (
+                _get_attr(item, "tool_name")
+                or _get_attr(item, "name")
+            )
+            if not tool_name:
+                func = _get_attr(item, "function")
+                tool_name = _get_attr(func, "name") if func else None
+            if not tool_name:
+                tool_name = _get_attr(item, "server_label") or _get_attr(item, "server")
+            if tool_name:
+                try:
+                    return str(tool_name)
+                except Exception:
+                    return None
+            return None
+
+        def _extract_tool_output_text(item: Any) -> str:
+            output = (
+                _get_attr(item, "output")
+                or _get_attr(item, "result")
+                or _get_attr(item, "outputs")
+                or _get_attr(item, "content")
+            )
+            if output is None:
+                return ""
+            outputs_list = output if isinstance(output, list) else [output]
+            parts: list[str] = []
+            for entry in outputs_list:
+                if isinstance(entry, dict):
+                    value = (
+                        entry.get("text")
+                        or entry.get("content")
+                        or entry.get("output")
+                        or entry.get("result")
+                        or entry.get("logs")
+                        or entry.get("error")
+                    )
+                    if value is None:
+                        parts.append(_stringify_output(entry))
+                    else:
+                        parts.append(_stringify_output(value))
+                else:
+                    parts.append(_stringify_output(entry))
+            return "\n".join([p for p in parts if p])
+
+        def _append_tool_log(message: str, tool_name: Optional[str] = None, call_id: Optional[str] = None) -> None:
+            nonlocal tool_log_so_far
+            if not message:
+                return
+            if "[tool output]" not in tool_log_so_far.lower():
+                if tool_log_so_far and not tool_log_so_far.endswith("\n"):
+                    tool_log_so_far += "\n"
+                tool_log_so_far += "[Tool output]\n"
+            if tool_name or call_id:
+                label = tool_name or "tool"
+                if call_id:
+                    label = f"{label} ({call_id})"
+                tool_log_so_far += f"{label}:\n"
+            tool_log_so_far += message
+            if not message.endswith("\n"):
+                tool_log_so_far += "\n"
+            _persist(status="streaming", force=False)
+
         _persist(status="streaming", force=True)
 
         def _is_incomplete_openai_stream_error(err: Exception) -> bool:
@@ -234,6 +326,8 @@ class StandardReportStrategy:
             if attempt > 1:
                 output_so_far = ""
                 tool_log_so_far = ""
+                tool_call_seen.clear()
+                tool_output_seen.clear()
                 code_log_started = False
                 code_delta_buffer = ""
                 code_delta_flush_at = 0.0
@@ -265,6 +359,92 @@ class StandardReportStrategy:
                                 continue
                             output_so_far += delta
                             _persist(status="streaming", force=False)
+                            continue
+
+                        if ev_type == "response.output_item.added":
+                            item = _get_attr(ev, "item")
+                            item_type = _normalize_type(_get_attr(item, "type"))
+                            if item_type == "code_interpreter_call":
+                                if has_code_interpreter:
+                                    tool_log_so_far += "\n[Code interpreter] call started.\n"
+                                    _persist(status="streaming", force=False)
+                                continue
+                            if item_type in (
+                                "tool_call",
+                                "tool_calls",
+                                "function_call",
+                                "tool_call_output",
+                                "function_call_output",
+                            ):
+                                tool_name = _extract_tool_label(item)
+                                call_id = _get_attr(item, "call_id") or _get_attr(item, "id")
+                                call_id_key = str(call_id) if call_id else None
+                                if call_id_key:
+                                    if call_id_key in tool_call_seen:
+                                        continue
+                                    tool_call_seen.add(call_id_key)
+                                _append_tool_log(
+                                    f"Calling {tool_name or 'tool'}...",
+                                    tool_name=tool_name,
+                                    call_id=call_id_key,
+                                )
+                            continue
+
+                        if ev_type == "response.output_item.done":
+                            item = _get_attr(ev, "item")
+                            item_type = _normalize_type(_get_attr(item, "type"))
+                            if item_type == "code_interpreter_call":
+                                if not has_code_interpreter:
+                                    continue
+                                outputs = _get_attr(item, "outputs") or []
+                                if isinstance(outputs, list):
+                                    for output in outputs:
+                                        output_type = _get_attr(output, "type")
+                                        if output_type == "logs":
+                                            logs = _get_attr(output, "logs") or ""
+                                            if logs:
+                                                tool_log_so_far += "\n[Code interpreter logs]\n"
+                                                tool_log_so_far += str(logs)
+                                                if not str(logs).endswith("\n"):
+                                                    tool_log_so_far += "\n"
+                                        elif output_type == "error":
+                                            error_message = _get_attr(output, "error") or ""
+                                            if error_message:
+                                                tool_log_so_far += "\n[Code interpreter error]\n"
+                                                tool_log_so_far += str(error_message)
+                                                if not str(error_message).endswith("\n"):
+                                                    tool_log_so_far += "\n"
+                                _persist(status="streaming", force=False)
+                                continue
+                            if item_type in (
+                                "tool_call",
+                                "tool_calls",
+                                "function_call",
+                                "tool_call_output",
+                                "function_call_output",
+                            ):
+                                tool_name = _extract_tool_label(item)
+                                call_id = _get_attr(item, "call_id") or _get_attr(item, "id")
+                                call_id_key = str(call_id) if call_id else None
+                                if call_id_key and call_id_key in tool_output_seen:
+                                    continue
+                                if call_id_key:
+                                    tool_output_seen.add(call_id_key)
+                                output_text = _extract_tool_output_text(item)
+                                if output_text:
+                                    _append_tool_log(
+                                        output_text,
+                                        tool_name=tool_name,
+                                        call_id=call_id_key,
+                                    )
+                                else:
+                                    error_message = _get_attr(item, "error") or _get_attr(item, "status")
+                                    if error_message:
+                                        _append_tool_log(
+                                            _stringify_output(error_message),
+                                            tool_name=tool_name,
+                                            call_id=call_id_key,
+                                        )
                             continue
 
                         if not has_code_interpreter:
@@ -311,40 +491,6 @@ class StandardReportStrategy:
 
                         if ev_type == "response.code_interpreter_call.completed":
                             tool_log_so_far += "\n[Code interpreter] completed.\n"
-                            _persist(status="streaming", force=False)
-                            continue
-
-                        if ev_type == "response.output_item.added":
-                            item = _get_attr(ev, "item")
-                            item_type = _get_attr(item, "type")
-                            if item_type == "code_interpreter_call":
-                                tool_log_so_far += "\n[Code interpreter] call started.\n"
-                                _persist(status="streaming", force=False)
-                            continue
-
-                        if ev_type == "response.output_item.done":
-                            item = _get_attr(ev, "item")
-                            item_type = _get_attr(item, "type")
-                            if item_type != "code_interpreter_call":
-                                continue
-                            outputs = _get_attr(item, "outputs") or []
-                            if isinstance(outputs, list):
-                                for output in outputs:
-                                    output_type = _get_attr(output, "type")
-                                    if output_type == "logs":
-                                        logs = _get_attr(output, "logs") or ""
-                                        if logs:
-                                            tool_log_so_far += "\n[Code interpreter logs]\n"
-                                            tool_log_so_far += str(logs)
-                                            if not str(logs).endswith("\n"):
-                                                tool_log_so_far += "\n"
-                                    elif output_type == "error":
-                                        error_message = _get_attr(output, "error") or ""
-                                        if error_message:
-                                            tool_log_so_far += "\n[Code interpreter error]\n"
-                                            tool_log_so_far += str(error_message)
-                                            if not str(error_message).endswith("\n"):
-                                                tool_log_so_far += "\n"
                             _persist(status="streaming", force=False)
                             continue
                     if code_delta_buffer:
