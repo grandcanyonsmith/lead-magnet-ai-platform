@@ -9,6 +9,7 @@ import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 import type { FormSubmission } from "@/types/form";
 import toast from "react-hot-toast";
 import { Fragment, useState } from "react";
+import { RecursiveJson } from "@/components/ui/recursive/RecursiveJson";
 
 interface SubmissionSummaryProps {
   submission: FormSubmission;
@@ -17,123 +18,29 @@ interface SubmissionSummaryProps {
   className?: string;
 }
 
-function JsonValue({ value, depth = 0 }: { value: any; depth?: number }) {
-  const [expanded, setExpanded] = useState(depth < 2); // Auto-expand first 2 levels
-
-  if (value === null || value === undefined) {
-    return <span className="text-gray-400 italic">null</span>;
-  }
-
-  if (typeof value === "string") {
-    // Check if it's a JSON string that should be parsed
-    if (value.trim().startsWith("{") || value.trim().startsWith("[")) {
-      try {
-        const parsed = JSON.parse(value);
-        return <JsonValue value={parsed} depth={depth} />;
-      } catch {
-        // Not valid JSON, display as string
-      }
-    }
-    return <span className="text-gray-900 dark:text-gray-200">{value}</span>;
-  }
-
-  if (typeof value === "number" || typeof value === "boolean") {
-    return <span className="text-blue-600 dark:text-blue-400 font-medium">{String(value)}</span>;
-  }
-
-  if (Array.isArray(value)) {
-    if (value.length === 0) {
-      return <span className="text-gray-400 italic">[]</span>;
-    }
-
-    return (
-      <div className="mt-1">
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 mb-1"
-        >
-          {expanded ? (
-            <FiChevronUp className="w-3 h-3" />
-          ) : (
-            <FiChevronDown className="w-3 h-3" />
-          )}
-          <span className="text-xs font-medium">
-            Array ({value.length} items)
-          </span>
-        </button>
-        {expanded && (
-          <div className="ml-4 mt-1 space-y-2 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
-            {value.map((item, idx) => (
-              <div key={idx} className="flex gap-2">
-                <span className="text-gray-400 text-xs font-mono">{idx}:</span>
-                <div className="flex-1">
-                  <JsonValue value={item} depth={depth + 1} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (typeof value === "object") {
-    const entries = Object.entries(value);
-    if (entries.length === 0) {
-      return <span className="text-gray-400 italic">{"{}"}</span>;
-    }
-
-    return (
-      <div className="mt-1">
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 mb-1"
-        >
-          {expanded ? (
-            <FiChevronUp className="w-3 h-3" />
-          ) : (
-            <FiChevronDown className="w-3 h-3" />
-          )}
-          <span className="text-xs font-medium">
-            Object ({entries.length} fields)
-          </span>
-        </button>
-        {expanded && (
-          <div className="ml-4 mt-1 space-y-2 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
-            {entries.map(([k, v]) => (
-              <div key={k} className="flex gap-2">
-                <span className="text-purple-600 dark:text-purple-400 text-xs font-medium">
-                  {k}:
-                </span>
-                <div className="flex-1">
-                  <JsonValue value={v} depth={depth + 1} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return <span className="text-gray-600 dark:text-gray-400">{String(value)}</span>;
-}
-
 function FormFieldValue({ value }: { value: any }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const MAX_LENGTH = 200;
 
-  // If it's a simple string, display it directly
-  if (
-    typeof value === "string" &&
-    !value.trim().startsWith("{") &&
-    !value.trim().startsWith("[")
-  ) {
-    const shouldTruncate = value.length > MAX_LENGTH;
+  // Try to parse JSON strings
+  let content = value;
+  let isJsonString = false;
+  if (typeof value === "string" && (value.trim().startsWith("{") || value.trim().startsWith("["))) {
+    try {
+      content = JSON.parse(value);
+      isJsonString = true;
+    } catch {
+      // Not valid JSON
+    }
+  }
+
+  // If it's a simple string (and not parsed JSON), display it directly with truncation
+  if (typeof content === "string") {
+    const shouldTruncate = content.length > MAX_LENGTH;
     const displayText =
       shouldTruncate && !isExpanded
-        ? value.substring(0, MAX_LENGTH) + "..."
-        : value;
+        ? content.substring(0, MAX_LENGTH) + "..."
+        : content;
 
     return (
       <div className="mt-1">
@@ -162,11 +69,11 @@ function FormFieldValue({ value }: { value: any }) {
     );
   }
 
-  // For complex values, use JSON viewer
+  // For complex values (objects, arrays, or parsed JSON), use RecursiveJson
   return (
     <div className="mt-2">
       <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 p-3 font-mono text-xs">
-        <JsonValue value={value} />
+        <RecursiveJson value={content} defaultExpandedDepth={2} />
       </div>
     </div>
   );
@@ -308,8 +215,7 @@ export function SubmissionSummary({
                 {entries.map(([key, value]) => {
                   const isComplex =
                     typeof value !== "string" ||
-                    value.trim().startsWith("{") ||
-                    value.trim().startsWith("[");
+                    (typeof value === "string" && (value.trim().startsWith("{") || value.trim().startsWith("[")));
 
                   return (
                     <div

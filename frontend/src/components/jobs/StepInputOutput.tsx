@@ -3,23 +3,12 @@
  * Displays step input and output sections with copy functionality
  */
 
-import React, { useEffect, useRef, useState } from "react";
-import {
-  FiCopy,
-  FiCheck,
-  FiLoader,
-  FiEdit,
-} from "react-icons/fi";
-import { formatStepInput, formatStepOutput } from "@/utils/jobFormatting";
-import { StepContent } from "./StepContent";
+import React from "react";
 import { MergedStep, StepStatus } from "@/types/job";
 import { Artifact } from "@/types/artifact";
-import { LiveOutputRenderer } from "./LiveOutputRenderer";
-import { StreamViewerUI } from "@/components/ui/StreamViewerUI";
-import { parseLogs } from "@/utils/logParsing";
-import { GeneratedImagesList } from "./GeneratedImagesList";
-import { GeneratedFilesList } from "./GeneratedFilesList";
-import { hasImageGeneration } from "@/utils/stepUtils";
+import { StepInput } from "./steps/StepInput";
+import { StepOutput } from "./steps/StepOutput";
+import { StepConfiguration } from "./steps/StepConfiguration";
 
 interface StepInputOutputProps {
   step: MergedStep;
@@ -50,81 +39,11 @@ export function StepInputOutput({
   variant = "compact",
   showInput = true,
 }: StepInputOutputProps) {
-  const inputScrollRef = useRef<HTMLDivElement>(null);
-  const outputScrollRef = useRef<HTMLDivElement>(null);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [copiedImageUrl, setCopiedImageUrl] = useState<string | null>(null);
-
-  // Add scroll detection to show scrollbars when scrolling
-  useEffect(() => {
-    const inputEl = inputScrollRef.current;
-    const outputEl = outputScrollRef.current;
-
-    const handleInputScroll = () => {
-      if (inputEl) {
-        inputEl.classList.add("scrolling");
-        if (scrollTimeoutRef.current) {
-          clearTimeout(scrollTimeoutRef.current);
-        }
-        scrollTimeoutRef.current = setTimeout(() => {
-          if (inputEl) {
-            inputEl.classList.remove("scrolling");
-          }
-        }, 300);
-      }
-    };
-
-    const handleOutputScroll = () => {
-      if (outputEl) {
-        outputEl.classList.add("scrolling");
-        if (scrollTimeoutRef.current) {
-          clearTimeout(scrollTimeoutRef.current);
-        }
-        scrollTimeoutRef.current = setTimeout(() => {
-          if (outputEl) {
-            outputEl.classList.remove("scrolling");
-          }
-        }, 300);
-      }
-    };
-
-    if (inputEl) {
-      inputEl.addEventListener("scroll", handleInputScroll, { passive: true });
-    }
-    if (outputEl) {
-      outputEl.addEventListener("scroll", handleOutputScroll, {
-        passive: true,
-      });
-    }
-
-    return () => {
-      if (inputEl) {
-        inputEl.removeEventListener("scroll", handleInputScroll);
-      }
-      if (outputEl) {
-        outputEl.removeEventListener("scroll", handleOutputScroll);
-      }
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current);
-      }
-    };
-  }, []);
-
   const isPending = status === "pending";
   const isCompleted = status === "completed";
   const isInProgress = status === "in_progress";
   const isFailed = status === "failed";
-  const liveOutputText = typeof liveOutput === "string" ? liveOutput : "";
-  const hasLiveOutput = liveOutputText.length > 0;
-  const shouldShowLiveOutput =
-    isInProgress &&
-    !hasImageGeneration(step, imageArtifacts) &&
-    (step.output === null || step.output === undefined || step.output === "") &&
-    (hasLiveOutput || Boolean(liveUpdatedAt));
+
   const contentHeightClass =
     variant === "expanded" ? "max-h-none" : "max-h-[350px] md:max-h-72";
   const liveOutputHeightClass =
@@ -133,35 +52,6 @@ export function StepInputOutput({
     variant === "expanded"
       ? "grid grid-cols-1 gap-4"
       : "grid grid-cols-1 gap-3";
-  const formattedInput = formatStepInput(step);
-  const formattedOutput = formatStepOutput(step);
-  const isAiStep =
-    step.step_type === "ai_generation" ||
-    step.step_type === "workflow_step" ||
-    step.step_type === "html_generation" ||
-    formattedInput.structure === "ai_input";
-  const isWebhookStep = step.step_type === "webhook";
-  const isHandoffStep = step.step_type === "workflow_handoff";
-  const inputLabel = isWebhookStep
-    ? "Request"
-    : isHandoffStep
-      ? "Handoff Input"
-      : isAiStep
-        ? "Prompt"
-        : "Input";
-  const outputLabel = isWebhookStep
-    ? "Response"
-    : isHandoffStep
-      ? "Handoff Result"
-      : isAiStep
-        ? "Step Output"
-        : "Output";
-  const inputLabelTitle = isAiStep
-    ? "Prompt = instructions + context (form submission + dependencies)"
-    : undefined;
-  const outputLabelTitle = isAiStep
-    ? "Result produced by this step"
-    : undefined;
 
   // Show section if step is completed, in progress, failed, or pending with instructions
   const shouldShow =
@@ -170,308 +60,39 @@ export function StepInputOutput({
     return null;
   }
 
-  const handleCopyImageUrl = (url: string) => {
-    onCopy(url);
-    setCopiedImageUrl(url);
-    if (copyTimeoutRef.current) {
-      clearTimeout(copyTimeoutRef.current);
-    }
-    copyTimeoutRef.current = setTimeout(() => {
-      setCopiedImageUrl(null);
-    }, 2000);
-  };
-
-  const renderCopyButton = (url: string) => {
-    const isCopied = copiedImageUrl === url;
-    return (
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          handleCopyImageUrl(url);
-        }}
-        className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 active:text-gray-900 dark:active:text-white flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600 touch-target min-h-[44px] sm:min-h-0"
-        title={isCopied ? "Copied" : "Copy image URL"}
-        aria-label={isCopied ? "Copied image URL" : "Copy image URL"}
-      >
-        {isCopied ? (
-          <FiCheck className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-        ) : (
-          <FiCopy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-        )}
-        <span className="hidden sm:inline">
-          {isCopied ? "Copied" : "Copy"}
-        </span>
-      </button>
-    );
-  };
-
-  // Check if image generation was used
-  const usedImageGeneration = hasImageGeneration(step, imageArtifacts);
-
   return (
     <div className="px-3 sm:px-3 pb-3 sm:pb-3 pt-3 border-t border-gray-100 dark:border-gray-700">
       <div className="mt-0">
         {isPending ? (
-          /* For pending steps, show configuration only */
-          <div className="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
-            <div className="bg-slate-50 dark:bg-slate-900/50 px-3 py-2 md:py-1.5 border-b border-gray-300 dark:border-gray-700 flex items-center justify-between">
-              <span className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300">
-                Configuration
-              </span>
-              {canEdit &&
-                onEditStep &&
-                (step.step_type === "workflow_step" ||
-                  step.step_type === "ai_generation" ||
-                  step.step_type === "webhook") &&
-                step.step_order !== undefined &&
-                step.step_order > 0 && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const workflowStepIndex = step.step_order - 1;
-                      onEditStep(workflowStepIndex);
-                    }}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
-                    title="Edit workflow step"
-                  >
-                    <FiEdit className="w-4 h-4" />
-                    <span>Edit Step</span>
-                  </button>
-                )}
-            </div>
-            <div className="p-4 md:p-3 bg-white dark:bg-card space-y-3 md:space-y-2">
-              {step.instructions && (
-                <div>
-                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
-                    Step Instructions (directive)
-                  </span>
-                  <pre className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap font-sans bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded border border-gray-200 dark:border-gray-700">
-                    {step.instructions}
-                  </pre>
-                </div>
-              )}
-            </div>
-          </div>
+          <StepConfiguration
+            step={step}
+            canEdit={canEdit}
+            onEditStep={onEditStep}
+          />
         ) : (
-          /* For completed/in-progress steps, show Input and Output side by side on desktop, stacked on mobile */
           <div className={layoutClass}>
             {showInput && (
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
-                <div className="bg-gray-50 dark:bg-gray-900/50 px-3 py-2 md:px-3 md:py-1.5 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300"
-                      title={inputLabelTitle}
-                    >
-                      {inputLabel}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      {canEdit &&
-                        onEditStep &&
-                        (step.step_type === "workflow_step" ||
-                          step.step_type === "ai_generation" ||
-                          step.step_type === "webhook") &&
-                        step.step_order !== undefined &&
-                        step.step_order > 0 && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const workflowStepIndex = step.step_order - 1;
-                              onEditStep(workflowStepIndex);
-                            }}
-                            className="flex items-center gap-1 px-1.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-                            title="Edit workflow step"
-                          >
-                            <FiEdit className="w-3 h-3" />
-                            <span className="hidden sm:inline">Edit</span>
-                          </button>
-                        )}
-                      <button
-                        onClick={() => {
-                          let text: string;
-                          if (formattedInput.type === "json") {
-                            text = JSON.stringify(formattedInput.content, null, 2);
-                          } else if (typeof formattedInput.content === "string") {
-                            text = formattedInput.content;
-                          } else if (
-                            typeof formattedInput.content === "object" &&
-                            formattedInput.content !== null &&
-                            "input" in formattedInput.content
-                          ) {
-                            const contentObj = formattedInput.content as {
-                              input?: unknown;
-                            };
-                            text = contentObj.input
-                              ? String(contentObj.input)
-                              : JSON.stringify(formattedInput.content, null, 2);
-                          } else {
-                            text = JSON.stringify(formattedInput.content, null, 2);
-                          }
-                          onCopy(text);
-                        }}
-                        className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 active:text-gray-900 dark:active:text-white flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600 touch-target min-h-[44px] sm:min-h-0"
-                      >
-                        <FiCopy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                        <span className="hidden sm:inline">Copy</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div
-                  ref={inputScrollRef}
-                  className={`p-3 md:p-2.5 bg-white dark:bg-card ${contentHeightClass} overflow-y-auto scrollbar-hide-until-hover`}
-                >
-                  <StepContent formatted={formattedInput} />
-                </div>
-              </div>
+              <StepInput
+                step={step}
+                canEdit={canEdit}
+                onEditStep={onEditStep}
+                onCopy={onCopy}
+                contentHeightClass={contentHeightClass}
+              />
             )}
 
-            {/* Output Section */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
-              <div className="bg-gray-50 dark:bg-gray-900/50 px-3 py-2 md:px-3 md:py-1.5 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between gap-2">
-                  <span
-                    className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300"
-                    title={outputLabelTitle}
-                  >
-                    {outputLabel}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => {
-                        // If the step is currently streaming, copy the live output instead of `null`.
-                        if (
-                          shouldShowLiveOutput &&
-                          typeof liveOutput === "string"
-                        ) {
-                          onCopy(liveOutput);
-                          return;
-                        }
-                        const text =
-                          formattedOutput.type === "json"
-                            ? JSON.stringify(formattedOutput.content, null, 2)
-                            : typeof formattedOutput.content === "string"
-                              ? formattedOutput.content
-                              : JSON.stringify(formattedOutput.content, null, 2);
-                        onCopy(text);
-                      }}
-                      className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 active:text-gray-900 dark:active:text-white flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300 dark:active:bg-gray-600 touch-target min-h-[44px] sm:min-h-0"
-                    >
-                      <FiCopy className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                      <span className="hidden sm:inline">Copy</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div
-                ref={outputScrollRef}
-                className={`p-3 md:p-2.5 bg-white dark:bg-card ${contentHeightClass} overflow-y-auto scrollbar-hide-until-hover`}
-              >
-                {usedImageGeneration ? (
-                  /* For image generation steps, only show the image URL, not markdown preview */
-                  <GeneratedImagesList
-                    step={step}
-                    imageArtifacts={imageArtifacts}
-                    loading={loadingImageArtifacts}
-                    renderCopyButton={renderCopyButton}
-                    onCopy={onCopy}
-                  />
-                ) : (
-                  /* For non-image generation steps, show the normal output content */
-                  <>
-                    {shouldShowLiveOutput && (
-                      <div className="mb-3 md:mb-2 rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-900/10 p-3 md:p-2.5">
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2">
-                            <FiLoader className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-300" />
-                            <span className="text-xs font-semibold text-blue-800 dark:text-blue-200">
-                              Live output (streaming)
-                            </span>
-                          </div>
-                          {liveUpdatedAt && (
-                            <span className="text-[11px] text-blue-700/70 dark:text-blue-200/60">
-                              Updated{" "}
-                              {new Date(liveUpdatedAt).toLocaleTimeString([], {
-                                hour12: false,
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                              })}
-                            </span>
-                          )}
-                        </div>
-                        <LiveOutputRenderer
-                          value={
-                            hasLiveOutput
-                              ? liveOutputText
-                              : "Waiting for model output..."
-                          }
-                          className={`text-sm md:text-xs text-gray-800 dark:text-gray-200 font-mono ${liveOutputHeightClass} overflow-y-auto scrollbar-hide-until-hover leading-relaxed`}
-                          textClassName="m-0 whitespace-pre-wrap break-words"
-                        />
-                      </div>
-                    )}
-                    {!shouldShowLiveOutput &&
-                      (() => {
-                        const stepImageUrls =
-                          step.image_urls &&
-                          Array.isArray(step.image_urls) &&
-                          step.image_urls.length > 0
-                            ? step.image_urls
-                            : [];
-
-                        // Check if output contains log markers
-                        const outputContent =
-                          typeof step.output === "string"
-                            ? step.output
-                            : step.output
-                              ? JSON.stringify(step.output, null, 2)
-                              : "";
-
-                        const hasLogMarkers =
-                          /\[Tool output\]|\[Code interpreter\]/.test(
-                            outputContent,
-                          );
-
-                        if (hasLogMarkers) {
-                          const logs = parseLogs(outputContent);
-                          return (
-                            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                              <StreamViewerUI
-                                logs={logs}
-                                status={
-                                  status === "in_progress"
-                                    ? "streaming"
-                                    : status === "failed"
-                                      ? "error"
-                                      : "completed"
-                                }
-                                className="h-[400px] border-0 rounded-none shadow-none"
-                              />
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <StepContent
-                            formatted={formattedOutput}
-                            imageUrls={stepImageUrls}
-                          />
-                        );
-                      })()}
-                    <GeneratedImagesList
-                      step={step}
-                      imageArtifacts={imageArtifacts}
-                      loading={loadingImageArtifacts}
-                      renderCopyButton={renderCopyButton}
-                      onCopy={onCopy}
-                    />
-                    <GeneratedFilesList fileArtifacts={fileArtifacts} />
-                  </>
-                )}
-              </div>
-            </div>
+            <StepOutput
+              step={step}
+              status={status}
+              onCopy={onCopy}
+              liveOutput={liveOutput}
+              liveUpdatedAt={liveUpdatedAt}
+              imageArtifacts={imageArtifacts}
+              fileArtifacts={fileArtifacts}
+              loadingImageArtifacts={loadingImageArtifacts}
+              contentHeightClass={contentHeightClass}
+              liveOutputHeightClass={liveOutputHeightClass}
+            />
           </div>
         )}
       </div>

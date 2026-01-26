@@ -1,5 +1,24 @@
 # Frontend Refactor Candidates
 
+## Completed Refactors
+
+### StepInputOutput (`frontend/src/components/jobs/StepInputOutput.tsx`)
+- Split into `StepInput`, `StepOutput`, and `StepConfiguration`.
+- Extracted `CopyButton` and `SectionHeader` primitives.
+
+### StepMetaRow (`frontend/src/components/jobs/StepMetaRow.tsx`)
+- Refactored to use `CollapsiblePanel` for panels.
+- Updated `StepMetaBadges` to use unified `Badge` component.
+
+### RecursiveStep (`frontend/src/components/jobs/RecursiveStep.tsx`)
+- Updated to use `RecursiveBlock` for true recursion.
+- Implemented `createBlockNode` helper.
+
+### JobDetailClient (`frontend/src/app/dashboard/jobs/[id]/client.tsx`)
+- Extracted state to `useJobDetailState`.
+- Extracted update logic to `useJobUpdates`.
+- Moved `getJobDuration` to utils.
+
 ## Priority ranking (impact vs risk)
 
 Legend: Impact (Low/Medium/High), Risk (Low/Medium/High).
@@ -9,7 +28,7 @@ Impact: High. Risk: Medium.
 Rationale: Very large component; mixes parsing helpers, UI state, and rendering for meta/context/actions.
 Extraction boundaries:
 - Move parsing + mapping helpers (`getRecord`, `getString`, `extractServiceTier`, `extractReasoningEffort`) and constants (`SERVICE_TIER_*`, `REASONING_*`) into a shared helper (e.g. `frontend/src/utils/stepMeta.ts`).
-- Extract UI subcomponents: `StepTimingRow`, `StepMetaRow`, `StepActionsMenu`, `DependencyPreviewGrid`.
+- Extract UI subcomponents: `StepTimingRow`, `StepActionsMenu`. (StepMetaRow is done).
 
 2) PromptOverridesSettings (`frontend/src/components/settings/PromptOverridesSettings.tsx`)
 Impact: High. Risk: Medium.

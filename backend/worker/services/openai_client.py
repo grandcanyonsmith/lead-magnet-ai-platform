@@ -2,6 +2,7 @@
 
 import logging
 import warnings
+import re
 from typing import Any, Dict, List, Optional
 
 import openai
@@ -116,6 +117,32 @@ class OpenAIClient:
             max_output_tokens=max_output_tokens,
             output_format=output_format,
         )
+
+    def _check_mcp_auth_error(self, error: Exception, job_id: Optional[str], tenant_id: Optional[str]):
+        """Check for MCP authentication errors and raise a clear ValueError if found."""
+        error_message = str(error)
+        error_lower = error_message.lower()
+        
+        if ("mcp server" in error_lower or "retrieving tool list from mcp" in error_lower) and \
+           ("401" in error_message or "unauthorized" in error_lower):
+            # Extract MCP server name if possible
+            mcp_server = "MCP server"
+            match = re.search(r"mcp server[:\s]+['\"]?([^'\"]+)['\"]?", error_message, re.IGNORECASE)
+            if match:
+                mcp_server = f"MCP server '{match.group(1)}'"
+            
+            logger.error(f"[OpenAI Client] MCP authentication error: {error_message}", extra={
+                "job_id": job_id,
+                "tenant_id": tenant_id,
+                "mcp_server": mcp_server,
+                "error_type": type(error).__name__,
+            })
+            
+            raise ValueError(
+                f"MCP authentication failed: {mcp_server} requires authentication. "
+                f"Please add an 'authorization' field to your MCP tool configuration with a valid token or API key. "
+                f"Original error: {error_message}"
+            )
 
     def create_response(self, **params):
         """
@@ -264,6 +291,9 @@ class OpenAIClient:
             error_body = getattr(e, "body", {}) or {}
             error_info = error_body.get("error", {}) if isinstance(error_body, dict) else {}
             
+            # Check for MCP authentication errors
+            self._check_mcp_auth_error(e, job_id, tenant_id)
+            
             # Check if error is about incompatible tools
             if "not supported with computer use" in error_message.lower() or \
                ("tool" in error_message.lower() and "not supported" in error_message.lower()):
@@ -285,7 +315,15 @@ class OpenAIClient:
 
             # 2) Image download recovery (raises if not applicable)
             return self.image_retry_handler.handle_image_download_error(e, params)
+        except openai.APIError as api_error:
+            # Check for MCP authentication errors in APIError exceptions
+            self._check_mcp_auth_error(api_error, job_id, tenant_id)
+            # Re-raise if not an MCP auth error
+            raise
         except Exception as api_error:
+            # Check for MCP authentication errors in any exception type
+            self._check_mcp_auth_error(api_error, job_id, tenant_id)
+            
             logger.exception("[OpenAI Client] API call failed", extra={
                 "job_id": job_id,
                 "tenant_id": tenant_id,

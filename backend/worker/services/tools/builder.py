@@ -124,6 +124,47 @@ class ToolBuilder:
                 ):
                     logger.info(f"Fixing Notion MCP authorization header for tool[{idx}]")
                     cleaned_tool["authorization"] = f"Bearer {cleaned_tool['authorization'].strip()}"
+                
+                # Handle missing authorization for MCP tools that require it
+                # Some MCP servers (like browser, notion, etc.) require authentication
+                if cleaned_tool.get("type") == "mcp":
+                    server_label = cleaned_tool.get("server_label", "")
+                    server_url = cleaned_tool.get("server_url", "")
+                    authorization = cleaned_tool.get("authorization")
+                    
+                    # Check if authorization is missing or empty
+                    has_auth = authorization and isinstance(authorization, str) and authorization.strip()
+                    
+                    # Known MCP servers that typically require authentication
+                    servers_requiring_auth = ["browser", "notion"]
+                    server_name = server_label.lower() if server_label else ""
+                    url_requires_auth = any(server in (server_url or "").lower() for server in ["notion.com", "browser"])
+                    
+                    if not has_auth and (server_name in servers_requiring_auth or url_requires_auth):
+                        # For browser MCP, add a placeholder that will trigger a clear error message
+                        # This helps users understand they need to add authorization
+                        if server_name == "browser" or "browser" in (server_url or "").lower():
+                            logger.warning(
+                                f"MCP tool[{idx}] (browser) is missing authorization. "
+                                f"This will cause a 401 error. Please add an 'authorization' field with a valid token.",
+                                extra={
+                                    "tool_index": idx,
+                                    "server_label": server_label,
+                                    "server_url": server_url,
+                                    "requires_fix": True,
+                                }
+                            )
+                            # Don't add a placeholder - let the error handler provide clear guidance
+                        else:
+                            logger.warning(
+                                f"MCP tool[{idx}] may require authorization: server_label='{server_label}', "
+                                f"server_url='{server_url}'. If you encounter 401 errors, add an 'authorization' field.",
+                                extra={
+                                    "tool_index": idx,
+                                    "server_label": server_label,
+                                    "server_url": server_url,
+                                }
+                            )
 
                 # Defensive check: Ensure container parameter is present for tools that require it
                 tool_type = cleaned_tool.get("type")
