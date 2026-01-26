@@ -18,12 +18,12 @@ import ReactFlow, {
   MarkerType,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import FlowchartNode from "./FlowchartNode";
+import StepNode from "./StepNode";
 import { WorkflowStep } from "@/types/workflow";
 import { FiPlus, FiMaximize2 } from "react-icons/fi";
 
 const nodeTypes = {
-  workflowStep: FlowchartNode,
+  workflowStep: StepNode,
 };
 
 interface WorkflowFlowchartProps {
@@ -152,6 +152,7 @@ function FlowchartContent({
           isDragging: dragState.nodeId === nodeId,
           warnings: getStepWarnings(step, index),
           animateIn: hasMounted,
+          // subSteps: step.subSteps // If we had this data
         },
         draggable: true,
         dragHandle: ".flow-node-drag-handle",

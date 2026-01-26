@@ -1,8 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 import type { JobLiveStep, MergedStep } from "@/types/job";
 import type { FormSubmission } from "@/types/form";
 import type {
@@ -12,27 +10,15 @@ import type {
   ServiceTier,
   Tool,
 } from "@/types/workflow";
-import { StepHeader } from "./StepHeader";
-import { StepInputOutput } from "./StepInputOutput";
-import { StepProgressBar } from "./StepProgressBar";
-import { ImagePreview } from "./ImagePreview";
 import { getStepStatus } from "./utils";
 import { Artifact } from "@/types/artifact";
 import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PreviewCard } from "@/components/artifacts/PreviewCard";
-import { getStepInput } from "@/utils/stepInput";
 import { parseLogs } from "@/utils/logParsing";
-import { StreamViewerUI } from "@/components/ui/StreamViewerUI";
-import { CompactTextPreview } from "./CompactTextPreview";
 import { ExecutionStepsHeader } from "./ExecutionStepsHeader";
-import {
-  buildOutputPreviewText,
-  formatLivePreviewText,
-  formatLiveUpdatedAt,
-  getStepImageFiles,
-} from "@/utils/executionSteps";
+import { StepProgressBar } from "./StepProgressBar";
+import { RecursiveStep } from "./RecursiveStep";
 
 type StepQuickUpdate = {
   model?: AIModel | null;
@@ -104,15 +90,6 @@ export function ExecutionSteps({
     return [...steps].sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0));
   }, [steps]);
 
-  const liveStepOrder = liveStep?.step_order;
-  const liveStepMeta = useMemo(() => {
-    if (liveStepOrder === undefined || liveStepOrder === null) return null;
-    return (
-      sortedSteps.find((step) => (step.step_order ?? 0) === liveStepOrder) ||
-      null
-    );
-  }, [liveStepOrder, sortedSteps]);
-
   const stepsForTimeline = useMemo(
     () => sortedSteps.filter((step) => step.step_type !== "form_submission"),
     [sortedSteps],
@@ -135,19 +112,6 @@ export function ExecutionSteps({
   const getStepStatusForStep = (step: MergedStep) => {
     return getStepStatus(step, sortedSteps, jobStatus);
   };
-
-  const liveOutputText =
-    typeof liveStep?.output_text === "string" ? liveStep.output_text : "";
-  const hasLiveOutput = liveOutputText.length > 0;
-  const shouldShowLivePanel =
-    jobStatus === "processing" ||
-    hasLiveOutput ||
-    Boolean(liveStep?.error) ||
-    Boolean(liveStep?.status);
-
-  const liveLogs = useMemo(() => {
-    return parseLogs(liveOutputText);
-  }, [liveOutputText]);
 
   if (!steps || steps.length === 0) {
     const emptyStatusCopy =
@@ -228,219 +192,30 @@ export function ExecutionSteps({
             )}
             {stepsForTimeline.map((step) => {
               const stepOrder = step.step_order ?? 0;
-              const isLiveStep = liveStep?.step_order === stepOrder;
-              const isExpanded = expandedSteps.has(stepOrder);
-              const stepStatus = getStepStatusForStep(step);
-              const liveOutputForStep =
-                liveStep && liveStep.step_order === stepOrder
-                  ? liveStep.output_text
-                  : undefined;
-              const liveUpdatedAtForStep =
-                liveStep && liveStep.step_order === stepOrder
-                  ? liveStep.updated_at
-                  : undefined;
-              const liveUpdatedAtLabel = formatLiveUpdatedAt(liveUpdatedAtForStep);
-              const livePreview =
-                typeof liveOutputForStep === "string"
-                  ? formatLivePreviewText(liveOutputForStep)
-                  : "";
-              const showLivePreview = Boolean(livePreview || liveUpdatedAtLabel);
-
-              const detailsHref =
-                jobId && step.step_order !== undefined
-                  ? `/dashboard/jobs/${jobId}/steps/${step.step_order}`
-                  : undefined;
-              const stepInput = getStepInput(step.input);
-              const stepTools = stepInput?.tools || step.tools;
-              const stepToolChoice = stepInput?.tool_choice || step.tool_choice;
-              const hasComputerUse =
-                Array.isArray(stepTools) &&
-                stepTools.some(
-                  (tool: any) =>
-                    (typeof tool === "string" && tool === "computer_use_preview") ||
-                    (tool && typeof tool === "object" && tool.type === "computer_use_preview"),
-                );
-              const stepImageArtifacts = imageArtifactsByStep.get(stepOrder) || [];
-              const stepFileArtifacts = fileArtifactsByStep.get(stepOrder) || [];
-              const stepImageFiles =
-                variant === "expanded" && isExpanded
-                  ? getStepImageFiles(step, stepImageArtifacts)
-                  : [];
-              const inlineOutputPreview =
-                variant === "compact" && stepStatus === "completed"
-                  ? buildOutputPreviewText(step)
-                  : null;
-              const showInlineOutputs = Boolean(inlineOutputPreview);
-              const inlineOutputCards = inlineOutputPreview
-                ? [
-                    <PreviewCard
-                      key={`output-${stepOrder}`}
-                      title="Output"
-                      description={inlineOutputPreview.typeLabel}
-                      showDescription
-                      preview={
-                        <CompactTextPreview
-                          text={inlineOutputPreview.text}
-                          format={inlineOutputPreview.type}
-                          onCopy={() => onCopy(inlineOutputPreview.text)}
-                          onExpand={() => onToggleStep(stepOrder)}
-                        />
-                      }
-                      className="group flex w-full flex-col text-left"
-                      previewClassName="aspect-[3/2] sm:aspect-[8/5]"
-                    />,
-                  ]
-                : [];
-              const imagePreviewProps = {
-                imageIndex: 0,
-                model: step.model,
-                tools: stepTools,
-                toolChoice: stepToolChoice,
-              };
-
               return (
-                <div
+                <RecursiveStep
                   key={stepOrder}
-                  id={`execution-step-${stepOrder}`}
-                  className="relative pb-6 last:pb-0 scroll-mt-24"
-                >
-                  <div
-                    className={`absolute left-[-5px] top-6 h-2.5 w-2.5 rounded-full ring-4 ring-background ${
-                      stepStatus === "completed"
-                        ? "bg-green-500"
-                        : stepStatus === "in_progress"
-                          ? "bg-blue-500 animate-pulse"
-                          : stepStatus === "failed"
-                            ? "bg-red-500"
-                            : "bg-muted-foreground/40"
-                    }`}
-                  />
-
-                  <div className="ml-6 rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md">
-                    <StepHeader
-                      step={step}
-                      status={stepStatus}
-                      jobStatus={jobStatus}
-                      canEdit={canEdit}
-                      rerunningStep={rerunningStep}
-                      allSteps={sortedSteps}
-                      onEditStep={onEditStep}
-                      onRerunStep={onRerunStep}
-                      onRerunStepClick={onRerunStepClick}
-                      onQuickUpdateStep={onQuickUpdateStep}
-                      updatingStepIndex={updatingStepIndex}
-                      detailsHref={detailsHref}
-                    />
-                    {isLiveStep && shouldShowLivePanel && (
-                      <div className="border-t border-border/60">
-                        <StreamViewerUI 
-                          logs={liveLogs}
-                          status={jobStatus === 'processing' ? 'streaming' : jobStatus === 'completed' ? 'completed' : jobStatus === 'failed' ? 'error' : 'pending'}
-                          hasComputerUse={hasComputerUse}
-                          className="h-[500px] border-0 rounded-none shadow-none"
-                        />
-                      </div>
-                    )}
-                    {showInlineOutputs && inlineOutputCards.length > 0 && (
-                      <div className="border-t border-border/60 bg-muted/20 px-4 py-3">
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                          {inlineOutputCards}
-                        </div>
-                      </div>
-                    )}
-                    {variant === "compact" ? (
-                      <div className="border-t border-border/60 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          {step.step_type !== "workflow_step" && (
-                            <span className="inline-flex items-center gap-2">
-                              {step.step_type.replace(/_/g, " ")}
-                            </span>
-                          )}
-                          {showLivePreview && (
-                            <span className="flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
-                              {liveUpdatedAtLabel && (
-                                <span className="shrink-0">
-                                  Updated {liveUpdatedAtLabel}
-                                </span>
-                              )}
-                              {livePreview && (
-                                <span
-                                  className="min-w-0 truncate font-mono"
-                                  title={livePreview}
-                                >
-                                  {livePreview}
-                                </span>
-                              )}
-                            </span>
-                          )}
-                        </div>
-                        {detailsHref && (
-                          <Link
-                            href={detailsHref}
-                            className="inline-flex items-center gap-2 font-semibold text-primary-600 hover:text-primary-700"
-                          >
-                            View details
-                            <ChevronDownIcon className="h-3.5 w-3.5 rotate-[-90deg]" />
-                          </Link>
-                        )}
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="w-full flex justify-center py-2 border-t border-border/60 hover:bg-muted/40 transition-colors text-xs font-medium text-muted-foreground"
-                        onClick={() => onToggleStep(stepOrder)}
-                        aria-expanded={isExpanded}
-                      >
-                        {isExpanded ? (
-                          <span className="flex items-center gap-1">
-                            Hide details <ChevronUpIcon className="w-3 h-3" />
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1">
-                            Show details <ChevronDownIcon className="w-3 h-3" />
-                          </span>
-                        )}
-                      </button>
-                    )}
-                    {isExpanded && (
-                      <div className="border-t border-border/60 bg-muted/30">
-                        <StepInputOutput
-                          step={step}
-                          status={stepStatus}
-                          onCopy={onCopy}
-                          liveOutput={liveOutputForStep}
-                          liveUpdatedAt={liveUpdatedAtForStep}
-                          imageArtifacts={imageArtifactsByStep.get(stepOrder) || []}
-                          fileArtifacts={fileArtifactsByStep.get(stepOrder) || []}
-                          loadingImageArtifacts={loadingImageArtifacts}
-                          onEditStep={onEditStep}
-                          canEdit={canEdit}
-                          variant={variant}
-                        />
-
-                        {stepImageFiles.length > 0 && (
-                          <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-muted/20">
-                            {stepImageFiles.map((file) =>
-                              file.type === "imageArtifact" ? (
-                                <ImagePreview
-                                  key={file.key}
-                                  artifact={file.data}
-                                  {...imagePreviewProps}
-                                />
-                              ) : (
-                                <ImagePreview
-                                  key={file.key}
-                                  imageUrl={file.data}
-                                  {...imagePreviewProps}
-                                />
-                              ),
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  step={step}
+                  jobId={jobId}
+                  variant={variant}
+                  isExpanded={expandedSteps.has(stepOrder)}
+                  onToggle={() => onToggleStep(stepOrder)}
+                  onCopy={onCopy}
+                  jobStatus={jobStatus}
+                  liveStep={liveStep}
+                  onRerunStep={onRerunStep}
+                  rerunningStep={rerunningStep}
+                  onEditStep={onEditStep}
+                  canEdit={canEdit}
+                  onQuickUpdateStep={onQuickUpdateStep}
+                  updatingStepIndex={updatingStepIndex}
+                  imageArtifacts={imageArtifactsByStep.get(stepOrder)}
+                  fileArtifacts={fileArtifactsByStep.get(stepOrder)}
+                  loadingImageArtifacts={loadingImageArtifacts}
+                  onRerunStepClick={onRerunStepClick}
+                  allSteps={sortedSteps}
+                  getStepStatus={getStepStatusForStep}
+                />
               );
             })}
           </div>
