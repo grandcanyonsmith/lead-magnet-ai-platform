@@ -238,100 +238,104 @@ export function JobTabs({
       ? 0 // Use 0 or undefined for loading state in generic tabs
       : trackingSessionCount ?? 0;
       
-  const badgeValues: Partial<Record<JobTabId, number>> = {
-    overview: artifactsBadge,
-    execution: stepsBadge,
-    tracking: typeof trackingBadge === 'number' ? trackingBadge : 0,
-  };
+  const tabs: TabNode[] = useMemo(() => {
+    const badgeValues: Partial<Record<JobTabId, number>> = {
+      overview: artifactsBadge,
+      execution: stepsBadge,
+      tracking: typeof trackingBadge === 'number' ? trackingBadge : 0,
+    };
 
-  const tabs: TabNode[] = useMemo(() => [
-    {
-      id: "overview",
-      label: "Overview",
-      badge: badgeValues.overview,
-      content: (
-        <JobSummaryTab
-          artifactGalleryItems={artifactGalleryItems}
-          loadingArtifacts={loadingArtifacts}
-          onPreview={openPreview}
-        />
-      ),
-    },
-    {
-      id: "execution",
-      label: "Execution",
-      badge: badgeValues.execution,
-      content: (
-        <JobExecutionTab
-          job={job}
-          mergedSteps={mergedSteps}
-          expandedSteps={expandedSteps}
-          onToggleStep={toggleStep}
-          onExpandAllSteps={expandAllSteps}
-          onCollapseAllSteps={collapseAllSteps}
-          executionStepsError={executionStepsError}
-          onRefresh={onRefresh}
-          refreshing={refreshing}
-          onCopy={onCopy}
-          imageArtifactsByStep={imageArtifactsByStep}
-          fileArtifactsByStep={fileArtifactsByStep}
-          loadingArtifacts={loadingArtifacts}
-          submission={submission}
-          onResubmit={onResubmit}
-          resubmitting={resubmitting}
-          onEditStep={onEditStep}
-          onQuickUpdateStep={onQuickUpdateStep}
-          updatingStepIndex={updatingStepIndex}
-          onRerunStepClick={onRerunStepClick}
-          rerunningStep={rerunningStep}
-          artifactGalleryItems={artifactGalleryItems}
-          onPreview={openPreview}
-        />
-      ),
-    },
-    {
-      id: "improve",
-      label: "Improve",
-      content: (
-        <JobImproveTab
-          job={job}
-          workflow={workflow}
-          mergedSteps={mergedSteps}
-          artifacts={artifacts}
-        />
-      ),
-    },
-    {
-      id: "edit",
-      label: "Edit",
-      content: <JobEditTab workflow={workflow} onExit={onEditExit} />,
-    },
-    {
-      id: "tracking",
-      label: "Activity",
-      badge: badgeValues.tracking,
-      content: (
-        <JobTrackingTab
-          jobId={job.job_id}
-          onSessionsLoaded={onTrackingSessionsLoaded}
-          onSessionsLoadingChange={onTrackingSessionsLoadingChange}
-          onStatsLoaded={onTrackingStatsLoaded}
-          onStatsLoadingChange={onTrackingStatsLoadingChange}
-        />
-      ),
-    },
-    {
-      id: "technical",
-      label: "Technical",
-      content: <JobTechnicalTab job={job} form={form} submission={submission} />,
-    },
-  ], [
+    return [
+      {
+        id: "overview",
+        label: "Overview",
+        badge: badgeValues.overview,
+        content: (
+          <JobSummaryTab
+            artifactGalleryItems={artifactGalleryItems}
+            loadingArtifacts={loadingArtifacts}
+            onPreview={openPreview}
+          />
+        ),
+      },
+      {
+        id: "execution",
+        label: "Execution",
+        badge: badgeValues.execution,
+        content: (
+          <JobExecutionTab
+            job={job}
+            mergedSteps={mergedSteps}
+            expandedSteps={expandedSteps}
+            onToggleStep={toggleStep}
+            onExpandAllSteps={expandAllSteps}
+            onCollapseAllSteps={collapseAllSteps}
+            executionStepsError={executionStepsError}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+            onCopy={onCopy}
+            imageArtifactsByStep={imageArtifactsByStep}
+            fileArtifactsByStep={fileArtifactsByStep}
+            loadingArtifacts={loadingArtifacts}
+            submission={submission}
+            onResubmit={onResubmit}
+            resubmitting={resubmitting}
+            onEditStep={onEditStep}
+            onQuickUpdateStep={onQuickUpdateStep}
+            updatingStepIndex={updatingStepIndex}
+            onRerunStepClick={onRerunStepClick}
+            rerunningStep={rerunningStep}
+            artifactGalleryItems={artifactGalleryItems}
+            onPreview={openPreview}
+          />
+        ),
+      },
+      {
+        id: "improve",
+        label: "Improve",
+        content: (
+          <JobImproveTab
+            job={job}
+            workflow={workflow}
+            mergedSteps={mergedSteps}
+            artifacts={artifacts}
+          />
+        ),
+      },
+      {
+        id: "edit",
+        label: "Edit",
+        content: <JobEditTab workflow={workflow} onExit={onEditExit} />,
+      },
+      {
+        id: "tracking",
+        label: "Activity",
+        badge: badgeValues.tracking,
+        content: (
+          <JobTrackingTab
+            jobId={job.job_id}
+            onSessionsLoaded={onTrackingSessionsLoaded}
+            onSessionsLoadingChange={onTrackingSessionsLoadingChange}
+            onStatsLoaded={onTrackingStatsLoaded}
+            onStatsLoadingChange={onTrackingStatsLoadingChange}
+          />
+        ),
+      },
+      {
+        id: "technical",
+        label: "Technical",
+        content: <JobTechnicalTab job={job} form={form} submission={submission} />,
+      },
+    ];
+  }, [
     artifactGalleryItems, loadingArtifacts, openPreview,
     job, mergedSteps, expandedSteps, toggleStep, expandAllSteps, collapseAllSteps, executionStepsError, onRefresh, refreshing, onCopy, imageArtifactsByStep, fileArtifactsByStep, submission, onResubmit, resubmitting, onEditStep, onQuickUpdateStep, updatingStepIndex, onRerunStepClick, rerunningStep,
     workflow, artifacts,
     onEditExit,
     onTrackingSessionsLoaded, onTrackingSessionsLoadingChange, onTrackingStatsLoaded, onTrackingStatsLoadingChange,
-    badgeValues, form
+    form,
+    // Add dependencies for badgeValues
+    artifactsBadge, stepsBadge, trackingBadge
   ]);
 
   const handleTabChange = (id: string) => {
