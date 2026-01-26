@@ -9,6 +9,9 @@ from typing import Optional
 _TEMPLATE_PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*[^{}]+\s*\}\}")
 _FORM_BLOCK_PATTERN = re.compile(r"<form\b[^>]*>.*?</form>", flags=re.IGNORECASE | re.DOTALL)
 _FORM_ELEMENT_PATTERN = re.compile(r"<(input|select|textarea)\b[^>]*>", flags=re.IGNORECASE)
+_FORM_TAG_DETECT_PATTERN = re.compile(
+    r"<(form|input|select|textarea)\b", flags=re.IGNORECASE
+)
 
 
 def strip_template_placeholders(html: Optional[str]) -> Optional[str]:
@@ -28,8 +31,7 @@ def strip_form_elements(html: Optional[str]) -> Optional[str]:
     """
     if not isinstance(html, str):
         return html
-    html_lower = html.lower()
-    if "<form" not in html_lower and "<input" not in html_lower and "<select" not in html_lower and "<textarea" not in html_lower:
+    if not _FORM_TAG_DETECT_PATTERN.search(html):
         return html
     cleaned = _FORM_BLOCK_PATTERN.sub("", html)
     cleaned = _FORM_ELEMENT_PATTERN.sub("", cleaned)

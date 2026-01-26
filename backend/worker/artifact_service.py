@@ -7,7 +7,7 @@ import logging
 import os
 import requests
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional, Union
 
 from utils.ulid_utils import new_ulid
 
@@ -29,7 +29,7 @@ class ArtifactService:
         tenant_id: str,
         job_id: str,
         artifact_type: str,
-        content: str | bytes,
+        content: Union[str, bytes],
         filename: str,
         public: bool = True  # Default to True - all artifacts should be public
     ) -> str:

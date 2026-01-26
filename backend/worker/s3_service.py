@@ -5,7 +5,7 @@ Handles all S3 operations for the worker.
 
 import os
 import logging
-from typing import Tuple
+from typing import Tuple, Union
 import boto3
 from botocore.exceptions import ClientError
 
@@ -58,7 +58,7 @@ class S3Service:
     def upload_artifact(
         self,
         key: str,
-        content: str | bytes,
+        content: Union[str, bytes],
         content_type: str = 'text/html',
         public: bool = False
     ) -> Tuple[str, str]:

@@ -19,6 +19,7 @@ import { KeyValueList } from "@/components/ui/KeyValueList";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { JsonViewer } from "@/components/ui/JsonViewer";
+import { buildExecutionJsonSummary } from "@/utils/jobs/rawExecutionJson";
 
 interface TechnicalDetailsProps {
   job: any;
@@ -37,17 +38,23 @@ export function TechnicalDetails({
   const [loadingArtifacts, setLoadingArtifacts] = useState(false);
   const [copyingAll, setCopyingAll] = useState(false);
   const { settings } = useSettings();
-  const hasRawJson = Array.isArray(job) ? job.length > 0 : Boolean(job);
+  const rawJsonData = useMemo(() => buildExecutionJsonSummary(job), [job]);
+  const hasRawJson = Array.isArray(rawJsonData)
+    ? rawJsonData.length > 0
+    : Boolean(rawJsonData);
   const { rawJsonString, rawJsonError } = useMemo(() => {
     if (!hasRawJson) {
       return { rawJsonString: "", rawJsonError: false };
     }
     try {
-      return { rawJsonString: JSON.stringify(job, null, 2), rawJsonError: false };
+      return {
+        rawJsonString: JSON.stringify(rawJsonData, null, 2),
+        rawJsonError: false,
+      };
     } catch {
       return { rawJsonString: "", rawJsonError: true };
     }
-  }, [job, hasRawJson]);
+  }, [rawJsonData, hasRawJson]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -420,7 +427,7 @@ export function TechnicalDetails({
 
         <SectionCard
           title="Raw execution JSON"
-          description="Full payload captured for this run."
+          description="Filtered execution steps (instructions, tools, step info, outputs)."
           padding="sm"
           actions={
             <Button
@@ -442,7 +449,7 @@ export function TechnicalDetails({
             </div>
           ) : hasRawJson ? (
             <JsonViewer
-              value={job}
+              value={rawJsonData}
               raw={rawJsonString}
               defaultMode="tree"
               defaultExpandedDepth={2}
