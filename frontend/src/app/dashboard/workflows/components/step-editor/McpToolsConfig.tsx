@@ -20,6 +20,7 @@ type McpCatalogEntry = {
 
 const MCP_CATALOG: McpCatalogEntry[] = [
   { id: "browser", label: "Browser", serverLabel: "browser" },
+  { id: "notion", label: "Notion", serverLabel: "notion" },
   { id: "openai", label: "OpenAI", serverLabel: "openai" },
   { id: "openai-tools", label: "OpenAI Tools", serverLabel: "openai_tools" },
 ];
@@ -306,12 +307,17 @@ export default function McpToolsConfig({
                   <input
                     id={`mcp-auth-${index}`}
                     value={tool.authorization || ""}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      let value = event.target.value;
+                      // If the user pastes a raw Notion token, automatically format it as a Bearer token
+                      if (value.trim().startsWith("ntn_") && !value.toLowerCase().includes("bearer")) {
+                        value = `Bearer ${value.trim()}`;
+                      }
                       updateTool(index, (current) => ({
                         ...current,
-                        authorization: event.target.value,
-                      }))
-                    }
+                        authorization: value,
+                      }));
+                    }}
                     className={CONTROL_BASE}
                     placeholder="Bearer <token>"
                   />

@@ -113,6 +113,18 @@ class ToolBuilder:
                     )
                     cleaned_tool.pop("container", None)
 
+                # Fix Notion MCP authorization header if missing "Bearer " prefix
+                # Notion requires "Bearer <token>" but users often just paste the token "ntn_..."
+                if (
+                    cleaned_tool.get("type") == "mcp"
+                    and isinstance(cleaned_tool.get("server_url"), str)
+                    and "notion.com" in cleaned_tool["server_url"]
+                    and isinstance(cleaned_tool.get("authorization"), str)
+                    and cleaned_tool["authorization"].strip().startswith("ntn_")
+                ):
+                    logger.info(f"Fixing Notion MCP authorization header for tool[{idx}]")
+                    cleaned_tool["authorization"] = f"Bearer {cleaned_tool['authorization'].strip()}"
+
                 # Defensive check: Ensure container parameter is present for tools that require it
                 tool_type = cleaned_tool.get("type")
                 if tool_type and ToolValidator.requires_container(tool_type):
