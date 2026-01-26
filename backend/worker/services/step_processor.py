@@ -14,7 +14,7 @@ from services.usage_service import UsageService
 from services.image_artifact_service import ImageArtifactService
 from services.context_builder import ContextBuilder
 from utils.step_utils import normalize_step_order, normalize_dependency_list
-from dependency_resolver import get_ready_steps, get_step_status
+from dependency_resolver import build_dependency_graph, get_ready_steps, get_step_status
 from core import log_context
 
 from services.steps.registry import StepRegistry
@@ -238,25 +238,66 @@ class StepProcessor:
         execution_steps: List[Dict[str, Any]]
     ):
         """Check if step dependencies are satisfied."""
-        step_deps = step.get('depends_on', [])
-        if not step_deps:
-            step_order = step.get('step_order', step_index)
-            step_deps = [i for i, s in enumerate(steps) if s.get('step_order', i) < step_order]
-        else:
-            step_deps = normalize_dependency_list(step_deps)
-            
-        completed_step_indices = [
-            normalize_step_order(s) - 1
-            for s in execution_steps
-            if s.get('step_type') in ['ai_generation', 'webhook', 'workflow_handoff', 'html_patch', 'browser'] and normalize_step_order(s) > 0
-        ]
-        
+        # Normalize dependencies using the shared dependency graph logic.
+        # This handles:
+        # - explicit `depends_on` specified as step_order or indices
+        # - implicit dependencies via step_order ordering
+        dependency_graph = build_dependency_graph(steps)
+        step_deps = dependency_graph.get(step_index, [])
+
+        # Build a mapping of workflow step_order -> workflow array index.
+        # (Used to map execution_steps to the correct workflow index even if step_order isn't 1-based.)
+        order_to_index: Dict[int, int] = {}
+        for idx, workflow_step in enumerate(steps):
+            order_to_index[normalize_step_order(workflow_step)] = idx
+
+        def _is_execution_step_completed(exec_step: Dict[str, Any]) -> bool:
+            # Ignore internal steps that shouldn't gate workflow execution.
+            if exec_step.get("step_type") == "s3_upload":
+                return False
+
+            # If the handler explicitly reports success/failure, honor it.
+            if exec_step.get("success") is True:
+                return True
+            if exec_step.get("success") is False:
+                return False
+
+            # Fall back to "did this step actually run" heuristics.
+            status = exec_step.get("status")
+            if status in {"completed", "succeeded", "success"}:
+                return True
+            if status in {"failed", "error"}:
+                return False
+
+            return bool(exec_step.get("timestamp") or exec_step.get("completed_at"))
+
+        completed_step_indices: List[int] = []
+        for exec_step in execution_steps:
+            if not _is_execution_step_completed(exec_step):
+                continue
+
+            exec_order = normalize_step_order(exec_step)
+
+            # Primary: treat exec_step.step_order as workflow step_order.
+            if exec_order in order_to_index:
+                completed_step_indices.append(order_to_index[exec_order])
+                continue
+
+            # Fallback: some producers store workflow step numbers (1-based) instead of step_order.
+            one_based_index = exec_order - 1
+            if 0 <= one_based_index < len(steps):
+                completed_step_indices.append(one_based_index)
+
+        completed_step_indices = sorted(set(completed_step_indices))
+
         all_deps_completed = all(dep_index in completed_step_indices for dep_index in step_deps)
-        
+
         if not all_deps_completed:
             missing_deps = [dep for dep in step_deps if dep not in completed_step_indices]
             logger.warning(f"Step {step_index + 1} waiting for dependencies: {missing_deps}")
-            raise ValueError(f"Step {step_index + 1} cannot execute yet. Missing dependencies: {missing_deps}")
+            raise ValueError(
+                f"Step {step_index + 1} cannot execute yet. Missing dependencies: {missing_deps}"
+            )
 
     def _build_step_outputs_from_execution_steps(
         self,

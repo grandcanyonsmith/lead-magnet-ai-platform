@@ -158,6 +158,7 @@ interface JobTabsProps {
   collapseAllSteps: () => void;
   executionStepsError: string | null;
   imageArtifactsByStep: Map<number, Artifact[]>;
+  fileArtifactsByStep?: Map<number, Artifact[]>;
   loadingArtifacts: boolean;
   submission?: FormSubmission | null;
   onResubmit?: () => void;
@@ -202,6 +203,7 @@ export function JobTabs({
   collapseAllSteps,
   executionStepsError,
   imageArtifactsByStep,
+  fileArtifactsByStep,
   loadingArtifacts,
   submission,
   onResubmit,
@@ -280,6 +282,7 @@ export function JobTabs({
             refreshing={refreshing}
             onCopy={onCopy}
             imageArtifactsByStep={imageArtifactsByStep}
+            fileArtifactsByStep={fileArtifactsByStep}
             loadingArtifacts={loadingArtifacts}
             submission={submission}
             onResubmit={onResubmit}

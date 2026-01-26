@@ -27,6 +27,7 @@ interface JobExecutionTabProps {
   refreshing?: boolean;
   onCopy: (text: string) => void;
   imageArtifactsByStep: Map<number, Artifact[]>;
+  fileArtifactsByStep?: Map<number, Artifact[]>;
   loadingArtifacts: boolean;
   submission?: FormSubmission | null;
   onResubmit?: () => void;
@@ -52,6 +53,7 @@ export function JobExecutionTab({
   refreshing,
   onCopy,
   imageArtifactsByStep,
+  fileArtifactsByStep,
   loadingArtifacts,
   submission,
   onResubmit,
@@ -111,6 +113,7 @@ export function JobExecutionTab({
         updatingStepIndex={updatingStepIndex}
         canEdit={true}
         imageArtifactsByStep={imageArtifactsByStep}
+        fileArtifactsByStep={fileArtifactsByStep}
         loadingImageArtifacts={loadingArtifacts}
         onRerunStepClick={onRerunStepClick}
         rerunningStep={rerunningStep}

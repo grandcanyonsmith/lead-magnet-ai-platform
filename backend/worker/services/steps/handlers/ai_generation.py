@@ -94,6 +94,7 @@ class AIStepHandler(AbstractStepHandler):
                 "mockup",
                 "dist/",
                 "bundle",
+                "file", # Generic file keyword
             ]
         )
         
@@ -142,16 +143,6 @@ class AIStepHandler(AbstractStepHandler):
         if force_shell and shell_keyword_hit and not has_image_generation_tool:
             step_tool_choice = 'required'
         
-        # Filter code_interpreter if S3 upload requested in instructions
-        instructions = step.get("instructions", "")
-        if self.s3_context_service.parse_s3_upload_target_from_instructions(instructions):
-            step_tools = [
-                t for t in step_tools
-                if not (isinstance(t, dict) and t.get("type") == "code_interpreter")
-            ]
-            if str(step_tool_choice).strip().lower() == "required" and len(step_tools) == 0:
-                step_tool_choice = "none"
-        
         return step_model, step_tools, step_tool_choice
 
     @staticmethod
@@ -182,11 +173,10 @@ class AIStepHandler(AbstractStepHandler):
             step_type='ai_generation',
             step_model=step_model
         ):
-            # Check dependency steps to build context
-            # Note: dependency resolution happens in step_processor main loop now
-            
             previous_context, current_step_context = self._split_step_context(step_index, context)
-            current_step_context = self.s3_context_service.maybe_inject_s3_upload_context(
+            
+            # Inject S3 upload context (New Method)
+            current_step_context = self.s3_context_service.inject_context(
                 step=step,
                 step_index=step_index,
                 tenant_id=tenant_id,
@@ -194,14 +184,6 @@ class AIStepHandler(AbstractStepHandler):
                 current_step_context=current_step_context,
                 step_outputs=step_outputs,
                 step_tools=step_tools,
-            )
-            current_step_context = self.s3_context_service.maybe_inject_s3_publish_output_only_context(
-                step=step,
-                current_step_context=current_step_context,
-            )
-            current_step_context = self.s3_context_service.maybe_inject_shell_manifest_context(
-                step_tools=step_tools,
-                current_step_context=current_step_context,
             )
             
             # Collect previous image URLs
@@ -263,8 +245,8 @@ class AIStepHandler(AbstractStepHandler):
                 
                 execution_steps.append(execution_step_data)
                 
-                # Post-processing S3 upload
-                s3_publish_step = self.s3_context_service.maybe_publish_current_step_output_to_s3(
+                # Post-processing S3 upload (New Method)
+                s3_publish_step = self.s3_context_service.process_step_upload(
                     step=step,
                     step_index=step_index,
                     tenant_id=tenant_id,

@@ -7,20 +7,19 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   FiCopy,
   FiCheck,
-  FiChevronDown,
-  FiChevronUp,
   FiLoader,
   FiEdit,
-  FiCpu,
 } from "react-icons/fi";
 import { formatStepInput, formatStepOutput } from "@/utils/jobFormatting";
 import { StepContent } from "./StepContent";
 import { MergedStep, StepStatus } from "@/types/job";
-import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { Artifact } from "@/types/artifact";
 import { LiveOutputRenderer } from "./LiveOutputRenderer";
 import { StreamViewerUI } from "@/components/ui/StreamViewerUI";
 import { parseLogs } from "@/utils/logParsing";
+import { GeneratedImagesList } from "./GeneratedImagesList";
+import { GeneratedFilesList } from "./GeneratedFilesList";
+import { hasImageGeneration } from "@/utils/stepUtils";
 
 interface StepInputOutputProps {
   step: MergedStep;
@@ -29,82 +28,11 @@ interface StepInputOutputProps {
   liveOutput?: string;
   liveUpdatedAt?: string;
   imageArtifacts?: Artifact[];
+  fileArtifacts?: Artifact[];
   loadingImageArtifacts?: boolean;
   onEditStep?: (stepIndex: number) => void;
   canEdit?: boolean;
   variant?: "compact" | "expanded";
-}
-
-// Type for tool - can be a string or an object with a type property
-type Tool = string | { type: string; [key: string]: unknown };
-
-// Helper to get tool name from tool object or string
-function getToolName(tool: Tool): string {
-  return typeof tool === "string" ? tool : tool.type || "unknown";
-}
-
-// Helper to truncate long URLs for display
-function truncateUrl(url: string, maxLength: number = 50): string {
-  if (url.length <= maxLength) {
-    return url;
-  }
-  return url.substring(0, maxLength) + "...";
-}
-
-// Helper to detect if image generation was used in this step
-function hasImageGeneration(
-  step: MergedStep,
-  imageArtifacts: Artifact[],
-): boolean {
-  // Check if step has image URLs
-  const hasImageUrls =
-    step.image_urls &&
-    Array.isArray(step.image_urls) &&
-    step.image_urls.length > 0;
-
-  // Check if step has image artifacts
-  const hasImageArtifacts = imageArtifacts.length > 0;
-
-  // Check if step tools include image generation
-  const tools = step.input?.tools || step.tools || [];
-  const hasImageGenerationTool =
-    Array.isArray(tools) &&
-    tools.some((tool) => {
-      const toolName = getToolName(tool as Tool);
-      return toolName === "image_generation";
-    });
-
-  return hasImageUrls || hasImageArtifacts || hasImageGenerationTool;
-}
-
-// Render tool badges inline
-function renderToolBadges(
-  tools?: string[] | unknown[],
-  showLabel: boolean = true,
-) {
-  if (!tools || !Array.isArray(tools) || tools.length === 0) {
-    return showLabel ? (
-      <span className="px-2 py-0.5 text-xs bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded border border-gray-200 dark:border-gray-700">
-        None
-      </span>
-    ) : null;
-  }
-
-  return (
-    <div className="flex flex-wrap gap-1">
-      {tools.map((tool, toolIdx) => {
-        const toolName = getToolName(tool as Tool);
-        return (
-          <span
-            key={toolIdx}
-            className="px-2 py-0.5 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800/30 whitespace-nowrap"
-          >
-            {toolName}
-          </span>
-        );
-      })}
-    </div>
-  );
 }
 
 export function StepInputOutput({
@@ -114,6 +42,7 @@ export function StepInputOutput({
   liveOutput,
   liveUpdatedAt,
   imageArtifacts = [],
+  fileArtifacts = [],
   loadingImageArtifacts = false,
   onEditStep,
   canEdit = false,
@@ -186,6 +115,7 @@ export function StepInputOutput({
   const isPending = status === "pending";
   const isCompleted = status === "completed";
   const isInProgress = status === "in_progress";
+  const isFailed = status === "failed";
   const liveOutputText = typeof liveOutput === "string" ? liveOutput : "";
   const hasLiveOutput = liveOutputText.length > 0;
   const shouldShowLiveOutput =
@@ -198,11 +128,13 @@ export function StepInputOutput({
   const liveOutputHeightClass =
     variant === "expanded" ? "max-h-96" : "max-h-48";
   const layoutClass =
-    variant === "expanded" ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 gap-3";
+    variant === "expanded"
+      ? "grid grid-cols-1 gap-4"
+      : "grid grid-cols-1 gap-3";
 
-  // Show section if step is completed, in progress, or pending with instructions
+  // Show section if step is completed, in progress, failed, or pending with instructions
   const shouldShow =
-    isCompleted || isInProgress || (isPending && step.instructions);
+    isCompleted || isInProgress || isFailed || (isPending && step.instructions);
   if (!shouldShow) {
     return null;
   }
@@ -242,146 +174,6 @@ export function StepInputOutput({
       </button>
     );
   };
-
-  const renderImageSection = () => {
-    const stepOrder = step.step_order ?? 0;
-    const hasImageUrls =
-      step.image_urls &&
-      Array.isArray(step.image_urls) &&
-      step.image_urls.length > 0;
-    const hasImageArtifacts = imageArtifacts.length > 0;
-
-    if (!hasImageUrls && !hasImageArtifacts) {
-      return null;
-    }
-
-    // Get model and tools for display
-    const modelValue = step.model || step.input?.model;
-    const modelString: string | undefined =
-      typeof modelValue === "string" ? modelValue : undefined;
-    const tools = step.input?.tools || step.tools || [];
-    const toolChoice = step.input?.tool_choice || step.tool_choice;
-    const hasTools = tools && Array.isArray(tools) && tools.length > 0;
-
-    return (
-    <div className="mt-3 md:mt-2.5 pt-3 md:pt-2.5 border-t border-gray-200 dark:border-gray-700">
-      {/* Show model and tools when image generation is used */}
-      {(modelString || hasTools) && (
-        <div className="flex items-center gap-2 mb-3 md:mb-2 flex-wrap">
-          {modelString && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800/30">
-              <FiCpu className="w-3 h-3" />
-              {modelString}
-            </span>
-          )}
-          {hasTools && (
-            <div className="flex items-center gap-1.5">
-              {renderToolBadges(step.input?.tools || step.tools)}
-            </div>
-          )}
-        </div>
-      )}
-
-      <span className="text-sm md:text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2.5 md:mb-2 block">
-        Generated Images:
-      </span>
-
-      {/* Loading state */}
-      {loadingImageArtifacts && !hasImageUrls && (
-        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 py-2">
-          <FiLoader className="w-3.5 h-3.5 animate-spin" />
-          <span>Loading images...</span>
-        </div>
-      )}
-
-      {/* Render from image_urls if available */}
-      {hasImageUrls && step.image_urls ? (
-        <div className="grid grid-cols-1 gap-2.5 md:gap-2">
-          {step.image_urls.map((imageUrl: string, imgIdx: number) => (
-            <div
-              key={`url-${imgIdx}`}
-              className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden"
-            >
-              <div className="aspect-video bg-gray-100 dark:bg-gray-800">
-                <PreviewRenderer
-                  contentType="image/png"
-                  objectUrl={imageUrl}
-                  fileName={`Generated image ${imgIdx + 1}`}
-                  className="w-full h-full"
-                />
-              </div>
-              <div className="p-3 md:p-2 bg-gray-100 dark:bg-gray-800">
-                <div className="flex items-center justify-between gap-2">
-                  <a
-                    href={imageUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm md:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 break-all touch-target py-2 md:py-1 min-h-[44px] md:min-h-0 flex-1 min-w-0"
-                    title={imageUrl}
-                  >
-                    {truncateUrl(imageUrl)}
-                  </a>
-                  {renderCopyButton(imageUrl)}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        /* Fallback: Render from artifacts */
-        hasImageArtifacts && (
-          <div className="grid grid-cols-1 gap-2.5 md:gap-2">
-            {imageArtifacts.map((artifact: Artifact, imgIdx: number) => {
-              const artifactUrl = artifact.object_url || artifact.public_url;
-              if (!artifactUrl) return null;
-
-              return (
-                <div
-                  key={`artifact-${artifact.artifact_id || imgIdx}`}
-                  className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
-                >
-                  <div className="aspect-video bg-gray-100 dark:bg-gray-800">
-                    <PreviewRenderer
-                      contentType={artifact.content_type || "image/png"}
-                      objectUrl={artifactUrl}
-                      fileName={
-                        artifact.file_name ||
-                        artifact.artifact_name ||
-                        `Image ${imgIdx + 1}`
-                      }
-                      className="w-full h-full"
-                      artifactId={artifact.artifact_id}
-                    />
-                  </div>
-                  <div className="p-3 md:p-2 bg-gray-100 dark:bg-gray-800">
-                    <div className="flex items-center justify-between gap-2">
-                      <a
-                        href={artifactUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs md:text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 truncate flex-1 min-w-0"
-                        title={
-                          artifact.file_name ||
-                          artifact.artifact_name ||
-                          artifactUrl
-                        }
-                      >
-                        {artifact.file_name ||
-                          artifact.artifact_name ||
-                          truncateUrl(artifactUrl)}
-                      </a>
-                    {renderCopyButton(artifactUrl)}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )
-      )}
-    </div>
-  );
-};
 
   // Check if image generation was used
   const usedImageGeneration = hasImageGeneration(step, imageArtifacts);
@@ -513,7 +305,10 @@ export function StepInputOutput({
                     <button
                       onClick={() => {
                         // If the step is currently streaming, copy the live output instead of `null`.
-                        if (shouldShowLiveOutput && typeof liveOutput === "string") {
+                        if (
+                          shouldShowLiveOutput &&
+                          typeof liveOutput === "string"
+                        ) {
                           onCopy(liveOutput);
                           return;
                         }
@@ -540,7 +335,13 @@ export function StepInputOutput({
               >
                 {usedImageGeneration ? (
                   /* For image generation steps, only show the image URL, not markdown preview */
-                  renderImageSection()
+                  <GeneratedImagesList
+                    step={step}
+                    imageArtifacts={imageArtifacts}
+                    loading={loadingImageArtifacts}
+                    renderCopyButton={renderCopyButton}
+                    onCopy={onCopy}
+                  />
                 ) : (
                   /* For non-image generation steps, show the normal output content */
                   <>
@@ -584,21 +385,33 @@ export function StepInputOutput({
                           step.image_urls.length > 0
                             ? step.image_urls
                             : [];
-                        
+
                         // Check if output contains log markers
-                        const outputContent = typeof step.output === 'string' 
-                          ? step.output 
-                          : (step.output ? JSON.stringify(step.output, null, 2) : '');
-                          
-                        const hasLogMarkers = /\[Tool output\]|\[Code interpreter\]/.test(outputContent);
-                        
+                        const outputContent =
+                          typeof step.output === "string"
+                            ? step.output
+                            : step.output
+                              ? JSON.stringify(step.output, null, 2)
+                              : "";
+
+                        const hasLogMarkers =
+                          /\[Tool output\]|\[Code interpreter\]/.test(
+                            outputContent,
+                          );
+
                         if (hasLogMarkers) {
                           const logs = parseLogs(outputContent);
                           return (
                             <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                              <StreamViewerUI 
+                              <StreamViewerUI
                                 logs={logs}
-                                status={status === 'in_progress' ? 'streaming' : status === 'failed' ? 'error' : 'completed'}
+                                status={
+                                  status === "in_progress"
+                                    ? "streaming"
+                                    : status === "failed"
+                                      ? "error"
+                                      : "completed"
+                                }
                                 className="h-[400px] border-0 rounded-none shadow-none"
                               />
                             </div>
@@ -612,7 +425,14 @@ export function StepInputOutput({
                           />
                         );
                       })()}
-                    {renderImageSection()}
+                    <GeneratedImagesList
+                      step={step}
+                      imageArtifacts={imageArtifacts}
+                      loading={loadingImageArtifacts}
+                      renderCopyButton={renderCopyButton}
+                      onCopy={onCopy}
+                    />
+                    <GeneratedFilesList fileArtifacts={fileArtifacts} />
                   </>
                 )}
               </div>

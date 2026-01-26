@@ -168,6 +168,7 @@ interface ExecutionStepsProps {
   onQuickUpdateStep?: (stepIndex: number, update: StepQuickUpdate) => Promise<void>;
   updatingStepIndex?: number | null;
   imageArtifactsByStep?: Map<number, Artifact[]>;
+  fileArtifactsByStep?: Map<number, Artifact[]>;
   loadingImageArtifacts?: boolean;
   onRerunStepClick?: (stepIndex: number) => void;
   submission?: FormSubmission | null;
@@ -194,6 +195,7 @@ export function ExecutionSteps({
   onQuickUpdateStep,
   updatingStepIndex,
   imageArtifactsByStep = new Map(),
+  fileArtifactsByStep = new Map(),
   loadingImageArtifacts = false,
   onRerunStepClick,
   submission,
@@ -551,6 +553,9 @@ export function ExecutionSteps({
                               liveUpdatedAt={liveUpdatedAtForStep}
                               imageArtifacts={
                                 imageArtifactsByStep.get(stepOrder) || []
+                              }
+                              fileArtifacts={
+                                fileArtifactsByStep.get(stepOrder) || []
                               }
                               loadingImageArtifacts={loadingImageArtifacts}
                               onEditStep={onEditStep}

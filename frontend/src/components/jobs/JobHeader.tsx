@@ -264,8 +264,9 @@ export function JobHeader({
     (job?.job_id ? `Job ${job.job_id.slice(0, 8)}` : "");
   const showRunSelector = Boolean(runLabel);
 
-  const statusBorderClass = job?.status
-    ? STATUS_BORDER_CLASS[job.status]
+  const effectiveStatus = error ? "failed" : job?.status;
+  const statusBorderClass = effectiveStatus
+    ? STATUS_BORDER_CLASS[effectiveStatus]
     : "border-transparent";
   const headingContent = (
     <span className="flex min-w-0 flex-col gap-1">
@@ -339,10 +340,13 @@ export function JobHeader({
   return (
     <div className="mb-6 sm:mb-7 space-y-3 sm:space-y-4">
       {error && (
-        <div className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-red-700 dark:text-red-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-red-700 dark:text-red-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-pulse">
           <div>
-            <p className="text-sm font-semibold">Unable to update this job</p>
-            <p className="text-sm text-red-700/90 dark:text-red-200/90">
+            <p className="text-sm font-semibold flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-red-500" />
+              Job failed
+            </p>
+            <p className="text-sm text-red-700/90 dark:text-red-200/90 mt-1">
               {error}
             </p>
           </div>

@@ -7,7 +7,7 @@ import { toast } from "react-hot-toast";
 import { useJobDetail } from "@/hooks/useJobDetail";
 import { useJobExecutionSteps } from "@/hooks/useJobExecutionSteps";
 import { useMergedSteps } from "@/hooks/useMergedSteps";
-import { useImageArtifacts } from "@/hooks/useImageArtifacts";
+import { useStepArtifacts } from "@/hooks/useStepArtifacts";
 import { useJobAutoUploads } from "@/hooks/useJobAutoUploads";
 import { usePreviewModal } from "@/hooks/usePreviewModal";
 
@@ -115,16 +115,17 @@ export default function JobDetailClient() {
     pollExecutionSteps: shouldLoadExecutionSteps,
   });
 
+  const mergedSteps = useMergedSteps({ job, workflow });
+
   const { expandedSteps, toggleStep, expandAll, collapseAll } =
     useJobExecutionSteps(mergedSteps);
 
-  const mergedSteps = useMergedSteps({ job, workflow });
-
   const {
     imageArtifactsByStep,
+    fileArtifactsByStep,
     artifacts: jobArtifacts,
     loading: loadingArtifacts,
-  } = useImageArtifacts({
+  } = useStepArtifacts({
     jobId: job?.job_id,
     steps: mergedSteps,
     enabled: shouldLoadExecutionSteps,
@@ -916,6 +917,7 @@ export default function JobDetailClient() {
             collapseAllSteps={collapseAll}
             executionStepsError={executionStepsError}
             imageArtifactsByStep={imageArtifactsByStep}
+            fileArtifactsByStep={fileArtifactsByStep}
             loadingArtifacts={loadingOutputs}
             submission={submission}
             onResubmit={handleResubmitClick}

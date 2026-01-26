@@ -314,8 +314,13 @@ class JobProcessor:
             # Add form submission as step 0
             self._add_form_submission_step(job_id, submission, form, execution_steps)
             
-            # Validate workflow has steps
+            # Validate workflow has steps and valid dependencies
             self._validate_workflow_steps(workflow)
+            is_valid, errors = validate_dependencies(workflow.get('steps', []))
+            if not is_valid:
+                error_msg = f"Invalid workflow dependencies: {'; '.join(errors)}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
             
             # Process workflow using steps format
             final_content, final_artifact_type, final_filename, report_artifact_id, all_image_artifact_ids = \
@@ -431,6 +436,14 @@ class JobProcessor:
         if not steps or len(steps) == 0:
             raise ValueError(f"Workflow {workflow_id} has no steps configured")
         
+        # Validate dependencies if steps are present
+        if steps:
+            is_valid, errors = validate_dependencies(steps)
+            if not is_valid:
+                error_msg = f"Invalid workflow dependencies: {'; '.join(errors)}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+
         if step_index < 0 or step_index >= len(steps):
             raise ValueError(f"Step index {step_index} is out of range. Workflow has {len(steps)} steps.")
     

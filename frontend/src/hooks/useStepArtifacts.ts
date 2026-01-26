@@ -1,5 +1,5 @@
 /**
- * Hook for fetching and organizing image artifacts by step order
+ * Hook for fetching and organizing artifacts by step order
  */
 
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -7,21 +7,27 @@ import { api } from "@/lib/api";
 import { Artifact } from "@/types/artifact";
 import { MergedStep } from "@/types/job";
 
-interface UseImageArtifactsOptions {
+interface UseStepArtifactsOptions {
   jobId?: string;
   steps: MergedStep[];
   enabled?: boolean;
 }
 
 /**
- * Fetch and organize image artifacts by step order
+ * Fetch and organize artifacts by step order
  */
-export function useImageArtifacts(options: UseImageArtifactsOptions) {
+export function useStepArtifacts(options: UseStepArtifactsOptions) {
   const { jobId, steps, enabled = true } = options;
   const isEnabled = enabled !== false;
+  
   const [imageArtifactsByStep, setImageArtifactsByStep] = useState<
     Map<number, Artifact[]>
   >(new Map());
+  
+  const [fileArtifactsByStep, setFileArtifactsByStep] = useState<
+    Map<number, Artifact[]>
+  >(new Map());
+
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +37,6 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
   const stepsRef = useRef<MergedStep[]>(steps);
 
   // Create a stable reference for steps by serializing key properties
-  // This prevents re-fetching when steps array reference changes but content is the same
   const stepsKey = useMemo(() => {
     if (!isEnabled) return "";
     if (!steps || steps.length === 0) return "";
@@ -45,7 +50,7 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
 
   // Fetch artifacts only when jobId changes
   useEffect(() => {
-    const fetchImageArtifacts = async () => {
+    const fetchArtifacts = async () => {
       if (!isEnabled) return;
       if (!jobId) return;
 
@@ -58,6 +63,8 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
         setLoading(true);
         setArtifacts([]);
         setImageArtifactsByStep(new Map());
+        setFileArtifactsByStep(new Map());
+        
         const response = await api.getArtifacts({
           job_id: jobId,
           limit: 200,
@@ -67,14 +74,13 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
         setArtifacts(allArtifacts);
         lastFetchedJobIdRef.current = jobId;
       } catch (error) {
-        console.error("Failed to fetch image artifacts:", error);
-        // Don't show error to user, just silently fail - images will fall back to image_urls
+        console.error("Failed to fetch artifacts:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchImageArtifacts();
+    fetchArtifacts();
   }, [jobId, isEnabled]);
 
   useEffect(() => {
@@ -89,19 +95,12 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
     const currentSteps = stepsRef.current || [];
     if (artifacts.length === 0 || currentSteps.length === 0) {
       setImageArtifactsByStep(new Map());
+      setFileArtifactsByStep(new Map());
       return;
     }
 
-    const imageArtifacts = artifacts.filter((artifact) => {
-      const type =
-        artifact.artifact_type?.toLowerCase() ||
-        artifact.content_type?.toLowerCase() ||
-        "";
-      return type.includes("image");
-    });
-
-    // Group artifacts by step order based on filename pattern or created_at timestamp
-    const artifactsByStep = new Map<number, Artifact[]>();
+    const imagesMap = new Map<number, Artifact[]>();
+    const filesMap = new Map<number, Artifact[]>();
 
     // Sort steps by step_order for matching
     const sortedSteps = [...currentSteps].sort((a, b) => {
@@ -110,17 +109,25 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
       return orderA - orderB;
     });
 
-    imageArtifacts.forEach((artifact: Artifact) => {
+    artifacts.forEach((artifact: Artifact) => {
+      const type =
+        artifact.artifact_type?.toLowerCase() ||
+        artifact.content_type?.toLowerCase() ||
+        "";
+      const isImage = type.includes("image");
+      
+      // Skip internal logs artifacts if they are just JSON logs (we render them inline now)
+      // But keep them if they are explicitly files user might want to download
+      // For now, let's include everything that isn't an image in filesMap
+      
+      let stepOrder: number | null = null;
+
       // Try to extract step order from filename
       const fileName = artifact.file_name || artifact.artifact_name || "";
       const stepMatch = fileName.match(/step[_\s](\d+)/i);
 
       if (stepMatch) {
-        const stepOrder = parseInt(stepMatch[1], 10);
-        if (!artifactsByStep.has(stepOrder)) {
-          artifactsByStep.set(stepOrder, []);
-        }
-        artifactsByStep.get(stepOrder)!.push(artifact);
+        stepOrder = parseInt(stepMatch[1], 10);
       } else {
         // Fallback: try to match by timestamp proximity to step execution
         if (artifact.created_at) {
@@ -133,24 +140,30 @@ export function useImageArtifacts(options: UseImageArtifactsOptions) {
 
               // If artifact was created within 5 minutes of step execution, associate it
               if (timeDiff < 5 * 60 * 1000) {
-                const stepOrder = step.step_order ?? 0;
-                if (!artifactsByStep.has(stepOrder)) {
-                  artifactsByStep.set(stepOrder, []);
-                }
-                artifactsByStep.get(stepOrder)!.push(artifact);
+                stepOrder = step.step_order ?? 0;
                 break;
               }
             }
           }
         }
       }
+
+      if (stepOrder !== null) {
+        const targetMap = isImage ? imagesMap : filesMap;
+        if (!targetMap.has(stepOrder)) {
+          targetMap.set(stepOrder, []);
+        }
+        targetMap.get(stepOrder)!.push(artifact);
+      }
     });
 
-    setImageArtifactsByStep(artifactsByStep);
+    setImageArtifactsByStep(imagesMap);
+    setFileArtifactsByStep(filesMap);
   }, [artifacts, stepsKey, isEnabled]);
 
   return {
     imageArtifactsByStep,
+    fileArtifactsByStep,
     artifacts,
     loading,
   };

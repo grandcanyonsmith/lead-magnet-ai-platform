@@ -112,6 +112,51 @@ export interface ShellSettings {
   command_max_output_length?: number;
 }
 
+/**
+ * Configuration for handling step outputs and artifacts.
+ * Replaces implicit instruction parsing for S3 uploads.
+ */
+export interface StepOutputConfig {
+  /**
+   * Where to store the output.
+   * - 's3': Upload to the configured S3 bucket.
+   * - 'none': Do not store persistently (default).
+   */
+  storage_provider?: "s3" | "none";
+  
+  /**
+   * What to upload.
+   * - 'text_content': The text response from the LLM.
+   * - 'file': A specific file generated on the worker filesystem.
+   * - 'directory': A directory to zip and upload (not yet supported).
+   */
+  source_type?: "text_content" | "file";
+  
+  /**
+   * If source_type is 'file', the absolute path to the file on the worker.
+   * e.g. "/work/output.pdf"
+   */
+  source_path?: string;
+  
+  /**
+   * The destination path/key in storage.
+   * Supports variables: {job_id}, {step_index}, {date}, {ext}
+   * Default: "jobs/{job_id}/step_{step_index}.{ext}"
+   */
+  destination_path?: string;
+  
+  /**
+   * MIME type for the uploaded file.
+   * If not provided, will be guessed from extension or content.
+   */
+  content_type?: string;
+  
+  /**
+   * Whether the uploaded artifact should be public (ACL or presigned URL).
+   */
+  public_access?: boolean;
+}
+
 export interface WorkflowStep {
   step_name: string;
   step_description?: string;
@@ -127,6 +172,12 @@ export interface WorkflowStep {
    * OpenAI Structured Outputs (Responses API: text.format).
    */
   output_format?: OutputFormat;
+  
+  /**
+   * Explicit configuration for handling step outputs/artifacts.
+   */
+  output_config?: StepOutputConfig;
+  
   instructions: string;
   step_order?: number;
   tools?: Tool[];
@@ -364,6 +415,7 @@ export interface WorkflowRefineInstructionsRequest {
 
 export interface WorkflowRefineInstructionsResponse {
   refined_instructions: string;
+  refined_output_config?: StepOutputConfig;
 }
 
 export interface WorkflowAIEditResponse {

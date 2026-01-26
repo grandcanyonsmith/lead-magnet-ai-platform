@@ -22,7 +22,7 @@ import {
 
 import { useJobDetail } from "@/hooks/useJobDetail";
 import { useMergedSteps } from "@/hooks/useMergedSteps";
-import { useImageArtifacts } from "@/hooks/useImageArtifacts";
+import { useStepArtifacts } from "@/hooks/useStepArtifacts";
 import { api } from "@/lib/api";
 import { getStepStatus } from "@/components/jobs/utils";
 import { StepContent } from "@/components/jobs/StepContent";
@@ -344,7 +344,7 @@ export default function StepDetailClient() {
     return getStepStatus(step, sortedSteps, job?.status);
   }, [step, sortedSteps, job?.status]);
 
-  const { imageArtifactsByStep, loading: loadingArtifacts } = useImageArtifacts({
+  const { imageArtifactsByStep, loading: loadingArtifacts } = useStepArtifacts({
     jobId: job?.job_id,
     steps: mergedSteps,
   });
