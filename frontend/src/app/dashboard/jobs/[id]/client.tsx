@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { toast } from "react-hot-toast";
 
 import { useJobDetail } from "@/hooks/useJobDetail";
 import { useJobExecutionSteps } from "@/hooks/useJobExecutionSteps";
@@ -12,9 +11,8 @@ import { useJobBreadcrumbs } from "@/hooks/useJobBreadcrumbs";
 import { useJobRelatedData } from "@/hooks/useJobRelatedData";
 import { useBreadcrumbs } from "@/contexts/BreadcrumbsContext";
 
-import { api } from "@/lib/api";
 import { summarizeStepProgress } from "@/utils/jobs/steps";
-import { formatDuration } from "@/utils/date";
+import { getJobDuration } from "@/utils/jobs/duration";
 
 import { JobHeader } from "@/components/jobs/JobHeader";
 import { JobDetailSkeleton } from "@/components/jobs/detail/JobDetailSkeleton";
@@ -28,79 +26,41 @@ import {
 
 import { JobDetailModals } from "./components/JobDetailModals";
 import { useJobArtifactsData } from "./hooks/useJobArtifactsData";
+import { useJobDetailState } from "./hooks/useJobDetailState";
+import { useJobUpdates } from "./hooks/useJobUpdates";
 
-import type { TrackingStats } from "@/lib/api/tracking.client";
 import type {
   ArtifactGalleryItem,
-  Job,
-  JobDurationInfo,
   JobStepSummary,
 } from "@/types/job";
-import type { WorkflowStep } from "@/types";
-import type {
-  ImageGenerationSettings,
-  ImageGenerationToolConfig,
-} from "@/types/workflow";
-
-type QuickUpdateStepInput = {
-  model?: WorkflowStep["model"] | null;
-  service_tier?: WorkflowStep["service_tier"] | null;
-  reasoning_effort?: WorkflowStep["reasoning_effort"] | null;
-  image_generation?: ImageGenerationSettings;
-  tools?: WorkflowStep["tools"] | null;
-};
-
-function getJobDuration(job?: Job | null): JobDurationInfo | null {
-  const shouldFallbackToCreatedAt =
-    job?.status === "processing" ||
-    job?.status === "completed" ||
-    job?.status === "failed";
-
-  const startTime =
-    job?.started_at || (shouldFallbackToCreatedAt ? job?.created_at : null);
-
-  if (!startTime) return null;
-
-  const start = new Date(startTime).getTime();
-  const endTime = job?.completed_at || job?.failed_at;
-  const endTimestamp = endTime ? new Date(endTime).getTime() : Date.now();
-
-  const seconds = Math.max(0, Math.round((endTimestamp - start) / 1000));
-
-  return {
-    seconds,
-    label: formatDuration(seconds),
-    isLive:
-      !job?.completed_at &&
-      !job?.failed_at &&
-      !job?.error_message &&
-      job?.status === "processing",
-  };
-}
 
 export default function JobDetailClient() {
   const router = useRouter();
   const { setItems: setBreadcrumbItems, clearItems: clearBreadcrumbItems } =
     useBreadcrumbs();
 
-  const [showResubmitModal, setShowResubmitModal] = useState(false);
-  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
-  const [showRerunDialog, setShowRerunDialog] = useState(false);
-  const [trackingSessionCount, setTrackingSessionCount] = useState<
-    number | null
-  >(null);
-  const [trackingSessionsLoading, setTrackingSessionsLoading] = useState(false);
-  const [trackingStats, setTrackingStats] = useState<TrackingStats | null>(
-    null,
-  );
-  const [trackingStatsLoading, setTrackingStatsLoading] = useState(false);
-  const [stepIndexForRerun, setStepIndexForRerun] = useState<number | null>(
-    null,
-  );
-  const [updatingStepIndex, setUpdatingStepIndex] = useState<number | null>(
-    null,
-  );
+  const {
+    showResubmitModal,
+    setShowResubmitModal,
+    editingStepIndex,
+    setEditingStepIndex,
+    isSidePanelOpen,
+    setIsSidePanelOpen,
+    showRerunDialog,
+    setShowRerunDialog,
+    stepIndexForRerun,
+    setStepIndexForRerun,
+    updatingStepIndex,
+    setUpdatingStepIndex,
+    trackingSessionCount,
+    setTrackingSessionCount,
+    trackingSessionsLoading,
+    setTrackingSessionsLoading,
+    trackingStats,
+    setTrackingStats,
+    trackingStatsLoading,
+    setTrackingStatsLoading,
+  } = useJobDetailState();
 
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -110,9 +70,6 @@ export default function JobDetailClient() {
     activeTab === "overview" ||
     activeTab === "execution" ||
     activeTab === "improve";
-
-  const latestStepUpdateRef = useRef<WorkflowStep | null>(null);
-  const savingStepRef = useRef(false);
 
   const {
     job,
@@ -131,6 +88,22 @@ export default function JobDetailClient() {
   } = useJobDetail({
     loadExecutionSteps: shouldLoadExecutionSteps,
     pollExecutionSteps: shouldLoadExecutionSteps,
+  });
+
+  const {
+    handleSaveStep,
+    handleQuickUpdateStep,
+    handleCancelEdit,
+    latestStepUpdateRef,
+  } = useJobUpdates({
+    workflow,
+    editingStepIndex,
+    setEditingStepIndex,
+    setIsSidePanelOpen,
+    setStepIndexForRerun,
+    setShowRerunDialog,
+    refreshJob,
+    setUpdatingStepIndex,
   });
 
   const mergedSteps = useMergedSteps({ job, workflow });
@@ -377,191 +350,6 @@ export default function JobDetailClient() {
     setEditingStepIndex(stepIndex);
     setIsSidePanelOpen(true);
     latestStepUpdateRef.current = null;
-  };
-
-  const handleSaveStep = async (updatedStep: WorkflowStep) => {
-    if (savingStepRef.current) {
-      return;
-    }
-    if (!workflow || editingStepIndex === null || !workflow.steps) {
-      toast.error("Unable to save: Workflow data not available");
-      return;
-    }
-
-    savingStepRef.current = true;
-    try {
-      const updatedSteps = [...workflow.steps];
-      const originalStep = updatedSteps[editingStepIndex];
-
-      updatedSteps[editingStepIndex] = {
-        ...originalStep,
-        ...updatedStep,
-      };
-
-      await api.updateWorkflow(workflow.workflow_id, {
-        steps: updatedSteps,
-      });
-
-      toast.success("Step updated successfully");
-
-      setStepIndexForRerun(editingStepIndex);
-
-      setEditingStepIndex(null);
-      setIsSidePanelOpen(false);
-
-      setShowRerunDialog(true);
-
-      router.refresh();
-    } catch (error: any) {
-      console.error("Failed to save step:", error);
-      toast.error("Failed to save step. Please try again.");
-    } finally {
-      savingStepRef.current = false;
-    }
-  };
-
-  const handleQuickUpdateStep = async (
-    stepIndex: number,
-    update: QuickUpdateStepInput,
-  ) => {
-    if (!workflow || !workflow.steps) {
-      toast.error("Unable to update: Workflow data not available");
-      return;
-    }
-
-    const originalStep = workflow.steps[stepIndex];
-    if (!originalStep) {
-      toast.error("Unable to update: Step not found");
-      return;
-    }
-
-    const updatedStep: WorkflowStep = { ...originalStep };
-
-    if (update.model) {
-      updatedStep.model = update.model;
-    }
-
-    if ("service_tier" in update) {
-      if (update.service_tier === null) {
-        delete updatedStep.service_tier;
-      } else if (update.service_tier !== undefined) {
-        updatedStep.service_tier = update.service_tier;
-      }
-    }
-
-    if ("reasoning_effort" in update) {
-      if (update.reasoning_effort === null) {
-        delete updatedStep.reasoning_effort;
-      } else if (update.reasoning_effort !== undefined) {
-        updatedStep.reasoning_effort = update.reasoning_effort;
-      }
-    }
-
-    if (update.image_generation) {
-      const imageConfig = update.image_generation;
-      const normalizedConfig: ImageGenerationToolConfig = {
-        type: "image_generation",
-        model: imageConfig.model || "gpt-image-1.5",
-        size: imageConfig.size || "auto",
-        quality: imageConfig.quality || "auto",
-        background: imageConfig.background || "auto",
-      };
-      if (imageConfig.format) {
-        normalizedConfig.format = imageConfig.format;
-      }
-      const supportsCompression =
-        imageConfig.format === "jpeg" || imageConfig.format === "webp";
-      if (
-        supportsCompression &&
-        typeof imageConfig.compression === "number" &&
-        Number.isFinite(imageConfig.compression)
-      ) {
-        normalizedConfig.compression = Math.min(
-          100,
-          Math.max(0, imageConfig.compression),
-        );
-      }
-      if (imageConfig.input_fidelity) {
-        normalizedConfig.input_fidelity = imageConfig.input_fidelity;
-      }
-
-      const existingTools = Array.isArray(updatedStep.tools)
-        ? updatedStep.tools
-        : [];
-      let replaced = false;
-      const nextTools = existingTools.map((tool) => {
-        if (tool === "image_generation") {
-          replaced = true;
-          return normalizedConfig;
-        }
-        if (
-          tool &&
-          typeof tool === "object" &&
-          "type" in tool &&
-          (tool as { type?: string }).type === "image_generation"
-        ) {
-          replaced = true;
-          return normalizedConfig;
-        }
-        return tool;
-      });
-      if (!replaced) {
-        nextTools.push(normalizedConfig);
-      }
-      updatedStep.tools = nextTools;
-    }
-
-    if ("tools" in update) {
-      if (update.tools === null) {
-        delete updatedStep.tools;
-      } else if (update.tools !== undefined) {
-        updatedStep.tools = update.tools;
-      }
-    }
-
-    const updatedSteps = [...workflow.steps];
-    updatedSteps[stepIndex] = updatedStep;
-
-    setUpdatingStepIndex(stepIndex);
-    try {
-      await api.updateWorkflow(workflow.workflow_id, {
-        steps: updatedSteps,
-      });
-      toast.success("Step updated successfully");
-      setStepIndexForRerun(stepIndex);
-      setShowRerunDialog(true);
-      refreshJob().catch((refreshError) => {
-        console.error("Failed to refresh job after step update:", refreshError);
-      });
-    } catch (error) {
-      console.error("Failed to update step:", error);
-      toast.error("Failed to update step. Please try again.");
-    } finally {
-      setUpdatingStepIndex(null);
-    }
-  };
-
-  const handleCancelEdit = async () => {
-    if (latestStepUpdateRef.current && editingStepIndex !== null) {
-      const currentStep = workflow?.steps?.[editingStepIndex];
-      const hasChanges =
-        currentStep &&
-        JSON.stringify(currentStep) !==
-          JSON.stringify(latestStepUpdateRef.current);
-
-      if (hasChanges) {
-        try {
-          await handleSaveStep(latestStepUpdateRef.current);
-        } catch (error) {
-          throw error;
-        }
-      }
-
-      latestStepUpdateRef.current = null;
-    }
-
-    setEditingStepIndex(null);
-    setIsSidePanelOpen(false);
   };
 
   const handleRerunStepClick = (stepIndex: number) => {

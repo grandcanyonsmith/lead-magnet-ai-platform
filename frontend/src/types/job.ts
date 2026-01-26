@@ -53,12 +53,14 @@ export interface ExecutionStep {
   _status?: StepStatus;
   artifact_id?: string;
   image_urls?: string[];
+  children?: ExecutionStep[];
 }
 
 export interface MergedStep extends ExecutionStep {
   _status: StepStatus;
   depends_on?: number[];
   dependency_labels?: string[];
+  children?: MergedStep[];
 }
 
 export interface JobLiveStep {

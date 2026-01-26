@@ -24,7 +24,12 @@ class ErrorHandler:
             Error category string
         """
         error_lower = error_message.lower()
-        if "API key" in error_message or "authentication" in error_lower:
+        # Check for MCP authentication errors first (more specific)
+        if "mcp server" in error_lower and ("401" in error_message or "unauthorized" in error_lower):
+            return "mcp_authentication"
+        elif "retrieving tool list from mcp" in error_lower and ("401" in error_message or "unauthorized" in error_lower):
+            return "mcp_authentication"
+        elif "API key" in error_message or "authentication" in error_lower:
             return "authentication"
         elif "rate limit" in error_lower or "quota" in error_lower:
             return "rate_limit"
@@ -62,7 +67,21 @@ class ErrorHandler:
         Returns:
             Exception object with appropriate message
         """
-        if error_category == "authentication":
+        if error_category == "mcp_authentication":
+            # Extract MCP server name from error message if possible
+            mcp_server = "MCP server"
+            if "mcp server" in error_message.lower():
+                import re
+                match = re.search(r"mcp server[:\s]+['\"]?([^'\"]+)['\"]?", error_message, re.IGNORECASE)
+                if match:
+                    mcp_server = f"MCP server '{match.group(1)}'"
+            logger.error(f"[ErrorHandler] MCP authentication error - {mcp_server} requires authorization")
+            return Exception(
+                f"MCP authentication failed: {mcp_server} requires authentication. "
+                f"Please add an 'authorization' field to your MCP tool configuration with a valid token or API key. "
+                f"Original error: {error_message}"
+            )
+        elif error_category == "authentication":
             logger.error(f"[ErrorHandler] Authentication error - check API key configuration")
             return Exception(f"OpenAI API authentication failed. Please check your API key configuration: {error_message}")
         elif error_category == "rate_limit":

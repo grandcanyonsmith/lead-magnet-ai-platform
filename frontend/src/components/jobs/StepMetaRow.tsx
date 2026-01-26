@@ -20,6 +20,7 @@ import {
 import type { EditablePanel } from "@/components/jobs/StepMetaTypes";
 import { useStepMetaRow } from "@/hooks/useStepMetaRow";
 import { BlockNode } from "@/types/recursive";
+import { CollapsiblePanel } from "@/components/ui/panels/CollapsiblePanel";
 
 type StepMetaUpdate = {
   model?: AIModel | null;
@@ -298,7 +299,7 @@ export function StepMetaRow({
     if (showModelDetails) {
       list.push({
         id: "model",
-        content: <ModelDetailsPanel {...modelPanelProps} />,
+        content: <ModelDetailsPanel {...modelPanelProps} onToggle={() => togglePanel("model")} />,
       });
     }
 
@@ -333,7 +334,7 @@ export function StepMetaRow({
     if (hasContext && showContext) {
       list.push({
         id: "context",
-        content: <ContextPanel {...contextPanelProps} />,
+        content: <ContextPanel {...contextPanelProps} onToggle={() => togglePanel("context")} />,
       });
     }
 
