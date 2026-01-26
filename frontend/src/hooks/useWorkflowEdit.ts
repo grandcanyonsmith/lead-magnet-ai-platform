@@ -112,6 +112,7 @@ export function useWorkflowEdit(
           service_tier: step.service_tier || resolvedDefaultServiceTier,
           text_verbosity:
             resolveTextVerbosity(step.text_verbosity) ?? resolvedDefaultTextVerbosity,
+          is_deliverable: step.is_deliverable === true,
           step_order: step.step_order !== undefined ? step.step_order : index,
           tools: step.tools || ["web_search"],
           tool_choice: step.tool_choice || resolvedDefaultToolChoice,

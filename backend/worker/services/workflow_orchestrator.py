@@ -90,7 +90,7 @@ class WorkflowOrchestrator:
         )
         
         # Sort steps by step_order if present
-        sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
+        sorted_steps = sorted(steps, key=normalize_step_order)
         
         # Process each step
         accumulated_context = ""
@@ -200,28 +200,27 @@ class WorkflowOrchestrator:
         else:
             template = None
         
+        # Build deliverable-focused context from explicit deliverable steps or terminal steps.
+        steps = workflow.get('steps', [])
+        sorted_steps = sorted(steps, key=normalize_step_order)
+        deliverable_context = ContextBuilder.build_deliverable_context_from_step_outputs(
+            step_outputs=step_outputs,
+            sorted_steps=sorted_steps
+        )
+        if not deliverable_context:
+            if step_outputs:
+                deliverable_context = ContextBuilder._stringify_step_output(
+                    step_outputs[-1].get('output', '')
+                )
+            else:
+                logger.warning(
+                    "[WorkflowOrchestrator] Deliverable context empty; falling back to full accumulated context",
+                    extra={'job_id': job_id, 'workflow_id': workflow.get('workflow_id')}
+                )
+                deliverable_context = accumulated_context
+
         if template:
             # Always generate the deliverable from the template when a template is configured.
-            # Use only terminal step outputs as the deliverable source to avoid leaking raw
-            # research or signup-page content into the final customer-facing artifact.
-            steps = workflow.get('steps', [])
-            sorted_steps = sorted(steps, key=normalize_step_order)
-            deliverable_context = ContextBuilder.build_deliverable_context_from_step_outputs(
-                step_outputs=step_outputs,
-                sorted_steps=sorted_steps
-            )
-            if not deliverable_context:
-                if step_outputs:
-                    deliverable_context = ContextBuilder._stringify_step_output(
-                        step_outputs[-1].get('output', '')
-                    )
-                else:
-                    logger.warning(
-                        "[WorkflowOrchestrator] Deliverable context empty; falling back to full accumulated context",
-                        extra={'job_id': job_id, 'workflow_id': workflow.get('workflow_id')}
-                    )
-                    deliverable_context = accumulated_context
-
             safe_deliverable_context = strip_html_tags(deliverable_context)
             final_content, final_artifact_type, final_filename = self.job_completion_service.generate_html_from_accumulated_context(
                 accumulated_context=safe_deliverable_context,
@@ -232,8 +231,8 @@ class WorkflowOrchestrator:
                 tenant_id=tenant_id
             )
         else:
-            # Use last step output as final content
-            final_content = step_outputs[-1]['output'] if step_outputs else accumulated_context
+            # Use deliverable-only context as the final content (non-template workflows)
+            final_content = deliverable_context if deliverable_context else accumulated_context
             last_step_name = step_outputs[-1].get('step_name', '') if step_outputs else ''
             file_ext = detect_content_type(str(final_content or ""), str(last_step_name or ""))
             if file_ext == '.html':

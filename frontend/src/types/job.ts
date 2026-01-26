@@ -43,8 +43,8 @@ export interface ExecutionStep {
   tools?: Tool[];
   tool_choice?: string;
   instructions?: string;
-  input?: ExecutionStepInput;
-  output?: string | null;
+  input?: ExecutionStepInput | unknown;
+  output?: string | Record<string, unknown> | Array<unknown> | number | boolean | null;
   error?: string;
   started_at?: string;
   completed_at?: string;

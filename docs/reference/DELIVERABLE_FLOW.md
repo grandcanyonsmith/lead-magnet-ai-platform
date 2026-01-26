@@ -5,7 +5,7 @@ This document explains how workflow steps, templates, and final deliverables (HT
 ## Key Concepts
 
 - **Template HTML**: A style reference only. It defines the visual system, not the content.
-- **Deliverable Content**: The output of the terminal workflow step(s) (highest `step_order`).
+- **Deliverable Content**: The output of the step(s) marked `is_deliverable`; if none are marked, the terminal step(s) (highest `step_order`) are used.
 - **Final Deliverable**: The customer-facing artifact. It must exclude signup forms and raw step outputs.
 
 ## Current Flow

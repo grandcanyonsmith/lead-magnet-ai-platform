@@ -172,6 +172,11 @@ export interface WorkflowStep {
    * OpenAI Structured Outputs (Responses API: text.format).
    */
   output_format?: OutputFormat;
+
+  /**
+   * When true, this step's output is treated as the final deliverable source.
+   */
+  is_deliverable?: boolean;
   
   /**
    * Explicit configuration for handling step outputs/artifacts.
@@ -212,7 +217,11 @@ export interface WorkflowStep {
    * Allows a step to send data to another workflow (lead magnet) as the next workflow's input.
    */
   handoff_workflow_id?: string;
-  handoff_payload_mode?: "previous_step_output" | "full_context" | "submission_only";
+  handoff_payload_mode?:
+    | "previous_step_output"
+    | "full_context"
+    | "submission_only"
+    | "deliverable_output";
   handoff_input_field?: string;
   /**
    * When true, the destination lead magnet's "required inputs" should not block execution.

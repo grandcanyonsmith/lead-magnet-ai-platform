@@ -109,6 +109,7 @@ Each step can have:
 - `step_order` (number, required): Execution order (steps with same order can run in parallel)
 - `model` (string, default: "gpt-5"): AI model to use
 - `instructions` (string, required): Instructions for the AI
+- `is_deliverable` (boolean, optional): If true, use this step's output as the final deliverable source
 - `tools` (array, default: ["web_search"]): Tools available to the AI
   - `"web_search"`: Web search capability
   - `"computer_use"`: Computer use tool (for advanced workflows)
@@ -118,6 +119,8 @@ Each step can have:
   - `"none"`: Model cannot use tools
 - `depends_on` (array of numbers, optional): Step indices (0-based) this step depends on
   - If omitted, the system falls back to `step_order` to infer dependencies (legacy behavior)
+- `is_deliverable` (boolean, optional): Marks this step as the deliverable source
+  - If none are set, terminal steps (highest `step_order`) are used
 
 ### Steps Format Features
 
@@ -133,7 +136,7 @@ Each step can have:
 2. **Parallel Execution**: Steps that can run in parallel are executed simultaneously
 3. **Sequential Execution**: Steps with dependencies wait for prerequisites
 4. **Context Building**: Each step receives accumulated context from its dependencies
-5. **HTML Generation** (if template is configured): Terminal step outputs (highest `step_order`) are treated as the deliverable source and rendered into template-styled HTML (opt-in forms are stripped)
+5. **HTML Generation** (if template is configured): Deliverable steps (`is_deliverable`) are used as the deliverable source; if none are marked, terminal step outputs (highest `step_order`) are used and rendered into template-styled HTML (opt-in forms are stripped)
 
 ## Historical: Legacy Format Migration
 
@@ -247,6 +250,15 @@ You can manually migrate a legacy workflow:
   template_id: "report_template_123"
 }
 ```
+
+## Handoff Payload Modes
+
+For `workflow_handoff` steps, `handoff_payload_mode` controls the primary payload value:
+
+- `previous_step_output`: Use the most recent step output (default)
+- `full_context`: Use the full dependency context for the step
+- `submission_only`: Do not include step output as the primary value
+- `deliverable_output`: Use deliverable-only context from `is_deliverable` (or terminal steps)
 
 ## See Also
 

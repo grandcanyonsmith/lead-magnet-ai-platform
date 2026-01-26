@@ -77,3 +77,69 @@ def test_handoff_step_triggers_destination_workflow(mock_post):
     assert called_json["workflow_id"] == "wf_target"
     assert called_json["submission_data"]["input"] == "previous output"
 
+
+@patch("services.steps.handlers.handoff.requests.post")
+def test_handoff_step_uses_deliverable_output_mode(mock_post):
+    db = Mock()
+    s3 = Mock()
+
+    db.get_job.return_value = {
+        "job_id": "job_1",
+        "tenant_id": "tenant_1",
+        "workflow_id": "wf_source",
+        "submission_id": "sub_1",
+        "api_url": "https://api.example.com",
+    }
+    db.get_submission.return_value = {
+        "submission_id": "sub_1",
+        "submission_data": {"name": "Test User", "email": "test@example.com"},
+    }
+    db.get_workflow.return_value = {
+        "workflow_id": "wf_target",
+        "tenant_id": "tenant_1",
+        "workflow_name": "Target Workflow",
+    }
+    db.ensure_webhook_token.return_value = "token_123"
+
+    mock_resp = Mock()
+    mock_resp.status_code = 202
+    mock_resp.text = '{"job_id":"job_child"}'
+    mock_resp.json.return_value = {"job_id": "job_child"}
+    mock_post.return_value = mock_resp
+
+    handler = HandoffStepHandler({"db_service": db, "s3_service": s3})
+
+    step = {
+        "step_name": "Handoff",
+        "handoff_workflow_id": "wf_target",
+        "handoff_payload_mode": "deliverable_output",
+        "handoff_input_field": "input",
+        "_sorted_steps": [
+            {"step_name": "Draft", "step_order": 0, "is_deliverable": True},
+            {"step_name": "Polish", "step_order": 1},
+        ],
+    }
+
+    execution_steps = []
+    step_outputs = [
+        {"step_name": "Draft", "step_index": 0, "output": "Deliverable draft"},
+        {"step_name": "Polish", "step_index": 1, "output": "Polished output"},
+    ]
+
+    result, image_artifact_ids = handler.execute(
+        step=step,
+        step_index=1,
+        job_id="job_1",
+        tenant_id="tenant_1",
+        context="CTX",
+        step_outputs=step_outputs,
+        execution_steps=execution_steps,
+    )
+
+    assert image_artifact_ids == []
+    assert result["success"] is True
+
+    called_json = mock_post.call_args.kwargs["json"]
+    assert called_json["submission_data"]["input"] == "Deliverable draft"
+    assert called_json["submission_data"]["deliverable_context"] == "Deliverable draft"
+

@@ -265,6 +265,13 @@ export function validateWorkflowStep(
     );
   }
 
+  if (
+    (s as any).is_deliverable !== undefined &&
+    typeof (s as any).is_deliverable !== "boolean"
+  ) {
+    errors.push(`Step ${stepIndex}: is_deliverable must be a boolean`);
+  }
+
   // Optional: service_tier (Responses API)
   if (
     (s as any).service_tier !== undefined &&

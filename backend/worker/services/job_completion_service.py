@@ -15,6 +15,7 @@ from services.execution_step_manager import ExecutionStepManager
 from services.html_sanitizer import strip_template_placeholders, strip_form_elements
 from services.pdf_generator import PDFGenerator
 from utils.html_utils import strip_html_tags
+from utils.step_utils import normalize_step_order
 from services.usage_service import UsageService
 from ai_service import AIService
 
@@ -125,7 +126,6 @@ class JobCompletionService:
                         api_url=job.get('api_url') or None
                     )
 
-            final_start_time = datetime.utcnow()
             final_artifact_id = self.artifact_service.store_artifact(
                 tenant_id=job['tenant_id'],
                 job_id=job_id,
@@ -138,8 +138,6 @@ class JobCompletionService:
             # Get public URL for final artifact
             public_url = self.artifact_service.get_artifact_public_url(final_artifact_id)
             
-            final_duration = (datetime.utcnow() - final_start_time).total_seconds() * 1000
-
             logger.info(f"Final artifact stored with URL: {public_url[:80]}...")
 
             # Generate and store PDF deliverable alongside HTML (best-effort).
@@ -168,12 +166,12 @@ class JobCompletionService:
             job_with_steps = self.db.get_job(job_id, s3_service=self.s3)
             if job_with_steps and job_with_steps.get('execution_steps'):
                 execution_steps = job_with_steps['execution_steps']
-                logger.debug(f"[JobCompletionService] Reloaded execution_steps from S3 before finalizing job", extra={
+                logger.debug("[JobCompletionService] Reloaded execution_steps from S3 before finalizing job", extra={
                     'job_id': job_id,
                     'execution_steps_count': len(execution_steps)
                 })
         except Exception as e:
-            logger.warning(f"[JobCompletionService] Failed to reload execution_steps from S3, using provided list", extra={
+            logger.warning("[JobCompletionService] Failed to reload execution_steps from S3, using provided list", extra={
                 'job_id': job_id,
                 'error': str(e)
             })
@@ -388,7 +386,7 @@ class JobCompletionService:
         html_start_time = datetime.utcnow()
         
         steps = workflow.get('steps', [])
-        sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
+        sorted_steps = sorted(steps, key=normalize_step_order)
         model = sorted_steps[-1].get('model', 'gpt-5.2') if sorted_steps else 'gpt-5.2'
         
         final_content, html_usage_info, html_request_details, html_response_details = self.ai_service.generate_styled_html(
@@ -415,12 +413,12 @@ class JobCompletionService:
             job_with_steps = self.db.get_job(job_id, s3_service=self.s3)
             if job_with_steps and job_with_steps.get('execution_steps'):
                 execution_steps = job_with_steps['execution_steps']
-                logger.debug(f"[JobCompletionService] Reloaded execution_steps from S3 before HTML generation", extra={
+                logger.debug("[JobCompletionService] Reloaded execution_steps from S3 before HTML generation", extra={
                     'job_id': job_id,
                     'execution_steps_count': len(execution_steps)
                 })
         except Exception as e:
-            logger.warning(f"[JobCompletionService] Failed to reload execution_steps from S3, using provided list", extra={
+            logger.warning("[JobCompletionService] Failed to reload execution_steps from S3, using provided list", extra={
                 'job_id': job_id,
                 'error': str(e)
             })
@@ -493,19 +491,27 @@ class JobCompletionService:
             job_with_steps = self.db.get_job(job_id, s3_service=self.s3)
             if job_with_steps and job_with_steps.get('execution_steps'):
                 execution_steps = job_with_steps['execution_steps']
-                logger.debug(f"[JobCompletionService] Reloaded execution_steps from S3 before HTML generation (single-step mode)", extra={
+                logger.debug("[JobCompletionService] Reloaded execution_steps from S3 before HTML generation (single-step mode)", extra={
                     'job_id': job_id,
                     'execution_steps_count': len(execution_steps)
                 })
         except Exception as e:
-            logger.warning(f"[JobCompletionService] Failed to reload execution_steps from S3 for HTML generation (single-step mode), using provided list", extra={
+            logger.warning("[JobCompletionService] Failed to reload execution_steps from S3 for HTML generation (single-step mode), using provided list", extra={
                 'job_id': job_id,
                 'error': str(e)
             })
         
-        # Build deliverable-only context from terminal steps (fallback to full context if needed)
+        # Build deliverable-only context from flagged steps (fallback to terminal steps if needed)
+        steps = workflow.get('steps', [])
+        sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
+        deliverable_step_orders = [
+            idx + 1 for idx, step in enumerate(sorted_steps)
+            if step.get('is_deliverable') is True
+        ]
+
         deliverable_context = ContextBuilder.build_deliverable_context_from_execution_steps(
-            execution_steps=execution_steps
+            execution_steps=execution_steps,
+            deliverable_step_orders=deliverable_step_orders or None
         )
         if not deliverable_context:
             fallback_output = ""
@@ -524,12 +530,9 @@ class JobCompletionService:
         deliverable_context = strip_html_tags(deliverable_context)
         
         # Get model from last workflow step or default
-        steps = workflow.get('steps', [])
         model = 'gpt-5.2'
-        if steps:
-            sorted_steps = sorted(steps, key=lambda s: s.get('step_order', 0))
-            if sorted_steps:
-                model = sorted_steps[-1].get('model', 'gpt-5.2')
+        if sorted_steps:
+            model = sorted_steps[-1].get('model', 'gpt-5.2')
         
         # Generate HTML
         ai_service = self.ai_service

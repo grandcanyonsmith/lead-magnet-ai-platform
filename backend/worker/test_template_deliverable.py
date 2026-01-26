@@ -128,6 +128,59 @@ def test_orchestrator_uses_terminal_step_outputs_for_deliverable_context():
     assert called_ctx == "Final deliverable content only."
 
 
+def test_orchestrator_prefers_deliverable_flag_over_terminal_step():
+    """
+    If a step is explicitly marked as deliverable, it should be used even if it's not the terminal step.
+    """
+    step_processor = Mock()
+    ai_service = Mock()
+    db_service = Mock()
+    s3_service = Mock()
+    job_completion_service = Mock()
+
+    db_service.get_template.return_value = {"template_id": "tmpl_test", "html_content": "<html>tmpl</html>"}
+    job_completion_service.generate_html_from_accumulated_context.return_value = (
+        "<html>FINAL</html>",
+        "html_final",
+        "final.html",
+    )
+
+    orchestrator = WorkflowOrchestrator(
+        step_processor=step_processor,
+        ai_service=ai_service,
+        db_service=db_service,
+        s3_service=s3_service,
+        job_completion_service=job_completion_service,
+    )
+
+    workflow = {
+        "template_id": "tmpl_test",
+        "template_version": 0,
+        "steps": [
+            {"step_name": "Deliverable Draft", "step_order": 0, "is_deliverable": True},
+            {"step_name": "Final Polish", "step_order": 1},
+        ],
+    }
+    step_outputs = [
+        {"output": "Chosen deliverable content."},
+        {"output": "Terminal step content (should not be used)."},
+    ]
+    accumulated_context = "Chosen deliverable content.\n\nTerminal step content (should not be used)."
+
+    orchestrator._generate_final_content(
+        workflow=workflow,
+        step_outputs=step_outputs,
+        accumulated_context=accumulated_context,
+        submission_data={},
+        execution_steps=[],
+        job_id="job_test",
+        tenant_id="tenant_test",
+    )
+
+    called_ctx = job_completion_service.generate_html_from_accumulated_context.call_args.kwargs.get("accumulated_context", "")
+    assert called_ctx == "Chosen deliverable content."
+
+
 def test_finalize_job_injects_tracking_script_for_html_final():
     """
     finalize_job() must ensure the stored html_final deliverable contains the tracking script.

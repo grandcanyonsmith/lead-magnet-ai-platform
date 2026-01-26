@@ -131,6 +131,11 @@ export default function WorkflowStepEditor({
                 <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-[11px] text-muted-foreground">
                   Step {index + 1}
                 </span>
+                {localStep.is_deliverable && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
+                    Deliverable
+                  </span>
+                )}
                 {isFocusMode && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
                     <FiMaximize2 className="h-3 w-3" aria-hidden />

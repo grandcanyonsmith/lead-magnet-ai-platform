@@ -78,7 +78,7 @@ def test_webhook_step_payload_structure():
     
     sorted_steps = [
         {'step_name': 'Step 1', 'step_order': 0},
-        {'step_name': 'Step 2', 'step_order': 1},
+        {'step_name': 'Step 2', 'step_order': 1, 'is_deliverable': True},
         {'step_name': 'Test Webhook Step', 'step_order': 2}
     ]
     
@@ -112,6 +112,10 @@ def test_webhook_step_payload_structure():
     # Verify job_info
     assert payload['job_info']['job_id'] == job_id
     assert payload['job_info']['workflow_id'] == 'test_workflow'
+
+    # Verify deliverable context
+    assert payload['deliverable_context'] == 'This is step 2 output'
+    assert payload['deliverable_steps']['step_1']['output'] == 'This is step 2 output'
     
     logger.info("✅ Payload structure test passed!")
     logger.info(f"Payload keys: {list(payload.keys())}")

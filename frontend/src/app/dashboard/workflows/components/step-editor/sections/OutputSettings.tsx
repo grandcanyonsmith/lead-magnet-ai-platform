@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { WorkflowStep } from "@/types/workflow";
 import { Select } from "@/components/ui/Select";
+import { Switch } from "@/components/ui/Switch";
 import {
   FIELD_LABEL,
   FIELD_OPTIONAL,
@@ -47,6 +48,23 @@ export default function OutputSettings({
   return (
     <div className="rounded-xl border border-border/50 bg-muted/10 p-5 space-y-4">
       <h5 className="text-sm font-semibold text-foreground">Output settings</h5>
+      <div className="flex items-start justify-between gap-4 rounded-lg border border-border/60 bg-background/70 px-4 py-3">
+        <div className="space-y-1">
+          <div className="text-sm font-medium text-foreground">
+            Use as final deliverable
+          </div>
+          <p className={HELP_TEXT}>
+            Mark the step that produces the customer-facing deliverable. This
+            output is used for final artifacts and included in webhook/handoff
+            payloads. If none are selected, terminal steps are used by default.
+          </p>
+        </div>
+        <Switch
+          checked={Boolean(step.is_deliverable)}
+          onChange={(checked) => onChange("is_deliverable", checked)}
+          aria-label="Mark step as final deliverable"
+        />
+      </div>
       <div className="space-y-1.5">
         <label className={FIELD_LABEL} htmlFor={`output-format-${index}`}>
           <span>Output Type</span>

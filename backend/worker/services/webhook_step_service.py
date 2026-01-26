@@ -1,12 +1,12 @@
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional, Tuple
 from services.webhooks.adapters.generic_http import GenericHttpAdapter
 from services.webhooks.adapters.slack import SlackAdapter
 import json
 import re
 from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
-from typing import List, Optional
 from utils.decimal_utils import convert_decimals_to_float
+from services.context_builder import ContextBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,8 @@ class WebhookStepService:
                 job_id=job_id,
                 job=job,
                 submission=submission,
-                step_outputs=step_outputs
+                step_outputs=step_outputs,
+                sorted_steps=sorted_steps,
             )
             rendered_body = self._render_template(str(body_template), template_vars)
             # Adapters typically expect a dict payload if JSON, or we might need to adjust Adapter interface 
@@ -178,6 +179,7 @@ class WebhookStepService:
         job: Dict[str, Any],
         submission: Dict[str, Any],
         step_outputs: List[Dict[str, Any]],
+        sorted_steps: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         submission_data = submission.get('submission_data', {}) if isinstance(submission, dict) else {}
         submission_meta = {}
@@ -186,11 +188,17 @@ class WebhookStepService:
 
         # Simplified context building for refactor - omitting complex artifact enrichment loop for now to save space
         # unless strictly required. Preserving structure.
+        deliverable_context, deliverable_steps = self._build_deliverable_payload(
+            step_outputs=step_outputs,
+            sorted_steps=sorted_steps or [],
+        )
         return {
             'job': job or {},
             'submission': submission_data or {},
             'submission_meta': submission_meta or {},
             'steps': step_outputs,
+            'deliverable_context': deliverable_context or "",
+            'deliverable_steps': deliverable_steps or {},
             'artifacts': [], # Add artifacts logic back if needed
         }
 
@@ -239,6 +247,40 @@ class WebhookStepService:
             return str(value)
 
         return re.sub(r'\{\{\s*([^}]+?)\s*\}\}', replacer, template)
+
+    def _build_deliverable_payload(
+        self,
+        *,
+        step_outputs: List[Dict[str, Any]],
+        sorted_steps: List[Dict[str, Any]],
+    ) -> Tuple[str, Dict[str, Any]]:
+        deliverable_context = ContextBuilder.build_deliverable_context_from_step_outputs(
+            step_outputs=step_outputs,
+            sorted_steps=sorted_steps,
+        )
+        if not deliverable_context:
+            return "", {}
+
+        deliverable_steps: Dict[str, Any] = {}
+        target_indices = ContextBuilder._resolve_deliverable_indices(sorted_steps)
+        for idx in target_indices:
+            if idx >= len(step_outputs):
+                continue
+            step_output = step_outputs[idx]
+            step_index = step_output.get("step_index", idx)
+            step_name = step_output.get("step_name", f"Step {step_index + 1}")
+            output_text = ContextBuilder._stringify_step_output(step_output.get("output", "")).strip()
+            if not output_text:
+                continue
+            deliverable_steps[f"step_{step_index}"] = {
+                "step_name": step_name,
+                "step_index": step_index,
+                "output": output_text,
+                "artifact_id": step_output.get("artifact_id"),
+                "image_urls": step_output.get("image_urls", []),
+            }
+
+        return deliverable_context, deliverable_steps
     
     def _build_webhook_payload(
         self,
@@ -292,6 +334,15 @@ class WebhookStepService:
         # Include submission data
         if data_selection.get('include_submission', True):
             payload['submission_data'] = submission_data
+
+        deliverable_context, deliverable_steps = self._build_deliverable_payload(
+            step_outputs=step_outputs,
+            sorted_steps=sorted_steps,
+        )
+        if deliverable_context:
+            payload['deliverable_context'] = deliverable_context
+            if deliverable_steps:
+                payload['deliverable_steps'] = deliverable_steps
         
         return payload
     

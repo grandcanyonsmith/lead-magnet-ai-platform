@@ -28,7 +28,8 @@ def strip_form_elements(html: Optional[str]) -> Optional[str]:
     """
     if not isinstance(html, str):
         return html
-    if "<form" not in html and "<input" not in html and "<select" not in html and "<textarea" not in html:
+    html_lower = html.lower()
+    if "<form" not in html_lower and "<input" not in html_lower and "<select" not in html_lower and "<textarea" not in html_lower:
         return html
     cleaned = _FORM_BLOCK_PATTERN.sub("", html)
     cleaned = _FORM_ELEMENT_PATTERN.sub("", cleaned)

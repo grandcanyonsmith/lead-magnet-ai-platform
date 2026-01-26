@@ -174,6 +174,12 @@ A number indicating when a step should execute relative to other steps. Steps wi
 ### Step Output
 The result produced when a step executes. Stored in the execution step record (`execution_steps[].output`) along with metadata like artifacts and image URLs. Step outputs are the **inputs** used to build context for dependency steps.
 
+### Deliverable Step
+A workflow step explicitly marked as the deliverable source (`is_deliverable: true`). When present, only deliverable steps are used to build the final deliverable content (and the `deliverable_context` shared with webhooks and handoff workflows). If none are marked, terminal steps (highest `step_order`) are used.
+
+### Deliverable Context
+The concatenated output from deliverable steps (or terminal steps if none are marked). Used as the source for final artifacts and included in webhook/handoff payloads as `deliverable_context`.
+
 ### Context Instructions (Step Instructions)
 The `instructions` field on a workflow step. This is the directive for the AI (what to do), and it is **combined with context** (form submission + dependency step outputs) to create the final prompt for that step.
 

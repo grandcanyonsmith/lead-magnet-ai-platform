@@ -61,6 +61,7 @@ export const workflowStepSchema = z
         }),
       ])
       .optional(),
+    is_deliverable: z.boolean().optional(),
     instructions: z.string().optional().default(""), 
     step_order: z.number().int().min(0).optional(),
     depends_on: z.array(z.number().int().min(0)).optional(), // Array of step indices this step depends on
@@ -149,7 +150,7 @@ export const workflowStepSchema = z
       z.string().min(1).optional(),
     ),
     handoff_payload_mode: z
-      .enum(["previous_step_output", "full_context", "submission_only"])
+      .enum(["previous_step_output", "full_context", "submission_only", "deliverable_output"])
       .optional(),
     handoff_input_field: z.preprocess(
       (val) =>

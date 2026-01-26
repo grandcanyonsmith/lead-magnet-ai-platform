@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Tuple, Optional
 import requests
 
 from services.steps.base import AbstractStepHandler
+from services.context_builder import ContextBuilder
 from utils.decimal_utils import convert_decimals_to_float
 from core import log_context
 
@@ -124,12 +125,43 @@ class HandoffStepHandler(AbstractStepHandler):
             if include_submission_data and isinstance(submission_data, dict):
                 outgoing_submission_data.update(submission_data)
 
+            sorted_steps = step.get("_sorted_steps", []) or []
+            deliverable_context = ContextBuilder.build_deliverable_context_from_step_outputs(
+                step_outputs=step_outputs,
+                sorted_steps=sorted_steps,
+            )
+            deliverable_steps: Dict[str, Any] = {}
+            if deliverable_context:
+                target_indices = ContextBuilder._resolve_deliverable_indices(sorted_steps)
+                for idx in target_indices:
+                    if idx >= len(step_outputs):
+                        continue
+                    step_output = step_outputs[idx]
+                    step_index = step_output.get("step_index", idx)
+                    step_name = step_output.get("step_name", f"Step {step_index + 1}")
+                    output_text = ContextBuilder._stringify_step_output(step_output.get("output", "")).strip()
+                    if not output_text:
+                        continue
+                    deliverable_steps[f"step_{step_index}"] = {
+                        "step_name": step_name,
+                        "step_index": step_index,
+                        "output": output_text,
+                        "artifact_id": step_output.get("artifact_id"),
+                        "image_urls": step_output.get("image_urls", []),
+                    }
+
             # Choose the primary value to pass
             primary_value: str = ""
             if payload_mode == "submission_only":
                 primary_value = ""
             elif payload_mode == "full_context":
                 primary_value = context or ""
+            elif payload_mode == "deliverable_output":
+                if deliverable_context:
+                    primary_value = deliverable_context
+                else:
+                    last_output = step_outputs[-1].get("output") if step_outputs else ""
+                    primary_value = self._stringify_output(last_output)
             else:
                 # previous_step_output (default)
                 last_output = step_outputs[-1].get("output") if step_outputs else ""
@@ -139,6 +171,10 @@ class HandoffStepHandler(AbstractStepHandler):
 
             if include_context and payload_mode != "full_context":
                 outgoing_submission_data["context"] = context or ""
+            if deliverable_context:
+                outgoing_submission_data["deliverable_context"] = deliverable_context
+                if deliverable_steps:
+                    outgoing_submission_data["deliverable_steps"] = deliverable_steps
 
             # Add lightweight metadata for traceability
             outgoing_submission_data["_handoff"] = {

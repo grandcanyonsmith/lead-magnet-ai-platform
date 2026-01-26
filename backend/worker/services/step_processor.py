@@ -90,9 +90,9 @@ class StepProcessor:
             raise ValueError("Step cannot have both webhook_url and handoff_workflow_id")
 
         # Normalize step type for webhook/handoff based on config fields (step_type is deprecated)
+        step['_sorted_steps'] = sorted_steps
         if has_webhook:
             step_type = 'webhook'
-            step['_sorted_steps'] = sorted_steps
         elif has_handoff:
             step_type = 'workflow_handoff'
             
@@ -170,9 +170,9 @@ class StepProcessor:
         if has_webhook and has_handoff:
             raise ValueError("Step cannot have both webhook_url and handoff_workflow_id")
 
+        step['_sorted_steps'] = sorted(steps, key=lambda s: s.get('step_order', 0))
         if has_webhook:
             step_type = 'webhook'
-            step['_sorted_steps'] = sorted(steps, key=lambda s: s.get('step_order', 0))
         elif has_handoff:
             step_type = 'workflow_handoff'
             

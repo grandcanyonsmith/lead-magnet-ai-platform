@@ -25,6 +25,27 @@ class ContextBuilder:
             except Exception:
                 return str(output)
         return str(output)
+
+    @staticmethod
+    def _resolve_deliverable_indices(sorted_steps: List[Dict[str, Any]]) -> List[int]:
+        """Resolve which workflow steps should be treated as deliverable sources."""
+        from utils.step_utils import normalize_step_order
+
+        if not sorted_steps:
+            return []
+
+        deliverable_indices = [
+            idx for idx, step in enumerate(sorted_steps)
+            if step.get('is_deliverable') is True
+        ]
+        if deliverable_indices:
+            return deliverable_indices
+
+        max_order = max(normalize_step_order(step) for step in sorted_steps)
+        return [
+            idx for idx, step in enumerate(sorted_steps)
+            if normalize_step_order(step) == max_order
+        ]
     
     @staticmethod
     def format_submission_data_with_labels(data: Dict[str, Any], field_label_map: Dict[str, str]) -> str:
@@ -85,7 +106,8 @@ class ContextBuilder:
             if not prev_step_name and 0 <= step_index < len(sorted_steps):
                 prev_step_name = sorted_steps[step_index].get("step_name")
             prev_step_name = prev_step_name or f"Step {step_number}"
-            prev_output_text = prev_step_output.get('output', '')
+            prev_output_raw = prev_step_output.get('output', '')
+            prev_output_text = ContextBuilder._stringify_step_output(prev_output_raw)
             
             # Extract image URLs from multiple sources:
             # 1. From image_urls array in step output
@@ -101,10 +123,10 @@ class ContextBuilder:
             
             # 2. Extract image URLs from the output text itself
             image_urls_from_text = []
-            if isinstance(prev_output_text, str):
-                image_urls_from_text = extract_image_urls(prev_output_text)
-            elif isinstance(prev_output_text, (dict, list)):
-                image_urls_from_text = extract_image_urls_from_object(prev_output_text)
+            if isinstance(prev_output_raw, str):
+                image_urls_from_text = extract_image_urls(prev_output_raw)
+            elif isinstance(prev_output_raw, (dict, list)):
+                image_urls_from_text = extract_image_urls_from_object(prev_output_raw)
             
             # Combine and deduplicate all image URLs
             all_image_urls: Set[str] = set(image_urls_from_array) | set(image_urls_from_text)
@@ -175,7 +197,8 @@ class ContextBuilder:
             
             if should_include:
                 prev_step_name = prev_step_data.get('step_name', 'Unknown Step')
-                prev_output_text = prev_step_data.get('output', '')
+                prev_output_raw = prev_step_data.get('output', '')
+                prev_output_text = ContextBuilder._stringify_step_output(prev_output_raw)
                 
                 # Extract image URLs from multiple sources:
                 # 1. From image_urls array in execution step
@@ -191,10 +214,10 @@ class ContextBuilder:
                 
                 # 2. Extract image URLs from the output text itself
                 image_urls_from_text = []
-                if isinstance(prev_output_text, str):
-                    image_urls_from_text = extract_image_urls(prev_output_text)
-                elif isinstance(prev_output_text, (dict, list)):
-                    image_urls_from_text = extract_image_urls_from_object(prev_output_text)
+                if isinstance(prev_output_raw, str):
+                    image_urls_from_text = extract_image_urls(prev_output_raw)
+                elif isinstance(prev_output_raw, (dict, list)):
+                    image_urls_from_text = extract_image_urls_from_object(prev_output_raw)
                 
                 # Combine and deduplicate all image URLs
                 all_image_urls: Set[str] = set(image_urls_from_array) | set(image_urls_from_text)
@@ -227,7 +250,8 @@ class ContextBuilder:
         for step_data in execution_steps:
             if step_data.get('step_type') == 'ai_generation':
                 step_name = step_data.get('step_name', 'Unknown Step')
-                step_output = step_data.get('output', '')
+                step_output_raw = step_data.get('output', '')
+                step_output_text = ContextBuilder._stringify_step_output(step_output_raw)
                 
                 # Extract image URLs from multiple sources:
                 # 1. From image_urls array
@@ -241,16 +265,16 @@ class ContextBuilder:
                 
                 # 2. Extract image URLs from the output text itself
                 image_urls_from_text = []
-                if isinstance(step_output, str):
-                    image_urls_from_text = extract_image_urls(step_output)
-                elif isinstance(step_output, (dict, list)):
-                    image_urls_from_text = extract_image_urls_from_object(step_output)
+                if isinstance(step_output_raw, str):
+                    image_urls_from_text = extract_image_urls(step_output_raw)
+                elif isinstance(step_output_raw, (dict, list)):
+                    image_urls_from_text = extract_image_urls_from_object(step_output_raw)
                 
                 # Combine and deduplicate all image URLs
                 all_image_urls: Set[str] = set(image_urls_from_array) | set(image_urls_from_text)
                 image_urls = sorted(list(all_image_urls))  # Sort for consistent output
                 
-                accumulated_context += f"--- {step_name} ---\n{step_output}\n\n"
+                accumulated_context += f"--- {step_name} ---\n{step_output_text}\n\n"
                 if image_urls:
                     accumulated_context += f"Generated Images:\n" + "\n".join([f"- {url}" for url in image_urls]) + "\n\n"
         
@@ -268,19 +292,15 @@ class ContextBuilder:
         internal research, raw notes, or submission scaffolding into the
         customer-facing deliverable.
         """
-        from utils.step_utils import normalize_step_order
-
         if not step_outputs or not sorted_steps:
             return ""
 
-        max_order = max(normalize_step_order(step) for step in sorted_steps)
-        terminal_indices = [
-            idx for idx, step in enumerate(sorted_steps)
-            if normalize_step_order(step) == max_order
-        ]
+        target_indices = ContextBuilder._resolve_deliverable_indices(sorted_steps)
+        if not target_indices:
+            return ""
 
         deliverable_outputs: List[str] = []
-        for idx in terminal_indices:
+        for idx in target_indices:
             if idx >= len(step_outputs):
                 continue
             output = step_outputs[idx].get('output', '')
@@ -292,7 +312,8 @@ class ContextBuilder:
 
     @staticmethod
     def build_deliverable_context_from_execution_steps(
-        execution_steps: List[Dict[str, Any]]
+        execution_steps: List[Dict[str, Any]],
+        deliverable_step_orders: Optional[List[int]] = None
     ) -> str:
         """
         Build deliverable-only context from execution steps (single-step mode).
@@ -306,11 +327,21 @@ class ContextBuilder:
         if not ai_steps:
             return ""
 
-        max_order = max(normalize_step_order(step) for step in ai_steps)
-        terminal_steps = [
-            step for step in ai_steps
-            if normalize_step_order(step) == max_order
-        ]
+        deliverable_orders = set(deliverable_step_orders or [])
+        if deliverable_orders:
+            terminal_steps = [
+                step for step in ai_steps
+                if normalize_step_order(step) in deliverable_orders
+            ]
+            if not terminal_steps:
+                deliverable_orders = set()
+
+        if not deliverable_orders:
+            max_order = max(normalize_step_order(step) for step in ai_steps)
+            terminal_steps = [
+                step for step in ai_steps
+                if normalize_step_order(step) == max_order
+            ]
 
         deliverable_outputs: List[str] = []
         for step in terminal_steps:

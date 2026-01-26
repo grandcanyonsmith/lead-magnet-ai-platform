@@ -24,6 +24,7 @@ interface RawStep {
   text_verbosity?: string;
   max_output_tokens?: number;
   output_format?: unknown;
+  is_deliverable?: boolean;
   instructions?: string;
   step_order?: number;
   depends_on?: number[];
@@ -258,6 +259,9 @@ function normalizeStep(step: RawStep, index: number, defaults?: WorkflowDefaults
     }
   }
 
+  const is_deliverable =
+    typeof step.is_deliverable === "boolean" ? step.is_deliverable : undefined;
+
   return {
     step_name: isString(step.step_name) && step.step_name.trim().length > 0 ? step.step_name : `Step ${index + 1}`,
     step_description: isString(step.step_description) ? step.step_description : '',
@@ -267,6 +271,7 @@ function normalizeStep(step: RawStep, index: number, defaults?: WorkflowDefaults
     text_verbosity,
     max_output_tokens,
     output_format,
+    is_deliverable,
     shell_settings,
     instructions: isString(step.instructions) && step.instructions.trim().length > 0 ? step.instructions : 'Generate content based on form submission data.',
     step_order: typeof step.step_order === 'number' && step.step_order >= 0 ? step.step_order : index,

@@ -40,6 +40,10 @@ export interface WorkflowStep {
         strict?: boolean;
         schema: Record<string, any>;
       };
+  /**
+   * When true, this step's output is treated as the final deliverable source.
+   */
+  is_deliverable?: boolean;
   instructions: string;
   step_order: number;
   depends_on?: number[];
@@ -57,7 +61,11 @@ export interface WorkflowStep {
 
   // Lead magnet handoff step fields
   handoff_workflow_id?: string;
-  handoff_payload_mode?: "previous_step_output" | "full_context" | "submission_only";
+  handoff_payload_mode?:
+    | "previous_step_output"
+    | "full_context"
+    | "submission_only"
+    | "deliverable_output";
   handoff_input_field?: string;
   handoff_bypass_required_inputs?: boolean;
   handoff_include_submission_data?: boolean;

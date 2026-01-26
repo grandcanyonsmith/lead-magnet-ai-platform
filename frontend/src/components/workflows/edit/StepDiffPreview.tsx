@@ -84,6 +84,7 @@ export default function StepDiffPreview({
       case "model": return <FiCpu className="w-4 h-4" />;
       case "service_tier": return <FiActivity className="w-4 h-4" />;
       case "instructions": return <FiFileText className="w-4 h-4" />;
+      case "is_deliverable": return <FiFileText className="w-4 h-4" />;
       case "tools": return <FiSettings className="w-4 h-4" />;
       case "tool_choice": return <FiSettings className="w-4 h-4" />;
       case "depends_on": return <FiLayers className="w-4 h-4" />;
@@ -103,6 +104,7 @@ export default function StepDiffPreview({
       { key: "model", label: "Model" },
       { key: "service_tier", label: "Service Tier" },
       { key: "instructions", label: "Instructions" },
+      { key: "is_deliverable", label: "Deliverable Source" },
       { key: "tools", label: "Tools" },
       { key: "tool_choice", label: "Tool Choice" },
       { key: "depends_on", label: "Dependencies" },
@@ -147,6 +149,9 @@ export default function StepDiffPreview({
     if (value === null || value === undefined) return "(not set)";
     if (field === "depends_on") {
       return formatDependsOn(Array.isArray(value) ? value : undefined);
+    }
+    if (field === "is_deliverable") {
+      return value ? "Yes" : "No";
     }
     if (Array.isArray(value)) {
       if (value.length === 0) return "(none)";

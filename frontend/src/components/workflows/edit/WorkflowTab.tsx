@@ -77,6 +77,19 @@ export function WorkflowTab({
     streamedOutput,
   } = useWorkflowAI(workflowId, { enableStreaming: false });
 
+  const normalizeDeliverableSteps = (nextSteps: WorkflowStep[]) => {
+    const deliverableIndices = nextSteps
+      .map((step, idx) => (step.is_deliverable ? idx : -1))
+      .filter((idx) => idx >= 0);
+    if (deliverableIndices.length <= 1) {
+      return nextSteps;
+    }
+    const keepIndex = deliverableIndices[deliverableIndices.length - 1];
+    return nextSteps.map((step, idx) =>
+      idx === keepIndex ? step : { ...step, is_deliverable: false },
+    );
+  };
+
   const handleGenerateAI = async () => {
     if (!aiPrompt.trim()) {
       toast.error(
@@ -124,7 +137,7 @@ export function WorkflowTab({
       }
 
       // Apply validated step changes
-      onStepsChange(proposal.steps);
+      onStepsChange(normalizeDeliverableSteps(proposal.steps));
 
       toast.success("AI changes applied! Don't forget to save.");
       clearProposal();
@@ -145,9 +158,10 @@ export function WorkflowTab({
   };
 
   const handleStepChange = (index: number, updatedStep: WorkflowStep) => {
-    const newSteps = [...steps];
-    newSteps[index] = updatedStep;
-    onStepsChange(newSteps);
+    const newSteps = steps.map((step, i) =>
+      i === index ? updatedStep : step,
+    );
+    onStepsChange(normalizeDeliverableSteps(newSteps));
   };
 
   const handleDeleteStep = (index: number) => {
