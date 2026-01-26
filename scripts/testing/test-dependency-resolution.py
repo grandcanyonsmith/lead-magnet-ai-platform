@@ -10,13 +10,7 @@ import os
 # Add backend/worker to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend', 'worker'))
 
-from dependency_resolver import (
-    resolve_execution_groups,
-    validate_dependencies,
-    get_ready_steps,
-    get_step_status,
-    build_dependency_graph
-)
+from services.dependency_resolver import DependencyResolver
 
 # Colors for output
 GREEN = '\033[32m'
@@ -73,7 +67,7 @@ def test_sequential_workflow():
         },
     ]
     
-    plan = resolve_execution_groups(steps)
+    plan = DependencyResolver.resolve_execution_groups(steps)
     
     assert_test(plan['totalSteps'] == 3, 'Total steps should be 3')
     assert_test(len(plan['executionGroups']) == 3, 'Should have 3 execution groups')
@@ -118,7 +112,7 @@ def test_parallel_workflow():
         },
     ]
     
-    plan = resolve_execution_groups(steps)
+    plan = DependencyResolver.resolve_execution_groups(steps)
     
     assert_test(plan['totalSteps'] == 3, 'Total steps should be 3')
     assert_test(len(plan['executionGroups']) == 2, 'Should have 2 execution groups')
@@ -167,7 +161,7 @@ def test_explicit_dependencies():
         },
     ]
     
-    plan = resolve_execution_groups(steps)
+    plan = DependencyResolver.resolve_execution_groups(steps)
     
     assert_test(plan['totalSteps'] == 3, 'Total steps should be 3')
     assert_test(len(plan['executionGroups']) == 2, 'Should have 2 execution groups')
@@ -204,7 +198,7 @@ def test_circular_dependency():
         },
     ]
     
-    is_valid, errors = validate_dependencies(steps)
+    is_valid, errors = DependencyResolver.validate_dependencies(steps)
     
     assert_test(is_valid == False, 'Should detect circular dependency')
     assert_test(len(errors) > 0, 'Should have error messages')
@@ -239,7 +233,7 @@ def test_invalid_dependencies():
         },
     ]
     
-    is_valid, errors = validate_dependencies(steps)
+    is_valid, errors = DependencyResolver.validate_dependencies(steps)
     
     assert_test(is_valid == False, 'Should detect invalid dependency')
     assert_test(len(errors) > 0, 'Should have error messages')
@@ -264,7 +258,7 @@ def test_self_dependency():
         },
     ]
     
-    is_valid, errors = validate_dependencies(steps)
+    is_valid, errors = DependencyResolver.validate_dependencies(steps)
     
     assert_test(is_valid == False, 'Should detect self-dependency')
     assert_test(len(errors) > 0, 'Should have error messages')
@@ -310,22 +304,22 @@ def test_step_readiness():
     ]
     
     # No steps completed
-    ready_steps = get_ready_steps([], steps)
+    ready_steps = DependencyResolver.get_ready_steps([], steps)
     assert_test(len(ready_steps) == 1, 'Should have 1 ready step')
     assert_test(ready_steps[0] == 0, 'Step 0 should be ready')
     
     # Step 0 completed
-    ready_steps = get_ready_steps([0], steps)
+    ready_steps = DependencyResolver.get_ready_steps([0], steps)
     assert_test(len(ready_steps) == 1, 'Should have 1 ready step')
     assert_test(ready_steps[0] == 1, 'Step 1 should be ready')
     
     # Steps 0 and 1 completed
-    ready_steps = get_ready_steps([0, 1], steps)
+    ready_steps = DependencyResolver.get_ready_steps([0, 1], steps)
     assert_test(len(ready_steps) == 1, 'Should have 1 ready step')
     assert_test(ready_steps[0] == 2, 'Step 2 should be ready')
     
     # All steps completed
-    ready_steps = get_ready_steps([0, 1, 2], steps)
+    ready_steps = DependencyResolver.get_ready_steps([0, 1, 2], steps)
     assert_test(len(ready_steps) == 0, 'No steps should be ready')
     
     log("✅ Step readiness logic working correctly")
@@ -357,7 +351,7 @@ def test_step_status():
         },
     ]
     
-    status = get_step_status([0], [1], steps)
+    status = DependencyResolver.get_step_status([0], [1], steps)
     
     assert_test(status[0] == 'completed', 'Step 0 should be completed')
     assert_test(status[1] == 'running', 'Step 1 should be running')
@@ -411,7 +405,7 @@ def test_complex_dependency_graph():
         },
     ]
     
-    plan = resolve_execution_groups(steps)
+    plan = DependencyResolver.resolve_execution_groups(steps)
     
     assert_test(plan['totalSteps'] == 4, 'Total steps should be 4')
     assert_test(len(plan['executionGroups']) == 3, 'Should have 3 execution groups')
@@ -447,7 +441,7 @@ def test_dependency_graph_building():
         },
     ]
     
-    graph = build_dependency_graph(steps)
+    graph = DependencyResolver.build_dependency_graph(steps)
     
     assert_test(len(graph) == 2, 'Graph should have 2 steps')
     assert_test(len(graph.get(0, [])) == 0, 'Step 0 should have no dependencies')

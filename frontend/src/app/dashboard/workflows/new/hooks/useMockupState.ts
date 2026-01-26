@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { Deliverable } from "@/types";
+import { WorkflowIdeationDeliverable } from "@/types";
 
 export function useMockupState() {
   const [mockupImages, setMockupImages] = useState<string[]>([]);
   const [isGeneratingMockups, setIsGeneratingMockups] = useState(false);
   const [mockupError, setMockupError] = useState<string | null>(null);
 
-  const generateMockups = async (selectedDeliverable: Deliverable) => {
+  const generateMockups = async (selectedDeliverable: WorkflowIdeationDeliverable) => {
     if (isGeneratingMockups) return;
 
     setIsGeneratingMockups(true);

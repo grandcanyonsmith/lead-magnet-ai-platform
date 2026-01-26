@@ -27,6 +27,9 @@ import {
   REASONING_EFFORT_LEVELS,
   SERVICE_TIER_LABELS,
   SERVICE_TIER_SPEED,
+  getRecord,
+  getString,
+  getNumber,
 } from "@/utils/stepMeta";
 import {
   resolveImageSettingsDefaults,
@@ -57,19 +60,7 @@ const SHELL_COMPATIBLE_MODELS: AIModel[] = [
 const COMPUTER_USE_MODEL: AIModel = "computer-use-preview";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
-const getStringValue = (value: unknown): string | null =>
-  typeof value === "string" && value.trim() ? value : null;
-
-const getNumberValue = (value: unknown): number | null => {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-};
+  getRecord(value) !== null;
 
 const isImageSettingsDifferent = (
   current: ResolvedImageSettings,
@@ -175,10 +166,10 @@ export function useStepMetaRow({
     step.step_order !== undefined ? step.step_order - 1 : null;
   const isUpdating = stepIndex !== null && updatingStepIndex === stepIndex;
   const toolChoice =
-    getStringValue(stepInput?.tool_choice) || getStringValue(step.tool_choice);
-  const modelFromStep = getStringValue(step.model);
-  const modelFromInput = getStringValue(inputRecord?.model);
-  const usageModel = getStringValue(step.usage_info?.model);
+    getString(stepInput?.tool_choice) || getString(step.tool_choice);
+  const modelFromStep = getString(step.model);
+  const modelFromInput = getString(inputRecord?.model);
+  const usageModel = getString(step.usage_info?.model);
   const modelValue =
     modelFromStep || modelFromInput || usageModel || "Unknown";
   const modelDetailsRows: DetailRow[] = [
@@ -271,10 +262,10 @@ export function useStepMetaRow({
   const speedLabel = normalizedServiceTier
     ? SERVICE_TIER_LABELS[normalizedServiceTier]
     : undefined;
-  const stepServiceTier = getStringValue(
+  const stepServiceTier = getString(
     (step as { service_tier?: unknown }).service_tier,
   );
-  const inputServiceTier = getStringValue(inputRecord?.service_tier);
+  const inputServiceTier = getString(inputRecord?.service_tier);
   const serviceTierValue = normalizedServiceTier || "auto";
   const serviceTierLabel = speedLabel || "Auto";
   const reasoningEffort = extractReasoningEffort(step);
@@ -285,12 +276,12 @@ export function useStepMetaRow({
   const reasoningLabel = normalizedReasoningEffort
     ? REASONING_EFFORT_LABELS[normalizedReasoningEffort]
     : undefined;
-  const stepReasoningEffort = getStringValue(
+  const stepReasoningEffort = getString(
     (step as { reasoning_effort?: unknown }).reasoning_effort,
   );
-  const inputReasoningEffort = getStringValue(inputRecord?.reasoning_effort);
+  const inputReasoningEffort = getString(inputRecord?.reasoning_effort);
   const inputReasoningNested = isRecord(inputRecord?.reasoning)
-    ? getStringValue((inputRecord.reasoning as Record<string, unknown>).effort)
+    ? getString((inputRecord.reasoning as Record<string, unknown>).effort)
     : null;
   const reasoningValue = normalizedReasoningEffort || "auto";
   const reasoningLabelValue = reasoningLabel || "Auto";
@@ -407,31 +398,31 @@ export function useStepMetaRow({
     config: Record<string, unknown> | null,
   ): ResolvedImageSettings => {
     const model =
-      (getStringValue(config?.model) as ImageGenerationSettings["model"]) ||
+      (getString(config?.model) as ImageGenerationSettings["model"]) ||
       defaultImageSettings.model;
     const size =
-      (getStringValue(config?.size) as ImageGenerationSettings["size"]) ||
+      (getString(config?.size) as ImageGenerationSettings["size"]) ||
       defaultImageSettings.size;
     const quality =
-      (getStringValue(
+      (getString(
         config?.quality,
       ) as ImageGenerationSettings["quality"]) || defaultImageSettings.quality;
     const background =
-      (getStringValue(
+      (getString(
         config?.background,
       ) as ImageGenerationSettings["background"]) ||
       defaultImageSettings.background;
     const format =
-      (getStringValue(
+      (getString(
         config?.format,
       ) as ImageGenerationSettings["format"]) || defaultImageSettings.format;
     const supportsCompression = format === "jpeg" || format === "webp";
-    const compressionValue = getNumberValue(config?.compression);
+    const compressionValue = getNumber(config?.compression);
     const compression = supportsCompression
       ? compressionValue ?? defaultImageSettings.compression
       : undefined;
     const inputFidelity =
-      (getStringValue(
+      (getString(
         config?.input_fidelity,
       ) as ImageGenerationSettings["input_fidelity"]) ||
       defaultImageSettings.input_fidelity;

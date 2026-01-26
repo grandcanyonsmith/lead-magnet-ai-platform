@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { PencilIcon } from "@heroicons/react/24/outline";
 import { MergedStep, StepStatus } from "@/types/job";
 import type {
@@ -19,6 +19,7 @@ import {
 } from "@/components/jobs/panels";
 import type { EditablePanel } from "@/components/jobs/StepMetaTypes";
 import { useStepMetaRow } from "@/hooks/useStepMetaRow";
+import { BlockNode } from "@/types/recursive";
 
 type StepMetaUpdate = {
   model?: AIModel | null;
@@ -290,21 +291,70 @@ export function StepMetaRow({
     };
   }, [openPanel, setEditPanel, setOpenPanel]);
 
+  // Define panels as BlockNodes
+  const panels: BlockNode[] = useMemo(() => {
+    const list: BlockNode[] = [];
+
+    if (showModelDetails) {
+      list.push({
+        id: "model",
+        content: <ModelDetailsPanel {...modelPanelProps} />,
+      });
+    }
+
+    if (showSpeedDetails) {
+      list.push({
+        id: "speed",
+        content: <SpeedDetailsPanel {...speedPanelProps} />,
+      });
+    }
+
+    if (showReasoningDetails) {
+      list.push({
+        id: "reasoning",
+        content: <ReasoningDetailsPanel {...reasoningPanelProps} />,
+      });
+    }
+
+    if (hasTools && showTools) {
+      list.push({
+        id: "tools",
+        content: <ToolsPanel {...toolsPanelProps} />,
+      });
+    }
+
+    if (hasImageGenerationTool && showImageSettings) {
+      list.push({
+        id: "image",
+        content: <ImageSettingsPanel {...imagePanelProps} />,
+      });
+    }
+
+    if (hasContext && showContext) {
+      list.push({
+        id: "context",
+        content: <ContextPanel {...contextPanelProps} />,
+      });
+    }
+
+    return list;
+  }, [
+    showModelDetails, modelPanelProps,
+    showSpeedDetails, speedPanelProps,
+    showReasoningDetails, reasoningPanelProps,
+    hasTools, showTools, toolsPanelProps,
+    hasImageGenerationTool, showImageSettings, imagePanelProps,
+    hasContext, showContext, contextPanelProps
+  ]);
+
   return (
     <div className="space-y-2 w-full min-w-0 max-w-full" ref={containerRef}>
       <StepMetaBadges {...badgeProps} />
-      {showModelDetails && <ModelDetailsPanel {...modelPanelProps} />}
-      {showSpeedDetails && <SpeedDetailsPanel {...speedPanelProps} />}
-      {showReasoningDetails && (
-        <ReasoningDetailsPanel {...reasoningPanelProps} />
-      )}
-      {hasTools && showTools && (
-        <ToolsPanel {...toolsPanelProps} />
-      )}
-      {hasImageGenerationTool && showImageSettings && (
-        <ImageSettingsPanel {...imagePanelProps} />
-      )}
-      {hasContext && showContext && <ContextPanel {...contextPanelProps} />}
+      {panels.map(panel => (
+        <div key={panel.id} className="animate-in fade-in slide-in-from-top-1 duration-200">
+          {panel.content}
+        </div>
+      ))}
     </div>
   );
 }

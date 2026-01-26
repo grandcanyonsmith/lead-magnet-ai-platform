@@ -13,7 +13,7 @@ import {
   FiAlertCircle,
   FiMove,
   FiCheckCircle,
-  FiArrowRightCircle,
+  FiArrowRight,
   FiLayers,
 } from "react-icons/fi";
 
@@ -238,7 +238,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
 
         {isHandoff && (
           <div className="flex items-center gap-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 px-3 py-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/30">
-            <FiArrowRightCircle className="h-4 w-4" />
+            <FiArrowRight className="h-4 w-4" />
             <span>Handoff to Workflow</span>
           </div>
         )}
