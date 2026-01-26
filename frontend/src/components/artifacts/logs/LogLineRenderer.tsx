@@ -3,9 +3,9 @@ import { LazySyntaxHighlighter } from "./LazySyntaxHighlighter";
 import {
   FilteredCommandEntry,
   splitShellCommandSegments,
-  highlightMatches,
   getOutputPreview,
 } from "./utils";
+import { highlightMatches } from "./LogUtils";
 
 interface LogLineRendererProps {
   entryCommand: FilteredCommandEntry;
