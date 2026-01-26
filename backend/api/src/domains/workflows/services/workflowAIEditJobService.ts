@@ -8,6 +8,7 @@ import { getOpenAIClient } from "@services/openaiService";
 import { WorkflowAIService, WorkflowAIEditRequest } from "./workflowAIService";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getPromptOverridesFromSettings } from "@services/promptOverrides";
+import { s3Service } from "@services/s3Service";
 
 const JOBS_TABLE = env.jobsTable;
 const WORKFLOWS_TABLE = env.workflowsTable;
@@ -43,6 +44,9 @@ const VALID_TEXT_VERBOSITIES = new Set<TextVerbosity>([
 ]);
 const DEFAULT_REVIEW_SERVICE_TIER: ServiceTier = "priority";
 const DEFAULT_REVIEW_REASONING_EFFORT: ReasoningEffort = "high";
+const MAX_INLINE_PROMPT_BYTES = 200 * 1024;
+const PROMPT_PREVIEW_CHARS = 2000;
+const PROMPT_STORAGE_CATEGORY = "workflow-ai-edit-prompts";
 
 type ExecutionHistory = NonNullable<WorkflowAIEditRequest["executionHistory"]>;
 type ReferenceExample = NonNullable<WorkflowAIEditRequest["referenceExamples"]>[number];
@@ -99,6 +103,60 @@ class WorkflowAIEditJobService {
     return typeof job?.requested_by_user_id === "string"
       ? job.requested_by_user_id
       : undefined;
+  }
+
+  private async storeUserPromptIfNeeded(params: {
+    tenantId: string;
+    jobId: string;
+    userPrompt: string;
+  }): Promise<{
+    storedPrompt: string;
+    s3Key?: string;
+    truncated: boolean;
+  }> {
+    const { tenantId, jobId, userPrompt } = params;
+    if (!userPrompt) {
+      return { storedPrompt: userPrompt, truncated: false };
+    }
+
+    const promptBytes = Buffer.byteLength(userPrompt, "utf8");
+    if (promptBytes <= MAX_INLINE_PROMPT_BYTES) {
+      return { storedPrompt: userPrompt, truncated: false };
+    }
+
+    const preview = userPrompt.slice(0, PROMPT_PREVIEW_CHARS);
+    if (!env.artifactsBucket) {
+      logger.warn("[Workflow AI Edit] Large prompt exceeds inline limit", {
+        jobId,
+        promptBytes,
+        hasArtifactsBucket: false,
+      });
+      return { storedPrompt: preview, truncated: true };
+    }
+
+    try {
+      const filename = `${jobId}.txt`;
+      const s3Key = await s3Service.uploadFile(
+        tenantId,
+        Buffer.from(userPrompt, "utf8"),
+        filename,
+        PROMPT_STORAGE_CATEGORY,
+        "text/plain",
+      );
+      logger.info("[Workflow AI Edit] Stored large prompt in S3", {
+        jobId,
+        promptBytes,
+        s3Key,
+      });
+      return { storedPrompt: preview, s3Key, truncated: true };
+    } catch (error: any) {
+      logger.warn("[Workflow AI Edit] Failed to store large prompt in S3", {
+        jobId,
+        promptBytes,
+        error: error?.message || String(error),
+      });
+      return { storedPrompt: preview, truncated: true };
+    }
   }
 
   private resolveRuntimeSettings(
@@ -207,6 +265,32 @@ class WorkflowAIEditJobService {
       });
     }
     return null;
+  }
+
+  private async resolveUserPrompt(params: {
+    userPrompt: string;
+    job: Record<string, any>;
+    s3Client: S3Client;
+    artifactsBucket: string | undefined;
+  }): Promise<string> {
+    const { userPrompt, job, s3Client, artifactsBucket } = params;
+    const s3Key =
+      typeof job?.user_prompt_s3_key === "string"
+        ? job.user_prompt_s3_key.trim()
+        : "";
+
+    if (s3Key && artifactsBucket) {
+      const s3Prompt = await this.fetchS3Text(s3Client, artifactsBucket, s3Key);
+      if (s3Prompt) {
+        return s3Prompt;
+      }
+    }
+
+    if (userPrompt) {
+      return userPrompt;
+    }
+
+    return typeof job?.user_prompt === "string" ? job.user_prompt : "";
   }
 
   private async loadExecutionHistory(params: {
@@ -446,6 +530,11 @@ class WorkflowAIEditJobService {
   }: StartWorkflowAIEditInput): Promise<{ jobId: string }> {
     const jobId = `wfaiedit_${ulid()}`;
     const now = new Date().toISOString();
+    const promptStorage = await this.storeUserPromptIfNeeded({
+      tenantId,
+      jobId,
+      userPrompt,
+    });
 
     const jobRecord: Record<string, any> = {
       job_id: jobId,
@@ -454,7 +543,9 @@ class WorkflowAIEditJobService {
       job_type: "workflow_ai_edit",
       status: "pending",
       model: "gpt-5.2",
-      user_prompt: userPrompt,
+      user_prompt: promptStorage.storedPrompt,
+      user_prompt_s3_key: promptStorage.s3Key,
+      user_prompt_truncated: promptStorage.truncated ? true : undefined,
       context_job_id: contextJobId || null,
       requested_by_user_id: requestedByUserId || null,
       result: null,
@@ -478,7 +569,7 @@ class WorkflowAIEditJobService {
       {
         source: "workflow-ai-edit-job",
         workflow_id: workflowId,
-        user_prompt: userPrompt,
+        user_prompt: promptStorage.storedPrompt,
         context_job_id: contextJobId || null,
       },
       async (localJobId: string, localTenantId: string) => {
@@ -588,6 +679,12 @@ class WorkflowAIEditJobService {
       // CONTEXT GATHERING (Parallelized)
       // ---------------------------------------------------------
       const s3Client = new S3Client({ region: env.awsRegion });
+      const resolvedUserPrompt = await this.resolveUserPrompt({
+        userPrompt,
+        job,
+        s3Client,
+        artifactsBucket,
+      });
       const [executionHistory, referenceExamples] = await Promise.all([
         this.loadExecutionHistory({
           contextJobId,
@@ -624,7 +721,7 @@ class WorkflowAIEditJobService {
       const aiService = new WorkflowAIService(openai);
 
       const aiRequest = this.buildWorkflowAIEditRequest({
-        userPrompt,
+        userPrompt: resolvedUserPrompt,
         tenantId,
         workflowId,
         workflow,
