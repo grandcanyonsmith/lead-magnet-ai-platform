@@ -12,12 +12,11 @@ from db_service import DynamoDBService
 from s3_service import S3Service
 from delivery_service import DeliveryService
 from services.execution_step_manager import ExecutionStepManager
-from services.html_sanitizer import strip_template_placeholders, strip_form_elements
-from services.pdf_generator import PDFGenerator
 from utils.html_utils import strip_html_tags
 from utils.step_utils import normalize_step_order
 from services.usage_service import UsageService
 from ai_service import AIService
+from services.artifact_finalizer import ArtifactFinalizer
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +48,7 @@ class JobCompletionService:
         self.delivery_service = delivery_service
         self.usage_service = usage_service
         self.ai_service = AIService(self.db, self.s3)
+        self.artifact_finalizer = ArtifactFinalizer(self.artifact_service)
     
     def finalize_job(
         self,
@@ -91,40 +91,13 @@ class JobCompletionService:
             pdf_source_html = None
             # Guarantee tracking injection for the final HTML deliverable regardless of how it was generated.
             if final_artifact_type == 'html_final' and isinstance(final_content, str) and final_content.strip():
-                final_content = strip_template_placeholders(final_content)
-                final_content = strip_form_elements(final_content)
+                final_content = self.artifact_finalizer.prepare_html_content(
+                    html_content=final_content,
+                    job_id=job_id,
+                    tenant_id=job.get('tenant_id', ''),
+                    api_url=job.get('api_url') or None
+                )
                 pdf_source_html = final_content
-                if 'Lead Magnet Tracking Script' not in final_content:
-                    from services.tracking_script_generator import TrackingScriptGenerator
-                    tracking_generator = TrackingScriptGenerator()
-                    final_content = tracking_generator.inject_tracking_script(
-                        html_content=final_content,
-                        job_id=job_id,
-                        tenant_id=job.get('tenant_id', ''),
-                        api_url=job.get('api_url') or None
-                    )
-
-                # Ensure session recording script is injected for replay support.
-                if 'Session Recording Script' not in final_content:
-                    from services.recording_script_generator import RecordingScriptGenerator
-                    recording_generator = RecordingScriptGenerator()
-                    final_content = recording_generator.inject_recording_script(
-                        html_content=final_content,
-                        job_id=job_id,
-                        tenant_id=job.get('tenant_id', ''),
-                        api_url=job.get('api_url') or None
-                    )
-
-                # Guarantee editor overlay injection for editMode=true visual editing.
-                if 'Lead Magnet Editor Overlay' not in final_content:
-                    from services.editor_overlay_generator import EditorOverlayGenerator
-                    editor_generator = EditorOverlayGenerator()
-                    final_content = editor_generator.inject_editor_overlay(
-                        html_content=final_content,
-                        job_id=job_id,
-                        tenant_id=job.get('tenant_id', ''),
-                        api_url=job.get('api_url') or None
-                    )
 
             final_artifact_id = self.artifact_service.store_artifact(
                 tenant_id=job['tenant_id'],
@@ -142,7 +115,7 @@ class JobCompletionService:
 
             # Generate and store PDF deliverable alongside HTML (best-effort).
             if pdf_source_html:
-                pdf_artifact_id = self._store_pdf_deliverable(
+                pdf_artifact_id = self.artifact_finalizer.store_pdf_deliverable(
                     job_id=job_id,
                     tenant_id=job['tenant_id'],
                     html_content=pdf_source_html
@@ -208,42 +181,6 @@ class JobCompletionService:
         
         return public_url
 
-    def _store_pdf_deliverable(
-        self,
-        job_id: str,
-        tenant_id: str,
-        html_content: str
-    ) -> Optional[str]:
-        """
-        Best-effort PDF generation from HTML content.
-        Returns the PDF artifact ID when successful, otherwise None.
-        """
-        if not isinstance(html_content, str) or not html_content.strip():
-            return None
-
-        try:
-            pdf_generator = PDFGenerator()
-            pdf_bytes = pdf_generator.generate_pdf(html_content)
-            pdf_artifact_id = self.artifact_service.store_artifact(
-                tenant_id=tenant_id,
-                job_id=job_id,
-                artifact_type='pdf_final',
-                content=pdf_bytes,
-                filename='final.pdf',
-                public=True
-            )
-            pdf_public_url = self.artifact_service.get_artifact_public_url(pdf_artifact_id)
-            logger.info(
-                "[JobCompletionService] PDF deliverable stored",
-                extra={'job_id': job_id, 'pdf_url_preview': pdf_public_url[:80]}
-            )
-            return pdf_artifact_id
-        except Exception as pdf_error:
-            logger.warning(
-                "[JobCompletionService] Failed to generate PDF deliverable",
-                extra={'job_id': job_id, 'error': str(pdf_error)}
-            )
-            return None
     
     def _deliver_job(
         self,
@@ -546,42 +483,16 @@ class JobCompletionService:
             tenant_id=job.get('tenant_id'),
         )
 
-        final_content = strip_template_placeholders(final_content)
-        final_content = strip_form_elements(final_content)
+        final_content = self.artifact_finalizer.prepare_html_content(
+            html_content=final_content,
+            job_id=job_id,
+            tenant_id=job['tenant_id'],
+            api_url=job.get('api_url') or None
+        )
         pdf_source_html = final_content
         
         html_duration = (datetime.utcnow() - html_start_time).total_seconds() * 1000
         self.usage_service.store_usage_record(job['tenant_id'], job_id, html_usage_info)
-        
-        # Inject tracking script into HTML
-        from services.tracking_script_generator import TrackingScriptGenerator
-        tracking_generator = TrackingScriptGenerator()
-        final_content = tracking_generator.inject_tracking_script(
-            html_content=final_content,
-            job_id=job_id,
-            tenant_id=job['tenant_id'],
-            api_url=job.get('api_url') or None
-        )
-
-        # Inject recording script into HTML (rrweb)
-        from services.recording_script_generator import RecordingScriptGenerator
-        recording_generator = RecordingScriptGenerator()
-        final_content = recording_generator.inject_recording_script(
-            html_content=final_content,
-            job_id=job_id,
-            tenant_id=job['tenant_id'],
-            api_url=job.get('api_url') or None
-        )
-
-        # Inject editor overlay into HTML (dormant unless ?editMode=true)
-        from services.editor_overlay_generator import EditorOverlayGenerator
-        editor_generator = EditorOverlayGenerator()
-        final_content = editor_generator.inject_editor_overlay(
-            html_content=final_content,
-            job_id=job_id,
-            tenant_id=job['tenant_id'],
-            api_url=job.get('api_url') or None
-        )
         
         # Store HTML as final artifact
         final_artifact_id = self.artifact_service.store_artifact(
@@ -610,7 +521,7 @@ class JobCompletionService:
         execution_steps.append(html_step_data)
         
         # Store PDF deliverable alongside HTML (best-effort)
-        pdf_artifact_id = self._store_pdf_deliverable(
+        pdf_artifact_id = self.artifact_finalizer.store_pdf_deliverable(
             job_id=job_id,
             tenant_id=job.get('tenant_id'),
             html_content=pdf_source_html

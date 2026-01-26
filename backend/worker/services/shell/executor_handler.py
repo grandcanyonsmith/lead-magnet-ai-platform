@@ -12,29 +12,18 @@ from typing import Dict, Any, Optional, Tuple, List
 
 import boto3
 
+from .config import (
+    MOUNT_POINT, FALLBACK_ROOT, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_OUTPUT_LENGTH,
+    DEFAULT_WORK_ROOT, REWRITE_WORK_PATHS, UPLOAD_MODE, UPLOAD_BUCKET,
+    UPLOAD_PREFIX, UPLOAD_PREFIX_TEMPLATE, UPLOAD_MANIFEST_NAME,
+    UPLOAD_MANIFEST_PATH, UPLOAD_DIST_SUBDIR, UPLOAD_BUILD_SUBDIR, UPLOAD_ACL,
+    WORKSPACE_TTL_HOURS, read_positive_int_env
+)
+from .workspace_manager import cleanup_old_workspaces
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Default configuration
-MOUNT_POINT = os.environ.get("EFS_MOUNT_POINT", "/mnt/shell-executor")
-# Fallback if EFS is not writable (e.g., permissions/mount issues)
-FALLBACK_ROOT = os.environ.get("SHELL_EXECUTOR_FALLBACK_ROOT", "/tmp/leadmagnet-shell-executor")
-# Lambda max timeout is 15 min (900s), and we default to 15 min per command
-DEFAULT_TIMEOUT_MS = 900000
-DEFAULT_MAX_OUTPUT_LENGTH = 10000000  # 10MB
-
-# Work root + upload configuration
-DEFAULT_WORK_ROOT = (os.environ.get("SHELL_EXECUTOR_WORK_ROOT") or "/work").strip() or "/work"
-REWRITE_WORK_PATHS = (os.environ.get("SHELL_EXECUTOR_REWRITE_WORK_PATHS") or "true").strip().lower() in ("1", "true", "yes")
-UPLOAD_MODE = (os.environ.get("SHELL_EXECUTOR_UPLOAD_MODE") or "").strip().lower()
-UPLOAD_BUCKET = (os.environ.get("SHELL_EXECUTOR_UPLOAD_BUCKET") or "").strip()
-UPLOAD_PREFIX = (os.environ.get("SHELL_EXECUTOR_UPLOAD_PREFIX") or "").strip()
-UPLOAD_PREFIX_TEMPLATE = (os.environ.get("SHELL_EXECUTOR_UPLOAD_PREFIX_TEMPLATE") or "").strip()
-UPLOAD_MANIFEST_NAME = (os.environ.get("SHELL_EXECUTOR_MANIFEST_NAME") or "shell_executor_manifest.json").strip()
-UPLOAD_MANIFEST_PATH = (os.environ.get("SHELL_EXECUTOR_MANIFEST_PATH") or "").strip()
-UPLOAD_DIST_SUBDIR = (os.environ.get("SHELL_EXECUTOR_UPLOAD_DIST_SUBDIR") or "dist").strip()
-UPLOAD_BUILD_SUBDIR = (os.environ.get("SHELL_EXECUTOR_UPLOAD_BUILD_SUBDIR") or "build").strip()
-UPLOAD_ACL = (os.environ.get("SHELL_EXECUTOR_UPLOAD_ACL") or "").strip()
 
 def truncate(text: Optional[str], max_len: int) -> str:
     """Truncate text to max_len characters."""
@@ -43,70 +32,6 @@ def truncate(text: Optional[str], max_len: int) -> str:
     if len(text) <= max_len:
         return text
     return text[:max_len] + "\n... [truncated]"
-
-def _read_positive_int_env(name: str, default: int) -> int:
-    value = (os.environ.get(name) or "").strip()
-    if not value:
-        return default
-    try:
-        parsed = int(value)
-    except Exception:
-        return default
-    return parsed if parsed > 0 else default
-
-
-WORKSPACE_TTL_HOURS = _read_positive_int_env("SHELL_EXECUTOR_WORKSPACE_TTL_HOURS", 0)
-WORKSPACE_CLEANUP_LIMIT = _read_positive_int_env("SHELL_EXECUTOR_WORKSPACE_CLEANUP_LIMIT", 200)
-_CLEANUP_BUDGET_RAW = (os.environ.get("SHELL_EXECUTOR_WORKSPACE_CLEANUP_BUDGET_SECS") or "1.0").strip()
-try:
-    WORKSPACE_CLEANUP_BUDGET_SECS = max(float(_CLEANUP_BUDGET_RAW), 0.1)
-except Exception:
-    WORKSPACE_CLEANUP_BUDGET_SECS = 1.0
-
-
-def _cleanup_old_workspaces(base_dir: str, *, current_workspace: str, ttl_seconds: int) -> None:
-    if ttl_seconds <= 0:
-        return
-    try:
-        entries = os.listdir(base_dir)
-    except Exception:
-        return
-
-    now = time.time()
-    start = time.time()
-    removed = 0
-
-    for name in entries:
-        if removed >= WORKSPACE_CLEANUP_LIMIT:
-            break
-        if (time.time() - start) >= WORKSPACE_CLEANUP_BUDGET_SECS:
-            break
-        if name == current_workspace:
-            continue
-        path = os.path.join(base_dir, name)
-        try:
-            if not os.path.isdir(path):
-                continue
-            mtime = os.path.getmtime(path)
-        except Exception:
-            continue
-        if (now - mtime) < ttl_seconds:
-            continue
-        try:
-            shutil.rmtree(path, ignore_errors=True)
-            removed += 1
-        except Exception as e:
-            logger.warning("Failed to prune workspace", extra={"path": path, "error": str(e)})
-
-    if removed:
-        logger.info(
-            "Pruned stale workspaces",
-            extra={
-                "base_dir": base_dir,
-                "removed": removed,
-                "ttl_seconds": ttl_seconds,
-            },
-        )
 
 def _prepare_workspace_path(workspace_id: str) -> Tuple[str, bool]:
     """
@@ -410,7 +335,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     ttl_seconds = WORKSPACE_TTL_HOURS * 3600
     if ttl_seconds > 0:
-        _cleanup_old_workspaces(
+        cleanup_old_workspaces(
             os.path.join(MOUNT_POINT, "sessions"),
             current_workspace=safe_workspace_id,
             ttl_seconds=ttl_seconds,
@@ -434,7 +359,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     if used_fallback:
         logger.warning("Shell executor using /tmp fallback workspace", extra={"workspace_path": workspace_path})
         if ttl_seconds > 0:
-            _cleanup_old_workspaces(
+            cleanup_old_workspaces(
                 os.path.join(FALLBACK_ROOT, "sessions"),
                 current_workspace=safe_workspace_id,
                 ttl_seconds=ttl_seconds,
@@ -638,7 +563,7 @@ if __name__ == '__main__':
         entries, bucket_override, prefix_override = _collect_upload_entries(UPLOAD_MODE, work_root, workspace_path)
         bucket = bucket_override or UPLOAD_BUCKET
         prefix = _resolve_upload_prefix(env_vars, workspace_id, prefix_override)
-        max_bytes = _read_positive_int_env("SHELL_EXECUTOR_MAX_UPLOAD_BYTES", 0)
+        max_bytes = read_positive_int_env("SHELL_EXECUTOR_MAX_UPLOAD_BYTES", 0)
         uploads, upload_errors = _upload_files(entries=entries, bucket=bucket, prefix=prefix, max_bytes=max_bytes)
         upload_meta = {
             "mode": UPLOAD_MODE,

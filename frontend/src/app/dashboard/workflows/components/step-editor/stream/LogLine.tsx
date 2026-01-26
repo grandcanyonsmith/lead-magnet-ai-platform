@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import {
   formatLogMessage,
+  formatTimestamp,
   getLogLevelBucket,
   LogEntry,
 } from "./utils";
@@ -42,6 +43,15 @@ export function LogLine({
         ? "text-yellow-300"
         : "text-gray-300";
   const shouldCollapse = isExpandable && !isExpanded;
+
+  // Log level badge styling
+  const levelBadgeClass =
+    levelBucket === "error"
+      ? "bg-red-500/20 text-red-300 border-red-500/30"
+      : levelBucket === "warn"
+        ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
+        : "bg-gray-500/20 text-gray-300 border-gray-500/30";
+  const levelLabel = levelBucket.toUpperCase();
 
   // Detect Shell Input/Output
   const isShellInput = log.message.startsWith("💻");
@@ -112,7 +122,29 @@ export function LogLine({
       `}
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 w-full">
-        {showLineNumbers && <div className="w-px bg-gray-700/30 shrink-0" />}
+        {/* Line number */}
+        {showLineNumbers && (
+          <div className="text-gray-500 dark:text-gray-400 text-[11px] font-mono shrink-0 min-w-[3ch] text-right">
+            {index + 1}
+          </div>
+        )}
+        
+        {/* Timestamp */}
+        {showTimestamps && (
+          <div className="text-gray-500 dark:text-gray-400 text-[11px] font-mono shrink-0 min-w-[8ch]">
+            {formatTimestamp(log.timestamp)}
+          </div>
+        )}
+        
+        {/* Log level badge */}
+        <div className="shrink-0">
+          <span
+            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${levelBadgeClass}`}
+          >
+            {levelLabel}
+          </span>
+        </div>
+        
         <div
           className={`w-full min-h-[1.5em] ${
             wrapLines
