@@ -119,15 +119,18 @@ class StepProcessor:
 
             # Build context
             # For AI steps, we build full context. For webhooks, it might be unused but passed for consistency.
-            # Only include form submission in the first step (step_index 0)
+            # Only include form submission in the first step (step_index 0) or if explicitly requested
             dependency_indices = self._resolve_dependency_indices(sorted_steps, step_index)
             step["_dependency_indices"] = dependency_indices
+            
+            should_include_form = (step_index == 0) or step.get('include_form_data', False)
+            
             all_previous_context = ContextBuilder.build_previous_context_from_step_outputs(
                 initial_context=initial_context,
                 step_outputs=step_outputs,
                 sorted_steps=sorted_steps,
                 dependency_indices=dependency_indices,
-                include_form_submission=True
+                include_form_submission=should_include_form
             )
             
             # Execute handler
@@ -205,13 +208,15 @@ class StepProcessor:
             dependency_indices = self._resolve_dependency_indices(steps, step_index)
             step["_dependency_indices"] = dependency_indices
 
-            # Only include form submission in the first step (step_index 0)
+            # Only include form submission in the first step (step_index 0) or if explicitly requested
+            should_include_form = (step_index == 0) or step.get('include_form_data', False)
+
             context = ContextBuilder.build_previous_context_from_execution_steps(
                 initial_context=initial_context,
                 execution_steps=execution_steps,
                 current_step_order=step_index + 1,
                 dependency_indices=dependency_indices,
-                include_form_submission=True
+                include_form_submission=should_include_form
             )
             
             # Execute handler

@@ -37,6 +37,8 @@ export default function ImageGenerationConfig({
             value={config.model}
             onChange={(nextValue) => onChange("model", nextValue)}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            searchable={true}
+            searchPlaceholder="Search models..."
           >
             <option value="gpt-image-1.5">gpt-image-1.5</option>
           </Select>
@@ -117,9 +119,10 @@ export default function ImageGenerationConfig({
               min="0"
               max="100"
               value={config.compression ?? 85}
-              onChange={(e) =>
-                onChange("compression", parseInt(e.target.value, 10) as any)
-              }
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                onChange("compression", (Number.isNaN(val) ? undefined : val) as any);
+              }}
               className="w-full"
             />
             <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">

@@ -54,22 +54,43 @@ export function useWorkflowForm() {
   );
 
   const updateFormData = useCallback(
-    (field: keyof WorkflowFormData, value: any) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
+    (
+      fieldOrUpdates: keyof WorkflowFormData | Partial<WorkflowFormData>,
+      value?: any,
+    ) => {
+      if (typeof fieldOrUpdates === "object") {
+        setFormData((prev) => ({ ...prev, ...fieldOrUpdates }));
+      } else {
+        setFormData((prev) => ({ ...prev, [fieldOrUpdates]: value }));
+      }
     },
     [],
   );
 
   const updateTemplateData = useCallback(
-    (field: keyof TemplateData, value: any) => {
-      setTemplateData((prev) => ({ ...prev, [field]: value }));
+    (
+      fieldOrUpdates: keyof TemplateData | Partial<TemplateData>,
+      value?: any,
+    ) => {
+      if (typeof fieldOrUpdates === "object") {
+        setTemplateData((prev) => ({ ...prev, ...fieldOrUpdates }));
+      } else {
+        setTemplateData((prev) => ({ ...prev, [fieldOrUpdates]: value }));
+      }
     },
     [],
   );
 
   const updateFormFieldsData = useCallback(
-    (field: keyof FormFieldsData, value: any) => {
-      setFormFieldsData((prev) => ({ ...prev, [field]: value }));
+    (
+      fieldOrUpdates: keyof FormFieldsData | Partial<FormFieldsData>,
+      value?: any,
+    ) => {
+      if (typeof fieldOrUpdates === "object") {
+        setFormFieldsData((prev) => ({ ...prev, ...fieldOrUpdates }));
+      } else {
+        setFormFieldsData((prev) => ({ ...prev, [fieldOrUpdates]: value }));
+      }
     },
     [],
   );

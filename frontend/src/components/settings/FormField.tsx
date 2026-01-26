@@ -26,6 +26,8 @@ interface FormFieldProps {
   options?: { value: string; label: string }[];
   className?: string;
   dataTour?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }
 
 export function FormField({
@@ -43,6 +45,8 @@ export function FormField({
   options,
   className = "",
   dataTour,
+  searchable,
+  searchPlaceholder,
 }: FormFieldProps) {
   const inputId = `field-${name}`;
 
@@ -82,6 +86,8 @@ export function FormField({
           aria-describedby={helpText && !error ? `${inputId}-help` : undefined}
           aria-invalid={error ? "true" : "false"}
           aria-required={required ? "true" : "false"}
+          searchable={searchable}
+          searchPlaceholder={searchPlaceholder}
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>

@@ -70,6 +70,7 @@ export interface WorkflowStep {
   handoff_bypass_required_inputs?: boolean;
   handoff_include_submission_data?: boolean;
   handoff_include_context?: boolean;
+  include_form_data?: boolean;
 }
 
 export interface ShellSettings {

@@ -243,23 +243,11 @@ function LogLine({
       `}
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 w-full">
-        <div className="flex flex-wrap items-center gap-2 sm:items-start sm:gap-3 shrink-0">
-          {showLineNumbers && (
-            <div className="flex select-none text-gray-600 text-right w-[28px] opacity-50 group-hover:opacity-100 transition-opacity">
-              {index + 1}
-            </div>
-          )}
-          {showTimestamps && (
-            <span className="text-gray-500 select-none shrink-0 w-[64px] opacity-70">
-              {formatTimestamp(log.timestamp)}
-            </span>
-          )}
-          <span className={`text-[10px] uppercase tracking-[0.1em] border px-1.5 py-0.5 rounded ${levelBadgeClass}`}>
-            {levelLabel}
-          </span>
-        </div>
+        {showLineNumbers && (
+          <div className="w-px bg-gray-700/30 shrink-0" />
+        )}
         <div
-          className={`w-full sm:border-l sm:border-gray-800 sm:pl-3 min-h-[1.5em] ${
+          className={`w-full min-h-[1.5em] ${
             wrapLines ? "whitespace-pre-wrap break-words" : "whitespace-pre overflow-x-auto"
           }`}
         >
@@ -1012,7 +1000,7 @@ export default function StreamViewer({ endpoint, requestBody, onClose, onUpdateS
              <div 
                ref={scrollRef}
               onScroll={handleScroll}
-              className="flex-1 overflow-y-auto p-2 sm:p-3 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent"
+              className="flex-1 overflow-y-auto p-2 sm:p-3 scrollbar-hide"
              >
                <div className="space-y-0.5">
                 {filteredLogs.map((log) => {

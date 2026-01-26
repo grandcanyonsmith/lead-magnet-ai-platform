@@ -246,6 +246,8 @@ export function GeneralSettings({
             onChange={(value) => onChange("default_ai_model", value)}
             options={aiModelOptions}
             helpText={aiModelHelpText}
+            searchable={true}
+            searchPlaceholder="Search models..."
           />
 
           <FormField

@@ -7,6 +7,7 @@ import { WorkflowFormData, TemplateData } from "./useWorkflowForm";
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
+  fieldErrors: Record<string, string>;
 }
 
 export function useWorkflowValidation(
@@ -16,10 +17,12 @@ export function useWorkflowValidation(
 ) {
   const validate = useMemo((): ValidationResult => {
     const errors: string[] = [];
+    const fieldErrors: Record<string, string> = {};
 
     // Validate workflow name
     if (!formData.workflow_name.trim()) {
       errors.push("Lead magnet name is required");
+      fieldErrors.workflow_name = "Lead magnet name is required";
     }
 
     // Validate steps
@@ -41,6 +44,7 @@ export function useWorkflowValidation(
     return {
       valid: errors.length === 0,
       errors,
+      fieldErrors,
     };
   }, [formData, steps]);
 

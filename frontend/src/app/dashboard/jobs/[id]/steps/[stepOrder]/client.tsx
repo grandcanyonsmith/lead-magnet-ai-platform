@@ -6,19 +6,11 @@ import { useParams } from "next/navigation";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
-  ChevronDownIcon,
   ChevronRightIcon,
-  ChevronUpIcon,
   ClipboardDocumentIcon,
   PencilSquareIcon,
 } from "@heroicons/react/24/outline";
-import { FiLoader } from "react-icons/fi";
 import { toast } from "react-hot-toast";
-import {
-  Disclosure,
-  DisclosureButton,
-  DisclosurePanel,
-} from "@headlessui/react";
 
 import { useJobDetail } from "@/hooks/useJobDetail";
 import { useMergedSteps } from "@/hooks/useMergedSteps";
@@ -35,226 +27,26 @@ import {
   formatDurationMs,
   formatStepInput,
   formatStepOutput,
-  isHTML,
-  isJSON,
-  isMarkdown,
 } from "@/utils/jobFormatting";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
-import { LiveOutputRenderer } from "@/components/jobs/LiveOutputRenderer";
 import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
 
 import { getStepInput } from "@/utils/stepInput";
-import type { MergedStep, StepStatus } from "@/types/job";
 import type { Artifact } from "@/types/artifact";
 import type { WorkflowStep } from "@/types";
-
-type FormattedContent = {
-  content: string | unknown;
-  type: "json" | "markdown" | "text" | "html";
-};
-
-function coerceJsonContent(formatted: FormattedContent): FormattedContent {
-  if (formatted.type === "json") {
-    return formatted;
-  }
-  if (typeof formatted.content !== "string") {
-    return formatted;
-  }
-  const trimmed = formatted.content.trim();
-  if (!trimmed) return formatted;
-  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
-    return formatted;
-  }
-  try {
-    const parsed = JSON.parse(trimmed);
-    return { content: parsed, type: "json" };
-  } catch {
-    return formatted;
-  }
-}
-
-function formatContentForDetail(value: unknown): FormattedContent {
-  if (typeof value === "string") {
-    if (isHTML(value)) {
-      return { content: value, type: "html" };
-    }
-    if (isJSON(value)) {
-      try {
-        return { content: JSON.parse(value), type: "json" };
-      } catch {
-        return { content: value, type: "text" };
-      }
-    }
-    if (isMarkdown(value)) {
-      return { content: value, type: "markdown" };
-    }
-    return { content: value, type: "text" };
-  }
-  return { content: value, type: "json" };
-}
-
-function toCopyText(formatted: FormattedContent): string {
-  if (formatted.type === "json") {
-    try {
-      const jsonString = JSON.stringify(formatted.content, null, 2);
-      if (typeof jsonString === "string") {
-        return jsonString;
-      }
-      return formatted.content === undefined ? "" : String(formatted.content);
-    } catch {
-      return String(formatted.content);
-    }
-  }
-  return typeof formatted.content === "string"
-    ? formatted.content
-    : formatted.content === undefined
-      ? ""
-      : String(formatted.content);
-}
-
-function toPreviewText(formatted: FormattedContent, maxLength = 280): string {
-  const raw = toCopyText(formatted).trim();
-  if (raw.length <= maxLength) return raw;
-  return `${raw.slice(0, maxLength - 3)}...`;
-}
-
-function abbreviateUrl(url: string, startLength = 28, endLength = 12): string {
-  if (!url) return "";
-  if (url.length <= startLength + endLength + 3) return url;
-  return `${url.slice(0, startLength)}...${url.slice(-endLength)}`;
-}
-
-type Tool = string | { type: string; [key: string]: unknown };
-
-function getToolLabel(tool: Tool): string {
-  return typeof tool === "string" ? tool : tool.type || "unknown";
-}
-
-interface SectionCardProps {
-  title: string;
-  description?: string;
-  defaultOpen?: boolean;
-  preview?: string | null;
-  actions?: React.ReactNode;
-  children: React.ReactNode;
-}
-
-function SectionCard({
-  title,
-  description,
-  defaultOpen = false,
-  preview,
-  actions,
-  children,
-}: SectionCardProps) {
-  return (
-    <Disclosure defaultOpen={defaultOpen}>
-      {({ open }) => (
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card shadow-sm overflow-hidden">
-          <div className="flex items-start justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4">
-            <div className="min-w-0">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                {title}
-              </h3>
-              {description && (
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {description}
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {actions}
-              <DisclosureButton
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
-                aria-label={open ? "Collapse section" : "Expand section"}
-              >
-                {open ? (
-                  <ChevronUpIcon className="h-4 w-4" />
-                ) : (
-                  <ChevronDownIcon className="h-4 w-4" />
-                )}
-              </DisclosureButton>
-            </div>
-          </div>
-          {!open && preview && (
-            <div className="px-4 pb-4 sm:px-5 text-sm text-gray-500 dark:text-gray-400 whitespace-pre-wrap line-clamp-3">
-              {preview}
-            </div>
-          )}
-          <DisclosurePanel className="border-t border-gray-100 dark:border-gray-700 px-4 py-4 sm:px-5 sm:py-5">
-            {children}
-          </DisclosurePanel>
-        </div>
-      )}
-    </Disclosure>
-  );
-}
-
-interface StepNavCardProps {
-  label: string;
-  direction: "previous" | "next";
-  href?: string | null;
-  step: MergedStep | null;
-  status?: StepStatus | null;
-}
-
-function StepNavCard({
-  label,
-  direction,
-  href,
-  step,
-  status,
-}: StepNavCardProps) {
-  const emptyLabel =
-    direction === "previous" ? "Start of workflow" : "End of workflow";
-  const title = step?.step_name || (step ? `Step ${step.step_order ?? 0}` : "");
-  const subtitle = step?.step_type
-    ? step.step_type.replace(/_/g, " ")
-    : emptyLabel;
-
-  const content = (
-    <div
-      className={`rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card p-3 shadow-sm transition-all ${
-        href
-          ? "hover:border-primary-200 dark:hover:border-primary-800/60 hover:shadow-md"
-          : "opacity-70"
-      }`}
-    >
-      <div className="flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
-        <span className="inline-flex items-center gap-1 font-semibold uppercase tracking-wide">
-          {direction === "previous" ? (
-            <ArrowLeftIcon className="h-3.5 w-3.5" />
-          ) : (
-            <ArrowRightIcon className="h-3.5 w-3.5" />
-          )}
-          {label}
-        </span>
-        {status && (
-          <StatusBadge status={status} className="px-2 py-0.5 text-[10px]" />
-        )}
-      </div>
-      <div className="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
-        {title || "No step available"}
-      </div>
-      <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 capitalize">
-        {subtitle}
-      </div>
-    </div>
-  );
-
-  if (href) {
-    return (
-      <Link
-        href={href}
-        className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-      >
-        {content}
-      </Link>
-    );
-  }
-
-  return <div>{content}</div>;
-}
+import {
+  abbreviateUrl,
+  coerceJsonContent,
+  formatContentForDetail,
+  getToolLabel,
+  toCopyText,
+  toPreviewText,
+  Tool,
+} from "@/utils/stepDetailUtils";
+import { CollapsibleSectionCard } from "@/components/ui/CollapsibleSectionCard";
+import { StepNavCard } from "@/components/jobs/detail/StepNavCard";
+import { LiveOutputPanel } from "@/components/jobs/detail/LiveOutputPanel";
+import { StepStatsCard } from "@/components/jobs/detail/StepStatsCard";
 
 export default function StepDetailClient() {
   const params = useParams();
@@ -588,7 +380,7 @@ export default function StepDetailClient() {
     Boolean(workflow?.steps && step.step_order !== undefined) &&
     !isSystemStep &&
     (step.step_order ?? 0) > 0;
-  const isEditingDisabled = job?.status === "processing";
+  const isEditingDisabled = false; // Never lock editing
 
   const handleEditStep = () => {
     if (!workflow || !canEditStep) return;
@@ -622,7 +414,7 @@ export default function StepDetailClient() {
       setEditingStepIndex(null);
       setIsSidePanelOpen(false);
       refreshJob();
-    } catch (saveError) {
+    } catch (saveError: unknown) {
       console.error("Failed to save step:", saveError);
       toast.error("Failed to save step. Please try again.");
     }
@@ -812,7 +604,7 @@ export default function StepDetailClient() {
       </div>
 
       <div className="space-y-4">
-        <SectionCard
+        <CollapsibleSectionCard
           title="Output"
           description="Latest step output and rendered preview."
           defaultOpen
@@ -828,47 +620,14 @@ export default function StepDetailClient() {
             </button>
           }
         >
-          {showLiveOutputPanel && (
-            <div className="mb-4 rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50/60 dark:bg-blue-900/10 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <FiLoader className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-300" />
-                  <span className="text-xs font-semibold text-blue-800 dark:text-blue-200">
-                    Live output (streaming)
-                  </span>
-                  {liveStatus && (
-                    <span className="rounded-full border border-blue-200/70 dark:border-blue-800/40 bg-blue-100/60 dark:bg-blue-900/20 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:text-blue-200">
-                      {liveStatus}
-                    </span>
-                  )}
-                  {job?.live_step?.truncated && (
-                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                      Output truncated
-                    </span>
-                  )}
-                </div>
-                {liveUpdatedAtLabel && (
-                  <span className="text-[11px] text-blue-700/70 dark:text-blue-200/60">
-                    Updated {liveUpdatedAtLabel}
-                  </span>
-                )}
-              </div>
-              <LiveOutputRenderer
-                value={
-                  hasLiveOutput
-                    ? liveOutputText
-                    : "Waiting for model output..."
-                }
-                className="mt-2 max-h-72 overflow-y-auto font-mono text-xs leading-relaxed text-gray-800 dark:text-gray-200 scrollbar-hide-until-hover"
-                textClassName="m-0 whitespace-pre-wrap break-words"
-              />
-              {job?.live_step?.error && (
-                <p className="mt-2 text-xs text-red-600">
-                  {job.live_step.error}
-                </p>
-              )}
-            </div>
-          )}
+          <LiveOutputPanel
+            showLiveOutputPanel={Boolean(showLiveOutputPanel)}
+            liveStatus={liveStatus}
+            job={job}
+            liveUpdatedAtLabel={liveUpdatedAtLabel}
+            hasLiveOutput={hasLiveOutput}
+            liveOutputText={liveOutputText}
+          />
           {showLiveOutputPanel && outputIsEmpty ? (
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Final output will appear once this step completes.
@@ -879,10 +638,10 @@ export default function StepDetailClient() {
               imageUrls={stepImageUrls}
             />
           )}
-        </SectionCard>
+        </CollapsibleSectionCard>
 
         {formattedInstructions && (
-          <SectionCard
+          <CollapsibleSectionCard
             title="Instructions"
             description="Prompt instructions for this step."
             preview={instructionsPreview}
@@ -903,10 +662,10 @@ export default function StepDetailClient() {
             }
           >
             <StepContent formatted={formattedInstructions} />
-          </SectionCard>
+          </CollapsibleSectionCard>
         )}
 
-        <SectionCard
+        <CollapsibleSectionCard
           title="Input payload"
           description="Structured input data sent into the step."
           preview={inputPreview}
@@ -927,10 +686,10 @@ export default function StepDetailClient() {
           }
         >
           <StepContent formatted={formattedInputPayload} />
-        </SectionCard>
+        </CollapsibleSectionCard>
 
         {hasImages && (
-          <SectionCard
+          <CollapsibleSectionCard
             title="Generated images"
             description="Images created during this step."
             preview={`${stepImageUrls.length + stepImageArtifacts.length} image${
@@ -1015,128 +774,27 @@ export default function StepDetailClient() {
                 })}
               </div>
             )}
-          </SectionCard>
+          </CollapsibleSectionCard>
         )}
 
-        <SectionCard
+        <CollapsibleSectionCard
           title="Step stats"
           description="Configuration, timing, and usage details."
           preview={statsPreview}
         >
-          <div className="grid gap-4 lg:grid-cols-3">
-            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-4 space-y-3">
-              <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
-                Configuration
-              </h3>
-              <dl className="space-y-2 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-gray-500 dark:text-gray-400">Step order</dt>
-                  <dd className="font-medium text-gray-900 dark:text-gray-100">
-                    {step.step_order ?? "—"}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-gray-500 dark:text-gray-400">Step type</dt>
-                  <dd className="font-medium text-gray-900 dark:text-gray-100 capitalize">
-                    {stepTypeLabel}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-gray-500 dark:text-gray-400">Model</dt>
-                  <dd className="font-medium text-gray-900 dark:text-gray-100">
-                    {step.model || "—"}
-                  </dd>
-                </div>
-                {toolChoice && (
-                  <div className="flex items-center justify-between gap-3">
-                    <dt className="text-gray-500 dark:text-gray-400">
-                      Tool choice
-                    </dt>
-                    <dd className="font-medium text-gray-900 dark:text-gray-100">
-                      {toolChoice}
-                    </dd>
-                  </div>
-                )}
-                <div className="flex items-start justify-between gap-3">
-                  <dt className="text-gray-500 dark:text-gray-400">Tools</dt>
-                  <dd className="flex flex-wrap justify-end gap-1 text-right">
-                    {toolLabels.length > 0 ? (
-                      toolLabels.map((tool) => (
-                        <span
-                          key={tool}
-                          className="rounded-md border border-primary-100 dark:border-primary-800/40 bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 text-[11px] font-semibold text-primary-700 dark:text-primary-300"
-                        >
-                          {tool}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-gray-500 dark:text-gray-400">—</span>
-                    )}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-4 space-y-3">
-              <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
-                Timing & cost
-              </h3>
-              <dl className="space-y-2 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-gray-500 dark:text-gray-400">Duration</dt>
-                  <dd className="font-medium text-gray-900 dark:text-gray-100">
-                    {durationLabel || "—"}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-gray-500 dark:text-gray-400">Started</dt>
-                  <dd className="font-medium text-gray-900 dark:text-gray-100">
-                    {startedAtLabel || "—"}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-gray-500 dark:text-gray-400">Completed</dt>
-                  <dd className="font-medium text-gray-900 dark:text-gray-100">
-                    {completedAtLabel || "—"}
-                  </dd>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="text-gray-500 dark:text-gray-400">Cost</dt>
-                  <dd className="font-medium text-gray-900 dark:text-gray-100">
-                    {formattedCost || "—"}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40 p-4 space-y-3">
-              <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
-                Usage
-              </h3>
-              {usageRows.length > 0 ? (
-                <dl className="space-y-2 text-sm">
-                  {usageRows.map((row) => (
-                    <div
-                      key={row.label}
-                      className="flex items-center justify-between gap-3"
-                    >
-                      <dt className="text-gray-500 dark:text-gray-400">
-                        {row.label}
-                      </dt>
-                      <dd className="font-medium text-gray-900 dark:text-gray-100">
-                        {row.value}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  No usage details recorded for this step yet.
-                </p>
-              )}
-            </div>
-          </div>
-        </SectionCard>
+          <StepStatsCard
+            step={step}
+            stepTypeLabel={stepTypeLabel}
+            toolChoice={toolChoice}
+            toolLabels={toolLabels}
+            durationLabel={durationLabel}
+            startedAtLabel={startedAtLabel}
+            completedAtLabel={completedAtLabel}
+            formattedCost={formattedCost}
+            usageRows={usageRows}
+            jobStatus={job?.status}
+          />
+        </CollapsibleSectionCard>
 
         {step.error && (
           <div className="rounded-2xl border border-red-200 dark:border-red-800 bg-red-50/70 dark:bg-red-900/20 p-4 text-sm text-red-700 dark:text-red-200">

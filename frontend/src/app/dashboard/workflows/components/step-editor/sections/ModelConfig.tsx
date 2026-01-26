@@ -29,7 +29,7 @@ export default function ModelConfig({ step, index, onChange }: ModelConfigProps)
   });
 
   return (
-    <div className="rounded-xl border border-border/50 bg-muted/10 p-5 space-y-4">
+    <div className="rounded-xl border border-border/50 bg-muted/10 p-4 sm:p-5 space-y-3 sm:space-y-4">
       <h5 className="text-sm font-semibold text-foreground">Model</h5>
       <div className="space-y-1.5">
         <label className={FIELD_LABEL} htmlFor={`ai-model-${index}`}>
@@ -43,6 +43,8 @@ export default function ModelConfig({ step, index, onChange }: ModelConfigProps)
           className={SELECT_CONTROL}
           placeholder={modelsLoading ? "Loading models..." : "Select model"}
           disabled={modelsLoading || !!modelsError}
+          searchable
+          searchPlaceholder="Search models..."
         >
           {modelsLoading && <option value="">Loading models...</option>}
           {modelsError && !modelsLoading && (
@@ -56,7 +58,7 @@ export default function ModelConfig({ step, index, onChange }: ModelConfigProps)
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label className={FIELD_LABEL} htmlFor={`reasoning-effort-${index}`}>
             <span>Reasoning Depth</span>
@@ -101,7 +103,7 @@ export default function ModelConfig({ step, index, onChange }: ModelConfigProps)
               </option>
             ))}
           </Select>
-          <p className={HELP_TEXT}>
+          <p className={`${HELP_TEXT} break-words`}>
             Controls cost/latency for this step. Use Priority for fastest
             responses.
           </p>

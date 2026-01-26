@@ -53,7 +53,7 @@ export function StepActionsMenu({
     Boolean(onRerunStep || onRerunStepClick) &&
     step.step_order > 0 &&
     !isSystemStep;
-  const editDisabled = jobStatus === "processing";
+  const editDisabled = false; // Never lock editing
   const rerunDisabled =
     rerunningStep === step.step_order - 1 ||
     status === "pending" ||
