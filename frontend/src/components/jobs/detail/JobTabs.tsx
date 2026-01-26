@@ -326,13 +326,12 @@ export function JobTabs({
       content: <JobTechnicalTab job={job} form={form} submission={submission} />,
     },
   ], [
-    activeTab, // Re-render when active tab changes (though content might not need it, but to be safe)
     artifactGalleryItems, loadingArtifacts, openPreview,
     job, mergedSteps, expandedSteps, toggleStep, expandAllSteps, collapseAllSteps, executionStepsError, onRefresh, refreshing, onCopy, imageArtifactsByStep, fileArtifactsByStep, submission, onResubmit, resubmitting, onEditStep, onQuickUpdateStep, updatingStepIndex, onRerunStepClick, rerunningStep,
     workflow, artifacts,
     onEditExit,
     onTrackingSessionsLoaded, onTrackingSessionsLoadingChange, onTrackingStatsLoaded, onTrackingStatsLoadingChange,
-    badgeValues
+    badgeValues, form
   ]);
 
   const handleTabChange = (id: string) => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useCallback } from "react";
 import { PencilIcon } from "@heroicons/react/24/outline";
 import { MergedStep, StepStatus } from "@/types/job";
 import type {
@@ -132,7 +132,7 @@ export function StepMetaRow({
     updatingStepIndex,
   });
 
-  const renderEditButton = (panel: EditablePanel) => {
+  const renderEditButton = useCallback((panel: EditablePanel) => {
     if (!showEditIcon) return null;
     return (
       <button
@@ -153,7 +153,7 @@ export function StepMetaRow({
         <PencilIcon className="h-3.5 w-3.5" />
       </button>
     );
-  };
+  }, [showEditIcon, editDisabled, startEditing]);
 
   const badgeProps = {
     modelValue,
@@ -192,85 +192,6 @@ export function StepMetaRow({
     status,
   };
 
-  const modelPanelProps = {
-    id: modelDetailsId,
-    editPanel,
-    draftModel,
-    onDraftModelChange: setDraftModel,
-    modelRestriction,
-    renderEditButton,
-    onCancel: handleCancelEdit,
-    onSave: handleSaveEdit,
-    isUpdating,
-    isModelDirty,
-    isModelAllowed,
-    modelDetailsRows,
-  };
-  const speedPanelProps = {
-    id: speedDetailsId,
-    editPanel,
-    draftServiceTier,
-    onDraftServiceTierChange: setDraftServiceTier,
-    renderEditButton,
-    onCancel: handleCancelEdit,
-    onSave: handleSaveEdit,
-    isUpdating,
-    isServiceTierDirty,
-    speedDetailsRows,
-  };
-  const reasoningPanelProps = {
-    id: reasoningDetailsId,
-    editPanel,
-    draftReasoningEffort,
-    onDraftReasoningEffortChange: setDraftReasoningEffort,
-    renderEditButton,
-    onCancel: handleCancelEdit,
-    onSave: handleSaveEdit,
-    isUpdating,
-    isReasoningDirty,
-    reasoningDetailsRows,
-  };
-  const imagePanelProps = {
-    id: imageSettingsId,
-    imageSettingsSource,
-    toolChoice,
-    imageSettingsRows,
-    editPanel,
-    draftImageSettings,
-    onDraftImageSettingsChange: handleDraftImageSettingsChange,
-    renderEditButton,
-    onCancel: handleCancelEdit,
-    onSave: handleSaveEdit,
-    isUpdating,
-    isImageSettingsDirty,
-  };
-  const toolsPanelProps = {
-    id: toolsId,
-    toolDetails,
-    editPanel,
-    draftTools,
-    onDraftToolsChange: setDraftTools,
-    renderEditButton,
-    onCancel: handleCancelEdit,
-    onSave: handleSaveEdit,
-    isUpdating,
-    isToolsDirty,
-  };
-
-  const contextPanelProps = {
-    id: contextId,
-    dependencyPreviews,
-    instructions,
-    editPanel,
-    draftInstructions,
-    onDraftInstructionsChange: setDraftInstructions,
-    renderEditButton,
-    onCancel: handleCancelEdit,
-    onSave: handleSaveEdit,
-    isUpdating,
-    isInstructionsDirty: isInstructionsDirty,
-  };
-
   useEffect(() => {
     if (!openPanel) {
       setEditPanel(null);
@@ -294,6 +215,85 @@ export function StepMetaRow({
 
   // Define panels as BlockNodes
   const panels: BlockNode[] = useMemo(() => {
+    const modelPanelProps = {
+      id: modelDetailsId,
+      editPanel,
+      draftModel,
+      onDraftModelChange: setDraftModel,
+      modelRestriction,
+      renderEditButton,
+      onCancel: handleCancelEdit,
+      onSave: handleSaveEdit,
+      isUpdating,
+      isModelDirty,
+      isModelAllowed,
+      modelDetailsRows,
+    };
+    const speedPanelProps = {
+      id: speedDetailsId,
+      editPanel,
+      draftServiceTier,
+      onDraftServiceTierChange: setDraftServiceTier,
+      renderEditButton,
+      onCancel: handleCancelEdit,
+      onSave: handleSaveEdit,
+      isUpdating,
+      isServiceTierDirty,
+      speedDetailsRows,
+    };
+    const reasoningPanelProps = {
+      id: reasoningDetailsId,
+      editPanel,
+      draftReasoningEffort,
+      onDraftReasoningEffortChange: setDraftReasoningEffort,
+      renderEditButton,
+      onCancel: handleCancelEdit,
+      onSave: handleSaveEdit,
+      isUpdating,
+      isReasoningDirty,
+      reasoningDetailsRows,
+    };
+    const imagePanelProps = {
+      id: imageSettingsId,
+      imageSettingsSource,
+      toolChoice,
+      imageSettingsRows,
+      editPanel,
+      draftImageSettings,
+      onDraftImageSettingsChange: handleDraftImageSettingsChange,
+      renderEditButton,
+      onCancel: handleCancelEdit,
+      onSave: handleSaveEdit,
+      isUpdating,
+      isImageSettingsDirty,
+    };
+    const toolsPanelProps = {
+      id: toolsId,
+      toolDetails,
+      editPanel,
+      draftTools,
+      onDraftToolsChange: setDraftTools,
+      renderEditButton,
+      onCancel: handleCancelEdit,
+      onSave: handleSaveEdit,
+      isUpdating,
+      isToolsDirty,
+    };
+
+    const contextPanelProps = {
+      id: contextId,
+      dependencyPreviews,
+      instructions,
+      editPanel,
+      draftInstructions,
+      onDraftInstructionsChange: setDraftInstructions,
+      renderEditButton,
+      onCancel: handleCancelEdit,
+      onSave: handleSaveEdit,
+      isUpdating,
+      isInstructionsDirty: isInstructionsDirty,
+    };
+
     const list: BlockNode[] = [];
 
     if (showModelDetails) {
@@ -340,12 +340,19 @@ export function StepMetaRow({
 
     return list;
   }, [
-    showModelDetails, modelPanelProps,
-    showSpeedDetails, speedPanelProps,
-    showReasoningDetails, reasoningPanelProps,
-    hasTools, showTools, toolsPanelProps,
-    hasImageGenerationTool, showImageSettings, imagePanelProps,
-    hasContext, showContext, contextPanelProps
+    showModelDetails,
+    showSpeedDetails,
+    showReasoningDetails,
+    hasTools, showTools,
+    hasImageGenerationTool, showImageSettings,
+    hasContext, showContext,
+    togglePanel,
+    modelDetailsId, editPanel, draftModel, setDraftModel, modelRestriction, renderEditButton, handleCancelEdit, handleSaveEdit, isUpdating, isModelDirty, isModelAllowed, modelDetailsRows,
+    speedDetailsId, draftServiceTier, setDraftServiceTier, isServiceTierDirty, speedDetailsRows,
+    reasoningDetailsId, draftReasoningEffort, setDraftReasoningEffort, isReasoningDirty, reasoningDetailsRows,
+    imageSettingsId, imageSettingsSource, toolChoice, imageSettingsRows, draftImageSettings, handleDraftImageSettingsChange, isImageSettingsDirty,
+    toolsId, toolDetails, draftTools, setDraftTools, isToolsDirty,
+    contextId, dependencyPreviews, instructions, draftInstructions, setDraftInstructions, isInstructionsDirty
   ]);
 
   return (
