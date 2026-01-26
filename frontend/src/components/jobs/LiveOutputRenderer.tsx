@@ -2,7 +2,8 @@
 
 import React, { forwardRef, useEffect, useMemo, useState } from "react";
 import { FiAlertTriangle, FiCode, FiTerminal } from "react-icons/fi";
-import { formatLiveOutputText } from "@/utils/jobFormatting";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
+import { formatLiveOutputText, isMarkdown } from "@/utils/jobFormatting";
 
 type LiveOutputSegment =
   | { type: "text"; content: string }
@@ -277,35 +278,58 @@ export const LiveOutputRenderer = forwardRef<
   const segments = useMemo(() => splitLiveOutputSegments(value), [value]);
   const containerClassName = className ? `${className} space-y-2` : "space-y-2";
   const textSegmentClass = textClassName ?? "m-0 whitespace-pre-wrap break-words";
+  const markdownClassName =
+    "prose prose-sm dark:prose-invert max-w-none break-words font-sans";
 
-  const renderTextContent = (content: string, keyPrefix: string) =>
-    splitPythonSegments(content).map((segment, index) =>
-      segment.type === "python" ? (
-        <LazySyntaxHighlighter
-          key={`${keyPrefix}-python-${index}`}
-          value={segment.content}
-          language="python"
-          wrapLongLines
-          customStyle={{
-            margin: 0,
-            padding: "12px",
-            borderRadius: "8px",
-            lineHeight: "1.6",
-            background: "transparent",
-          }}
-          codeTagProps={{
-            style: {
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-            },
-          }}
-        />
-      ) : (
+  const renderTextContent = (
+    content: string,
+    keyPrefix: string,
+    options?: { allowMarkdown?: boolean },
+  ) => {
+    const allowMarkdown = options?.allowMarkdown ?? false;
+    return splitPythonSegments(content).map((segment, index) => {
+      if (segment.type === "python") {
+        return (
+          <LazySyntaxHighlighter
+            key={`${keyPrefix}-python-${index}`}
+            value={segment.content}
+            language="python"
+            wrapLongLines
+            customStyle={{
+              margin: 0,
+              padding: "12px",
+              borderRadius: "8px",
+              lineHeight: "1.6",
+              background: "transparent",
+            }}
+            codeTagProps={{
+              style: {
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+              },
+            }}
+          />
+        );
+      }
+
+      if (allowMarkdown && isMarkdown(segment.content)) {
+        return (
+          <MarkdownRenderer
+            key={`${keyPrefix}-markdown-${index}`}
+            value={segment.content}
+            className={markdownClassName}
+            fallbackClassName={textSegmentClass}
+          />
+        );
+      }
+
+      return (
         <pre key={`${keyPrefix}-text-${index}`} className={textSegmentClass}>
           {segment.content}
         </pre>
-      ),
-    );
+      );
+    });
+  };
 
   return (
     <div ref={ref} className={containerClassName} aria-live={ariaLive}>
@@ -429,7 +453,9 @@ export const LiveOutputRenderer = forwardRef<
                 Tool output
               </div>
               <div className="px-3 pb-3 pt-2 space-y-2">
-                {renderTextContent(segment.content, `tool-${index}`)}
+                {renderTextContent(segment.content, `tool-${index}`, {
+                  allowMarkdown: false,
+                })}
               </div>
             </div>
           );
@@ -438,7 +464,9 @@ export const LiveOutputRenderer = forwardRef<
         if (!segment.content.trim()) return null;
         return (
           <div key={`text-${index}`} className="space-y-2">
-            {renderTextContent(segment.content, `text-${index}`)}
+            {renderTextContent(segment.content, `text-${index}`, {
+              allowMarkdown: true,
+            })}
           </div>
         );
       })}
