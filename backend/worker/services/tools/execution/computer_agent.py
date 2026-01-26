@@ -6,7 +6,7 @@ import asyncio
 from typing import List, Dict, Any, Optional, AsyncGenerator
 
 from services.cua.types import (
-    LogEvent, LoopCompleteEvent, CUAEvent
+    LogEvent, LoopCompleteEvent, CUAEvent, ScreenshotEvent
 )
 from services.cua.environment import Environment
 from services.shell_executor_service import ShellExecutorService
@@ -14,11 +14,12 @@ from services.tools import ToolBuilder
 from core.prompts import COMPUTER_AGENT_TOOL_GUIDANCE
 
 from .agent_utils import (
-    is_likely_filename_domain, supports_responses_api, 
+    supports_responses_api, 
     get_responses_client, is_incomplete_openai_stream_error
 )
 from .response_parser import ResponseParser
 from .action_executor import ActionExecutor
+from .agent_loop_handler import AgentLoopHandler
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,7 @@ class CUAgent:
         self.shell_executor = ShellExecutorService()
         self.response_parser = ResponseParser()
         self.action_executor = ActionExecutor(environment, image_handler, self.shell_executor)
+        self.loop_handler = AgentLoopHandler(environment, image_handler)
 
     async def run_loop(
         self,
@@ -58,8 +60,7 @@ class CUAgent:
         # Suppress Pydantic warnings
         warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
 
-        # Tool guidance
-        instructions_for_model = instructions or ""
+        # Tool detection
         has_computer_use_tool = any(
             (t == "computer_use_preview")
             or (isinstance(t, dict) and t.get("type") == "computer_use_preview")
@@ -73,6 +74,11 @@ class CUAgent:
             (t == "code_interpreter")
             or (isinstance(t, dict) and t.get("type") == "code_interpreter")
             for t in (tools or [])
+        )
+
+        # Prepare instructions
+        instructions_for_model = self.loop_handler.prepare_instructions(
+            instructions, has_computer_use_tool, has_shell_tool
         )
 
         if has_code_interpreter_tool and has_computer_use_tool:
@@ -98,32 +104,11 @@ class CUAgent:
                 f"max_duration_seconds={max_duration_seconds}"
             ),
         )
-
-        if has_computer_use_tool and has_shell_tool:
-            hint = COMPUTER_AGENT_TOOL_GUIDANCE
-            if hint not in instructions_for_model:
-                instructions_for_model = (instructions_for_model or "").rstrip()
-                instructions_for_model = (
-                    f"{instructions_for_model}\n\n{hint}"
-                    if instructions_for_model
-                    else hint
-                )
         
         try:
             # 1. Initialize Environment
             yield LogEvent(type='log', timestamp=time.time(), level='info', message='Initializing environment...')
-            
-            # Find display size from tools
-            display_width = 1024
-            display_height = 768
-            for tool in tools:
-                t_type = tool.get('type') if isinstance(tool, dict) else tool
-                if t_type == 'computer_use_preview' and isinstance(tool, dict):
-                    display_width = int(tool.get('display_width', 1024))
-                    display_height = int(tool.get('display_height', 768))
-                    break
-
-            await self.env.initialize(display_width, display_height)
+            await self.loop_handler.initialize_environment(tools)
             yield LogEvent(type='log', timestamp=time.time(), level='info', message='Environment ready.')
 
             if not supports_responses_api(openai_client):
@@ -141,61 +126,22 @@ class CUAgent:
                 )
                 return
 
-            # Check if instructions/input_text contain a URL and navigate there
-            import re
-            url_search_text = f"{instructions or ''}\n{input_text or ''}".strip()
-            url_pattern = r'https?://[^\s<>"\'\)]+'
-            url_match = re.search(url_pattern, url_search_text)
-            initial_url = None
-            
-            if url_match:
-                initial_url = url_match.group(0).rstrip('.,;!?)')
-            else:
-                domain_pattern = r'(?:go to |visit |navigate to |open )?([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*(?:\.[a-zA-Z]{2,}))'
-                domain_match = re.search(domain_pattern, url_search_text, re.IGNORECASE)
-                if domain_match:
-                    domain = domain_match.group(1)
-                    if domain and not domain.lower() in ['com', 'org', 'net', 'io', 'ai', 'the', 'and', 'for']:
-                        if is_likely_filename_domain(domain):
-                            domain = None
-                    if domain:
-                        initial_url = f"https://{domain}"
-            
-            target_url = initial_url if initial_url else "https://www.bing.com"
-            initial_screenshot_b64_for_model: Optional[str] = None
-            initial_current_url_for_model: Optional[str] = None
-            initial_nav_error: Optional[str] = None
+            # Initial Navigation
+            target_url, initial_nav_error = await self.loop_handler.perform_initial_navigation(instructions, input_text)
+            if target_url:
+                if initial_nav_error:
+                    yield LogEvent(type='log', timestamp=time.time(), level='warning', message=f'Navigation failed: {initial_nav_error}')
+                else:
+                    yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'🌐 Navigate to: {target_url}')
 
-            if initial_url:
-                yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'Detected URL in task: {target_url}')
-            else:
-                yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'No URL found in instructions/input, using default: {target_url}')
-            
-            try:
-                yield LogEvent(type='log', timestamp=time.time(), level='info', message=f'🌐 Navigate to: {target_url}')
-                await self.env.execute_action({'type': 'navigate', 'url': target_url})
-            except Exception as e:
-                logger.warning(f"Failed to navigate to {target_url}: {e}")
-                initial_nav_error = str(e)
-                yield LogEvent(type='log', timestamp=time.time(), level='warning', message=f'Navigation failed: {e}')
-
-            # Always capture screenshot
-            try:
-                screenshot_b64 = await self.env.capture_screenshot()
-                current_url = await self.env.get_current_url()
-                initial_screenshot_b64_for_model = screenshot_b64
-                initial_current_url_for_model = current_url
-                url = self.image_handler.upload_base64_image_to_s3(
-                    screenshot_b64, 'image/jpeg', tenant_id=tenant_id, job_id=job_id
-                )
+            # Capture Initial Screenshot
+            screenshot_b64, current_url, s3_url = await self.loop_handler.capture_initial_screenshot(tenant_id, job_id)
+            if s3_url:
+                screenshot_urls.append(s3_url)
                 yield ScreenshotEvent(
                     type='screenshot', timestamp=time.time(),
-                    url=url or '', current_url=current_url, base64=screenshot_b64
+                    url=s3_url, current_url=current_url or '', base64=screenshot_b64 or ''
                 )
-                if url:
-                    screenshot_urls.append(url)
-            except Exception as e:
-                 logger.error(f"Initial screenshot failed: {e}")
 
             # 2. Initial Request
             initial_params = openai_client.build_api_params(
@@ -220,16 +166,10 @@ class CUAgent:
                     yield LogEvent(type='log', timestamp=time.time(), level='info', 
                                  message=f'Applied API params: {list(filtered_params.keys())}')
 
-            if initial_screenshot_b64_for_model:
-                user_text = (input_text or "").strip() or "Start the task."
-                if initial_current_url_for_model:
-                    user_text = f"{user_text}\n\n(Current URL: {initial_current_url_for_model})"
-
-                if initial_nav_error:
-                    user_text = (
-                        f"{user_text}\n\nWARNING: Initial navigation to {target_url} failed with error: "
-                        f"{initial_nav_error}. Please check the URL or try a different one."
-                    )
+            if screenshot_b64:
+                user_text = self.loop_handler.build_initial_user_message(
+                    input_text, target_url, current_url, initial_nav_error
+                )
 
                 model_supports_image_inputs = not (
                     isinstance(model, str)
@@ -247,7 +187,7 @@ class CUAgent:
                                 {"type": "input_text", "text": user_text},
                                 {
                                     "type": "input_image",
-                                    "image_url": f"data:image/jpeg;base64,{initial_screenshot_b64_for_model}",
+                                    "image_url": f"data:image/jpeg;base64,{screenshot_b64}",
                                 },
                             ],
                         }

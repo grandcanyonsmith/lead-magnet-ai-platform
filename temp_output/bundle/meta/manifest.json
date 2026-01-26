@@ -1,0 +1,101 @@
+{
+  "bundle_name": "CourseCreator360_Loom_to_SOP_Kit",
+  "created_utc": "2026-01-26T13:00:19.471370+00:00",
+  "model_step": "Step 6 - Packaging, QA, and Lead Magnet Delivery Bundle",
+  "loom_url": null,
+  "selection_log": {
+    "transcript": {
+      "category": "transcript",
+      "chosen": "temp_output/transcript.txt",
+      "destination": "transcripts/transcript.txt",
+      "candidates": []
+    },
+    "sop_model": {
+      "category": "sop_model",
+      "chosen": "temp_output/sop_model.json",
+      "destination": "sop/sop_model.json",
+      "candidates": [
+        "temp_output/sop_model.json"
+      ]
+    },
+    "diagram_specs": {
+      "category": "diagram_specs",
+      "chosen": "temp_output/diagram_specs.json",
+      "destination": "diagrams/specs/diagram_specs.json",
+      "candidates": [
+        "temp_output/diagram_specs.json"
+      ]
+    },
+    "rendered_diagrams": {
+      "chosen": [
+        "temp_output/diagram.png"
+      ]
+    },
+    "notion_template": {
+      "category": "notion_template",
+      "chosen": "temp_output/notion_template.md",
+      "destination": "notion/SOP_NOTION_TEMPLATE.md",
+      "candidates": [
+        "temp_output/notion_template.md"
+      ]
+    },
+    "infographic": {
+      "category": "infographic",
+      "chosen": "temp_output/infographic.png",
+      "destination": "infographic/SOP_ONE_PAGER.png",
+      "candidates": [
+        "temp_output/infographic.png"
+      ]
+    },
+    "scripts": {
+      "chosen": [
+        "/Users/canyonsmith/lead-magnent-ai/package_bundle.py"
+      ]
+    }
+  },
+  "included_files": [
+    {
+      "relative_path": "transcripts/transcript.txt",
+      "bytes": 0,
+      "modified_time": 1769432289.4970298
+    },
+    {
+      "relative_path": "infographic/SOP_ONE_PAGER.png",
+      "bytes": 0,
+      "modified_time": 1769432289.497266
+    },
+    {
+      "relative_path": "sop/sop_model.json",
+      "bytes": 0,
+      "modified_time": 1769432289.4970958
+    },
+    {
+      "relative_path": "diagrams/specs/diagram_specs.json",
+      "bytes": 0,
+      "modified_time": 1769432289.4971383
+    },
+    {
+      "relative_path": "diagrams/rendered/diagram.png",
+      "bytes": 0,
+      "modified_time": 1769432289.4971828
+    },
+    {
+      "relative_path": "notion/SOP_NOTION_TEMPLATE.md",
+      "bytes": 0,
+      "modified_time": 1769432289.497228
+    },
+    {
+      "relative_path": "scripts/package_bundle.py",
+      "bytes": 17109,
+      "modified_time": 1769432412.6490076
+    }
+  ],
+  "missing_expected_artifacts": [],
+  "environment": {
+    "python_version": "3.9.6 (default, Dec  2 2025, 07:27:58) \n[Clang 17.0.0 (clang-1700.6.3.2)]",
+    "platform": "macOS-26.2-arm64-arm-64bit"
+  },
+  "s3_upload": {
+    "errors": "No allowed S3 bucket discovered or configured. Skipping upload."
+  }
+}
