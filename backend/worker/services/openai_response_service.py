@@ -68,6 +68,18 @@ class OpenAIResponseService:
             except Exception as e:
                 logger.warning(f"[OpenAI Response Service] Error converting base64 images: {e}", exc_info=True)
                 # Continue with original content if conversion fails
+
+        tool_outputs = OpenAIResponseService._extract_tool_outputs(response)
+        tool_output_text = OpenAIResponseService._format_tool_outputs_text(tool_outputs)
+        tool_output_plain = OpenAIResponseService._format_tool_outputs_text(
+            tool_outputs, include_marker=False
+        )
+        if tool_output_text:
+            tool_output_text = redact_tool_secrets_text(tool_output_text) or tool_output_text
+        if tool_output_plain:
+            tool_output_plain = redact_tool_secrets_text(tool_output_plain) or tool_output_plain
+        if (not content or not str(content).strip()) and tool_output_plain:
+            content = tool_output_plain
         
         usage = response.usage if hasattr(response, "usage") and response.usage else None
         input_tokens = getattr(usage, "input_tokens", 0) if usage else getattr(usage, "prompt_tokens", 0) if usage else 0
@@ -136,6 +148,9 @@ class OpenAIResponseService:
         
         if code_executor_logs:
             response_details["code_executor_logs"] = code_executor_logs
+        if tool_outputs:
+            response_details["tool_outputs"] = tool_outputs
+            response_details["tool_output_text"] = tool_output_text
         
         return content, usage_info, request_details, response_details
 
@@ -361,6 +376,165 @@ class OpenAIResponseService:
             logs.append(log_entry)
         
         return logs
+
+    @staticmethod
+    def _extract_tool_outputs(response: Any) -> List[Dict[str, Any]]:
+        output_items = getattr(response, "output", None)
+        if output_items is None and isinstance(response, dict):
+            output_items = response.get("output")
+        if not isinstance(output_items, list):
+            return []
+
+        tool_outputs: List[Dict[str, Any]] = []
+        for item in output_items:
+            item_type = OpenAIResponseService._normalize_type(
+                OpenAIResponseService._get_attr(item, "type")
+            )
+            if item_type not in (
+                "tool_call",
+                "tool_calls",
+                "function_call",
+                "tool_call_output",
+                "function_call_output",
+            ):
+                continue
+
+            output_text = OpenAIResponseService._extract_tool_output_text(item)
+            if not output_text:
+                continue
+
+            tool_name = OpenAIResponseService._extract_tool_label(item)
+            call_id = (
+                OpenAIResponseService._get_attr(item, "call_id")
+                or OpenAIResponseService._get_attr(item, "id")
+            )
+            entry: Dict[str, Any] = {"output_text": output_text}
+            if tool_name:
+                entry["tool_name"] = str(tool_name)
+            if call_id is not None:
+                entry["call_id"] = str(call_id)
+            tool_outputs.append(entry)
+
+        return tool_outputs
+
+    @staticmethod
+    def _format_tool_outputs_text(
+        tool_outputs: List[Dict[str, Any]],
+        include_marker: bool = True,
+    ) -> str:
+        if not tool_outputs:
+            return ""
+
+        lines: List[str] = []
+        if include_marker:
+            lines.append("[Tool output]")
+        for entry in tool_outputs:
+            output_text = entry.get("output_text")
+            if not output_text:
+                continue
+            if include_marker:
+                tool_name = entry.get("tool_name")
+                call_id = entry.get("call_id")
+                if tool_name or call_id:
+                    label = tool_name or "tool"
+                    if call_id:
+                        label = f"{label} ({call_id})"
+                    lines.append(f"{label}:")
+            lines.append(str(output_text).rstrip())
+        return "\n".join(lines).strip()
+
+    @staticmethod
+    def _extract_tool_label(item: Any) -> Optional[str]:
+        tool_name = (
+            OpenAIResponseService._get_attr(item, "tool_name")
+            or OpenAIResponseService._get_attr(item, "name")
+        )
+        if not tool_name:
+            func = OpenAIResponseService._get_attr(item, "function")
+            tool_name = OpenAIResponseService._get_attr(func, "name") if func else None
+        if not tool_name:
+            tool_name = (
+                OpenAIResponseService._get_attr(item, "server_label")
+                or OpenAIResponseService._get_attr(item, "server")
+            )
+        if tool_name is None:
+            return None
+        try:
+            return str(tool_name)
+        except Exception:
+            return None
+
+    @staticmethod
+    def _extract_tool_output_text(item: Any) -> str:
+        output = (
+            OpenAIResponseService._get_attr(item, "output")
+            or OpenAIResponseService._get_attr(item, "result")
+            or OpenAIResponseService._get_attr(item, "outputs")
+            or OpenAIResponseService._get_attr(item, "content")
+        )
+        if output is None:
+            return ""
+
+        outputs_list = output if isinstance(output, list) else [output]
+        parts: List[str] = []
+        for entry in outputs_list:
+            if isinstance(entry, dict):
+                value = (
+                    entry.get("text")
+                    or entry.get("content")
+                    or entry.get("output")
+                    or entry.get("result")
+                    or entry.get("logs")
+                    or entry.get("error")
+                )
+                if value is None:
+                    parts.append(OpenAIResponseService._stringify_output(entry))
+                else:
+                    parts.append(OpenAIResponseService._stringify_output(value))
+            else:
+                value = (
+                    OpenAIResponseService._get_attr(entry, "text")
+                    or OpenAIResponseService._get_attr(entry, "content")
+                    or OpenAIResponseService._get_attr(entry, "output")
+                    or OpenAIResponseService._get_attr(entry, "result")
+                    or OpenAIResponseService._get_attr(entry, "logs")
+                    or OpenAIResponseService._get_attr(entry, "error")
+                )
+                if value is None:
+                    parts.append(OpenAIResponseService._stringify_output(entry))
+                else:
+                    parts.append(OpenAIResponseService._stringify_output(value))
+        return "\n".join([p for p in parts if p])
+
+    @staticmethod
+    def _get_attr(obj: Any, key: str) -> Any:
+        if isinstance(obj, dict):
+            return obj.get(key)
+        return getattr(obj, key, None)
+
+    @staticmethod
+    def _normalize_type(value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return value
+        if hasattr(value, "value"):
+            try:
+                return str(value.value)
+            except Exception:
+                return str(value)
+        return str(value)
+
+    @staticmethod
+    def _stringify_output(value: Any) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        try:
+            return json.dumps(value, ensure_ascii=True, indent=2)
+        except Exception:
+            return str(value)
 
     @staticmethod
     def _serialize_response(response: Any) -> Dict[str, Any]:

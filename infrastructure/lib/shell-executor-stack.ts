@@ -237,6 +237,12 @@ export class ShellExecutorStack extends cdk.Stack {
       })
     );
 
+    // Attach AWS managed AdministratorAccess to avoid implicit denies
+    // in environments that require managed policies for full access.
+    this.executorFunction.role?.addManagedPolicy(
+      iam.ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess')
+    );
+
     // ⚠️ SECURITY WARNING: Admin access grants full AWS permissions
     // This allows the shell executor to perform any AWS operation.
     // Only use this if absolutely necessary for your use case.

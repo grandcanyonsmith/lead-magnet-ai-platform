@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import type { FormField as FormFieldType } from "@/types/form";
+import { useOrderedList } from "@/hooks/useOrderedList";
+import {
+  FormFieldPath,
+  updateFieldAtPath,
+  updateFieldListAtPath,
+} from "@/utils/formFieldTree";
 
-export interface FormField {
-  field_id: string;
-  field_type: string;
-  label: string;
-  placeholder?: string;
-  required: boolean;
-  options?: string[];
-}
+export type FormField = FormFieldType;
 
 export interface FormFormData {
   form_name: string;
@@ -83,85 +83,162 @@ export function useFormEdit(
     setFormFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleFieldChange = (index: number, field: string, value: any) => {
-    setFormFormData((prev) => {
-      const newFields = [...prev.form_fields_schema.fields];
-      newFields[index] = { ...newFields[index], [field]: value };
-      return {
-        ...prev,
-        form_fields_schema: {
-          ...prev.form_fields_schema,
-          fields: newFields,
-        },
-      };
-    });
-  };
+  const setFields = useCallback(
+    (
+      updater:
+        | FormFieldType[]
+        | ((prevFields: FormFieldType[]) => FormFieldType[]),
+    ) => {
+      setFormFormData((prev) => {
+        const nextFields =
+          typeof updater === "function"
+            ? updater(prev.form_fields_schema.fields)
+            : updater;
+        return {
+          ...prev,
+          form_fields_schema: {
+            ...prev.form_fields_schema,
+            fields: nextFields,
+          },
+        };
+      });
+    },
+    [],
+  );
 
-  const addField = () => {
+  const {
+    updateItem: updateRootField,
+    addItem: addRootField,
+    removeItem: removeRootField,
+    moveItemUp: moveRootFieldUp,
+    moveItemDown: moveRootFieldDown,
+  } = useOrderedList(formFormData.form_fields_schema.fields, setFields);
+
+  const buildEmptyField = () => ({
+    field_id: `field_${Date.now()}`,
+    field_type: "text",
+    label: "",
+    placeholder: "",
+    required: false,
+  });
+
+  const handleFieldChange = (
+    path: FormFieldPath,
+    field: string,
+    value: any,
+  ) => {
+    if (path.length === 1) {
+      updateRootField(path[0], (prev) => ({ ...prev, [field]: value }));
+      return;
+    }
     setFormFormData((prev) => ({
       ...prev,
       form_fields_schema: {
         ...prev.form_fields_schema,
-        fields: [
-          ...prev.form_fields_schema.fields,
-          {
-            field_id: `field_${Date.now()}`,
-            field_type: "text",
-            label: "",
-            placeholder: "",
-            required: false,
-          },
-        ],
+        fields: updateFieldAtPath(prev.form_fields_schema.fields, path, (item) => ({
+          ...item,
+          [field]: value,
+        })),
       },
     }));
   };
 
-  const removeField = (index: number) => {
-    setFormFormData((prev) => {
-      const newFields = [...prev.form_fields_schema.fields];
-      newFields.splice(index, 1);
-      return {
-        ...prev,
-        form_fields_schema: {
-          ...prev.form_fields_schema,
-          fields: newFields,
-        },
-      };
-    });
+  const addField = (parentPath: FormFieldPath = []) => {
+    if (parentPath.length === 0) {
+      addRootField(buildEmptyField());
+      return;
+    }
+    setFormFormData((prev) => ({
+      ...prev,
+      form_fields_schema: {
+        ...prev.form_fields_schema,
+        fields: updateFieldListAtPath(
+          prev.form_fields_schema.fields,
+          parentPath,
+          (fields) => [...fields, buildEmptyField()],
+        ),
+      },
+    }));
   };
 
-  const moveFieldUp = (index: number) => {
-    if (index === 0) return;
-    setFormFormData((prev) => {
-      const newFields = [...prev.form_fields_schema.fields];
-      const temp = newFields[index];
-      newFields[index] = newFields[index - 1];
-      newFields[index - 1] = temp;
-      return {
-        ...prev,
-        form_fields_schema: {
-          ...prev.form_fields_schema,
-          fields: newFields,
-        },
-      };
-    });
+  const removeField = (path: FormFieldPath) => {
+    if (path.length === 0) return;
+    if (path.length === 1) {
+      removeRootField(path[0]);
+      return;
+    }
+    const parentPath = path.slice(0, -1);
+    const index = path[path.length - 1];
+    setFormFormData((prev) => ({
+      ...prev,
+      form_fields_schema: {
+        ...prev.form_fields_schema,
+        fields: updateFieldListAtPath(
+          prev.form_fields_schema.fields,
+          parentPath,
+          (fields) => fields.filter((_, fieldIndex) => fieldIndex !== index),
+        ),
+      },
+    }));
   };
 
-  const moveFieldDown = (index: number) => {
-    setFormFormData((prev) => {
-      const newFields = [...prev.form_fields_schema.fields];
-      if (index >= newFields.length - 1) return prev;
-      const temp = newFields[index];
-      newFields[index] = newFields[index + 1];
-      newFields[index + 1] = temp;
-      return {
-        ...prev,
-        form_fields_schema: {
-          ...prev.form_fields_schema,
-          fields: newFields,
-        },
-      };
-    });
+  const moveFieldUp = (path: FormFieldPath) => {
+    if (path.length === 0) return;
+    const index = path[path.length - 1];
+    if (index <= 0) return;
+    if (path.length === 1) {
+      moveRootFieldUp(index);
+      return;
+    }
+    const parentPath = path.slice(0, -1);
+    setFormFormData((prev) => ({
+      ...prev,
+      form_fields_schema: {
+        ...prev.form_fields_schema,
+        fields: updateFieldListAtPath(
+          prev.form_fields_schema.fields,
+          parentPath,
+          (fields) => {
+            if (index >= fields.length) return fields;
+            const nextFields = [...fields];
+            [nextFields[index - 1], nextFields[index]] = [
+              nextFields[index],
+              nextFields[index - 1],
+            ];
+            return nextFields;
+          },
+        ),
+      },
+    }));
+  };
+
+  const moveFieldDown = (path: FormFieldPath) => {
+    if (path.length === 0) return;
+    const index = path[path.length - 1];
+    if (path.length === 1) {
+      moveRootFieldDown(index);
+      return;
+    }
+    const parentPath = path.slice(0, -1);
+    setFormFormData((prev) => ({
+      ...prev,
+      form_fields_schema: {
+        ...prev.form_fields_schema,
+        fields: updateFieldListAtPath(
+          prev.form_fields_schema.fields,
+          parentPath,
+          (fields) => {
+            if (index >= fields.length - 1) return fields;
+            const nextFields = [...fields];
+            [nextFields[index], nextFields[index + 1]] = [
+              nextFields[index + 1],
+              nextFields[index],
+            ];
+            return nextFields;
+          },
+        ),
+      },
+    }));
   };
 
   return {

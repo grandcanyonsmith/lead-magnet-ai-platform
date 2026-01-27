@@ -13,7 +13,8 @@ export type FormFieldType =
   | "select"
   | "checkbox"
   | "url"
-  | "file";
+  | "file"
+  | "group";
 
 export interface FormField {
   field_id: string;
@@ -24,6 +25,7 @@ export interface FormField {
   options?: string[];
   validation_regex?: string;
   max_length?: number;
+  fields?: FormField[];
 }
 
 export interface FormFieldsSchema {

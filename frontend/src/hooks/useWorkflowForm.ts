@@ -2,6 +2,12 @@
 
 import { useState, useCallback } from "react";
 import { WorkflowStep } from "@/types/workflow";
+import type { FormField } from "@/types/form";
+import {
+  FormFieldPath,
+  updateFieldAtPath,
+  updateFieldListAtPath,
+} from "@/utils/formFieldTree";
 
 export interface WorkflowFormData {
   workflow_name: string;
@@ -20,7 +26,7 @@ export interface FormFieldsData {
   form_name: string;
   public_slug: string;
   form_fields_schema: {
-    fields: any[];
+    fields: FormField[];
   };
 }
 
@@ -96,44 +102,52 @@ export function useWorkflowForm() {
   );
 
   const updateFormField = useCallback(
-    (fieldIndex: number, field: string, value: any) => {
-      setFormFieldsData((prev) => {
-        const newFields = [...prev.form_fields_schema.fields];
-        newFields[fieldIndex] = { ...newFields[fieldIndex], [field]: value };
-        return {
-          ...prev,
-          form_fields_schema: {
-            fields: newFields,
-          },
-        };
-      });
+    (path: FormFieldPath, field: string, value: any) => {
+      setFormFieldsData((prev) => ({
+        ...prev,
+        form_fields_schema: {
+          fields: updateFieldAtPath(prev.form_fields_schema.fields, path, (item) => ({
+            ...item,
+            [field]: value,
+          })),
+        },
+      }));
     },
     [],
   );
 
-  const addFormField = useCallback(() => {
+  const addFormField = useCallback((parentPath: FormFieldPath = []) => {
+    const newField: FormField = {
+      field_id: `field_${Date.now()}`,
+      label: "New Question",
+      field_type: "text",
+      required: true,
+      placeholder: "",
+    };
     setFormFieldsData((prev) => ({
       ...prev,
       form_fields_schema: {
-        fields: [
-          ...prev.form_fields_schema.fields,
-          {
-            field_id: `field_${Date.now()}`,
-            label: "New Question",
-            field_type: "text",
-            required: true,
-            placeholder: "",
-          },
-        ],
+        fields: updateFieldListAtPath(
+          prev.form_fields_schema.fields,
+          parentPath,
+          (fields) => [...fields, newField],
+        ),
       },
     }));
   }, []);
 
-  const removeFormField = useCallback((index: number) => {
+  const removeFormField = useCallback((path: FormFieldPath) => {
+    if (path.length === 0) return;
+    const parentPath = path.slice(0, -1);
+    const index = path[path.length - 1];
     setFormFieldsData((prev) => ({
       ...prev,
       form_fields_schema: {
-        fields: prev.form_fields_schema.fields.filter((_, i) => i !== index),
+        fields: updateFieldListAtPath(
+          prev.form_fields_schema.fields,
+          parentPath,
+          (fields) => fields.filter((_, fieldIndex) => fieldIndex !== index),
+        ),
       },
     }));
   }, []);
@@ -155,7 +169,7 @@ export function useWorkflowForm() {
         form_name?: string;
         public_slug?: string;
         form_fields_schema?: {
-          fields: any[];
+          fields: FormField[];
         };
       };
     }) => {
