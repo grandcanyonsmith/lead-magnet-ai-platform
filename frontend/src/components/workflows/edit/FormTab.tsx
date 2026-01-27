@@ -1,22 +1,13 @@
 "use client";
 
-import {
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  Info,
-  Minus,
-  Plus,
-  Settings,
-  Shield,
-} from "lucide-react";
+import { Eye, Info, Plus, Settings, Shield } from "lucide-react";
 import { SectionCard } from "@/components/ui/SectionCard";
-import { Select } from "@/components/ui/Select";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { Switch } from "@/components/ui/Switch";
-import { FormFormData, FormField } from "@/hooks/useFormEdit";
-import { getFieldTypeIcon } from "@/utils/formUtils";
+import { FormFormData } from "@/hooks/useFormEdit";
 import { buildPublicFormUrl } from "@/utils/url";
+import { RecursiveForm } from "@/components/ui/recursive/RecursiveForm";
+import { FormFieldListEditor } from "@/components/workflows/FormFieldListEditor";
+import { toRecursiveSchema } from "@/components/workflows/formFieldSchema";
 
 interface FormTabProps {
   formFormData: FormFormData;
@@ -24,17 +15,18 @@ interface FormTabProps {
   submitting: boolean;
   customDomain?: string;
   onFormChange: (field: string, value: any) => void;
-  onFieldChange: (index: number, field: string, value: any) => void;
-  onAddField: () => void;
-  onRemoveField: (index: number) => void;
-  onMoveFieldUp: (index: number) => void;
-  onMoveFieldDown: (index: number) => void;
+  onFieldChange: (path: number[], field: string, value: any) => void;
+  onAddField: (parentPath?: number[]) => void;
+  onRemoveField: (path: number[]) => void;
+  onMoveFieldUp: (path: number[]) => void;
+  onMoveFieldDown: (path: number[]) => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
 }
 
 function FormPreview({ formFormData }: { formFormData: FormFormData }) {
   const allFields = formFormData.form_fields_schema.fields;
+  const previewSchema = toRecursiveSchema(allFields);
 
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 sm:p-6">
@@ -42,59 +34,12 @@ function FormPreview({ formFormData }: { formFormData: FormFormData }) {
         {formFormData.form_name || "Form Preview"}
       </h3>
       <div className="space-y-4">
-        {allFields.map((field) => (
-          <div key={field.field_id}>
-            <label className="block text-sm font-medium text-gray-700 dark:text-foreground mb-1">
-              {field.label}
-              {field.required && <span className="text-red-500 dark:text-red-400 ml-1">*</span>}
-            </label>
-            {field.field_type === "textarea" ? (
-              <textarea
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary"
-                placeholder={field.placeholder || ""}
-                rows={4}
-                disabled
-              />
-            ) : field.field_type === "select" && field.options ? (
-              <Select
-                value=""
-                onChange={() => {}}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary"
-                disabled
-                placeholder="Select an option..."
-              >
-                {field.options.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </Select>
-            ) : field.field_type === "file" ? (
-              <input
-                type="file"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary"
-                disabled
-              />
-            ) : (
-              <input
-                type={
-                  field.field_type === "email"
-                    ? "email"
-                    : field.field_type === "tel"
-                      ? "tel"
-                      : field.field_type === "number"
-                        ? "number"
-                        : field.field_type === "url"
-                          ? "url"
-                        : "text"
-                }
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary"
-                placeholder={field.placeholder || ""}
-                disabled
-              />
-            )}
-          </div>
-        ))}
+        <RecursiveForm
+          schema={previewSchema}
+          values={{}}
+          onChange={() => {}}
+          readOnly={true}
+        />
         <button
           type="button"
           className="w-full py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 dark:bg-primary hover:bg-primary-700 dark:hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -209,147 +154,15 @@ export function FormTab({
           </p>
 
           <div className="mt-4 space-y-3">
-            {customFields.map((field, index) => (
-              <div
-                key={field.field_id || index}
-                className="rounded-2xl border border-gray-100 dark:border-border bg-white/90 dark:bg-secondary/50 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-gray-200 dark:hover:border-border"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 dark:bg-secondary text-xs font-semibold text-gray-500 dark:text-muted-foreground">
-                      #{index + 1}
-                    </span>
-                    <div className="flex items-center gap-2 rounded-full bg-gray-100 dark:bg-secondary px-3 py-1 text-xs font-medium text-gray-700 dark:text-foreground">
-                      {getFieldTypeIcon(field.field_type)}
-                      <span className="capitalize">{field.field_type}</span>
-                    </div>
-                    {field.required && (
-                      <span className="rounded-full bg-red-50 dark:bg-red-900/30 px-2.5 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400">
-                        Required
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => onMoveFieldUp(index)}
-                      disabled={index === 0}
-                      className="rounded-full border border-gray-200 dark:border-border p-2 text-gray-500 dark:text-muted-foreground transition hover:text-gray-900 dark:hover:text-foreground disabled:cursor-not-allowed disabled:text-gray-300 dark:disabled:text-muted-foreground/50"
-                      title="Move field up"
-                      aria-label={`Move ${field.label || "field"} up`}
-                    >
-                      <ChevronUp className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onMoveFieldDown(index)}
-                      disabled={index === customFields.length - 1}
-                      className="rounded-full border border-gray-200 dark:border-border p-2 text-gray-500 dark:text-muted-foreground transition hover:text-gray-900 dark:hover:text-foreground disabled:cursor-not-allowed disabled:text-gray-300 dark:disabled:text-muted-foreground/50"
-                      title="Move field down"
-                      aria-label={`Move ${field.label || "field"} down`}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onRemoveField(index)}
-                      className="ml-1 rounded-full border border-red-100 dark:border-red-800 p-2 text-red-600 dark:text-red-400 transition hover:bg-red-50 dark:hover:bg-red-900/30"
-                      title="Remove field"
-                      aria-label={`Remove ${field.label || "field"}`}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-muted-foreground">
-                      Field type
-                    </label>
-                    <Select
-                      value={field.field_type}
-                      onChange={(nextValue) =>
-                        onFieldChange(index, "field_type", nextValue)
-                      }
-                      className="mt-2 w-full rounded-xl border border-gray-200 dark:border-border px-3 py-2 text-sm bg-white dark:bg-secondary text-gray-900 dark:text-foreground focus:border-primary-500 dark:focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary/20"
-                    >
-                      <option value="text">Text</option>
-                      <option value="email">Email</option>
-                      <option value="tel">Phone</option>
-                      <option value="textarea">Textarea</option>
-                      <option value="select">Select</option>
-                      <option value="number">Number</option>
-                      <option value="url">URL</option>
-                      <option value="file">File Upload</option>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-muted-foreground">
-                      Label
-                    </label>
-                    <input
-                      type="text"
-                      value={field.label}
-                      onChange={(e) =>
-                        onFieldChange(index, "label", e.target.value)
-                      }
-                      className="mt-2 w-full rounded-xl border border-gray-200 dark:border-border px-3 py-2 text-sm bg-white dark:bg-secondary text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground focus:border-primary-500 dark:focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary/20"
-                      placeholder="Field label"
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-3">
-                  <label className="block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-muted-foreground">
-                    Placeholder
-                  </label>
-                  <input
-                    type="text"
-                    value={field.placeholder || ""}
-                    onChange={(e) =>
-                      onFieldChange(index, "placeholder", e.target.value)
-                    }
-                    className="mt-2 w-full rounded-xl border border-gray-200 dark:border-border px-3 py-2 text-sm bg-white dark:bg-secondary text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground focus:border-primary-500 dark:focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary/20"
-                    placeholder="Placeholder text"
-                  />
-                </div>
-
-                {field.field_type === "select" && (
-                  <div className="mt-3">
-                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-muted-foreground">
-                      Options (comma separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={field.options?.join(", ") || ""}
-                      onChange={(e) =>
-                        onFieldChange(
-                          index,
-                          "options",
-                          e.target.value
-                            .split(",")
-                            .map((option) => option.trim())
-                            .filter((option) => option),
-                        )
-                      }
-                      className="mt-2 w-full rounded-xl border border-gray-200 dark:border-border px-3 py-2 text-sm bg-white dark:bg-secondary text-gray-900 dark:text-foreground placeholder-gray-500 dark:placeholder-muted-foreground focus:border-primary-500 dark:focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary/20"
-                      placeholder="Option 1, Option 2, Option 3"
-                    />
-                  </div>
-                )}
-
-                <label className="mt-3 flex items-center gap-2 text-sm text-gray-600 dark:text-muted-foreground">
-                  <Checkbox
-                    checked={field.required}
-                    onChange={(checked) =>
-                      onFieldChange(index, "required", checked)
-                    }
-                  />
-                  Required field
-                </label>
-              </div>
-            ))}
+            <FormFieldListEditor
+              fields={customFields}
+              onFieldChange={onFieldChange}
+              onRemoveField={onRemoveField}
+              onMoveFieldUp={onMoveFieldUp}
+              onMoveFieldDown={onMoveFieldDown}
+              variant="card"
+              showMoveControls={true}
+            />
 
             {customFields.length === 0 && (
               <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-border px-4 py-10 text-center">

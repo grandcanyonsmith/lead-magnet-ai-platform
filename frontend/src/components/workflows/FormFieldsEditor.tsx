@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { FiEye, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiEye } from "react-icons/fi";
 import { FormFieldsData } from "@/hooks/useWorkflowForm";
-import { Select } from "@/components/ui/Select";
-import { Checkbox } from "@/components/ui/Checkbox";
-import { RecursiveForm, FieldSchema } from "@/components/ui/recursive/RecursiveForm";
+import { RecursiveForm } from "@/components/ui/recursive/RecursiveForm";
+import { FormFieldListEditor } from "@/components/workflows/FormFieldListEditor";
+import { toRecursiveSchema } from "@/components/workflows/formFieldSchema";
 
 interface FormFieldsEditorProps {
   formFieldsData: FormFieldsData;
   onChange: (field: keyof FormFieldsData, value: any) => void;
-  onFieldChange: (fieldIndex: number, field: string, value: any) => void;
-  onAddField?: () => void;
-  onRemoveField?: (index: number) => void;
+  onFieldChange: (path: number[], field: string, value: any) => void;
+  onAddField?: (parentPath?: number[]) => void;
+  onRemoveField?: (path: number[]) => void;
 }
 
 export function FormFieldsEditor({
@@ -24,17 +24,8 @@ export function FormFieldsEditor({
 }: FormFieldsEditorProps) {
   const [showFormPreview, setShowFormPreview] = useState(false);
 
-  // Convert form fields to RecursiveForm schema
-  const previewSchema: FieldSchema[] = formFieldsData.form_fields_schema.fields.map(
-    (field: any, index: number) => ({
-      id: field.field_id || `field-${index}`,
-      type: field.field_type || "text",
-      label: field.label || `Field ${index + 1}`,
-      name: field.field_id || `field-${index}`,
-      placeholder: field.placeholder,
-      required: field.required,
-      options: field.options,
-    })
+  const previewSchema = toRecursiveSchema(
+    formFieldsData.form_fields_schema.fields,
   );
 
   return (
@@ -132,127 +123,16 @@ export function FormFieldsEditor({
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Questions ({formFieldsData.form_fields_schema.fields.length})
         </label>
-        <div className="space-y-4">
-          {formFieldsData.form_fields_schema.fields.map(
-            (field: any, index: number) => (
-              <div
-                key={field.field_id || index}
-                className="border border-gray-200 rounded-lg p-4 relative group"
-              >
-                {onRemoveField && (
-                  <button
-                    type="button"
-                    onClick={() => onRemoveField(index)}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors p-1"
-                    title="Remove field"
-                  >
-                    <FiTrash2 className="w-4 h-4" />
-                  </button>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3 pr-8">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Question Label
-                    </label>
-                    <input
-                      type="text"
-                      value={field.label || ""}
-                      onChange={(e) =>
-                        onFieldChange(index, "label", e.target.value)
-                      }
-                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                      placeholder="e.g. What is your email?"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Type
-                    </label>
-                    <Select
-                      value={field.field_type || "text"}
-                      onChange={(nextValue) =>
-                        onFieldChange(index, "field_type", nextValue)
-                      }
-                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                    >
-                      <option value="text">Text</option>
-                      <option value="email">Email</option>
-                      <option value="tel">Phone</option>
-                      <option value="textarea">Textarea</option>
-                      <option value="select">Select</option>
-                      <option value="number">Number</option>
-                      <option value="url">URL</option>
-                      <option value="file">File Upload</option>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Placeholder
-                    </label>
-                    <input
-                      type="text"
-                      value={field.placeholder || ""}
-                      onChange={(e) =>
-                        onFieldChange(index, "placeholder", e.target.value)
-                      }
-                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                      placeholder="Placeholder text"
-                    />
-                  </div>
-                  <div className="flex items-center">
-                    <label className="flex items-center gap-2">
-                      <Checkbox
-                        checked={field.required || false}
-                        onChange={(checked) =>
-                          onFieldChange(index, "required", checked)
-                        }
-                      />
-                      <span className="text-xs font-medium text-gray-600">
-                        Required
-                      </span>
-                    </label>
-                  </div>
-                </div>
-                {field.field_type === "select" && (
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Options (comma-separated)
-                    </label>
-                    <input
-                      type="text"
-                      value={field.options?.join(", ") || ""}
-                      onChange={(e) =>
-                        onFieldChange(
-                          index,
-                          "options",
-                          e.target.value
-                            .split(",")
-                            .map((o: string) => o.trim())
-                            .filter(Boolean),
-                        )
-                      }
-                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                      placeholder="Option 1, Option 2, Option 3"
-                    />
-                  </div>
-                )}
-              </div>
-            ),
-          )}
-        </div>
-
-        {onAddField && (
-          <button
-            type="button"
-            onClick={onAddField}
-            className="mt-4 flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors w-full justify-center border border-primary-200 border-dashed"
-          >
-            <FiPlus className="w-4 h-4" />
-            Add Question
-          </button>
-        )}
+        <FormFieldListEditor
+          fields={formFieldsData.form_fields_schema.fields}
+          onFieldChange={onFieldChange}
+          onAddField={onAddField}
+          onRemoveField={onRemoveField}
+          variant="compact"
+          showMoveControls={false}
+          showAddButton={Boolean(onAddField)}
+          addButtonLabel="Add Question"
+        />
       </div>
     </div>
   );

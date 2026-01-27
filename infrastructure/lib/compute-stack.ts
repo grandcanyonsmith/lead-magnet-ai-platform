@@ -289,6 +289,15 @@ export class ComputeStack extends cdk.Stack {
       }),
     );
 
+    // Allow bucket-level queries required by SDKs/presigned flows.
+    const cc360BucketPolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ["s3:GetBucketLocation", "s3:ListBucket"],
+      resources: ["arn:aws:s3:::cc360-pages"],
+    });
+    this.jobProcessorLambda.addToRolePolicy(cc360BucketPolicy);
+    this.shellWorkerLambda.addToRolePolicy(cc360BucketPolicy);
+
     // Create IAM role for Step Functions
     const stateMachineRole = new iam.Role(this, 'StateMachineRole', {
       assumedBy: new iam.ServicePrincipal('states.amazonaws.com'),

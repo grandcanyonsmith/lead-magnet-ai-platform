@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { AIModel, Tool } from "@/types";
 import { WorkflowStep, WorkflowTrigger } from "@/types/workflow";
 import {
   resolveServiceTier,
@@ -11,6 +10,7 @@ import {
   resolveToolChoice,
 } from "@/utils/workflowDefaults";
 import { useWorkflowId } from "./useWorkflowId";
+import { useOrderedList } from "./useOrderedList";
 
 export interface WorkflowFormData {
   workflow_name: string;
@@ -49,7 +49,20 @@ export function useWorkflowEdit(
     template_version: 0,
   });
 
-  const [steps, setSteps] = useState<WorkflowStep[]>([]);
+  const normalizeSteps = useCallback(
+    (nextSteps: WorkflowStep[]) =>
+      nextSteps.map((step, index) => ({ ...step, step_order: index })),
+    [],
+  );
+  const [steps, setStepsState] = useState<WorkflowStep[]>([]);
+  const {
+    setItems: setSteps,
+    updateItem: updateStep,
+    addItem: addStep,
+    removeItem: removeStep,
+    moveItemUp: moveStepUp,
+    moveItemDown: moveStepDown,
+  } = useOrderedList(steps, setStepsState, { normalize: normalizeSteps });
   const [formId, setFormId] = useState<string | null>(null);
   const [workflowForm, setWorkflowForm] = useState<any>(null);
   const [workflowStatus, setWorkflowStatus] = useState<
@@ -166,59 +179,33 @@ export function useWorkflowEdit(
   };
 
   const handleStepChange = (index: number, step: WorkflowStep) => {
-    setSteps((prev) => {
-      const newSteps = [...prev];
-      newSteps[index] = { ...step, step_order: index };
-      return newSteps;
-    });
+    updateStep(index, step);
   };
 
   const handleAddStep = () => {
-    setSteps((prev) => [
-      ...prev,
-      {
-        step_name: `Step ${prev.length + 1}`,
-        step_description: "",
-        model: "gpt-5.2",
-        instructions: "",
-        step_order: prev.length,
-        tools: ["web_search"],
-        tool_choice: resolvedDefaultToolChoice,
-        service_tier: resolvedDefaultServiceTier,
-        text_verbosity: resolvedDefaultTextVerbosity,
-      },
-    ]);
+    addStep((prev) => ({
+      step_name: `Step ${prev.length + 1}`,
+      step_description: "",
+      model: "gpt-5.2",
+      instructions: "",
+      step_order: prev.length,
+      tools: ["web_search"],
+      tool_choice: resolvedDefaultToolChoice,
+      service_tier: resolvedDefaultServiceTier,
+      text_verbosity: resolvedDefaultTextVerbosity,
+    }));
   };
 
   const handleDeleteStep = (index: number) => {
-    setSteps((prev) => {
-      const newSteps = prev.filter((_, i) => i !== index);
-      return newSteps.map((step, i) => ({ ...step, step_order: i }));
-    });
+    removeStep(index);
   };
 
   const handleMoveStepUp = (index: number) => {
-    if (index === 0) return;
-    setSteps((prev) => {
-      const newSteps = [...prev];
-      [newSteps[index - 1], newSteps[index]] = [
-        newSteps[index],
-        newSteps[index - 1],
-      ];
-      return newSteps.map((step, i) => ({ ...step, step_order: i }));
-    });
+    moveStepUp(index);
   };
 
   const handleMoveStepDown = (index: number) => {
-    if (index === steps.length - 1) return;
-    setSteps((prev) => {
-      const newSteps = [...prev];
-      [newSteps[index], newSteps[index + 1]] = [
-        newSteps[index + 1],
-        newSteps[index],
-      ];
-      return newSteps.map((step, i) => ({ ...step, step_order: i }));
-    });
+    moveStepDown(index);
   };
 
   return {
