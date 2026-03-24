@@ -1,13 +1,29 @@
-const { DynamoDBClient, PutItemCommand } = require("@aws-sdk/client-dynamodb");
-const { SecretsManagerClient, GetSecretValueCommand } = require("@aws-sdk/client-secrets-manager");
+const crypto = require("crypto");
+const {
+  DynamoDBClient,
+  UpdateItemCommand,
+} = require("@aws-sdk/client-dynamodb");
+const {
+  CognitoIdentityProviderClient,
+  AdminUpdateUserAttributesCommand,
+} = require("@aws-sdk/client-cognito-identity-provider");
 
 const ddb = new DynamoDBClient();
-const secrets = new SecretsManagerClient();
+const cognito = new CognitoIdentityProviderClient();
+
+function generateCustomerId(email) {
+  return crypto
+    .createHash("sha256")
+    .update(email.toLowerCase())
+    .digest("hex")
+    .substring(0, 16);
+}
 
 exports.handler = async (event) => {
   console.log("PostConfirmation event:", JSON.stringify(event, null, 2));
 
-  const { sub, email, name } = event.request.userAttributes;
+  const attributes = event.request?.userAttributes || {};
+  const { sub, email, name, fullname } = attributes;
   const { userPoolId, userName } = event;
 
   if (!sub || !email) {
@@ -16,30 +32,79 @@ exports.handler = async (event) => {
   }
 
   // TODO: Implement Stripe customer creation.
-  // We need to fetch the Stripe key from Secrets Manager, create a customer, 
-  // and then save the user and customer to DynamoDB.
-  // For now, we'll just log that this step is pending implementation to unblock deployment.
+  // This handler only bootstraps app identity data so auth/customer resolution works.
+  // Stripe customer creation should be added separately once that flow is implemented.
 
   try {
     const usersTable = process.env.USERS_TABLE;
-    const customersTable = process.env.CUSTOMERS_TABLE;
-    
+    const now = new Date().toISOString();
+    const customerId =
+      attributes["custom:customer_id"] || generateCustomerId(email);
+    const role = attributes["custom:role"] || "USER";
+    const displayName = name || fullname || userName || email.split("@")[0];
+
+    if (userPoolId && userName) {
+      const userAttributes = [
+        {
+          Name: "custom:customer_id",
+          Value: customerId,
+        },
+        {
+          Name: "custom:role",
+          Value: role,
+        },
+      ];
+
+      if (!attributes["custom:tenant_id"]) {
+        userAttributes.push({
+          Name: "custom:tenant_id",
+          Value: customerId,
+        });
+      }
+
+      await cognito.send(
+        new AdminUpdateUserAttributesCommand({
+          UserPoolId: userPoolId,
+          Username: userName,
+          UserAttributes: userAttributes,
+        }),
+      );
+    }
+
     if (usersTable) {
-        // Minimal user record creation to ensure login works if app relies on it
-        // This is a placeholder implementation
-        /*
-        await ddb.send(new PutItemCommand({
-            TableName: usersTable,
-            Item: {
-                user_id: { S: sub },
-                email: { S: email },
-                name: { S: name || userName },
-                created_at: { S: new Date().toISOString() },
-                // customer_id would go here
-            }
-        }));
-        */
-       console.log("User creation skipped (Stripe dependency missing in simplified handler)");
+      await ddb.send(
+        new UpdateItemCommand({
+          TableName: usersTable,
+          Key: {
+            user_id: { S: sub },
+          },
+          UpdateExpression:
+            "SET email = if_not_exists(email, :email), " +
+            "#name = if_not_exists(#name, :name), " +
+            "customer_id = if_not_exists(customer_id, :customer_id), " +
+            "#role = if_not_exists(#role, :role), " +
+            "created_at = if_not_exists(created_at, :created_at), " +
+            "updated_at = :updated_at",
+          ExpressionAttributeNames: {
+            "#name": "name",
+            "#role": "role",
+          },
+          ExpressionAttributeValues: {
+            ":email": { S: email },
+            ":name": { S: displayName },
+            ":customer_id": { S: customerId },
+            ":role": { S: role },
+            ":created_at": { S: now },
+            ":updated_at": { S: now },
+          },
+        }),
+      );
+      console.log("Ensured user record exists for confirmed user", {
+        userId: sub,
+        customerId,
+      });
+    } else {
+      console.log("USERS_TABLE not configured, skipping user bootstrap");
     }
   } catch (error) {
     console.error("Error in PostConfirmation:", error);

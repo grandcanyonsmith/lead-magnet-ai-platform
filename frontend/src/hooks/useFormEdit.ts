@@ -55,7 +55,7 @@ export function useFormEdit(
           workflowForm.rate_limit_enabled !== undefined
             ? workflowForm.rate_limit_enabled
             : true,
-        rate_limit_per_hour: workflowForm.rate_limit_per_hour || 10,
+        rate_limit_per_hour: workflowForm.rate_limit_per_hour ?? 10,
         captcha_enabled: workflowForm.captcha_enabled || false,
         custom_css: workflowForm.custom_css || "",
         thank_you_message: workflowForm.thank_you_message || "",

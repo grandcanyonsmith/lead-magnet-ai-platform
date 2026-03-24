@@ -29,7 +29,6 @@ export class EnvConfig {
 
   // AWS Configuration
   readonly awsRegion: string;
-  readonly awsAccountId: string;
   readonly lambdaFunctionName: string;
   readonly stepFunctionsArn: string | undefined;
 
@@ -144,11 +143,7 @@ export class EnvConfig {
 
     // AWS Configuration
     this.awsRegion = this.getWithDefault("AWS_REGION", "us-east-1");
-    this.awsAccountId = this.getOptional("AWS_ACCOUNT_ID") || "471112574622";
-    this.lambdaFunctionName = this.getWithDefault(
-      "LAMBDA_FUNCTION_NAME",
-      "leadmagnet-api-handler",
-    );
+    this.lambdaFunctionName = (this.getOptional("LAMBDA_FUNCTION_NAME") || "").trim();
     this.stepFunctionsArn = this.getOptional("STEP_FUNCTIONS_ARN");
 
     // S3 Configuration
@@ -412,10 +407,16 @@ export class EnvConfig {
   }
 
   /**
-   * Get the full Lambda function ARN.
+   * Get the Lambda invoke target.
+   * Lambda accepts either a function name or a full ARN, so use the configured value directly.
    */
-  getLambdaFunctionArn(): string {
-    return `arn:aws:lambda:${this.awsRegion}:${this.awsAccountId}:function:${this.lambdaFunctionName}`;
+  getLambdaInvokeTarget(): string {
+    if (!this.lambdaFunctionName) {
+      throw new Error(
+        "LAMBDA_FUNCTION_NAME must be configured for async Lambda invocation",
+      );
+    }
+    return this.lambdaFunctionName;
   }
 }
 
