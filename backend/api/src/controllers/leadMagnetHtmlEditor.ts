@@ -198,9 +198,9 @@ class LeadMagnetHtmlEditorController {
         }
       } else {
         // In production, invoke Lambda asynchronously
-        const functionArn = env.getLambdaFunctionArn();
+        const functionTarget = env.getLambdaInvokeTarget();
         const invokeCommand = new InvokeCommand({
-          FunctionName: functionArn,
+          FunctionName: functionTarget,
           InvocationType: "Event",
           Payload: JSON.stringify({
             source: "html-patch-request",
@@ -214,7 +214,7 @@ class LeadMagnetHtmlEditorController {
         logger.info("[LeadMagnetHtmlEditor] Triggered async patch processing", {
           patchId,
           jobId,
-          functionArn,
+          functionTarget,
         });
       }
     } catch (error: any) {

@@ -5,30 +5,11 @@ import { useRouter, useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useSettings } from "@/hooks/api/useSettings";
 import { buildPublicFormUrl } from "@/utils/url";
+import type { FormField } from "@/types/form";
 import { FiArrowLeft, FiSave } from "react-icons/fi";
 import { Select } from "@/components/ui/Select";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Switch } from "@/components/ui/Switch";
-
-type FormField = {
-  field_id: string;
-  field_type:
-    | "text"
-    | "textarea"
-    | "email"
-    | "tel"
-    | "number"
-    | "select"
-    | "checkbox"
-    | "url"
-    | "file";
-  label: string;
-  placeholder?: string;
-  required: boolean;
-  validation_regex?: string;
-  max_length?: number;
-  options?: string[];
-};
 
 export default function EditFormClient() {
   const router = useRouter();
@@ -72,15 +53,20 @@ export default function EditFormClient() {
   });
 
   useEffect(() => {
-    if (formId) {
-      loadForm();
+    if (!formId) {
+      setLoading(false);
+      setError("Form ID is missing from the URL");
+      return;
     }
+
+    setLoading(true);
+    void loadForm(formId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formId]);
 
-  const loadForm = async () => {
+  const loadForm = async (currentFormId: string) => {
     try {
-      const form = await api.getForm(formId);
+      const form = await api.getForm(currentFormId);
       setFormFormData({
         form_name: form.form_name || "",
         public_slug: form.public_slug || "",
@@ -89,7 +75,7 @@ export default function EditFormClient() {
           form.rate_limit_enabled !== undefined
             ? form.rate_limit_enabled
             : true,
-        rate_limit_per_hour: form.rate_limit_per_hour || 10,
+        rate_limit_per_hour: form.rate_limit_per_hour ?? 10,
         captcha_enabled: form.captcha_enabled || false,
         custom_css: form.custom_css || "",
         thank_you_message: form.thank_you_message || "",
@@ -117,6 +103,11 @@ export default function EditFormClient() {
 
     if (!formFormData.public_slug.trim()) {
       setError("Public URL slug is required");
+      return;
+    }
+
+    if (!formId) {
+      setError("Form ID is missing from the URL");
       return;
     }
 
@@ -155,6 +146,9 @@ export default function EditFormClient() {
   const handleFieldChange = (index: number, field: string, value: any) => {
     setFormFormData((prev) => {
       const newFields = [...prev.form_fields_schema.fields];
+      if (index < 0 || index >= newFields.length) {
+        return prev;
+      }
       newFields[index] = { ...newFields[index], [field]: value };
       return {
         ...prev,
@@ -188,6 +182,9 @@ export default function EditFormClient() {
   const removeField = (index: number) => {
     setFormFormData((prev) => {
       const newFields = [...prev.form_fields_schema.fields];
+      if (index < 0 || index >= newFields.length) {
+        return prev;
+      }
       newFields.splice(index, 1);
       return {
         ...prev,

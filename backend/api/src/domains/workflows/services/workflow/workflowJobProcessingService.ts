@@ -64,10 +64,10 @@ export class JobProcessingUtils {
           }
         });
       } else {
-        const functionArn = env.getLambdaFunctionArn();
+        const functionTarget = env.getLambdaInvokeTarget();
 
         const invokeCommand = new InvokeCommand({
-          FunctionName: functionArn,
+          FunctionName: functionTarget,
           InvocationType: 'Event',
           Payload: JSON.stringify({
             ...payload,
@@ -79,7 +79,7 @@ export class JobProcessingUtils {
         const invokeResponse = await lambdaClient.send(invokeCommand);
         logger.info('[Job Processing] Triggered async processing', {
           jobId,
-          functionArn,
+          functionTarget,
           statusCode: invokeResponse.StatusCode,
           requestId: invokeResponse.$metadata.requestId,
         });

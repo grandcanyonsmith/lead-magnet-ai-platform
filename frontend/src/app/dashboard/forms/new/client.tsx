@@ -117,6 +117,9 @@ export default function NewFormClient() {
   const handleFieldChange = (index: number, field: string, value: any) => {
     setFormFormData((prev) => {
       const newFields = [...prev.form_fields_schema.fields];
+      if (index < 0 || index >= newFields.length) {
+        return prev;
+      }
       newFields[index] = { ...newFields[index], [field]: value };
       return {
         ...prev,
@@ -150,6 +153,9 @@ export default function NewFormClient() {
   const removeField = (index: number) => {
     setFormFormData((prev) => {
       const newFields = [...prev.form_fields_schema.fields];
+      if (index < 0 || index >= newFields.length) {
+        return prev;
+      }
       newFields.splice(index, 1);
       return {
         ...prev,
