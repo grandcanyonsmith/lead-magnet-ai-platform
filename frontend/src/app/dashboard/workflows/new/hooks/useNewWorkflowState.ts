@@ -88,14 +88,14 @@ export function useNewWorkflowState() {
 
   // Effects
   useEffect(() => {
-    if (generationStatus.status === "completed" && generationStatus.workflowId) {
-      setStep("form");
-    } else if (generationStatus.status === "failed") {
+    // On completion, useWorkflowGenerationStatus handles navigation to the
+    // edit page via router.push. We only need to handle the failure case here.
+    if (generationStatus.status === "failed") {
       setError(generationStatus.error || "Workflow generation failed");
       setStep("prompt");
       setGenerationJobId(null);
     }
-  }, [generationStatus.status, generationStatus.workflowId, generationStatus.error]);
+  }, [generationStatus.status, generationStatus.error]);
 
   // Actions
   const handleSkipWizard = () => {
@@ -241,12 +241,40 @@ export function useNewWorkflowState() {
 
     if (!selectedDeliverable) return;
 
-    workflowForm.updateFormData({
-      workflow_name: selectedDeliverable.title,
-      workflow_description: selectedDeliverable.description,
-    });
-
-    setStep("form");
+    // Use build_description (the rich AI specification) to trigger full
+    // workflow generation rather than just copying title/description to
+    // an empty manual form.
+    if (selectedDeliverable.build_description) {
+      setStep("creating");
+      try {
+        const result = await aiGeneration.generateWorkflow(
+          selectedDeliverable.build_description,
+          resolvedModel,
+        );
+        if (result?.job_id) {
+          setGenerationJobId(result.job_id);
+        } else if (result?.workflow) {
+          workflowForm.updateFormData({
+            workflow_name: result.workflow.workflow_name || selectedDeliverable.title,
+            workflow_description: result.workflow.workflow_description || selectedDeliverable.description,
+          });
+          workflowSteps.setSteps(result.workflow.steps);
+          if (result.workflow.templateData) {
+            workflowForm.updateTemplateData(result.workflow.templateData, undefined);
+          }
+          setStep("form");
+        }
+      } catch (err: any) {
+        setError(err.message || "Failed to generate workflow");
+        setStep("prompt");
+      }
+    } else {
+      workflowForm.updateFormData({
+        workflow_name: selectedDeliverable.title,
+        workflow_description: selectedDeliverable.description,
+      });
+      setStep("form");
+    }
   };
 
   const handleResetChat = () => {

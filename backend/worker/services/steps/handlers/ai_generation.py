@@ -147,10 +147,14 @@ class AIStepHandler(AbstractStepHandler):
 
     @staticmethod
     def _split_step_context(step_index: int, full_context: str) -> Tuple[str, str]:
-        """Return (previous_context, current_step_context) based on step index."""
-        current_step_context = ContextBuilder.get_current_step_context(step_index, full_context)
-        previous_context = full_context if step_index > 0 else ""
-        return previous_context, current_step_context
+        """Return (previous_context, current_step_context).
+
+        All assembled context (form submission + dependency outputs) is passed
+        as current_step_context so the model sees it as a single coherent block.
+        Splitting it would leave an empty "Current Step Context" section in the
+        prompt for every step after step 0, which is confusing noise.
+        """
+        return "", full_context
 
     def execute(
         self,

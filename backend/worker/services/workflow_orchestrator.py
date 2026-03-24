@@ -148,12 +148,19 @@ class WorkflowOrchestrator:
             step_outputs=step_outputs,
             accumulated_context=accumulated_context,
             submission_data=submission_data,
+            field_label_map=field_label_map,
             execution_steps=execution_steps,
             job_id=job_id,
             tenant_id=job['tenant_id']
         )
         
-        report_artifact_id = step_outputs[0]['artifact_id'] if step_outputs else None
+        deliverable_indices = ContextBuilder._resolve_deliverable_indices(sorted_steps)
+        if deliverable_indices and deliverable_indices[-1] < len(step_outputs):
+            report_artifact_id = step_outputs[deliverable_indices[-1]].get('artifact_id')
+        elif step_outputs:
+            report_artifact_id = step_outputs[-1].get('artifact_id')
+        else:
+            report_artifact_id = None
         
         return final_content, final_artifact_type, final_filename, report_artifact_id, all_image_artifact_ids
     
@@ -163,6 +170,7 @@ class WorkflowOrchestrator:
         step_outputs: List[Dict[str, Any]],
         accumulated_context: str,
         submission_data: Dict[str, Any],
+        field_label_map: Dict[str, str],
         execution_steps: List[Dict[str, Any]],
         job_id: str,
         tenant_id: str
@@ -174,7 +182,8 @@ class WorkflowOrchestrator:
             workflow: Workflow configuration
             step_outputs: List of step output dictionaries
             accumulated_context: Accumulated context from all steps
-            submission_data: Submission data
+            submission_data: Submission data (raw field IDs as keys)
+            field_label_map: Map of field IDs to human-readable labels
             execution_steps: List of execution steps (will be updated)
             job_id: Job ID
             tenant_id: Tenant ID
@@ -222,9 +231,12 @@ class WorkflowOrchestrator:
         if template:
             # Always generate the deliverable from the template when a template is configured.
             safe_deliverable_context = strip_html_tags(deliverable_context)
+            labeled_submission = FieldLabelService.map_submission_data_keys(
+                submission_data, field_label_map
+            )
             final_content, final_artifact_type, final_filename = self.job_completion_service.generate_html_from_accumulated_context(
                 accumulated_context=safe_deliverable_context,
-                submission_data=submission_data,
+                submission_data=labeled_submission,
                 workflow=workflow,
                 execution_steps=execution_steps,
                 job_id=job_id,

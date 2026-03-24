@@ -476,11 +476,15 @@ class JobProcessor:
             # Handle HTML generation step (special case)
             if step_type == 'html_generation':
                 submission_data = submission.get('submission_data', {})
+                field_label_map = FieldLabelService.build_field_label_map(form)
+                labeled_submission = FieldLabelService.map_submission_data_keys(
+                    submission_data, field_label_map
+                )
                 return self.job_completion_service.generate_html_from_steps(
                     job_id=job_id,
                     job=job,
                     workflow=workflow,
-                    submission_data=submission_data,
+                    submission_data=labeled_submission,
                     execution_steps=execution_steps,
                     initial_context=initial_context
                 )
