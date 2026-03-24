@@ -140,7 +140,7 @@ export function FormTab({
           actions={
             <button
               type="button"
-              onClick={onAddField}
+              onClick={() => onAddField()}
               className="inline-flex items-center gap-2 rounded-full border border-primary-600 dark:border-primary px-4 py-2 text-sm font-semibold text-primary-700 dark:text-primary transition hover:bg-primary-600 dark:hover:bg-primary hover:text-white"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
@@ -172,7 +172,7 @@ export function FormTab({
                 </p>
                 <button
                   type="button"
-                  onClick={onAddField}
+                  onClick={() => onAddField()}
                   className="mt-4 text-sm font-semibold text-primary-600 dark:text-primary transition hover:text-primary-800 dark:hover:text-primary/80"
                 >
                   Add your first field
