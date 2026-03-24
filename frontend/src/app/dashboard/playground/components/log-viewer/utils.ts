@@ -60,7 +60,7 @@ export const detectContentType = (
 ): { content: any; type: ContentType } => {
   const trimmed = text.trim();
 
-  if ((trimmed.startsWith('{') || trimmed.startsWith('[')) && trimmed.length > 2) {
+  if ((trimmed.startsWith('{') || trimmed.startsWith('[')) && trimmed.length >= 2) {
     try {
       const json = JSON.parse(trimmed);
       return { content: json, type: 'json' };
@@ -103,11 +103,11 @@ export const parseLog = (rawLog: string): ParsedLog => {
     const json = JSON.parse(content);
     if (json && typeof json === 'object') {
       if ('message' in json || 'msg' in json) {
-        const message = json.message || json.msg;
+        const message = json.message ?? json.msg;
         meta = {
-          timestamp: json.timestamp || json.time,
-          level: json.level || json.levelname,
-          logger: json.logger || json.name,
+          timestamp: json.timestamp ?? json.time,
+          level: json.level ?? json.levelname,
+          logger: json.logger ?? json.name,
         };
 
         const {
