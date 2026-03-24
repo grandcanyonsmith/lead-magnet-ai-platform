@@ -117,20 +117,19 @@ export function WorkflowTab({
       }
 
       const normalizedSteps = proposal.steps.map((step, index) => {
-        const baseStep = steps[index];
         const stepName =
           (typeof step.step_name === "string" && step.step_name.trim()) ||
-          baseStep?.step_name ||
+          steps[index]?.step_name ||
           `Step ${index + 1}`;
         const instructions =
           (typeof step.instructions === "string" && step.instructions.trim()) ||
-          baseStep?.instructions ||
-          "Generate content based on form submission data.";
+          steps[index]?.instructions ||
+          "";
 
         return {
           ...step,
           step_name: stepName,
-          instructions,
+          ...(instructions ? { instructions } : {}),
         };
       });
 

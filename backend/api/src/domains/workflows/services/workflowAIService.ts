@@ -32,7 +32,6 @@ export interface WorkflowAIEditRequest {
     workflow_id: string;
     workflow_name: string;
     workflow_description: string;
-    template_id?: string;
     current_steps: WorkflowStep[];
   };
   // Context from the current job being analyzed
@@ -148,9 +147,6 @@ export class WorkflowAIService {
     const contextParts: string[] = [
       `Current Workflow: ${workflowContext.workflow_name}`,
       `Description: ${workflowContext.workflow_description || '(none)'}`,
-      workflowContext.template_id
-        ? `Template: Configured (ID: ${workflowContext.template_id})`
-        : 'Template: Not configured',
       '',
       'Current Steps:',
     ];

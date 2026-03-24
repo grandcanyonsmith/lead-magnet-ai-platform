@@ -146,9 +146,12 @@ export function WorkflowImprovePanel({
       },
     ];
     improvements.forEach((improvement) => {
-      const summary = improvement.result?.changes_summary
-        ? truncate(improvement.result.changes_summary, 80)
-        : "AI improvement";
+      const isFailed = improvement.status === "failed";
+      const summary = isFailed
+        ? `Failed: ${truncate(improvement.error_message || improvement.user_prompt || "Unknown error", 70)}`
+        : improvement.result?.changes_summary
+          ? truncate(improvement.result.changes_summary, 80)
+          : "AI improvement";
       items.push({
         id: improvement.job_id,
         title: summary,
@@ -420,10 +423,14 @@ export function WorkflowImprovePanel({
     previewMode,
   ]);
 
+  const isSelectedFailed = selectedImprovement?.status === "failed";
+
   const emptyMessage =
     activeHistoryId === "current"
       ? "No execution steps available yet."
-      : "No context available for this version.";
+      : isSelectedFailed
+        ? "This improvement failed to generate. See the error details above."
+        : "No context available for this version.";
 
   const htmlEmptyMessage = htmlJobId
     ? "No HTML outputs available for this version."

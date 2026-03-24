@@ -140,15 +140,24 @@ export function ImprovementDetails({
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-background px-3 py-2">
-        <p className="text-xs text-muted-foreground">Changes summary</p>
-        <p className="text-sm text-foreground">
-          {selectedImprovement?.result?.changes_summary ||
-            (isCurrentHistory
-              ? "Current run context does not include an improvement summary yet."
-              : "No changes summary available for this improvement.")}
-        </p>
-      </div>
+      {selectedImprovement?.status === "failed" && selectedImprovement?.error_message ? (
+        <div className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50 px-3 py-2">
+          <p className="text-xs text-red-600 dark:text-red-400 font-medium">Error</p>
+          <p className="text-sm text-red-700 dark:text-red-300">
+            {selectedImprovement.error_message}
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border bg-background px-3 py-2">
+          <p className="text-xs text-muted-foreground">Changes summary</p>
+          <p className="text-sm text-foreground">
+            {selectedImprovement?.result?.changes_summary ||
+              (isCurrentHistory
+                ? "Current run context does not include an improvement summary yet."
+                : "No changes summary available for this improvement.")}
+          </p>
+        </div>
+      )}
 
       <div className="rounded-lg border border-border bg-background px-3 py-2">
         <p className="text-xs text-muted-foreground">Prompt</p>
@@ -169,7 +178,11 @@ export function ImprovementDetails({
               : "—"}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {selectedImprovement.improvement_status === "pending" ? (
+            {selectedImprovement.status === "failed" ? (
+              <span className="text-xs text-red-500">
+                Generation failed — no changes to review
+              </span>
+            ) : selectedImprovement.improvement_status === "pending" ? (
               <>
                 <Button
                   type="button"

@@ -462,4 +462,5 @@ export interface WorkflowAIImprovement {
   user_prompt?: string;
   context_job_id?: string | null;
   result?: WorkflowAIEditResponse | null;
+  error_message?: string | null;
 }
