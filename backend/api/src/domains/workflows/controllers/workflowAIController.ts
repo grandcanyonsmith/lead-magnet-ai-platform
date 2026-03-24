@@ -353,8 +353,8 @@ export class WorkflowAIController {
       throw new ApiError("status is required", 400);
     }
 
-    if (status !== "pending" && status !== "approved" && status !== "denied") {
-      throw new ApiError("Invalid improvement status", 400);
+    if (status !== "approved" && status !== "denied") {
+      throw new ApiError("Invalid improvement status. Must be 'approved' or 'denied'.", 400);
     }
 
     const improvement =
@@ -759,7 +759,6 @@ export class WorkflowAIController {
             workflow_id: workflowId,
             workflow_name: workflow.workflow_name || 'Untitled Workflow',
             workflow_description: workflow.workflow_description || '',
-            template_id: workflow.template_id,
             current_steps: workflow.steps || [],
           },
         };

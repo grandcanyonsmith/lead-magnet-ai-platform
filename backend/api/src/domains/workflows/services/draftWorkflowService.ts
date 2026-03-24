@@ -18,8 +18,6 @@ export interface DraftWorkflowData {
   workflow_name: string;
   workflow_description?: string;
   steps: WorkflowStep[];
-  template_id?: string;
-  template_version?: number;
   form_fields_schema?: {
     fields: any[];
   };
@@ -31,9 +29,6 @@ export interface DraftWorkflowData {
 export async function saveDraftWorkflow(
   tenantId: string,
   draftData: DraftWorkflowData,
-  templateHtml?: string,
-  templateName?: string,
-  templateDescription?: string,
   defaultToolChoice?: "auto" | "required" | "none",
   defaultServiceTier?: string,
   defaultTextVerbosity?: string
@@ -65,10 +60,8 @@ export async function saveDraftWorkflow(
     workflow_name: workflowData.workflow_name,
     workflow_description: workflowData.workflow_description || '',
     steps: workflowData.steps,
-    template_id: workflowData.template_id,
-    template_version: workflowData.template_version || 0,
     version: 1,
-    status: 'active', // Save as active (AI-generated workflows are always active)
+    status: 'active',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -76,41 +69,6 @@ export async function saveDraftWorkflow(
   await db.put(WORKFLOWS_TABLE, workflow);
   await createWorkflowVersion(workflow, 1);
   logger.info('[Draft Workflow Service] AI-generated workflow saved as active', { workflowId });
-
-  // Create template if HTML content is provided
-  let templateId: string | null = null;
-  if (templateHtml && templateHtml.trim()) {
-    try {
-      const { templatesController } = await import('@controllers/templates');
-      const templateResult = await templatesController.create(tenantId, {
-        template_name: templateName || `${workflowData.workflow_name} Template`,
-        template_description: templateDescription || '',
-        html_content: templateHtml,
-        workflow_id: workflowId,
-        is_published: true, // AI-generated templates are always published
-      });
-      
-      if (templateResult.body && (templateResult.body as any).template_id) {
-        templateId = (templateResult.body as any).template_id;
-        
-        // Update workflow with template_id
-        await db.update(WORKFLOWS_TABLE, { workflow_id: workflowId }, {
-          template_id: templateId,
-        });
-        
-        logger.info('[Draft Workflow Service] Template created and linked', {
-          workflowId,
-          templateId,
-        });
-      }
-    } catch (error: any) {
-      logger.error('[Draft Workflow Service] Error creating template', {
-        workflowId,
-        error: error.message,
-      });
-      // Continue even if template creation fails
-    }
-  }
 
   // Auto-create form for the workflow if form fields are provided
   let formId: string | null = null;

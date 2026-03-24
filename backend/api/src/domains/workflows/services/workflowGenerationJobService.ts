@@ -220,43 +220,21 @@ class WorkflowGenerationJobService {
         );
       }
 
-      const [templateHtmlResult, templateMetadataResult, formFieldsResult] = await Promise.all([
-        generationService.generateTemplateHTML(
-          jobDescription,
-          jobModel,
-          tenantId,
-          jobId,
-          brandContext || undefined,
-          icpContext || undefined,
-          promptOverrides,
-        ),
-        generationService.generateTemplateMetadata(
-          jobDescription,
-          jobModel,
-          tenantId,
-          jobId,
-          brandContext || undefined,
-          icpContext || undefined,
-          promptOverrides,
-        ),
-        generationService.generateFormFields(
-          jobDescription,
-          workflowResult.workflowData.workflow_name,
-          jobModel,
-          tenantId,
-          jobId,
-          brandContext || undefined,
-          icpContext || undefined,
-          promptOverrides,
-        ),
-      ]);
+      const formFieldsResult = await generationService.generateFormFields(
+        jobDescription,
+        workflowResult.workflowData.workflow_name,
+        jobModel,
+        tenantId,
+        jobId,
+        brandContext || undefined,
+        icpContext || undefined,
+        promptOverrides,
+      );
 
       const totalDuration = Date.now() - workflowStartTime;
       logger.info('[Workflow Generation] Success!', {
         tenantId,
         workflowName: workflowResult.workflowData.workflow_name,
-        templateName: templateMetadataResult.templateName,
-        htmlLength: templateHtmlResult.htmlContent.length,
         formFieldsCount: formFieldsResult.formData.fields.length,
         totalDuration: `${totalDuration}ms`,
         timestamp: new Date().toISOString(),
@@ -264,9 +242,6 @@ class WorkflowGenerationJobService {
 
       const result = generationService.processGenerationResult(
         workflowResult.workflowData,
-        templateMetadataResult.templateName,
-        templateMetadataResult.templateDescription,
-        templateHtmlResult.htmlContent,
         formFieldsResult.formData
       );
 
@@ -279,9 +254,6 @@ class WorkflowGenerationJobService {
           steps: result.workflow.steps || [],
           form_fields_schema: result.form.form_fields_schema,
         },
-        result.template.html_content,
-        result.template.template_name,
-        result.template.template_description,
         defaultToolChoice,
         defaultServiceTier,
         defaultTextVerbosity

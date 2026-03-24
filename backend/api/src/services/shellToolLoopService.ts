@@ -135,7 +135,7 @@ export async function runShellToolLoop(
   let response = await callResponsesWithTimeout(
     () =>
       openai.responses.create({
-        model: model, // Explicitly pass the model variable
+        model: model,
         instructions,
         input,
         tools: [{ type: "shell" }],
@@ -143,6 +143,7 @@ export async function runShellToolLoop(
         service_tier: "priority",
       } as any),
     "shell tool initial response",
+    600_000, // 10 min timeout for shell loops
   );
 
   for (let step = 0; step < maxSteps; step++) {

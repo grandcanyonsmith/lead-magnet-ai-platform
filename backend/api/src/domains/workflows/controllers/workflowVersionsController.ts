@@ -8,6 +8,7 @@ import {
   restoreWorkflowVersion,
 } from "@domains/workflows/services/workflowVersionService";
 import { ApiError } from "@utils/errors";
+import { parseLimitParam } from "@utils/pagination";
 
 class WorkflowVersionsController {
   async list(
@@ -18,8 +19,7 @@ class WorkflowVersionsController {
     const workflow = await workflowCrudService.getWorkflow(tenantId, workflowId);
     await ensureWorkflowVersionBaseline(workflow);
 
-    const limit = queryParams.limit ? parseInt(queryParams.limit, 10) : 50;
-    const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : 50;
+    const safeLimit = parseLimitParam(queryParams.limit, 50);
     const versions = await listWorkflowVersions(
       tenantId,
       workflowId,

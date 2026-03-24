@@ -124,6 +124,8 @@ Return ONLY the CSS code. No Markdown code blocks.`;
         input: resolved.prompt,
         reasoning: { effort: "high" },
         service_tier: "priority",
+        max_output_tokens: 8_000,
+        user: tenantId,
       };
       const completion = await callResponsesWithTimeout(
         () => openai.responses.create(completionParams),
@@ -131,7 +133,11 @@ Return ONLY the CSS code. No Markdown code blocks.`;
       );
 
       const cssDuration = Date.now() - cssStartTime;
-      const cssModelUsed = (completion as any).model || model;
+      const cssModelUsed = completion.model || model;
+      logger.debug("[Form CSS Generation] Response details", {
+        responseId: completion.id,
+        status: completion.status,
+      });
       logger.info("[Form CSS Generation] CSS generation completed", {
         duration: `${cssDuration}ms`,
         tokensUsed: completion.usage?.total_tokens,
@@ -264,6 +270,8 @@ ${current_css}
         input: resolved.prompt,
         reasoning: { effort: "high" },
         service_tier: "priority",
+        max_output_tokens: 8_000,
+        user: tenantId,
       };
       const completion = await callResponsesWithTimeout(
         () => openai.responses.create(completionParams),
@@ -271,7 +279,7 @@ ${current_css}
       );
 
       const refineDuration = Date.now() - refineStartTime;
-      const refineCssModel = (completion as any).model || model;
+      const refineCssModel = completion.model || model;
       logger.info("[Form CSS Refinement] Refinement completed", {
         duration: `${refineDuration}ms`,
         tokensUsed: completion.usage?.total_tokens,

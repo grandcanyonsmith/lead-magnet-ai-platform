@@ -183,18 +183,6 @@ export interface Submission {
   ttl?: number;
 }
 
-export interface Template {
-  template_id: string;
-  tenant_id: string;
-  template_name: string;
-  template_description?: string;
-  html_content: string;
-  version: number;
-  created_at: string;
-  updated_at: string;
-  deleted_at?: string;
-}
-
 export interface Artifact {
   artifact_id: string;
   tenant_id: string;

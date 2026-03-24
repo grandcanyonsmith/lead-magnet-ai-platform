@@ -92,44 +92,6 @@ class AIService:
             shell_settings=shell_settings,
         )
     
-    def generate_html_from_submission(
-        self,
-        submission_data: dict,
-        template_html: str,
-        template_style: str = '',
-        model: str = 'gpt-5.2',
-        tenant_id: Optional[str] = None,
-    ) -> Tuple[str, Dict, Dict, Dict]:
-        """Delegate to HTMLGenerator."""
-        prompt_overrides = get_prompt_overrides(self.db_service, tenant_id)
-        return self.html_generator.generate_html_from_submission(
-            submission_data=submission_data,
-            template_html=template_html,
-            template_style=template_style,
-            model=model,
-            prompt_overrides=prompt_overrides,
-        )
-
-    def generate_styled_html(
-        self,
-        research_content: str,
-        template_html: str,
-        template_style: str = '',
-        submission_data: dict = None,
-        model: str = 'gpt-5.2',
-        tenant_id: Optional[str] = None,
-    ) -> Tuple[str, Dict, Dict, Dict]:
-        """Delegate to HTMLGenerator."""
-        prompt_overrides = get_prompt_overrides(self.db_service, tenant_id)
-        return self.html_generator.generate_styled_html(
-            research_content=research_content,
-            template_html=template_html,
-            template_style=template_style,
-            submission_data=submission_data,
-            model=model,
-            prompt_overrides=prompt_overrides,
-        )
-
     def rewrite_html(
         self,
         html_content: str,

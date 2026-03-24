@@ -15,10 +15,13 @@ import { useOrderedList } from "./useOrderedList";
 export interface WorkflowFormData {
   workflow_name: string;
   workflow_description: string;
-  template_id: string;
-  template_version: number;
   trigger?: WorkflowTrigger;
 }
+
+const createEmptyWorkflowFormData = (): WorkflowFormData => ({
+  workflow_name: "",
+  workflow_description: "",
+});
 
 
 export function useWorkflowEdit(
@@ -42,12 +45,9 @@ export function useWorkflowEdit(
   const [error, setError] = useState<string | null>(null);
   const [workflowVersion, setWorkflowVersion] = useState<number>(1);
 
-  const [formData, setFormData] = useState<WorkflowFormData>({
-    workflow_name: "",
-    workflow_description: "",
-    template_id: "",
-    template_version: 0,
-  });
+  const [formData, setFormData] = useState<WorkflowFormData>(
+    createEmptyWorkflowFormData,
+  );
 
   const normalizeSteps = useCallback(
     (nextSteps: WorkflowStep[]) =>
@@ -69,22 +69,42 @@ export function useWorkflowEdit(
     "active" | "inactive" | "draft" | null
   >(null);
 
+  const resetWorkflowState = useCallback(() => {
+    setFormData(createEmptyWorkflowFormData());
+    setWorkflowVersion(1);
+    setSteps([]);
+    setFormId(null);
+    setWorkflowForm(null);
+    setWorkflowStatus(null);
+  }, [setSteps]);
+
   useEffect(() => {
-    if (workflowId) {
-      loadWorkflow();
+    if (!workflowId) {
+      resetWorkflowState();
+      setError("Workflow ID is missing.");
+      setLoading(false);
+      return;
     }
+
+    loadWorkflow();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workflowId]);
 
   const loadWorkflow = async () => {
+    if (!workflowId) {
+      resetWorkflowState();
+      setError("Workflow ID is missing.");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
+    setError(null);
     try {
       const workflow = await api.getWorkflow(workflowId);
       setFormData({
         workflow_name: workflow.workflow_name || "",
         workflow_description: workflow.workflow_description || "",
-        template_id: workflow.template_id || "",
-        template_version: workflow.template_version || 0,
         trigger: workflow.trigger || { type: "form" },
       });
       setWorkflowVersion(
@@ -158,12 +178,16 @@ export function useWorkflowEdit(
       if (workflow.form) {
         setFormId(workflow.form.form_id);
         setWorkflowForm(workflow.form);
+      } else {
+        setFormId(null);
+        setWorkflowForm(null);
       }
 
       // Store workflow status
       setWorkflowStatus(workflow.status || "active");
     } catch (error: any) {
       console.error("Failed to load workflow:", error);
+      resetWorkflowState();
       setError(
         error.response?.data?.message ||
           error.message ||

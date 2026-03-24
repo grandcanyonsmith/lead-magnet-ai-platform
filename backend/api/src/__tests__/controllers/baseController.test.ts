@@ -84,5 +84,17 @@ describe('BaseController', () => {
       expect(sorted[2].id).toBe('1');
     });
   });
+
+  describe('pagination parsing', () => {
+    it('should fall back to defaults when limit or offset are invalid', () => {
+      expect((controller as any).parseLimit({ limit: 'abc' }, 50)).toBe(50);
+      expect((controller as any).parseOffset({ offset: '-5' }, 0)).toBe(0);
+    });
+
+    it('should parse valid limit and offset values', () => {
+      expect((controller as any).parseLimit({ limit: '25' }, 50)).toBe(25);
+      expect((controller as any).parseOffset({ offset: '10' }, 0)).toBe(10);
+    });
+  });
 });
 

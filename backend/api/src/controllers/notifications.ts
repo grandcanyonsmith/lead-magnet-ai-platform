@@ -3,6 +3,7 @@ import { ApiError } from "../utils/errors";
 import { RouteResponse } from "../routes";
 import { ulid } from "ulid";
 import { env } from "../utils/env";
+import { parseLimitParam } from "../utils/pagination";
 
 const NOTIFICATIONS_TABLE = env.notificationsTable;
 
@@ -44,7 +45,7 @@ class NotificationsController {
 
     try {
       const unreadOnly = queryParams.unread_only === "true";
-      const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
+      const limit = parseLimitParam(queryParams.limit, 50);
 
       let notifications: any[] = [];
 

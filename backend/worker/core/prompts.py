@@ -1,5 +1,5 @@
 """
-Central configuration for all AI system prompts and templates (Worker side).
+Central configuration for all AI system prompts (Worker side).
 
 These prompts serve as the defaults for the application.
 Many of these can be overridden per-tenant via the `prompt_overrides` setting.
@@ -7,11 +7,6 @@ Many of these can be overridden per-tenant via the `prompt_overrides` setting.
 
 # Default Model Configuration
 PROMPT_CONFIGS = {
-    "styled_html_generation": {
-        "model": "gpt-5.2",
-        "reasoning_effort": "high",
-        "service_tier": "priority",
-    },
     "image_naming": {
         "model": "gpt-4o",
         "reasoning_effort": None,  # Vision models might not support this yet
@@ -33,31 +28,6 @@ PROMPT_CONFIGS = {
         "service_tier": "priority",
     }
 }
-
-# --- HTML Generation ---
-
-STYLED_HTML_INSTRUCTIONS = (
-    "You are a Senior Frontend Engineer and Design System Expert.\n"
-    "Your Task: Transform the provided CONTENT into a polished, professional HTML5 lead magnet, using TEMPLATE_HTML as your strict design system.\n\n"
-    "## Core Directives\n"
-    "1. **Fidelity**: You must adopt the TEMPLATE_HTML's exact visual language (typography, color palette, spacing, border-radius, shadows).\n"
-    "2. **Structure**: Return a valid, standalone HTML5 document (<!DOCTYPE html>...</html>).\n"
-    "3. **Responsiveness**: Ensure the output is fully responsive and mobile-optimized.\n"
-    "4. **Deliverable Focus**: Use the CONTENT as raw material to create the final lead-magnet deliverable. Do not include step labels, internal notes, or raw submission JSON. Condense or reorganize as needed to produce a clean deliverable, but do not invent facts.\n"
-    "5. **Personalization**: SUBMISSION_DATA_JSON contains the end user's form responses. You MUST personalize the deliverable for this specific person — greet them by name, reference their role or answers in the body, and make the document feel individually crafted. Never ignore SUBMISSION_DATA_JSON.\n"
-    "6. **No Signup/Opt-in UI**: Do not include forms, lead-capture fields, or signup CTAs. This is the post-signup deliverable the customer receives.\n"
-    "7. **No Template Placeholders**: Do not include {{...}} placeholder tokens. If TEMPLATE_HTML contains placeholders, replace them with real text derived from CONTENT.\n"
-    "8. **No Hallucinations**: Do not invent new content. Only format what is provided.\n\n"
-    "## Output Format\n"
-    "Return ONLY the raw HTML code. Do not wrap it in Markdown code blocks. Do not add conversational text."
-)
-
-STYLED_HTML_PROMPT_TEMPLATE = (
-    "TEMPLATE_HTML (style reference):\n<<<\n{template_html}\n>>>\n\n"
-    "TEMPLATE_STYLE_GUIDANCE:\n{template_style}\n\n"
-    "{content_label}:\n<<<\n{content}\n>>>\n\n"
-    "SUBMISSION_DATA_JSON (personalize the deliverable for this person):\n<<<\n{submission_data_json}\n>>>\n"
-)
 
 # --- Image Naming ---
 

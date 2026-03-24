@@ -34,16 +34,6 @@ import {
   FormSubmission,
 } from "./form";
 import {
-  Template,
-  TemplateListResponse,
-  TemplateCreateRequest,
-  TemplateUpdateRequest,
-  TemplateGenerateRequest,
-  TemplateGenerateResponse,
-  TemplateRefineRequest,
-  TemplateRefineResponse,
-} from "./template";
-import {
   Job,
   JobListResponse,
   JobListParams,
@@ -90,13 +80,6 @@ export interface ApiClient {
   createForm(data: FormCreateRequest): Promise<Form>;
   updateForm(id: string, data: FormUpdateRequest): Promise<Form>;
   deleteForm(id: string): Promise<void>;
-
-  // Templates
-  getTemplates(params?: Record<string, unknown>): Promise<TemplateListResponse>;
-  getTemplate(id: string): Promise<Template>;
-  createTemplate(data: TemplateCreateRequest): Promise<Template>;
-  updateTemplate(id: string, data: TemplateUpdateRequest): Promise<Template>;
-  deleteTemplate(id: string): Promise<void>;
 
   // Jobs
   getJobs(params?: JobListParams): Promise<JobListResponse>;
@@ -249,14 +232,6 @@ export interface ApiClient {
     status: string;
     message: string;
   }>;
-
-  // Template AI
-  generateTemplateWithAI(
-    request: TemplateGenerateRequest,
-  ): Promise<TemplateGenerateResponse>;
-  refineTemplateWithAI(
-    request: TemplateRefineRequest,
-  ): Promise<TemplateRefineResponse>;
 
   // Form AI
   generateFormCSS(

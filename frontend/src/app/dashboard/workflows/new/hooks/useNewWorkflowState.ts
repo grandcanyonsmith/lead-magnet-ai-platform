@@ -36,8 +36,6 @@ export function useNewWorkflowState() {
   
   // Generation State
   const [generationJobId, setGenerationJobId] = useState<string | null>(null);
-  const [generatedTemplateId, setGeneratedTemplateId] = useState<string | null>(null);
-
   // Hooks
   const aiGeneration = useAIGeneration();
   const ideation = useWorkflowIdeation();
@@ -55,7 +53,6 @@ export function useNewWorkflowState() {
   const validation = useWorkflowValidation(
     workflowForm.formData,
     workflowSteps.steps,
-    workflowForm.templateData,
   );
 
   const submission = useWorkflowSubmission();
@@ -259,9 +256,6 @@ export function useNewWorkflowState() {
             workflow_description: result.workflow.workflow_description || selectedDeliverable.description,
           });
           workflowSteps.setSteps(result.workflow.steps);
-          if (result.workflow.templateData) {
-            workflowForm.updateTemplateData(result.workflow.templateData, undefined);
-          }
           setStep("form");
         }
       } catch (err: any) {
@@ -342,10 +336,7 @@ export function useNewWorkflowState() {
     const workflow = await submission.submitWorkflow(
       workflowForm.formData,
       workflowSteps.steps,
-      workflowForm.templateData,
       workflowForm.formFieldsData,
-      generatedTemplateId,
-      setGeneratedTemplateId,
       false,
     );
 
@@ -360,7 +351,6 @@ export function useNewWorkflowState() {
     prompt, setPrompt,
     error, setError,
     generationJobId, setGenerationJobId,
-    generatedTemplateId, setGeneratedTemplateId,
     
     // Sub-hooks exposed directly
     ...wizard,

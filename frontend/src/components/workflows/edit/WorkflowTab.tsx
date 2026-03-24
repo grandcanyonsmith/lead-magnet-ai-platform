@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Separator } from "@/components/ui/Separator";
-import { Sparkles, Zap, ChevronDown, ChevronUp, LayoutTemplate } from "lucide-react";
+import { Sparkles, Zap, ChevronDown, ChevronUp } from "lucide-react";
 const WorkflowFlowchart = dynamic(
   () => import("@/app/dashboard/workflows/components/WorkflowFlowchart"),
   {
@@ -117,20 +117,19 @@ export function WorkflowTab({
       }
 
       const normalizedSteps = proposal.steps.map((step, index) => {
-        const baseStep = steps[index];
         const stepName =
           (typeof step.step_name === "string" && step.step_name.trim()) ||
-          baseStep?.step_name ||
+          steps[index]?.step_name ||
           `Step ${index + 1}`;
         const instructions =
           (typeof step.instructions === "string" && step.instructions.trim()) ||
-          baseStep?.instructions ||
-          "Generate content based on form submission data.";
+          steps[index]?.instructions ||
+          "";
 
         return {
           ...step,
           step_name: stepName,
-          instructions,
+          ...(instructions ? { instructions } : {}),
         };
       });
 
@@ -387,15 +386,6 @@ export function WorkflowTab({
           />
         </div>
       </Card>
-
-      {formData.template_id && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex items-center gap-3">
-          <LayoutTemplate className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          <p className="text-sm text-blue-800 dark:text-blue-300">
-            <strong>Template Active:</strong> This workflow is connected to a template. Visit the <strong>Design</strong> tab to edit it.
-          </p>
-        </div>
-      )}
 
       {/* Step Editor Side Panel */}
       {selectedStepIndex !== null && selectedStepIndex >= 0 && (

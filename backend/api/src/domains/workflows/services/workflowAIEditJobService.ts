@@ -495,7 +495,6 @@ class WorkflowAIEditJobService {
         workflow_id: workflowId,
         workflow_name: workflow.workflow_name || "Untitled Workflow",
         workflow_description: workflow.workflow_description || "",
-        template_id: workflow.template_id,
         current_steps: workflow.steps || [],
       },
       executionHistory,
@@ -509,7 +508,9 @@ class WorkflowAIEditJobService {
       workflow_id: job.workflow_id,
       status: job.status,
       improvement_status:
-        (job.improvement_status as ImprovementStatus) || "pending",
+        job.status === "failed"
+          ? "denied"
+          : (job.improvement_status as ImprovementStatus) || "pending",
       created_at: job.created_at,
       updated_at: job.updated_at,
       reviewed_at: job.reviewed_at,
@@ -517,7 +518,8 @@ class WorkflowAIEditJobService {
       denied_at: job.denied_at,
       user_prompt: job.user_prompt,
       context_job_id: job.context_job_id,
-      result: job.result,
+      result: job.result || null,
+      error_message: job.error_message || null,
     };
   }
 
@@ -801,8 +803,7 @@ class WorkflowAIEditJobService {
       .filter(
         (job: any) =>
           job.job_type === "workflow_ai_edit" &&
-          job.status === "completed" &&
-          job.result,
+          (job.status === "completed" || job.status === "failed"),
       )
       .sort((a: any, b: any) => {
         const dateA = new Date(a.created_at || 0).getTime();
@@ -825,9 +826,9 @@ class WorkflowAIEditJobService {
       );
     }
 
-    const validStatuses: ImprovementStatus[] = ["pending", "approved", "denied"];
-    if (!validStatuses.includes(status)) {
-      throw new ApiError("Invalid improvement status", 400);
+    const reviewableStatuses: ImprovementStatus[] = ["approved", "denied"];
+    if (!reviewableStatuses.includes(status)) {
+      throw new ApiError("Invalid improvement status. Must be 'approved' or 'denied'.", 400);
     }
 
     const job = await db.get(JOBS_TABLE, { job_id: jobId });

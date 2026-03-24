@@ -156,17 +156,32 @@ class IcpResearchService {
       profileName: profile.name,
     });
 
-    const completionParams: any = {
+    const completionParams = {
       model: resolvedModel,
       instructions: ICP_RESEARCH_SYSTEM_PROMPT,
       input: prompt,
-      reasoning: { effort: "high" },
-      service_tier: "priority",
-      tools: [{ type: "web_search" }],
+      reasoning: { effort: "high" as const },
+      service_tier: "priority" as const,
+      tools: [{ type: "web_search" as const }],
+      user: tenantId,
     };
 
-    const completion = await openai.responses.create(completionParams);
-    const outputText = String((completion as any)?.output_text || "");
+    const completion = await openai.responses.create(completionParams as any);
+
+    logger.info("[ICP Research] Response received", {
+      responseId: completion.id,
+      model: completion.model,
+      status: completion.status,
+    });
+
+    if (completion.status === "incomplete") {
+      logger.warn("[ICP Research] Incomplete response", {
+        reason: completion.incomplete_details?.reason,
+        responseId: completion.id,
+      });
+    }
+
+    const outputText = String(completion?.output_text || "");
 
     return this.parseReport(outputText);
   }

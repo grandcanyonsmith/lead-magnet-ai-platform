@@ -4,48 +4,58 @@
  */
 
 // OpenAI model pricing (per 1K tokens, USD)
-// Source: OpenAI pricing as of 2024
+// Keep in sync with https://openai.com/api/pricing/
 const OPENAI_PRICING: Record<
   string,
   { input_per_1k_tokens_usd: number; output_per_1k_tokens_usd: number }
 > = {
   "gpt-4o": {
-    input_per_1k_tokens_usd: 0.0025, // $2.50 per 1M tokens
-    output_per_1k_tokens_usd: 0.01, // $10 per 1M tokens
-  },
-  "gpt-4.1": {
-    input_per_1k_tokens_usd: 0.0025, // $2.50 per 1M tokens
-    output_per_1k_tokens_usd: 0.01, // $10 per 1M tokens
-  },
-  "gpt-4-turbo": {
-    input_per_1k_tokens_usd: 0.01, // $10 per 1M tokens
-    output_per_1k_tokens_usd: 0.03, // $30 per 1M tokens
-  },
-  "gpt-3.5-turbo": {
-    input_per_1k_tokens_usd: 0.0005, // $0.50 per 1M tokens
-    output_per_1k_tokens_usd: 0.0015, // $1.50 per 1M tokens
+    input_per_1k_tokens_usd: 0.0025,
+    output_per_1k_tokens_usd: 0.01,
   },
   "gpt-4o-mini": {
-    input_per_1k_tokens_usd: 0.00015, // $0.15 per 1M tokens
-    output_per_1k_tokens_usd: 0.0006, // $0.60 per 1M tokens
+    input_per_1k_tokens_usd: 0.00015,
+    output_per_1k_tokens_usd: 0.0006,
+  },
+  "gpt-4.1": {
+    input_per_1k_tokens_usd: 0.002,
+    output_per_1k_tokens_usd: 0.008,
+  },
+  "gpt-4.1-mini": {
+    input_per_1k_tokens_usd: 0.0004,
+    output_per_1k_tokens_usd: 0.0016,
   },
   "gpt-5": {
     input_per_1k_tokens_usd: 0.005,
     output_per_1k_tokens_usd: 0.015,
   },
-  // Treat GPT-5.1 as same pricing tier as GPT-5 unless/until updated pricing is provided
   "gpt-5.1": {
     input_per_1k_tokens_usd: 0.005,
     output_per_1k_tokens_usd: 0.015,
   },
-  // Treat GPT-5.2 as same pricing tier as GPT-5 unless/until updated pricing is provided
   "gpt-5.2": {
     input_per_1k_tokens_usd: 0.005,
     output_per_1k_tokens_usd: 0.015,
   },
+  "o3": {
+    input_per_1k_tokens_usd: 0.01,
+    output_per_1k_tokens_usd: 0.04,
+  },
+  "o4-mini": {
+    input_per_1k_tokens_usd: 0.0011,
+    output_per_1k_tokens_usd: 0.0044,
+  },
+  "o4-mini-deep-research": {
+    input_per_1k_tokens_usd: 0.0011,
+    output_per_1k_tokens_usd: 0.0044,
+  },
   "computer-use-preview": {
-    input_per_1k_tokens_usd: 0.005, // $5 per 1M tokens (similar to gpt-5)
-    output_per_1k_tokens_usd: 0.015, // $15 per 1M tokens (similar to gpt-5)
+    input_per_1k_tokens_usd: 0.005,
+    output_per_1k_tokens_usd: 0.015,
+  },
+  "gpt-image-1.5": {
+    input_per_1k_tokens_usd: 0.005,
+    output_per_1k_tokens_usd: 0.04,
   },
 };
 

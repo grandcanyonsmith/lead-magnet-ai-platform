@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { calculateOpenAICost } from '@services/costService';
 import { callResponsesWithTimeout } from '@utils/openaiHelpers';
+import { logger } from '@utils/logger';
 import { buildWorkflowPrompt } from '@domains/workflows/services/workflow/workflowPromptService';
 import { parseWorkflowConfig } from '@domains/workflows/services/workflow/workflowConfigSupport';
 import {
@@ -87,7 +88,7 @@ export class WorkflowConfigService {
       },
     });
 
-    console.log('[Workflow Config Service] Calling OpenAI for workflow generation...');
+    logger.info('[Workflow Config Service] Calling OpenAI for workflow generation');
     const workflowStartTime = Date.now();
     
     // Force gpt-5.2 with max reasoning + priority tier for best quality and faster throughput.
@@ -97,17 +98,20 @@ export class WorkflowConfigService {
       input: resolved.prompt,
       reasoning: { effort: resolved.reasoning_effort || "high" },
       service_tier: resolved.service_tier || "priority",
+      max_output_tokens: 16_000,
     };
     const workflowCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(workflowCompletionParams),
-      'workflow generation'
+      'workflow generation',
+      300_000,
     );
 
     const workflowDuration = Date.now() - workflowStartTime;
     const workflowUsedModel =
-      (workflowCompletion as any).model || workflowCompletionParams.model;
-    console.log('[Workflow Config Service] Workflow generation completed', {
+      workflowCompletion.model || workflowCompletionParams.model;
+    logger.info('[Workflow Config Service] Workflow generation completed', {
       duration: `${workflowDuration}ms`,
+      responseId: workflowCompletion.id,
       tokensUsed: workflowCompletion.usage?.total_tokens,
       modelUsed: workflowUsedModel,
     });

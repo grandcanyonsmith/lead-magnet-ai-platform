@@ -12,14 +12,6 @@ import {
 export interface WorkflowFormData {
   workflow_name: string;
   workflow_description: string;
-  template_id: string;
-  template_version: number;
-}
-
-export interface TemplateData {
-  template_name: string;
-  template_description: string;
-  html_content: string;
 }
 
 export interface FormFieldsData {
@@ -33,14 +25,6 @@ export interface FormFieldsData {
 const defaultFormData: WorkflowFormData = {
   workflow_name: "",
   workflow_description: "",
-  template_id: "",
-  template_version: 0,
-};
-
-const defaultTemplateData: TemplateData = {
-  template_name: "",
-  template_description: "",
-  html_content: "",
 };
 
 const defaultFormFieldsData: FormFieldsData = {
@@ -53,8 +37,6 @@ const defaultFormFieldsData: FormFieldsData = {
 
 export function useWorkflowForm() {
   const [formData, setFormData] = useState<WorkflowFormData>(defaultFormData);
-  const [templateData, setTemplateData] =
-    useState<TemplateData>(defaultTemplateData);
   const [formFieldsData, setFormFieldsData] = useState<FormFieldsData>(
     defaultFormFieldsData,
   );
@@ -68,20 +50,6 @@ export function useWorkflowForm() {
         setFormData((prev) => ({ ...prev, ...fieldOrUpdates }));
       } else {
         setFormData((prev) => ({ ...prev, [fieldOrUpdates]: value }));
-      }
-    },
-    [],
-  );
-
-  const updateTemplateData = useCallback(
-    (
-      fieldOrUpdates: keyof TemplateData | Partial<TemplateData>,
-      value?: any,
-    ) => {
-      if (typeof fieldOrUpdates === "object") {
-        setTemplateData((prev) => ({ ...prev, ...fieldOrUpdates }));
-      } else {
-        setTemplateData((prev) => ({ ...prev, [fieldOrUpdates]: value }));
       }
     },
     [],
@@ -160,11 +128,6 @@ export function useWorkflowForm() {
         research_instructions?: string;
         steps?: WorkflowStep[];
       };
-      template?: {
-        template_name?: string;
-        template_description?: string;
-        html_content?: string;
-      };
       form?: {
         form_name?: string;
         public_slug?: string;
@@ -182,14 +145,6 @@ export function useWorkflowForm() {
         }));
       }
 
-      if (result.template) {
-        setTemplateData({
-          template_name: result.template?.template_name || "",
-          template_description: result.template?.template_description || "",
-          html_content: result.template?.html_content || "",
-        });
-      }
-
       if (result.form) {
         setFormFieldsData({
           form_name: result.form.form_name || "",
@@ -203,16 +158,13 @@ export function useWorkflowForm() {
 
   const reset = useCallback(() => {
     setFormData(defaultFormData);
-    setTemplateData(defaultTemplateData);
     setFormFieldsData(defaultFormFieldsData);
   }, []);
 
   return {
     formData,
-    templateData,
     formFieldsData,
     updateFormData,
-    updateTemplateData,
     updateFormFieldsData,
     updateFormField,
     addFormField,

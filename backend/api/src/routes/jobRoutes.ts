@@ -2,10 +2,12 @@ import { jobsController } from "../controllers/jobs";
 import { executionStepsController } from "../controllers/executionStepsController";
 import { jobRerunController } from "../controllers/jobRerunController";
 import { jobLogsController } from "../controllers/jobLogsController";
+import { leadMagnetHtmlEditorController } from "../controllers/leadMagnetHtmlEditor";
 import { router } from "./router";
 import { ApiError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { cacheMiddleware } from "../utils/cache";
+import { parseLimitParam } from "../utils/pagination";
 
 /**
  * Job-related admin routes.
@@ -168,6 +170,55 @@ export function registerJobRoutes(): void {
 
   // Get job logs (for streaming)
   router.register(
+    "POST",
+    "/v1/jobs/:id/html/patch",
+    async (params, body, _query, tenantId) => {
+      logger.info("[Router] Matched /v1/jobs/:id/html/patch route", {
+        id: params.id,
+      });
+      return await leadMagnetHtmlEditorController.patch(
+        params.id,
+        body,
+        tenantId!,
+      );
+    },
+    true,
+  );
+
+  router.register(
+    "GET",
+    "/v1/jobs/:id/html/patch/:patchId/status",
+    async (params, _body, _query, tenantId) => {
+      logger.info("[Router] Matched /v1/jobs/:id/html/patch/:patchId/status route", {
+        id: params.id,
+        patchId: params.patchId,
+      });
+      return await leadMagnetHtmlEditorController.getPatchStatus(
+        params.id,
+        params.patchId,
+        tenantId!,
+      );
+    },
+    true,
+  );
+
+  router.register(
+    "POST",
+    "/v1/jobs/:id/html/save",
+    async (params, body, _query, tenantId) => {
+      logger.info("[Router] Matched /v1/jobs/:id/html/save route", {
+        id: params.id,
+      });
+      return await leadMagnetHtmlEditorController.save(
+        params.id,
+        body,
+        tenantId!,
+      );
+    },
+    true,
+  );
+
+  router.register(
     "GET",
     "/admin/jobs/:id/logs",
     async (params, _body, query, tenantId) => {
@@ -175,7 +226,7 @@ export function registerJobRoutes(): void {
         id: params.id,
       });
       const since = query.since ? parseInt(query.since) : undefined;
-      const limit = query.limit ? parseInt(query.limit) : 100;
+      const limit = parseLimitParam(query.limit, 100);
       return await jobLogsController.getLogs(tenantId!, params.id, since, limit);
     },
   );

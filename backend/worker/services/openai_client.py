@@ -1,7 +1,6 @@
 """OpenAI API client wrapper."""
 
 import logging
-import warnings
 import re
 from typing import Any, Dict, List, Optional
 
@@ -14,10 +13,6 @@ from services.openai_image_service import generate_images as generate_images_api
 from services.openai_param_sanitizer import sanitize_api_params
 from services.openai_request_builder import OpenAIRequestBuilder
 from services.openai_response_service import OpenAIResponseService
-
-# Suppress Pydantic serialization warnings globally
-warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
-warnings.filterwarnings("ignore", message=".*PydanticSerializationUnexpectedValue.*")
 
 logger = logging.getLogger(__name__)
 
@@ -160,12 +155,10 @@ class OpenAIClient:
             "has_tools": bool(params.get("tools")),
         })
 
-        # Flush logs before making the API call to ensure they're captured
-        import sys
-        sys.stdout.flush()
-        sys.stderr.flush()
-
         api_params = self._sanitize_api_params(params)
+
+        if tenant_id:
+            api_params["user"] = tenant_id
 
         has_previous_response = bool(api_params.get("previous_response_id"))
         input_value = api_params.get("input", None)
@@ -183,29 +176,6 @@ class OpenAIClient:
                 },
             )
             api_params["input"] = ""
-
-        # #region agent log
-        try:
-            import json
-            import time
-            with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({
-                    "sessionId": "debug-session",
-                    "runId": "repro-1",
-                    "hypothesisId": "check-api-call",
-                    "location": "openai_client.py:create_response",
-                    "timestamp": int(time.time() * 1000),
-                    "message": "Making OpenAI API call",
-                    "data": {
-                        "model": api_params.get("model"),
-                        "tools": [t.get('type') for t in api_params.get("tools", [])],
-                        "has_shell": any(t.get('type') == 'shell' for t in api_params.get("tools", [])),
-                        "has_computer": any(t.get('type') == 'computer_use_preview' for t in api_params.get("tools", []))
-                    }
-                }) + '\n')
-        except Exception:
-            pass
-        # #endregion
 
         requested_tool_types: List[str] = []
         tools_param = api_params.get("tools")
@@ -250,10 +220,12 @@ class OpenAIClient:
                 return create_chat_completion_fallback(self.client, api_params)
 
             response = responses_client.create(**api_params)
-            logger.info("[OpenAI Client] ✅ RECEIVED RESPONSES API RESPONSE ✅", extra={
+            logger.info("[OpenAI Client] Responses API call succeeded", extra={
                 "job_id": job_id,
                 "tenant_id": tenant_id,
+                "response_id": getattr(response, "id", None),
                 "response_type": type(response).__name__,
+                "model": getattr(response, "model", None),
             })
             return response
         except AttributeError:
@@ -265,27 +237,6 @@ class OpenAIClient:
             })
             return create_chat_completion_fallback(self.client, api_params)
         except openai.BadRequestError as e:
-            # #region agent log
-            try:
-                import json
-                import time
-                with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({
-                        "sessionId": "debug-session",
-                        "runId": "repro-4",
-                        "hypothesisId": "api-error",
-                        "location": "openai_client.py:create_response",
-                        "timestamp": int(time.time() * 1000),
-                        "message": "OpenAI API BadRequestError",
-                        "data": {
-                            "error": str(e),
-                            "body": getattr(e, "body", {})
-                        }
-                    }) + '\n')
-            except Exception:
-                pass
-            # #endregion
-
             # Check for incompatible tool errors (e.g., shell with computer_use_preview)
             error_message = str(e)
             error_body = getattr(e, "body", {}) or {}
@@ -321,7 +272,6 @@ class OpenAIClient:
             # Re-raise if not an MCP auth error
             raise
         except Exception as api_error:
-            # Check for MCP authentication errors in any exception type
             self._check_mcp_auth_error(api_error, job_id, tenant_id)
             
             logger.exception("[OpenAI Client] API call failed", extra={
@@ -330,8 +280,6 @@ class OpenAIClient:
                 "error_type": type(api_error).__name__,
                 "error_message": str(api_error),
             })
-            sys.stdout.flush()
-            sys.stderr.flush()
             raise
 
     def _handle_capability_error(
@@ -459,11 +407,10 @@ class OpenAIClient:
         previous_context: str,
         image_handler,
     ):
-        """Handle OpenAI API errors with retry logic."""
-        # Check for MCP authentication errors first
+        """Handle OpenAI API errors, preserving the original exception type."""
         self._check_mcp_auth_error(error, None, None)
         
         logger.error(f"OpenAI API error: {error}", exc_info=True)
-        raise Exception(f"OpenAI API error ({type(error).__name__}): {str(error)}")
+        raise error
 
 

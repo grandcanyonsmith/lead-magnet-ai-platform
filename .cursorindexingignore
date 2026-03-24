@@ -1,0 +1,18 @@
+# Keep Cursor's codebase index focused on source files instead of generated artifacts.
+# Files here stay available when directly referenced; they just drop out of search/indexing.
+
+# Compiled TypeScript artifacts from the infrastructure package.
+infrastructure/lib/stepfunctions/*.js
+infrastructure/lib/stepfunctions/*.d.ts
+infrastructure/lib/monitoring/*.js
+infrastructure/lib/monitoring/*.d.ts
+infrastructure/lib/utils/*.js
+infrastructure/lib/utils/*.d.ts
+infrastructure/lib/config/*.js
+infrastructure/lib/config/*.d.ts
+infrastructure/bin/*.js
+infrastructure/bin/*.d.ts
+
+# Cursor workspace metadata that tends to add noise.
+.cursor/plans/
+.cursor/worktrees.json

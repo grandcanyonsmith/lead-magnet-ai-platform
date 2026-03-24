@@ -2,6 +2,7 @@ import { db, normalizeQueryResult } from "../utils/db";
 import { ApiError } from "../utils/errors";
 import { RouteResponse } from "../routes";
 import { env } from "../utils/env";
+import { parseLimitParam } from "../utils/pagination";
 
 const SUBMISSIONS_TABLE = env.submissionsTable;
 
@@ -11,7 +12,7 @@ class SubmissionsController {
     queryParams: Record<string, any>,
   ): Promise<RouteResponse> {
     const formId = queryParams.form_id;
-    const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
+    const limit = parseLimitParam(queryParams.limit, 50);
 
     let submissionsResult;
     if (formId) {

@@ -3,6 +3,7 @@ import { RequestContext } from "../routes/router";
 import { getCustomerId, getActingUserId } from "../utils/rbac";
 import { ApiError } from "../utils/errors";
 import { fileService } from "../services/files/fileService";
+import { parseLimitParam } from "../utils/pagination";
 
 /**
  * Files Controller
@@ -65,7 +66,7 @@ class FilesController {
     context?: RequestContext,
   ): Promise<RouteResponse> {
     const customerId = getCustomerId(context);
-    const limit = parseInt(query.limit || "50", 10);
+    const limit = parseLimitParam(query.limit, 50);
 
     const files = await fileService.listFiles(customerId, {
       limit,

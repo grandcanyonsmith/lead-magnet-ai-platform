@@ -13,8 +13,6 @@ import {
   WORKFLOW_INSTRUCTIONS_REFINE_PROMPT,
   IDEATION_SYSTEM_PROMPT,
   FOLLOWUP_SYSTEM_PROMPT,
-  TEMPLATE_HTML_PROMPT,
-  TEMPLATE_METADATA_PROMPT,
   HTML_PATCH_INSTRUCTIONS,
   HTML_PATCH_PROMPT,
   FORM_FIELD_PROMPT,
@@ -25,8 +23,6 @@ import {
   FILE_SEARCH_ASSISTANT_INSTRUCTIONS,
   FILE_SEARCH_SIMPLE_INSTRUCTIONS,
   FILE_SEARCH_SIMPLE_PROMPT,
-  STYLED_HTML_INSTRUCTIONS,
-  STYLED_HTML_PROMPT,
   IMAGE_PROMPT_PLANNER_INSTRUCTIONS,
   IMAGE_PROMPT_PLANNER_PROMPT,
   SHELL_TOOL_LOOP_INSTRUCTIONS,
@@ -90,16 +86,6 @@ const PROMPT_DEFAULTS: PromptDefaults = {
     prompt: WORKFLOW_INSTRUCTIONS_REFINE_PROMPT,
     ...PROMPT_CONFIGS.workflow_instructions_refine,
   },
-  template_html_generation: {
-    instructions:
-      "You are an expert HTML template designer. Return only valid HTML code without markdown formatting.",
-    prompt: TEMPLATE_HTML_PROMPT,
-    ...PROMPT_CONFIGS.template_html_generation,
-  },
-  template_metadata_generation: {
-    prompt: TEMPLATE_METADATA_PROMPT,
-    ...PROMPT_CONFIGS.template_metadata_generation,
-  },
   html_patch: {
     instructions: HTML_PATCH_INSTRUCTIONS,
     prompt: HTML_PATCH_PROMPT,
@@ -137,11 +123,6 @@ const PROMPT_DEFAULTS: PromptDefaults = {
     instructions: FILE_SEARCH_SIMPLE_INSTRUCTIONS,
     prompt: FILE_SEARCH_SIMPLE_PROMPT,
     ...PROMPT_CONFIGS.file_search_simple,
-  },
-  styled_html_generation: {
-    instructions: STYLED_HTML_INSTRUCTIONS,
-    prompt: STYLED_HTML_PROMPT,
-    ...PROMPT_CONFIGS.styled_html_generation,
   },
   image_prompt_planner: {
     instructions: IMAGE_PROMPT_PLANNER_INSTRUCTIONS,

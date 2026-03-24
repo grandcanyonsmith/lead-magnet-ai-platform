@@ -146,6 +146,29 @@ const DEFAULT_RETRY_CONFIG: Required<
 };
 
 /**
+ * Extract the Retry-After delay (in ms) from an error if available.
+ * OpenAI includes this header on 429 responses.
+ */
+function extractRetryAfterMs(error: unknown): number | undefined {
+  const headers =
+    (error as any)?.response?.headers ??
+    (error as any)?.headers;
+  if (!headers) return undefined;
+
+  const raw =
+    typeof headers.get === "function"
+      ? headers.get("retry-after")
+      : headers["retry-after"];
+  if (!raw) return undefined;
+
+  const seconds = Number(raw);
+  if (!Number.isNaN(seconds) && seconds > 0) {
+    return seconds * 1000;
+  }
+  return undefined;
+}
+
+/**
  * Determines if an error is retryable by default.
  * Network errors, timeouts, and 5xx errors are considered retryable.
  *
@@ -154,7 +177,6 @@ const DEFAULT_RETRY_CONFIG: Required<
  */
 function isRetryableError(error: unknown): boolean {
   if (error instanceof ApiError) {
-    // Retry on 5xx errors, rate limits, and service unavailable
     return (
       error.statusCode >= 500 ||
       error.statusCode === 429 ||
@@ -162,15 +184,20 @@ function isRetryableError(error: unknown): boolean {
     );
   }
 
+  const status = (error as any)?.status ?? (error as any)?.statusCode;
+  if (typeof status === "number") {
+    if (status === 429 || status === 503 || status >= 500) return true;
+  }
+
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
-    // Retry on network errors, timeouts, and connection issues
     return (
       message.includes("timeout") ||
       message.includes("network") ||
       message.includes("connection") ||
       message.includes("econnreset") ||
-      message.includes("enotfound")
+      message.includes("enotfound") ||
+      message.includes("rate limit")
     );
   }
 
@@ -191,8 +218,9 @@ function calculateRetryDelay(attempt: number, config: RetryConfig): number {
   const multiplier =
     config.backoffMultiplier ?? DEFAULT_RETRY_CONFIG.backoffMultiplier;
 
-  const delay = initialDelay * Math.pow(multiplier, attempt);
-  return Math.min(delay, maxDelay);
+  const baseDelay = initialDelay * Math.pow(multiplier, attempt);
+  const jitter = Math.random() * baseDelay * 0.5;
+  return Math.min(baseDelay + jitter, maxDelay);
 }
 
 /**
@@ -249,13 +277,16 @@ export async function retryWithBackoff<T>(
         throw error;
       }
 
-      // Calculate delay and wait before retry
-      const delay = calculateRetryDelay(attempt, config);
+      // Prefer Retry-After header from 429 responses over computed backoff
+      const retryAfter = extractRetryAfterMs(error);
+      const computedDelay = calculateRetryDelay(attempt, config);
+      const delay = retryAfter ?? computedDelay;
 
       logger.debug("[Retry] Retrying after delay", {
         attempt: attempt + 1,
         maxAttempts,
         delayMs: delay,
+        usedRetryAfterHeader: retryAfter !== undefined,
         error: error instanceof Error ? error.message : String(error),
       });
 
