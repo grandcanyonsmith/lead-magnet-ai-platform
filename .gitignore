@@ -95,8 +95,10 @@ backend/api/package/
 backend/api/bundle/
 
 # Compiled TypeScript outputs
-infrastructure/lib/*.js
-infrastructure/lib/*.d.ts
+infrastructure/lib/**/*.js
+infrastructure/lib/**/*.d.ts
+!infrastructure/lib/lambdas/**/*.js
+!infrastructure/lib/cloudfront-functions/**/*.js
 infrastructure/bin/*.js
 infrastructure/bin/*.d.ts
 backend/api/dist/

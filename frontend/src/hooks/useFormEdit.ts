@@ -25,43 +25,50 @@ export interface FormFormData {
   redirect_url: string;
 }
 
+const createEmptyFormFormData = (): FormFormData => ({
+  form_name: "",
+  public_slug: "",
+  form_fields_schema: {
+    fields: [],
+  },
+  rate_limit_enabled: true,
+  rate_limit_per_hour: 10,
+  captcha_enabled: false,
+  custom_css: "",
+  thank_you_message: "",
+  redirect_url: "",
+});
+
 export function useFormEdit(
   workflowName: string,
   formId: string | null,
   workflowForm?: any,
 ) {
-  const [formFormData, setFormFormData] = useState<FormFormData>({
-    form_name: "",
-    public_slug: "",
-    form_fields_schema: {
-      fields: [],
-    },
-    rate_limit_enabled: true,
-    rate_limit_per_hour: 10,
-    captcha_enabled: false,
-    custom_css: "",
-    thank_you_message: "",
-    redirect_url: "",
-  });
+  const [formFormData, setFormFormData] = useState<FormFormData>(
+    createEmptyFormFormData,
+  );
 
   // Load form data if provided
   useEffect(() => {
-    if (workflowForm) {
-      setFormFormData({
-        form_name: workflowForm.form_name || "",
-        public_slug: workflowForm.public_slug || "",
-        form_fields_schema: workflowForm.form_fields_schema || { fields: [] },
-        rate_limit_enabled:
-          workflowForm.rate_limit_enabled !== undefined
-            ? workflowForm.rate_limit_enabled
-            : true,
-        rate_limit_per_hour: workflowForm.rate_limit_per_hour ?? 10,
-        captcha_enabled: workflowForm.captcha_enabled || false,
-        custom_css: workflowForm.custom_css || "",
-        thank_you_message: workflowForm.thank_you_message || "",
-        redirect_url: workflowForm.redirect_url || "",
-      });
+    if (!workflowForm) {
+      setFormFormData(createEmptyFormFormData());
+      return;
     }
+
+    setFormFormData({
+      form_name: workflowForm.form_name || "",
+      public_slug: workflowForm.public_slug || "",
+      form_fields_schema: workflowForm.form_fields_schema || { fields: [] },
+      rate_limit_enabled:
+        workflowForm.rate_limit_enabled !== undefined
+          ? workflowForm.rate_limit_enabled
+          : true,
+      rate_limit_per_hour: workflowForm.rate_limit_per_hour ?? 10,
+      captcha_enabled: workflowForm.captcha_enabled || false,
+      custom_css: workflowForm.custom_css || "",
+      thank_you_message: workflowForm.thank_you_message || "",
+      redirect_url: workflowForm.redirect_url || "",
+    });
   }, [workflowForm]);
 
   // Auto-update form name when workflow name changes
@@ -114,7 +121,7 @@ export function useFormEdit(
     moveItemDown: moveRootFieldDown,
   } = useOrderedList(formFormData.form_fields_schema.fields, setFields);
 
-  const buildEmptyField = () => ({
+  const buildEmptyField = (): FormFieldType => ({
     field_id: `field_${Date.now()}`,
     field_type: "text",
     label: "",
