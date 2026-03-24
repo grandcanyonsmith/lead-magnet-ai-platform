@@ -7,6 +7,7 @@ import {
 } from '@services/promptOverrides';
 import { stripMarkdownCodeFences } from '@utils/openaiHelpers';
 import { parseJsonFromText } from '@utils/jsonParsing';
+import { logger } from '@utils/logger';
 import { ToolChoice } from '@utils/types';
 import { WorkflowStep } from './workflow/workflowConfigSupport';
 import { AVAILABLE_MODELS } from './workflow/modelDescriptions';
@@ -350,7 +351,7 @@ export class WorkflowStepAIService {
     if (!parsedResponse.step.model) {
       parsedResponse.step.model = DEFAULT_MODEL;
     } else if (!AVAILABLE_MODELS.includes(parsedResponse.step.model)) {
-      console.warn(
+      logger.warn(
         `[WorkflowStepAI] Model ${parsedResponse.step.model} not in curated list; using as-is`,
       );
     }
@@ -441,7 +442,7 @@ export class WorkflowStepAIService {
     if (parsedResponse.action === 'update' && currentStep) {
       if (normalizedDependsOn === null) {
         parsedResponse.step.depends_on = currentStep.depends_on || [];
-        console.log('[WorkflowStepAI] Preserved existing dependencies', {
+        logger.debug('[WorkflowStepAI] Preserved existing dependencies', {
           depends_on: parsedResponse.step.depends_on,
         });
       }
@@ -452,7 +453,7 @@ export class WorkflowStepAIService {
       }
     }
 
-    console.log('[WorkflowStepAI] Step generated successfully', {
+    logger.info('[WorkflowStepAI] Step generated successfully', {
       action: parsedResponse.action,
       stepName: parsedResponse.step.step_name,
       model: parsedResponse.step.model,
@@ -475,6 +476,7 @@ export class WorkflowStepAIService {
         effort: context.resolved.reasoning_effort || DEFAULT_REASONING_EFFORT,
       },
       service_tier: context.resolved.service_tier || DEFAULT_SERVICE_TIER,
+      max_output_tokens: 8_000,
       ...(stream ? { stream: true } : {}),
     };
   }
@@ -482,24 +484,36 @@ export class WorkflowStepAIService {
   async generateStep(request: AIStepGenerationRequest): Promise<AIStepGenerationResponse> {
     const context = await this.buildGenerationContext(request);
 
-    console.log('[WorkflowStepAI] Generating step', {
+    logger.info('[WorkflowStepAI] Generating step', {
       workflow: context.workflowContext.workflow_name,
       userPrompt: context.userPrompt.substring(0, 100),
       action: context.suggestedAction,
     });
 
     try {
-      const completion = await (this.openaiClient as any).responses.create(
-        this.buildResponsesRequest(context),
+      const completion = await this.openaiClient.responses.create(
+        this.buildResponsesRequest(context) as any,
       );
 
+      logger.info('[WorkflowStepAI] Response received', {
+        responseId: completion.id,
+        status: completion.status,
+      });
+
+      if (completion.status === 'incomplete') {
+        logger.warn('[WorkflowStepAI] Incomplete response', {
+          reason: completion.incomplete_details?.reason,
+          responseId: completion.id,
+        });
+      }
+
       const responseContent = stripMarkdownCodeFences(
-        String((completion as any)?.output_text || ''),
+        String(completion?.output_text || ''),
       ).trim();
 
       return this.parseStepResponse(responseContent, context);
     } catch (error: any) {
-      console.error('[WorkflowStepAI] Error generating step', {
+      logger.error('[WorkflowStepAI] Error generating step', {
         error: error.message,
         stack: error.stack,
       });
@@ -513,29 +527,29 @@ export class WorkflowStepAIService {
   ): Promise<AIStepGenerationResponse> {
     const context = await this.buildGenerationContext(request);
 
-    console.log('[WorkflowStepAI] Streaming step generation', {
+    logger.info('[WorkflowStepAI] Streaming step generation', {
       workflow: context.workflowContext.workflow_name,
       userPrompt: context.userPrompt.substring(0, 100),
       action: context.suggestedAction,
     });
 
     try {
-      const stream = await (this.openaiClient as any).responses.create(
-        this.buildResponsesRequest(context, true),
+      const stream = await this.openaiClient.responses.create(
+        this.buildResponsesRequest(context, true) as any,
       );
 
       let outputText = '';
-      for await (const event of stream as any) {
+      for await (const event of stream as unknown as AsyncIterable<any>) {
         handlers?.onEvent?.(event);
-        const eventType = String((event as any)?.type || '');
+        const eventType = String(event?.type || '');
         if (!eventType.includes('output_text')) {
           continue;
         }
         const delta =
-          typeof (event as any)?.delta === 'string'
-            ? (event as any).delta
-            : typeof (event as any)?.text === 'string'
-              ? (event as any).text
+          typeof event?.delta === 'string'
+            ? event.delta
+            : typeof event?.text === 'string'
+              ? event.text
               : undefined;
         if (!delta) {
           continue;
@@ -547,7 +561,7 @@ export class WorkflowStepAIService {
       const responseContent = stripMarkdownCodeFences(outputText).trim();
       return this.parseStepResponse(responseContent, context);
     } catch (error: any) {
-      console.error('[WorkflowStepAI] Error streaming step generation', {
+      logger.error('[WorkflowStepAI] Error streaming step generation', {
         error: error.message,
         stack: error.stack,
       });

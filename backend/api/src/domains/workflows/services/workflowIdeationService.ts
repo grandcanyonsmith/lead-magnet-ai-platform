@@ -110,9 +110,19 @@ class WorkflowIdeationService {
     });
 
     const completion = await openai.responses.create(
-      this.buildCompletionParams(model, mode, prompt),
+      this.buildCompletionParams(model, mode, prompt) as any,
     );
-    const outputText = String((completion as any)?.output_text || "");
+    logger.info("[Workflow Ideation] Response received", {
+      responseId: completion.id,
+      status: completion.status,
+    });
+    if (completion.status === "incomplete") {
+      logger.warn("[Workflow Ideation] Incomplete response", {
+        reason: completion.incomplete_details?.reason,
+        responseId: completion.id,
+      });
+    }
+    const outputText = String(completion?.output_text || "");
     const parsed = this.parseIdeationResult(outputText);
 
     return this.finalizeIdeationResponse({
@@ -145,19 +155,19 @@ class WorkflowIdeationService {
       model,
       prompt,
     });
-    const stream = await (openai as any).responses.create(streamParams);
+    const stream = await openai.responses.create(streamParams as any);
 
     let outputText = "";
-    for await (const event of stream as any) {
-      const eventType = String((event as any)?.type || "");
+    for await (const event of stream as unknown as AsyncIterable<any>) {
+      const eventType = String(event?.type || "");
       if (!eventType.includes("output_text")) {
         continue;
       }
       const delta =
-        typeof (event as any)?.delta === "string"
-          ? (event as any).delta
-          : typeof (event as any)?.text === "string"
-            ? (event as any).text
+        typeof event?.delta === "string"
+          ? event.delta
+          : typeof event?.text === "string"
+            ? event.text
             : undefined;
       if (!delta) {
         continue;
@@ -266,7 +276,7 @@ class WorkflowIdeationService {
     model: string,
     mode: "ideation" | "followup",
     prompt: string,
-  ): any {
+  ): Record<string, unknown> {
     return {
       model,
       instructions:
@@ -274,6 +284,7 @@ class WorkflowIdeationService {
       input: prompt,
       reasoning: { effort: "high" },
       service_tier: "priority",
+      max_output_tokens: 8_000,
     };
   }
 
@@ -307,6 +318,8 @@ class WorkflowIdeationService {
       input: resolved.prompt,
       reasoning: { effort: resolved.reasoning_effort || "high" },
       service_tier: resolved.service_tier || "priority",
+      max_output_tokens: 8_000,
+      user: tenantId,
       stream: true,
     };
   }

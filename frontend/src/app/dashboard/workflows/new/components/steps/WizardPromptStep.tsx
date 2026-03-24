@@ -108,12 +108,6 @@ export const WizardPromptStep: React.FC<WizardPromptStepProps> = ({
                       workflow_description: result.workflow.workflow_description || "",
                     });
                     workflowSteps.setSteps(result.workflow.steps);
-                    if (result.workflow.templateData) {
-                      workflowForm.updateTemplateData(
-                        result.workflow.templateData,
-                        undefined,
-                      );
-                    }
                     setStep("form");
                   }
                 } catch (err: any) {

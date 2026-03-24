@@ -5,7 +5,6 @@ import {
   FiCode,
   FiArrowLeft,
   FiSave,
-  FiLayers,
   FiSmartphone,
   FiRotateCcw,
   FiRotateCw,
@@ -29,9 +28,6 @@ interface EditorHeaderProps {
   handleSave: () => void;
   canSave: boolean;
   isSaving: boolean;
-  handleSaveAsTemplate: () => void;
-  canSaveAsTemplate: boolean;
-  savingTemplate: boolean;
   workflow: Workflow | null;
   jobId: string | null;
   device: "desktop" | "mobile";
@@ -55,9 +51,6 @@ export function EditorHeader({
   handleSave,
   canSave,
   isSaving,
-  handleSaveAsTemplate,
-  canSaveAsTemplate,
-  savingTemplate,
   workflow,
   jobId,
   device,
@@ -167,30 +160,6 @@ export function EditorHeader({
             <FiSave className="w-3.5 h-3.5" />
             <span className="hidden md:inline">
               {isSaving ? "Saving…" : "Save"}
-            </span>
-          </button>
-        </Tooltip>
-
-        <Tooltip
-          content={
-            workflow?.template_id
-              ? "Update the lead magnet template HTML from your current editor HTML"
-              : "No template attached to this lead magnet"
-          }
-          position="bottom"
-        >
-          <button
-            onClick={handleSaveAsTemplate}
-            disabled={!canSaveAsTemplate}
-            className={`hidden lg:inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all border ${
-              canSaveAsTemplate
-                ? "bg-indigo-600/10 text-indigo-400 hover:bg-indigo-600/20 border-indigo-500/20"
-                : "bg-white/5 text-gray-500 border-white/5 cursor-not-allowed"
-            }`}
-          >
-            <FiLayers className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline">
-              {savingTemplate ? "Updating template…" : "Save as Template"}
             </span>
           </button>
         </Tooltip>

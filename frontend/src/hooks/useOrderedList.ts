@@ -11,9 +11,10 @@ export function useOrderedList<T>(
   setItems: React.Dispatch<React.SetStateAction<T[]>>,
   options: OrderedListOptions<T> = {},
 ) {
+  const { normalize: normalizeOption } = options;
   const normalize = useCallback(
-    (next: T[]) => (options.normalize ? options.normalize(next) : next),
-    [options.normalize],
+    (next: T[]) => (normalizeOption ? normalizeOption(next) : next),
+    [normalizeOption],
   );
 
   const applyUpdate = useCallback(

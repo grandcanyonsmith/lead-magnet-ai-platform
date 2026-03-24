@@ -22,14 +22,6 @@ import type {
   JobResubmitResponse,
   ExecutionStep,
   JobAutoUploadsResponse,
-  Template,
-  TemplateListResponse,
-  TemplateCreateRequest,
-  TemplateUpdateRequest,
-  TemplateGenerateRequest,
-  TemplateGenerateResponse,
-  TemplateRefineRequest,
-  TemplateRefineResponse,
   NotificationListResponse,
   Settings,
   SettingsUpdateRequest,
@@ -351,59 +343,6 @@ export const jobContracts = {
   },
 } satisfies Record<string, ApiEndpointContract<any, any, any>>;
 
-export const templateContracts = {
-  list: {
-    method: "GET",
-    path: "/admin/templates",
-    description: "List templates.",
-    docs: "docs/contracts/README.md#templates--notifications-snapshot",
-    __types: defineTypes<
-      Record<string, unknown> | undefined,
-      void,
-      TemplateListResponse
-    >(),
-  },
-  detail: {
-    method: "GET",
-    path: "/admin/templates/:id",
-    description: "Fetch a template.",
-    docs: "docs/contracts/README.md#templates--notifications-snapshot",
-    __types: defineTypes<void, void, Template>(),
-  },
-  create: {
-    method: "POST",
-    path: "/admin/templates",
-    description: "Create a template.",
-    docs: "docs/contracts/README.md#templates--notifications-snapshot",
-    __types: defineTypes<void, TemplateCreateRequest, Template>(),
-  },
-  update: {
-    method: "PUT",
-    path: "/admin/templates/:id",
-    description: "Update a template.",
-    docs: "docs/contracts/README.md#templates--notifications-snapshot",
-    __types: defineTypes<void, TemplateUpdateRequest, Template>(),
-  },
-  generateWithAI: {
-    method: "POST",
-    path: "/admin/templates/generate-with-ai",
-    description: "AI-generate template HTML.",
-    docs: "docs/contracts/README.md#templates--notifications-snapshot",
-    __types: defineTypes<
-      void,
-      TemplateGenerateRequest,
-      TemplateGenerateResponse
-    >(),
-  },
-  refineWithAI: {
-    method: "POST",
-    path: "/admin/templates/refine-with-ai",
-    description: "Refine template HTML via AI.",
-    docs: "docs/contracts/README.md#templates--notifications-snapshot",
-    __types: defineTypes<void, TemplateRefineRequest, TemplateRefineResponse>(),
-  },
-} satisfies Record<string, ApiEndpointContract<any, any, any>>;
-
 export const notificationContracts = {
   list: {
     method: "GET",
@@ -482,7 +421,6 @@ export const apiContracts = {
   workflows: workflowContracts,
   forms: formContracts,
   jobs: jobContracts,
-  templates: templateContracts,
   notifications: notificationContracts,
   settings: settingsContracts,
 } as const;

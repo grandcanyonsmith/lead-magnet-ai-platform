@@ -29,6 +29,7 @@ process.env.SESSIONS_TABLE = "test-sessions";
 process.env.USERS_TABLE = "test-users";
 process.env.CUSTOMERS_TABLE = "test-customers";
 process.env.ARTIFACTS_BUCKET = "test-artifacts-bucket";
+process.env.ARTIFACTS_TABLE = "test-artifacts";
 process.env.OPENAI_SECRET_NAME = "test/openai-api-key";
 process.env.LAMBDA_FUNCTION_NAME = "test-api-handler";
 process.env.LOG_LEVEL = "error"; // Reduce noise in tests

@@ -14,11 +14,6 @@ export interface AIGenerationResult {
     research_instructions?: string;
     steps?: WorkflowStep[];
   };
-  template: {
-    template_name?: string;
-    template_description?: string;
-    html_content?: string;
-  };
   form: {
     form_name?: string;
     public_slug?: string;
@@ -110,7 +105,6 @@ export function useAIGeneration() {
             data: {
               duration: `${duration}ms`,
               workflow: syncResult.result.workflow,
-              template: syncResult.result.template,
               form: syncResult.result.form,
               timestamp: new Date().toISOString(),
             },

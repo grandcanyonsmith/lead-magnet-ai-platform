@@ -7,6 +7,28 @@ from .input_builder import build_multimodal_input
 
 logger = logging.getLogger(__name__)
 
+
+def _enforce_additional_properties(schema: Any) -> Any:
+    """Recursively set additionalProperties: false on all object-typed schemas."""
+    if not isinstance(schema, dict):
+        return schema
+    result = dict(schema)
+    schema_type = result.get("type")
+    if schema_type == "object":
+        result.setdefault("additionalProperties", False)
+    if "properties" in result and isinstance(result["properties"], dict):
+        result["properties"] = {
+            k: _enforce_additional_properties(v)
+            for k, v in result["properties"].items()
+        }
+    if "items" in result:
+        result["items"] = _enforce_additional_properties(result["items"])
+    for keyword in ("allOf", "anyOf", "oneOf"):
+        if keyword in result and isinstance(result[keyword], list):
+            result[keyword] = [_enforce_additional_properties(s) for s in result[keyword]]
+    return result
+
+
 # Global guardrail: workflows run autonomously with no user interaction between steps.
 NO_CONFIRMATION_PREFIX = (
     "IMPORTANT: This workflow runs end-to-end with NO user interaction between steps. "
@@ -87,6 +109,9 @@ def build_api_params(
         and "no user input" not in instructions_lower
         and "no human-in-the-loop" not in instructions_lower
     ):
+        # Prepend the stable guardrail prefix first for prompt caching benefits:
+        # OpenAI caches the longest matching prefix, so keeping constant text at the
+        # start of instructions maximizes cache hit rates across calls.
         instructions_text = NO_CONFIRMATION_PREFIX + instructions_text
 
     # Check if image_generation tool is present
@@ -226,35 +251,6 @@ def build_api_params(
         except Exception:
             pass
     
-    # #region agent log
-    try:
-        import json
-        import time
-        # Shell is supported alongside computer_use_preview; keep it and just log the final tool set.
-        # ToolBuilder.clean_tools preserves the native shell tool type.
-        
-        # Convert Decimals to ensure JSON serialization works
-        log_data = convert_decimals_to_float({
-            "sessionId": "debug-session",
-            "runId": "repro-3",
-            "hypothesisId": "check-tools-after-builder",
-            "location": "openai_request_builder.py:build_api_params",
-            "timestamp": int(time.time() * 1000),
-            "message": "Tools after ToolBuilder.clean_tools",
-            "data": {
-                "model": model,
-                "has_computer_use": has_computer_use,
-                "final_tools_count": len(cleaned_tools),
-                "final_tool_types": [t.get('type') for t in cleaned_tools],
-                "final_tool_names": [t.get('name') for t in cleaned_tools if t.get('type') == 'function']
-            }
-        })
-        with open('/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log', 'a') as f:
-            f.write(json.dumps(log_data) + '\n')
-    except Exception:
-        pass
-    # #endregion
-
     # Only add tools if we actually have any after cleaning/filtering
     if cleaned_tools:
         params["tools"] = cleaned_tools
@@ -405,11 +401,11 @@ def build_api_params(
             description = output_format.get("description")
             strict = output_format.get("strict")
             if isinstance(name, str) and name and isinstance(schema, dict) and schema:
-                fmt: Dict[str, Any] = {"type": "json_schema", "name": name, "schema": schema}
+                enforced_schema = _enforce_additional_properties(schema)
+                fmt: Dict[str, Any] = {"type": "json_schema", "name": name, "schema": enforced_schema}
                 if isinstance(description, str) and description:
                     fmt["description"] = description
-                if isinstance(strict, bool):
-                    fmt["strict"] = strict
+                fmt["strict"] = strict if isinstance(strict, bool) else True
                 text_cfg["format"] = fmt
 
     if text_cfg:

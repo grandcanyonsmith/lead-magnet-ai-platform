@@ -170,33 +170,43 @@ export async function patchHtmlWithOpenAI(
       },
     });
 
-    const completionParams: any = {
-      model,
-      instructions: resolved.instructions,
-      input: resolved.prompt,
-      service_tier: "priority",
-      reasoning: { effort: reasoningEffort },
+    const completionParams = {
+      model: model ?? "gpt-5.2",
+      instructions: resolved.instructions ?? "",
+      input: resolved.prompt ?? "",
+      service_tier: "priority" as const,
+      reasoning: { effort: reasoningEffort ?? "high" },
+      max_output_tokens: 32_000,
+      ...(tenantId ? { user: tenantId } : {}),
     };
 
     const startTime = Date.now();
-    const completion = await openai.responses.create(completionParams);
+    const completion = await openai.responses.create(completionParams as any);
     const duration = Date.now() - startTime;
 
     logger.info("[HtmlPatchService] OpenAI patch completed", {
       durationMs: duration,
-      tokensUsed: (completion as any).usage?.total_tokens,
-      modelUsed: (completion as any).model || model,
+      responseId: completion.id,
+      tokensUsed: completion.usage?.total_tokens,
+      modelUsed: completion.model || model,
     });
 
-    if (!(completion as any).output_text) {
+    if (!completion.output_text) {
       throw new ApiError(
         "OpenAI Responses API returned empty response. output_text is missing.",
         500,
       );
     }
 
+    if (completion.status === "incomplete") {
+      logger.warn("[HtmlPatchService] Incomplete response from OpenAI", {
+        reason: completion.incomplete_details?.reason,
+        responseId: completion.id,
+      });
+    }
+
     const patchedHtml = stripTemplatePlaceholders(
-      stripMarkdownCodeFences((completion as any).output_text),
+      stripMarkdownCodeFences(completion.output_text),
     );
 
     // Generate a brief summary

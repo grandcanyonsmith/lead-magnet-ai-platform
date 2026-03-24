@@ -283,16 +283,20 @@ export async function searchFilesSimple(
       },
     });
 
-    // Use Responses API (gpt-5.2) to answer query
-    const completion = await (openai as any).responses.create({
+    const completion = await openai.responses.create({
       model: "gpt-5.2",
       instructions: resolved.instructions,
       input: resolved.prompt,
       reasoning: { effort: "high" },
       service_tier: "priority",
+      max_output_tokens: 8_000,
+    } as any);
+
+    logger.debug("[OpenAI File Service] Response details", {
+      responseId: completion.id,
     });
 
-    const response = String((completion as any)?.output_text || "").trim() || "No response generated.";
+    const response = String(completion?.output_text || "").trim() || "No response generated.";
 
     logger.info("[OpenAI File Service] File search completed (simple)", {
       customerId,

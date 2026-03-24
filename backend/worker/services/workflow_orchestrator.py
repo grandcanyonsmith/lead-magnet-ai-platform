@@ -13,7 +13,6 @@ from services.step_processor import StepProcessor
 from services.context_builder import ContextBuilder
 from services.field_label_service import FieldLabelService
 from services.job_completion_service import JobCompletionService
-from utils.html_utils import strip_html_tags
 from utils.content_detector import detect_content_type
 from utils.step_utils import normalize_step_order
 
@@ -191,24 +190,6 @@ class WorkflowOrchestrator:
         Returns:
             Tuple of (final_content, final_artifact_type, final_filename)
         """
-        template_id = workflow.get('template_id')
-        
-        # Check if template exists
-        if template_id:
-            try:
-                template = self.db.get_template(
-                    template_id,
-                    workflow.get('template_version', 0)
-                )
-                if not template:
-                    logger.warning(f"Template {template_id} not found, using markdown")
-                    template = None
-            except Exception as e:
-                logger.warning(f"Failed to load template: {e}, using markdown")
-                template = None
-        else:
-            template = None
-        
         # Build deliverable-focused context from explicit deliverable steps or terminal steps.
         steps = workflow.get('steps', [])
         sorted_steps = sorted(steps, key=normalize_step_order)
@@ -228,33 +209,17 @@ class WorkflowOrchestrator:
                 )
                 deliverable_context = accumulated_context
 
-        if template:
-            # Always generate the deliverable from the template when a template is configured.
-            safe_deliverable_context = strip_html_tags(deliverable_context)
-            labeled_submission = FieldLabelService.map_submission_data_keys(
-                submission_data, field_label_map
-            )
-            final_content, final_artifact_type, final_filename = self.job_completion_service.generate_html_from_accumulated_context(
-                accumulated_context=safe_deliverable_context,
-                submission_data=labeled_submission,
-                workflow=workflow,
-                execution_steps=execution_steps,
-                job_id=job_id,
-                tenant_id=tenant_id
-            )
+        final_content = deliverable_context if deliverable_context else accumulated_context
+        last_step_name = step_outputs[-1].get('step_name', '') if step_outputs else ''
+        file_ext = detect_content_type(str(final_content or ""), str(last_step_name or ""))
+        if file_ext == '.html':
+            final_artifact_type = 'html_final'
+            final_filename = 'final.html'
+        elif file_ext == '.json':
+            final_artifact_type = 'json_final'
+            final_filename = 'final.json'
         else:
-            # Use deliverable-only context as the final content (non-template workflows)
-            final_content = deliverable_context if deliverable_context else accumulated_context
-            last_step_name = step_outputs[-1].get('step_name', '') if step_outputs else ''
-            file_ext = detect_content_type(str(final_content or ""), str(last_step_name or ""))
-            if file_ext == '.html':
-                final_artifact_type = 'html_final'
-                final_filename = 'final.html'
-            elif file_ext == '.json':
-                final_artifact_type = 'json_final'
-                final_filename = 'final.json'
-            else:
-                final_artifact_type = 'markdown_final'
-                final_filename = 'final.md'
+            final_artifact_type = 'markdown_final'
+            final_filename = 'final.md'
         
         return final_content, final_artifact_type, final_filename

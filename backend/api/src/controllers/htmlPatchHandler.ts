@@ -58,8 +58,18 @@ export async function handleHtmlPatchRequest(event: any): Promise<APIGatewayProx
     };
   }
 
+  let patchRequest: any | undefined;
   try {
-    // Update status to processing
+    // Get the patch request details
+    patchRequest = await db.get(HTML_PATCH_REQUESTS_TABLE, { patch_id: patchId });
+    if (!patchRequest) {
+      throw new Error(`Patch request ${patchId} not found`);
+    }
+    if (patchRequest.job_id !== jobId || patchRequest.tenant_id !== tenantId) {
+      throw new Error(`Patch request ${patchId} does not match the provided job or tenant`);
+    }
+
+    // Update status to processing after verifying the patch exists.
     await db.update(
       HTML_PATCH_REQUESTS_TABLE,
       { patch_id: patchId },
@@ -68,12 +78,6 @@ export async function handleHtmlPatchRequest(event: any): Promise<APIGatewayProx
         updated_at: new Date().toISOString(),
       },
     );
-
-    // Get the patch request details
-    const patchRequest = await db.get(HTML_PATCH_REQUESTS_TABLE, { patch_id: patchId });
-    if (!patchRequest) {
-      throw new Error(`Patch request ${patchId} not found`);
-    }
 
     // Fetch HTML base:
     // - Prefer the client-provided HTML snapshot (unsaved edits) if present
@@ -149,15 +153,17 @@ export async function handleHtmlPatchRequest(event: any): Promise<APIGatewayProx
     });
 
     // Update patch request with failure
-    await db.update(
-      HTML_PATCH_REQUESTS_TABLE,
-      { patch_id: patchId },
-      {
-        status: 'failed',
-        error_message: error.message || String(error),
-        updated_at: new Date().toISOString(),
-      },
-    );
+    if (patchRequest) {
+      await db.update(
+        HTML_PATCH_REQUESTS_TABLE,
+        { patch_id: patchId },
+        {
+          status: 'failed',
+          error_message: error.message || String(error),
+          updated_at: new Date().toISOString(),
+        },
+      );
+    }
 
     return {
       statusCode: 500,

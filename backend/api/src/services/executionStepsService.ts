@@ -415,17 +415,22 @@ export class ExecutionStepsService {
         },
       });
 
-      // Call OpenAI (Responses API)
-      const completion = await (openai as any).responses.create({
+      const completion = await openai.responses.create({
         model: resolved.model || "gpt-5.2",
         instructions: resolved.instructions,
         input: resolved.prompt,
         reasoning: { effort: resolved.reasoning_effort || "high" },
         service_tier: resolved.service_tier || "priority",
+        max_output_tokens: 16_000,
+      } as any);
+
+      logger.debug("[ExecutionSteps] Response received", {
+        responseId: completion.id,
+        status: completion.status,
       });
 
       const editedOutput = stripMarkdownCodeFences(
-        String((completion as any)?.output_text || ""),
+        String(completion?.output_text || ""),
       ).trim();
       if (!editedOutput) {
         throw new Error("No response from OpenAI");

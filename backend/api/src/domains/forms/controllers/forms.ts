@@ -1,10 +1,11 @@
 import { RouteResponse } from '@routes/routes';
 import { cssGenerationService } from '@services/cssGenerationService';
 import { formManagementService } from '@domains/forms/services/formManagementService';
+import { parseLimitParam } from '@utils/pagination';
 
 class FormsController {
   async list(tenantId: string, queryParams: Record<string, any>): Promise<RouteResponse> {
-    const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
+    const limit = parseLimitParam(queryParams.limit, 50);
 
     return {
       statusCode: 200,

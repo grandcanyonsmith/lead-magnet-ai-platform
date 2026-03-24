@@ -1,6 +1,5 @@
 import OpenAI from 'openai';
 import { WorkflowConfigService } from './workflowConfigService';
-import { TemplateAIService, type StoreUsageRecordFn } from '@services/templateAIService';
 import { FormFieldGenerationService } from '@domains/forms/services/formFieldGenerationService';
 import type { PromptOverrides } from '@services/promptOverrides';
 
@@ -10,12 +9,6 @@ export interface GenerationResult {
     workflow_description: string;
     steps: any[];
     research_instructions?: string;
-  };
-  template: {
-    template_name: string;
-    template_description: string;
-    html_content: string;
-    placeholder_tags: string[];
   };
   form: {
     form_name: string;
@@ -40,7 +33,6 @@ export interface UsageInfo {
  */
 export class WorkflowGenerationService {
   private workflowConfigService: WorkflowConfigService;
-  private templateService: TemplateAIService;
   private formFieldGenerationService: FormFieldGenerationService;
 
   constructor(
@@ -56,26 +48,6 @@ export class WorkflowGenerationService {
     ) => Promise<void>
   ) {
     this.workflowConfigService = new WorkflowConfigService(openai, storeUsageRecord);
-    const storeUsageRecordAdapter: StoreUsageRecordFn = async ({
-      tenantId: usageTenantId,
-      serviceType,
-      model: usageModel,
-      inputTokens,
-      outputTokens,
-      costUsd,
-      jobId: usageJobId,
-    }) => {
-      await storeUsageRecord(
-        usageTenantId,
-        serviceType,
-        usageModel,
-        inputTokens,
-        outputTokens,
-        costUsd,
-        usageJobId
-      );
-    };
-    this.templateService = new TemplateAIService({ openai, storeUsageRecord: storeUsageRecordAdapter });
     this.formFieldGenerationService = new FormFieldGenerationService(openai, storeUsageRecord);
   }
 
@@ -110,54 +82,6 @@ export class WorkflowGenerationService {
   }
 
   /**
-   * Generate template HTML from description
-   * Delegates to TemplateGenerationService
-   */
-  async generateTemplateHTML(
-    description: string,
-    model: string,
-    tenantId: string,
-    jobId?: string,
-    brandContext?: string,
-    icpContext?: string,
-    promptOverrides?: PromptOverrides,
-  ): Promise<{ htmlContent: string; usageInfo: UsageInfo }> {
-    return this.templateService.generateTemplateHTML({
-      description,
-      model,
-      tenantId,
-      jobId,
-      brandContext,
-      icpContext,
-      promptOverrides,
-    });
-  }
-
-  /**
-   * Generate template name and description
-   * Delegates to TemplateGenerationService
-   */
-  async generateTemplateMetadata(
-    description: string,
-    model: string,
-    tenantId: string,
-    jobId?: string,
-    brandContext?: string,
-    icpContext?: string,
-    promptOverrides?: PromptOverrides,
-  ): Promise<{ templateName: string; templateDescription: string; usageInfo: UsageInfo }> {
-    return this.templateService.generateTemplateMetadata({
-      description,
-      model,
-      tenantId,
-      jobId,
-      brandContext,
-      icpContext,
-      promptOverrides,
-    });
-  }
-
-  /**
    * Generate form fields from description
    * Delegates to FormFieldGenerationService
    */
@@ -188,9 +112,6 @@ export class WorkflowGenerationService {
    */
   processGenerationResult(
     workflowData: any,
-    templateName: string,
-    templateDescription: string,
-    htmlContent: string,
     formData: any
   ): GenerationResult {
     return {
@@ -199,12 +120,6 @@ export class WorkflowGenerationService {
         workflow_description: workflowData.workflow_description,
         steps: workflowData.steps,
         research_instructions: workflowData.research_instructions || (workflowData.steps && workflowData.steps.length > 0 ? workflowData.steps[0].instructions : ''),
-      },
-      template: {
-        template_name: templateName,
-        template_description: templateDescription,
-        html_content: htmlContent,
-        placeholder_tags: [],
       },
       form: {
         form_name: formData.form_name,

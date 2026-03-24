@@ -1,7 +1,31 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+
+const WORKFLOW_PATH_PATTERN = /\/dashboard\/workflows\/([^/]+)/;
+
+function normalizeWorkflowParam(param: string | string[] | undefined): string {
+  if (Array.isArray(param)) {
+    return normalizeWorkflowParam(param[0]);
+  }
+  if (typeof param === "string" && param !== "_") {
+    return param;
+  }
+  return "";
+}
+
+function getWorkflowIdFromPathname(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  const pathMatch = window.location.pathname.match(WORKFLOW_PATH_PATTERN);
+  if (pathMatch?.[1] && pathMatch[1] !== "_") {
+    return pathMatch[1];
+  }
+
+  return "";
+}
 
 /**
  * Hook to extract workflow ID from params/URL
@@ -9,46 +33,5 @@ import { useState, useEffect, useCallback } from "react";
  */
 export function useWorkflowId(): string {
   const params = useParams();
-
-  const getWorkflowId = useCallback(() => {
-    const paramId = params?.id as string;
-    if (paramId && paramId !== "_") {
-      return paramId;
-    }
-    // Fallback: extract from browser URL
-    if (typeof window !== "undefined") {
-      const pathMatch = window.location.pathname.match(
-        /\/dashboard\/workflows\/([^/]+)/,
-      );
-      if (pathMatch && pathMatch[1] && pathMatch[1] !== "_") {
-        return pathMatch[1];
-      }
-    }
-    return paramId || "";
-  }, [params?.id]);
-
-  const [workflowId, setWorkflowId] = useState<string>(() => {
-    const paramId = params?.id as string;
-    if (paramId && paramId !== "_") {
-      return paramId;
-    }
-    if (typeof window !== "undefined") {
-      const pathMatch = window.location.pathname.match(
-        /\/dashboard\/workflows\/([^/]+)/,
-      );
-      if (pathMatch && pathMatch[1] && pathMatch[1] !== "_") {
-        return pathMatch[1];
-      }
-    }
-    return paramId || "";
-  });
-
-  useEffect(() => {
-    const newId = getWorkflowId();
-    if (newId && newId !== workflowId && newId.trim() !== "" && newId !== "_") {
-      setWorkflowId(newId);
-    }
-  }, [params?.id, workflowId, getWorkflowId]);
-
-  return workflowId;
+  return normalizeWorkflowParam(params?.id) || getWorkflowIdFromPathname();
 }

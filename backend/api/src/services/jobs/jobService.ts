@@ -3,6 +3,7 @@ import { env } from "../../utils/env";
 import { ApiError } from "../../utils/errors";
 import { HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { generateExecutionStepsUrl } from "../../utils/executionStepsUtils";
+import { parseLimitParam, parseOffsetParam } from "../../utils/pagination";
 
 const JOBS_TABLE = env.jobsTable;
 const ARTIFACTS_BUCKET = env.artifactsBucket;
@@ -36,8 +37,8 @@ export class JobService {
       queryParams.all === true ||
       queryParams.all === "true" ||
       queryParams.all === "1";
-    const pageSize = queryParams.limit ? parseInt(queryParams.limit) : 20;
-    const offset = queryParams.offset ? parseInt(queryParams.offset) : 0;
+    const pageSize = parseLimitParam(queryParams.limit, 20);
+    const offset = parseOffsetParam(queryParams.offset, 0);
     const fetchLimit = pageSize + offset;
 
     let jobs;

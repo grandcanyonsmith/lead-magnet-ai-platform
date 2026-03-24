@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { calculateOpenAICost } from '@services/costService';
 import { callResponsesWithTimeout } from '@utils/openaiHelpers';
+import { logger } from '@utils/logger';
 import {
   getPromptOverridesForTenant,
   resolvePromptOverride,
@@ -105,7 +106,7 @@ The public_slug should be URL-friendly (lowercase, hyphens only). Return ONLY va
       },
     });
 
-    console.log('[Form Field Generation Service] Calling OpenAI for form generation...');
+    logger.info('[Form Field Generation Service] Calling OpenAI for form generation');
     const formStartTime = Date.now();
     
     const formCompletionParams: any = {
@@ -114,6 +115,8 @@ The public_slug should be URL-friendly (lowercase, hyphens only). Return ONLY va
       input: resolved.prompt,
       reasoning: { effort: resolved.reasoning_effort || "high" },
       service_tier: resolved.service_tier || "priority",
+      max_output_tokens: 4_000,
+      user: tenantId,
     };
     const formCompletion = await callResponsesWithTimeout(
       () => this.openai.responses.create(formCompletionParams),
@@ -121,12 +124,7 @@ The public_slug should be URL-friendly (lowercase, hyphens only). Return ONLY va
     );
 
     const formDuration = Date.now() - formStartTime;
-    const formModelUsed = (formCompletion as any).model || formCompletionParams.model;
-    console.log('[Form Field Generation Service] Form generation completed', {
-      duration: `${formDuration}ms`,
-      tokensUsed: formCompletion.usage?.total_tokens,
-      modelUsed: formModelUsed,
-    });
+    const formModelUsed = formCompletion.model || formCompletionParams.model;
 
     // Track usage
     const formUsage = formCompletion.usage;
@@ -195,7 +193,7 @@ The public_slug should be URL-friendly (lowercase, hyphens only). Return ONLY va
         formData = JSON.parse(jsonMatch[0]);
       }
     } catch (e) {
-      console.warn('[Form Field Generation Service] Failed to parse form JSON, using defaults', e);
+      logger.warn('[Form Field Generation Service] Failed to parse form JSON, using defaults', { error: e instanceof Error ? e.message : String(e) });
     }
 
     // Ensure field_id is generated for each field if missing

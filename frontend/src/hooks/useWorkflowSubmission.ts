@@ -5,7 +5,6 @@ import { api } from "@/lib/api";
 import { AIModel } from "@/types";
 import {
   WorkflowFormData,
-  TemplateData,
   FormFieldsData,
 } from "./useWorkflowForm";
 import { WorkflowStep } from "@/types/workflow";
@@ -18,10 +17,7 @@ export function useWorkflowSubmission() {
     async (
       formData: WorkflowFormData,
       steps: WorkflowStep[],
-      templateData: TemplateData,
       formFieldsData: FormFieldsData,
-      generatedTemplateId: string | null,
-      setGeneratedTemplateId: (id: string) => void,
       autoSave: boolean = false,
     ) => {
       setError(null);
@@ -31,29 +27,6 @@ export function useWorkflowSubmission() {
       }
 
       try {
-        // Create template if template content exists
-        let templateId = formData.template_id;
-        if (templateData.html_content.trim()) {
-          if (!generatedTemplateId) {
-            // Create new template
-            const template = await api.createTemplate({
-              template_name: templateData.template_name || "Generated Template",
-              template_description: templateData.template_description || "",
-              html_content: templateData.html_content.trim(),
-            });
-            templateId = template.template_id;
-            setGeneratedTemplateId(templateId);
-          } else {
-            // Update existing template
-            await api.updateTemplate(generatedTemplateId, {
-              template_name: templateData.template_name || "Generated Template",
-              template_description: templateData.template_description || "",
-              html_content: templateData.html_content.trim(),
-            });
-            templateId = generatedTemplateId;
-          }
-        }
-
         // Validate required fields before submission
         const workflowName = formData.workflow_name.trim();
         if (!workflowName) {
@@ -87,9 +60,6 @@ export function useWorkflowSubmission() {
             tools: step.tools,
             instructions: step.instructions.trim(), // Ensure instructions are trimmed
           })),
-          // Legacy fields removed - all workflows must use steps format
-          template_id: templateId || undefined,
-          template_version: formData.template_version,
         });
 
         // Update or create the form if form fields are provided

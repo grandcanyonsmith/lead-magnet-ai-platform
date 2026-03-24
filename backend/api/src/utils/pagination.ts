@@ -29,6 +29,71 @@ export interface PaginatedResult<T> {
   hasMore: boolean;
 }
 
+interface IntegerParamOptions {
+  defaultValue: number;
+  minimum?: number;
+  maximum?: number;
+}
+
+/**
+ * Parse an integer query value and fall back safely when invalid.
+ */
+export function parseIntegerParam(
+  value: unknown,
+  { defaultValue, minimum, maximum }: IntegerParamOptions,
+): number {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? parseInt(value, 10)
+        : NaN;
+
+  if (!Number.isFinite(parsed)) {
+    return defaultValue;
+  }
+
+  let normalized = Math.floor(parsed);
+
+  if (minimum !== undefined && normalized < minimum) {
+    return defaultValue;
+  }
+
+  if (maximum !== undefined) {
+    normalized = Math.min(normalized, maximum);
+  }
+
+  return normalized;
+}
+
+/**
+ * Parse a limit value while preserving existing fallback behavior.
+ */
+export function parseLimitParam(
+  value: unknown,
+  defaultValue: number = 20,
+  maximum?: number,
+): number {
+  return parseIntegerParam(value, {
+    defaultValue,
+    minimum: 1,
+    maximum,
+  });
+}
+
+/**
+ * Parse an offset value while preserving existing fallback behavior.
+ */
+export function parseOffsetParam(
+  value: unknown,
+  defaultValue: number = 0,
+): number {
+  return parseIntegerParam(value, {
+    defaultValue,
+    minimum: 0,
+  });
+}
+
 /**
  * Parse pagination parameters from query string.
  *

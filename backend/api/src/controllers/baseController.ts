@@ -3,6 +3,7 @@ import { ApiError } from "../utils/errors";
 import { RouteResponse } from "../routes";
 import { logger } from "../utils/logger";
 import { env } from "../utils/env";
+import { parseLimitParam, parseOffsetParam } from "../utils/pagination";
 
 /**
  * Base controller class providing common CRUD patterns and utilities.
@@ -110,7 +111,7 @@ export abstract class BaseController {
     queryParams: Record<string, any>,
     defaultLimit: number = 50,
   ): number {
-    return queryParams.limit ? parseInt(queryParams.limit, 10) : defaultLimit;
+    return parseLimitParam(queryParams.limit, defaultLimit);
   }
 
   /**
@@ -120,9 +121,7 @@ export abstract class BaseController {
     queryParams: Record<string, any>,
     defaultOffset: number = 0,
   ): number {
-    return queryParams.offset
-      ? parseInt(queryParams.offset, 10)
-      : defaultOffset;
+    return parseOffsetParam(queryParams.offset, defaultOffset);
   }
 
   /**

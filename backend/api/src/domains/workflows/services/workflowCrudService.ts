@@ -8,6 +8,7 @@ import { env } from '@utils/env';
 import { validate, createWorkflowSchema, updateWorkflowSchema } from '@utils/validation';
 import { ToolChoice } from '@utils/types';
 import { createWorkflowVersion, resolveWorkflowVersion } from './workflowVersionService';
+import { parseLimitParam } from '@utils/pagination';
 
 const WORKFLOWS_TABLE = env.workflowsTable;
 const USER_SETTINGS_TABLE = env.userSettingsTable;
@@ -81,7 +82,7 @@ export class WorkflowCrudService {
     try {
       // Status filtering removed as per requirements to simplify workflow states
       // const status = queryParams.status;
-      const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
+      const limit = parseLimitParam(queryParams.limit, 50);
 
       logger.info('[Workflows List] Starting query', { tenantId, limit });
 

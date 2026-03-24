@@ -19,8 +19,6 @@ import { useAIModelOptions } from "@/hooks/useAIModelOptions";
 import { useEditorHistory } from "./hooks/useEditorHistory";
 import { useHtmlPatcher } from "./hooks/useHtmlPatcher";
 import { SELECTION_SCRIPT } from "./constants";
-import { stripInjectedBlocksForTemplate } from "./utils";
-
 import { EditorHeader } from "./components/EditorHeader";
 import { EditorFooter } from "./components/EditorFooter";
 import { useEditorShortcuts } from "./hooks/useEditorShortcuts";
@@ -63,8 +61,6 @@ export default function EditorClient() {
   const [lastSavedHtml, setLastSavedHtml] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [showAiSettings, setShowAiSettings] = useState(false);
-  const [savingTemplate, setSavingTemplate] = useState(false);
-
   // Refs
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -172,61 +168,6 @@ export default function EditorClient() {
     });
   }, [submitPatch, htmlState.html, selectedElement, selectedOuterHtml]);
 
-  const handleSaveAsTemplate = useCallback(async () => {
-    if (!workflow?.template_id) {
-      toast.error("This lead magnet does not have a template attached.");
-      return;
-    }
-    if (!htmlState.html) return;
-    if (savingTemplate) return;
-
-    const name = workflow.workflow_name || "this lead magnet";
-    const confirmed = confirm(
-      `Save your current HTML as the new template for "${name}"?\n\nThis will create a new template version. Future runs will use the updated template.`,
-    );
-    if (!confirmed) return;
-
-    setSavingTemplate(true);
-    try {
-      const cleanedHtml = stripInjectedBlocksForTemplate(htmlState.html);
-      const updatedTemplate = await api.updateTemplate(workflow.template_id, {
-        html_content: cleanedHtml,
-      });
-
-      const currentVersion =
-        typeof workflow.template_version === "number" &&
-        Number.isFinite(workflow.template_version)
-          ? workflow.template_version
-          : 0;
-
-      // If this workflow is pinned to a specific version (non-zero), bump it to the new version.
-      if (
-        currentVersion !== 0 &&
-        updatedTemplate?.version &&
-        updatedTemplate.version !== currentVersion
-      ) {
-        await api.updateWorkflow(workflow.workflow_id, {
-          template_version: updatedTemplate.version,
-        });
-        setWorkflow((prev) =>
-          prev ? { ...prev, template_version: updatedTemplate.version } : prev,
-        );
-      }
-
-      toast.success(`Template updated (v${updatedTemplate?.version || "new"})`);
-    } catch (err) {
-      const apiErr = err instanceof ApiError ? err : null;
-      toast.error(apiErr?.message || "Failed to update template");
-    } finally {
-      setSavingTemplate(false);
-    }
-  }, [
-    htmlState.html,
-    savingTemplate,
-    workflow,
-    setWorkflow
-  ]);
-
   const handleSave = useCallback(async () => {
     if (!jobId || !htmlState.html) return;
     setIsSaving(true);
@@ -276,10 +217,6 @@ export default function EditorClient() {
 
   const backHref = jobId ? `/dashboard/jobs/${jobId}` : "/dashboard/jobs";
   const canSave = Boolean(jobId && htmlState.html && isDirty && !isSaving);
-  const canSaveAsTemplate = Boolean(
-    workflow?.template_id && htmlState.html && !savingTemplate,
-  );
-
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-gray-200 font-sans selection:bg-indigo-500/30 overflow-hidden">
       <EditorHeader
@@ -298,9 +235,6 @@ export default function EditorClient() {
         handleSave={handleSave}
         canSave={canSave}
         isSaving={isSaving}
-        handleSaveAsTemplate={handleSaveAsTemplate}
-        canSaveAsTemplate={canSaveAsTemplate}
-        savingTemplate={savingTemplate}
         workflow={workflow}
         jobId={jobId}
         device={device}

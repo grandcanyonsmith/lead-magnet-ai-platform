@@ -76,6 +76,7 @@ export class WorkflowInstructionsService {
         input: resolved.prompt,
         reasoning: { effort: "high" },
         service_tier: "priority",
+        max_output_tokens: 8_000,
       };
       const completion = await callResponsesWithTimeout(
         () => openai.responses.create(completionParams),
@@ -83,7 +84,10 @@ export class WorkflowInstructionsService {
       );
 
       const refineDuration = Date.now() - refineStartTime;
-      const refinementModel = (completion as any).model || model;
+      const refinementModel = completion.model || model;
+      logger.debug('[Workflow Instructions Refinement] Response details', {
+        responseId: completion.id,
+      });
       logger.info('[Workflow Instructions Refinement] Refinement completed', {
         duration: `${refineDuration}ms`,
         tokensUsed: completion.usage?.total_tokens,

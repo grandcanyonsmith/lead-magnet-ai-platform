@@ -109,52 +109,6 @@ class PlaywrightEnvironment(Environment):
         action_type = str(action.get("type", "")).lower()
 
         # #region debug-move-action
-        try:
-            supported = {
-                "click",
-                "double_click",
-                "drag",
-                "drag_and_drop",
-                "move",
-                "hover",
-                "mouse_move",
-                "type",
-                "scroll",
-                "keypress",
-                "wait",
-                "screenshot",
-                "navigate",
-                "cursor_position",
-            }
-            if action_type not in supported:
-                with open("/Users/canyonsmith/lead-magnent-ai/.cursor/debug.log", "a") as f:
-                    f.write(
-                        json.dumps(
-                            {
-                                "sessionId": "debug-session",
-                                "runId": "pre-fix",
-                                "hypothesisId": "H1-move-unsupported",
-                                "location": "playwright.py:execute_action",
-                                "timestamp": int(time.time() * 1000),
-                                "message": "PlaywrightEnvironment received unsupported action type",
-                                "data": {
-                                    "action_type": action_type,
-                                    "has_x": "x" in action,
-                                    "has_y": "y" in action,
-                                    "x": action.get("x"),
-                                    "y": action.get("y"),
-                                    "has_url": "url" in action,
-                                    "url": action.get("url"),
-                                    "keys": action.get("keys") or action.get("key"),
-                                },
-                            }
-                        )
-                        + "\n"
-                    )
-        except Exception:
-            pass
-        # #endregion
-
         if action_type == "click":
             x = action.get("x")
             y = action.get("y")

@@ -247,8 +247,6 @@ export interface WorkflowTrigger {
 export interface WorkflowFormData {
   workflow_name: string;
   workflow_description: string;
-  template_id: string;
-  template_version: number;
   trigger?: WorkflowTrigger;
 }
 
@@ -282,8 +280,8 @@ export interface Workflow extends BaseEntity {
   tenant_id: string;
   workflow_name: string;
   workflow_description: string;
-  template_id: string;
-  template_version: number;
+  template_id?: string;
+  template_version?: number;
   version?: number;
   steps?: WorkflowStep[];
   status: "active" | "inactive" | "draft";

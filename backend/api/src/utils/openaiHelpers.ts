@@ -11,10 +11,11 @@ import { withTimeout } from "./timeout";
 import { logger } from "./logger";
 
 /**
- * Default timeout for OpenAI responses (no timeout by default).
- * Set to 0 to disable timeout entirely.
+ * Default timeout for OpenAI Responses API calls (120 seconds).
+ * Covers most standard calls; callers can override for longer operations
+ * (e.g. deep research, shell loops).
  */
-export const RESPONSES_TIMEOUT_MS = 0;
+export const RESPONSES_TIMEOUT_MS = 120_000;
 
 /**
  * Call an async function with optional timeout.

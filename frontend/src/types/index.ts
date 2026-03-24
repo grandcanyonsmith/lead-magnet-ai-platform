@@ -7,7 +7,6 @@ export * from "./auth";
 export * from "./workflow";
 export * from "./form";
 export * from "./job";
-export * from "./template";
 export * from "./notification";
 export * from "./settings";
 export * from "./analytics";

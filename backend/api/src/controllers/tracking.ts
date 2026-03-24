@@ -10,6 +10,7 @@ import { trackingService } from "../services/trackingService";
 import { s3Service } from "../services/s3Service";
 import { db } from "../utils/db";
 import { env } from "../utils/env";
+import { parseLimitParam } from "../utils/pagination";
 
 const JOBS_TABLE = env.jobsTable;
 const RECORDINGS_BUCKET = "cc360-pages";
@@ -190,7 +191,7 @@ class TrackingController {
       );
     }
 
-    const limit = queryParams.limit ? parseInt(queryParams.limit) : 100;
+    const limit = parseLimitParam(queryParams.limit, 100);
     const lastEvaluatedKey = queryParams.lastEvaluatedKey
       ? JSON.parse(decodeURIComponent(queryParams.lastEvaluatedKey))
       : undefined;
@@ -241,7 +242,7 @@ class TrackingController {
 
     // Fetch raw events (descending by created_at). We fetch a large batch and
     // group server-side. If you have very high volume, add pagination later.
-    const fetchLimit = queryParams.limit ? parseInt(queryParams.limit) : 5000;
+    const fetchLimit = parseLimitParam(queryParams.limit, 5000);
     const { events } = await trackingService.getJobEvents(
       jobId,
       tenantId,

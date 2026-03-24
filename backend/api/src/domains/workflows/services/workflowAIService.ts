@@ -324,7 +324,7 @@ Please generate the updated workflow configuration with all necessary changes.`;
     request: WorkflowAIEditRequest,
     stream = false,
   ): Record<string, unknown> {
-    const { reviewReasoningEffort, reviewServiceTier } = request;
+    const { reviewReasoningEffort, reviewServiceTier, tenantId } = request;
     return {
       model: resolved.model || 'gpt-5.2',
       instructions: resolved.instructions,
@@ -339,6 +339,8 @@ Please generate the updated workflow configuration with all necessary changes.`;
         reviewServiceTier && VALID_SERVICE_TIERS.has(reviewServiceTier)
           ? reviewServiceTier
           : (resolved.service_tier || 'priority'),
+      max_output_tokens: 16_000,
+      ...(tenantId ? { user: tenantId } : {}),
       ...(stream ? { stream: true } : {}),
     };
   }
@@ -401,11 +403,11 @@ Please generate the updated workflow configuration with all necessary changes.`;
         () =>
           callResponsesWithTimeout(
             () =>
-              (this.openaiClient as any).responses.create(
-                this.buildResponsePayload(resolved, request),
+              this.openaiClient.responses.create(
+                this.buildResponsePayload(resolved, request) as any,
               ),
             'Workflow AI Edit',
-            0, // No timeout - allow up to 5 minutes for complex workflow edits
+            300_000, // 5 minutes for complex workflow edits
           ),
         {
           maxAttempts: 3,
@@ -420,7 +422,20 @@ Please generate the updated workflow configuration with all necessary changes.`;
         },
       );
 
-      const outputText = String((completion as any)?.output_text || '');
+      logger.info('[WorkflowAI] Response received', {
+        responseId: completion.id,
+        model: completion.model,
+        status: completion.status,
+      });
+
+      if (completion.status === 'incomplete') {
+        logger.warn('[WorkflowAI] Incomplete response', {
+          reason: completion.incomplete_details?.reason,
+          responseId: completion.id,
+        });
+      }
+
+      const outputText = String(completion?.output_text || '');
       const cleaned = stripMarkdownCodeFences(outputText).trim();
       if (!cleaned) {
         throw new Error('No response from OpenAI');
@@ -498,22 +513,22 @@ Please generate the updated workflow configuration with all necessary changes.`;
       referenceCount: referenceExamples?.length || 0
     });
 
-    const stream = await (this.openaiClient as any).responses.create(
-      this.buildResponsePayload(resolved, request, true),
+    const stream = await this.openaiClient.responses.create(
+      this.buildResponsePayload(resolved, request, true) as any,
     );
 
     let outputText = "";
-    for await (const event of stream as any) {
+    for await (const event of stream as unknown as AsyncIterable<any>) {
       handlers?.onEvent?.(event);
-      const eventType = String((event as any)?.type || "");
+      const eventType = String(event?.type || "");
       if (!eventType.includes("output_text")) {
         continue;
       }
       const delta =
-        typeof (event as any)?.delta === "string"
-          ? (event as any).delta
-          : typeof (event as any)?.text === "string"
-            ? (event as any).text
+        typeof event?.delta === "string"
+          ? event.delta
+          : typeof event?.text === "string"
+            ? event.text
             : undefined;
       if (!delta) {
         continue;

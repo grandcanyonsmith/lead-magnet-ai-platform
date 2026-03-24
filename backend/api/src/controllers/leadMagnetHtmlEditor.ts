@@ -94,7 +94,41 @@ function ensureInjectedBlocks(patchedHtml: string, blocks: string[]): string {
 }
 
 class LeadMagnetHtmlEditorController {
-  async patch(jobId: string, body: any): Promise<RouteResponse> {
+  private async getOwnedJob(jobId: string, tenantId: string) {
+    const job = await db.get(JOBS_TABLE, { job_id: jobId });
+    if (!job) {
+      throw new ApiError("Job not found", 404);
+    }
+    if (job.tenant_id !== tenantId) {
+      throw new ApiError(
+        "You do not have permission to edit this job",
+        403,
+      );
+    }
+    return job;
+  }
+
+  private async getOwnedPatchRequest(
+    jobId: string,
+    patchId: string,
+    tenantId: string,
+  ) {
+    const patchRequest = await db.get(HTML_PATCH_REQUESTS_TABLE, {
+      patch_id: patchId,
+    });
+
+    if (
+      !patchRequest ||
+      patchRequest.job_id !== jobId ||
+      patchRequest.tenant_id !== tenantId
+    ) {
+      throw new ApiError("Patch request not found", 404);
+    }
+
+    return patchRequest;
+  }
+
+  async patch(jobId: string, body: any, tenantId: string): Promise<RouteResponse> {
     if (!jobId) {
       throw new ApiError("Job ID is required", 400);
     }
@@ -104,13 +138,9 @@ class LeadMagnetHtmlEditorController {
       throw new ApiError("prompt is required", 400);
     }
 
-    const job = await db.get(JOBS_TABLE, { job_id: jobId });
-    if (!job) {
-      throw new ApiError("Job not found", 404);
-    }
-
-    const tenantId = job.tenant_id;
-    if (!tenantId) {
+    const job = await this.getOwnedJob(jobId, tenantId);
+    const jobTenantId = job.tenant_id;
+    if (!jobTenantId) {
       throw new ApiError("Job tenant not found", 404);
     }
 
@@ -142,7 +172,7 @@ class LeadMagnetHtmlEditorController {
           500,
         );
       }
-      inputS3Key = `${tenantId}/patches/${patchId}/input.html`;
+      inputS3Key = `${jobTenantId}/patches/${patchId}/input.html`;
       await s3Client.send(
         new PutObjectCommand({
           Bucket: ARTIFACTS_BUCKET,
@@ -159,7 +189,7 @@ class LeadMagnetHtmlEditorController {
     const patchRequest = {
       patch_id: patchId,
       job_id: jobId,
-      tenant_id: tenantId,
+      tenant_id: jobTenantId,
       prompt,
       selector,
       selected_outer_html: selectedOuterHtml,
@@ -188,7 +218,7 @@ class LeadMagnetHtmlEditorController {
           await handleHtmlPatchRequest({
             patch_id: patchId,
             job_id: jobId,
-            tenant_id: tenantId,
+            tenant_id: jobTenantId,
           });
         } catch (error: any) {
           logger.error("[LeadMagnetHtmlEditor] Error processing patch in local mode", {
@@ -206,7 +236,7 @@ class LeadMagnetHtmlEditorController {
             source: "html-patch-request",
             patch_id: patchId,
             job_id: jobId,
-            tenant_id: tenantId,
+            tenant_id: jobTenantId,
           }),
         });
 
@@ -246,18 +276,16 @@ class LeadMagnetHtmlEditorController {
     };
   }
 
-  async getPatchStatus(patchId: string): Promise<RouteResponse> {
+  async getPatchStatus(
+    jobId: string,
+    patchId: string,
+    tenantId: string,
+  ): Promise<RouteResponse> {
     if (!patchId) {
       throw new ApiError("Patch ID is required", 400);
     }
 
-    const patchRequest = await db.get(HTML_PATCH_REQUESTS_TABLE, {
-      patch_id: patchId,
-    });
-
-    if (!patchRequest) {
-      throw new ApiError("Patch request not found", 404);
-    }
+    const patchRequest = await this.getOwnedPatchRequest(jobId, patchId, tenantId);
 
     const response: any = {
       patch_id: patchId,
@@ -301,7 +329,7 @@ class LeadMagnetHtmlEditorController {
     };
   }
 
-  async save(jobId: string, body: any): Promise<RouteResponse> {
+  async save(jobId: string, body: any, tenantId: string): Promise<RouteResponse> {
     if (!jobId) {
       throw new ApiError("Job ID is required", 400);
     }
@@ -325,23 +353,19 @@ class LeadMagnetHtmlEditorController {
       );
     }
 
-    const job = await db.get(JOBS_TABLE, { job_id: jobId });
-    if (!job) {
-      throw new ApiError("Job not found", 404);
-    }
-
-    const tenantId = job.tenant_id;
-    if (!tenantId) {
+    const job = await this.getOwnedJob(jobId, tenantId);
+    const jobTenantId = job.tenant_id;
+    if (!jobTenantId) {
       throw new ApiError("Job tenant not found", 404);
     }
 
     // Preserve injected scripts (tracking + editor overlay) even if the patched HTML omitted them.
-    const currentHtml = await fetchFinalHtmlFromS3(tenantId, jobId);
+    const currentHtml = await fetchFinalHtmlFromS3(jobTenantId, jobId);
     const injectedBlocks = extractInjectedBlocks(currentHtml);
     const htmlToSave = ensureInjectedBlocks(patchedHtml, injectedBlocks);
     const sanitizedHtml = stripTemplatePlaceholders(htmlToSave);
 
-    const s3Key = `${tenantId}/jobs/${jobId}/final.html`;
+    const s3Key = `${jobTenantId}/jobs/${jobId}/final.html`;
 
     await s3Client.send(
       new PutObjectCommand({
@@ -365,7 +389,7 @@ class LeadMagnetHtmlEditorController {
 
     const artifact = {
       artifact_id: artifactId,
-      tenant_id: tenantId,
+      tenant_id: jobTenantId,
       job_id: jobId,
       artifact_type: "html_final",
       artifact_name: "final.html",
@@ -399,7 +423,7 @@ class LeadMagnetHtmlEditorController {
     } catch (error: any) {
       logger.error("[LeadMagnetHtmlEditor] CloudFront invalidation failed", {
         jobId,
-        tenantId,
+        tenantId: jobTenantId,
         s3Key,
         error: error?.message || String(error),
       });
@@ -408,7 +432,7 @@ class LeadMagnetHtmlEditorController {
 
     logger.info("[LeadMagnetHtmlEditor] Saved patched HTML", {
       jobId,
-      tenantId,
+      tenantId: jobTenantId,
       s3Key,
       artifactId,
       fileSizeBytes,

@@ -402,6 +402,16 @@ class SettingsController {
       try {
         data = validate(updateSettingsSchema, body);
       } catch (validationError) {
+        const safeValidationDetails =
+          validationError instanceof ValidationError
+            ? validationError.details
+            : {
+                validationError:
+                  validationError instanceof Error
+                    ? validationError.message
+                    : String(validationError),
+              };
+
         logger.warn("[SettingsController.update] Validation error", {
           error:
             validationError instanceof Error
@@ -420,13 +430,7 @@ class SettingsController {
           validationError instanceof Error
             ? validationError.message
             : "Invalid settings data",
-          {
-            body,
-            validationError:
-              validationError instanceof Error
-                ? validationError.message
-                : String(validationError),
-          },
+          safeValidationDetails,
         );
       }
 

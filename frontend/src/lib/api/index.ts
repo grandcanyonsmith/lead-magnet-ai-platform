@@ -8,7 +8,6 @@ import { LocalStorageTokenProvider } from "./tokenProvider.client";
 import { BaseApiClient } from "./base.client";
 import { WorkflowsClient } from "./workflows.client";
 import { FormsClient } from "./forms.client";
-import { TemplatesClient } from "./templates.client";
 import { JobsClient } from "./jobs.client";
 import { ArtifactsClient } from "./artifacts.client";
 import { SubmissionsClient } from "./submissions.client";
@@ -23,7 +22,6 @@ import {
   ArtifactListResponse,
   Artifact,
   FormUpdateRequest,
-  TemplateUpdateRequest,
   WorkflowUpdateRequest,
 } from "@/types";
 import { AxiosRequestConfig } from "axios";
@@ -31,7 +29,6 @@ import { AxiosRequestConfig } from "axios";
 class ApiClientImpl extends BaseApiClient implements ApiClient {
   public workflows: WorkflowsClient;
   public forms: FormsClient;
-  public templates: TemplatesClient;
   public jobs: JobsClient;
   public artifacts: ArtifactsClient;
   public submissions: SubmissionsClient;
@@ -46,7 +43,6 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
 
     this.workflows = new WorkflowsClient(this.tokenProvider);
     this.forms = new FormsClient(this.tokenProvider);
-    this.templates = new TemplatesClient(this.tokenProvider);
     this.jobs = new JobsClient(this.tokenProvider);
     this.artifacts = new ArtifactsClient(this.tokenProvider);
     this.submissions = new SubmissionsClient(this.tokenProvider);
@@ -149,27 +145,6 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
 
   async deleteForm(id: string) {
     return this.forms.deleteForm(id);
-  }
-
-  // Templates - delegate to templates client
-  async getTemplates(params?: Record<string, unknown>) {
-    return this.templates.getTemplates(params);
-  }
-
-  async getTemplate(id: string) {
-    return this.templates.getTemplate(id);
-  }
-
-  async createTemplate(data: Parameters<TemplatesClient["createTemplate"]>[0]) {
-    return this.templates.createTemplate(data);
-  }
-
-  async updateTemplate(id: string, data: TemplateUpdateRequest) {
-    return this.templates.updateTemplate(id, data);
-  }
-
-  async deleteTemplate(id: string) {
-    return this.templates.deleteTemplate(id);
   }
 
   // Jobs - delegate to jobs client
@@ -399,19 +374,6 @@ class ApiClientImpl extends BaseApiClient implements ApiClient {
 
   async moveWorkflowToFolder(workflowId: string, folderId: string | null) {
     return this.workflows.moveWorkflowToFolder(workflowId, folderId);
-  }
-
-  // Template AI - delegate to templates client
-  async generateTemplateWithAI(
-    request: Parameters<TemplatesClient["generateTemplateWithAI"]>[0],
-  ) {
-    return this.templates.generateTemplateWithAI(request);
-  }
-
-  async refineTemplateWithAI(
-    request: Parameters<TemplatesClient["refineTemplateWithAI"]>[0],
-  ) {
-    return this.templates.refineTemplateWithAI(request);
   }
 
   // Form AI - delegate to forms client

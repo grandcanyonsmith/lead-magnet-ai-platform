@@ -5,6 +5,7 @@ import { requireSuperAdmin, requireAdmin, requireUser } from "../utils/rbac";
 import { ApiError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { env } from "../utils/env";
+import { parseLimitParam } from "../utils/pagination";
 
 const USERS_TABLE = env.usersTable;
 const CUSTOMERS_TABLE = env.customersTable;
@@ -28,7 +29,7 @@ class AdminController {
     requireAdmin(context);
 
     const searchTerm = query.q;
-    const limit = parseInt(query.limit || "50", 10);
+    const limit = parseLimitParam(query.limit, 50);
 
     try {
       let users: any[];
@@ -97,7 +98,7 @@ class AdminController {
     const auth = requireUser(context);
 
     const searchTerm = query.q;
-    const limit = parseInt(query.limit || "50", 10);
+    const limit = parseLimitParam(query.limit, 50);
 
     try {
       const allUsers = await db.scan(USERS_TABLE, 1000);
@@ -161,7 +162,7 @@ class AdminController {
     requireSuperAdmin(context);
 
     const searchTerm = query.q;
-    const limit = parseInt(query.limit || "100", 10);
+    const limit = parseLimitParam(query.limit, 100);
     const customerId = query.customer_id; // Optional filter by customer
 
     try {
@@ -410,7 +411,7 @@ class AdminController {
     requireSuperAdmin(context);
 
     const searchTerm = query.q;
-    const limit = parseInt(query.limit || "100", 10);
+    const limit = parseLimitParam(query.limit, 100);
 
     try {
       let customers: any[];

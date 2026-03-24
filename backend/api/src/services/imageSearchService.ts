@@ -36,15 +36,20 @@ Rules:
 - Prefer recent, high-quality examples.
 - If unsure, return an empty array.`;
 
-      const response = await (openai as any).responses.create({
+      const response = await openai.responses.create({
         model: OPENAI_SEARCH_MODEL,
         input: prompt,
         tools: [{ type: "web_search" }],
         tool_choice: "auto",
         reasoning: { effort: "low" },
+        max_output_tokens: 4_000,
       });
 
-      const outputText = String((response as any)?.output_text || "")
+      logger.debug("[Image Search] Response received", {
+        responseId: response.id,
+      });
+
+      const outputText = String(response?.output_text || "")
         .slice(0, MAX_TEXT_LENGTH);
       const parsed = this.parseImagePayload(outputText);
       const images = Array.isArray(parsed)

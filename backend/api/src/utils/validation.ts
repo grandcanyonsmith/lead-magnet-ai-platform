@@ -366,17 +366,6 @@ export const createFormSchema = z.object({
 
 export const updateFormSchema = createFormSchema.partial();
 
-// Template schemas
-export const createTemplateSchema = z.object({
-  template_name: z.string().min(1).max(200),
-  template_description: z.string().max(1000).optional(),
-  html_content: z.string().min(1),
-  placeholder_tags: z.array(z.string()).optional(),
-  is_published: z.boolean().default(true), // Templates are published by default
-});
-
-export const updateTemplateSchema = createTemplateSchema.partial();
-
 // Settings schema
 export const updateSettingsSchema = z.object({
   organization_name: z.string().optional(),

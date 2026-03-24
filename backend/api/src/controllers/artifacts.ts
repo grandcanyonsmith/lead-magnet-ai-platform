@@ -9,6 +9,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { env } from "../utils/env";
+import { parseLimitParam } from "../utils/pagination";
 
 const ARTIFACTS_TABLE = env.artifactsTable;
 const JOBS_TABLE = env.jobsTable;
@@ -40,7 +41,7 @@ class ArtifactsController {
 
     const jobId = queryParams.job_id;
     const artifactType = queryParams.artifact_type;
-    const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
+    const limit = parseLimitParam(queryParams.limit, 50);
 
     let artifactsResult;
     if (jobId) {

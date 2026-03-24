@@ -1,17 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FileText, Save, AlertCircle, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { AIModel, Tool } from "@/types";
 import { useWorkflowEdit } from "@/hooks/useWorkflowEdit";
 import { useFormEdit } from "@/hooks/useFormEdit";
-import { useTemplateEdit } from "@/hooks/useTemplateEdit";
 import { WorkflowTab } from "@/components/workflows/edit/WorkflowTab";
 import { FormTab } from "@/components/workflows/edit/FormTab";
-import { TemplateTab } from "@/components/workflows/edit/TemplateTab";
-import { formatHTML } from "@/utils/templateUtils";
 import { useSettings } from "@/hooks/api/useSettings";
 
 // UI Components
@@ -37,14 +34,13 @@ export function WorkflowEditor({
   onSaveSuccess,
   loadingFullPage = true,
 }: WorkflowEditorProps) {
-  const [activeTab, setActiveTab] = useState<"workflow" | "form" | "template">(
+  const [activeTab, setActiveTab] = useState<"workflow" | "form">(
     "workflow",
   );
   const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(
     null,
   );
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
-  const [templateId, setTemplateId] = useState<string | null>(null);
   const router = useRouter();
 
   const { settings } = useSettings();
@@ -103,58 +99,6 @@ export function WorkflowEditor({
     moveFieldUp,
     moveFieldDown,
   } = formEdit;
-
-  // Template edit hook
-  const templateEdit = useTemplateEdit(
-    formData.workflow_name,
-    templateId,
-    formData.template_id,
-  );
-  const {
-    templateLoading,
-    templateData,
-    templateViewMode,
-    devicePreviewSize,
-    previewKey,
-    refining,
-    generationStatus,
-    editPrompt,
-    handleTemplateChange,
-    handleHtmlChange,
-    handleRefine,
-    setTemplateViewMode,
-    setDevicePreviewSize,
-    setEditPrompt,
-    handleUndo,
-    handleRedo,
-    canUndo,
-    canRedo,
-    history,
-    historyIndex,
-    jumpToHistory,
-    commitHtmlChange,
-    selectedSelectors,
-    setSelectedSelectors,
-  } = templateEdit;
-
-  // Update templateId when formData.template_id changes
-  useEffect(() => {
-    if (formData.template_id) {
-      setTemplateId(formData.template_id);
-    }
-  }, [formData.template_id]);
-
-  // Switch away from template tab if no template
-  useEffect(() => {
-    const hasTemplate = templateId || (templateData.html_content?.trim() || "");
-    if (!hasTemplate && activeTab === "template") {
-      setActiveTab("workflow");
-    }
-  }, [templateId, templateData.html_content, activeTab]);
-
-  const hasTemplateTab = Boolean(
-    templateId || (templateData.html_content?.trim() || ""),
-  );
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -222,43 +166,9 @@ export function WorkflowEditor({
       }
     }
 
-    // Template validation - if template tab is accessible, ensure template exists
-    const hasTemplate = templateId || (templateData.html_content?.trim() || "");
-    if (activeTab === "template" && !hasTemplate) {
-      setError("Template HTML content is required");
-      return;
-    }
-
     setSubmitting(true);
 
     try {
-      // Create or update template if template content exists
-      let finalTemplateId = templateId;
-      if (templateData.html_content?.trim()) {
-        if (templateId) {
-          // Update existing template
-          await api.updateTemplate(templateId, {
-            template_name: templateData.template_name.trim(),
-            template_description:
-              templateData.template_description.trim() || undefined,
-            html_content: templateData.html_content?.trim() || "",
-            is_published: templateData.is_published,
-          });
-          finalTemplateId = templateId;
-        } else {
-          // Create new template
-          const template = await api.createTemplate({
-            template_name: templateData.template_name.trim(),
-            template_description:
-              templateData.template_description.trim() || "",
-            html_content: templateData.html_content?.trim() || "",
-            is_published: templateData.is_published,
-          });
-          finalTemplateId = template.template_id;
-          setTemplateId(template.template_id);
-        }
-      }
-
       // Update workflow with steps
       await api.updateWorkflow(workflowId, {
         workflow_name: formData.workflow_name.trim(),
@@ -283,9 +193,6 @@ export function WorkflowEditor({
                 : undefined,
           };
         }),
-        // Legacy fields removed - all workflows must use steps format
-        template_id: finalTemplateId || undefined,
-        template_version: 0,
       });
 
       // Update form if it exists
@@ -312,21 +219,6 @@ export function WorkflowEditor({
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleRefineWithError = async () => {
-    const result = await handleRefine();
-    if (result.error) {
-      setError(result.error);
-      return result;
-    }
-    return result;
-  };
-
-  const handleFormatHtml = () => {
-    if (!templateData.html_content) return;
-    const formatted = formatHTML(templateData.html_content);
-    handleTemplateChange("html_content", formatted);
   };
 
   if (loading) {
@@ -359,7 +251,7 @@ export function WorkflowEditor({
               </h1>
             </div>
             <p className="hidden sm:block text-sm text-muted-foreground">
-              Configure your workflow logic, intake form, and output design.
+              Configure your workflow logic and intake form.
             </p>
           </div>
         </div>
@@ -414,10 +306,9 @@ export function WorkflowEditor({
         items={[
           { id: "workflow", label: "Settings" },
           { id: "form", label: "Form" },
-          ...(hasTemplateTab ? [{ id: "template", label: "Design" }] : []),
         ]}
         activeId={activeTab}
-        onSelect={(id) => setActiveTab(id as "workflow" | "form" | "template")}
+        onSelect={(id) => setActiveTab(id as "workflow" | "form")}
         portalTargetId={portalTargetId}
         ariaLabel="Workflow sections"
       />
@@ -487,38 +378,6 @@ export function WorkflowEditor({
           )}
         </TabsContent>
 
-        <TabsContent value="template" className="mt-0 focus-visible:outline-none focus-visible:ring-0">
-          <TemplateTab
-            templateData={templateData}
-            templateLoading={templateLoading}
-            templateViewMode={templateViewMode}
-            devicePreviewSize={devicePreviewSize}
-            previewKey={previewKey}
-            refining={refining}
-            generationStatus={generationStatus}
-            editPrompt={editPrompt}
-            selectedSelectors={selectedSelectors}
-            onSelectionChange={setSelectedSelectors}
-            onTemplateChange={handleTemplateChange}
-            onHtmlChange={handleHtmlChange}
-            onViewModeChange={setTemplateViewMode}
-            onDeviceSizeChange={setDevicePreviewSize}
-            onRefine={handleRefineWithError}
-            onEditPromptChange={setEditPrompt}
-            onFormatHtml={handleFormatHtml}
-            onSubmit={handleSubmit}
-            onCancel={handleExit}
-            submitting={submitting}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            history={history}
-            historyIndex={historyIndex}
-            onJumpToHistory={jumpToHistory}
-            onCommitChange={commitHtmlChange}
-          />
-        </TabsContent>
       </Tabs>
     </div>
   );
