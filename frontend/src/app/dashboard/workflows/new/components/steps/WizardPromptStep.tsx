@@ -99,8 +99,8 @@ export const WizardPromptStep: React.FC<WizardPromptStepProps> = ({
                     prompt,
                     resolvedModel,
                   );
-                  if (result?.jobId) {
-                    setGenerationJobId(result.jobId);
+                  if (result?.job_id) {
+                    setGenerationJobId(result.job_id);
                   } else if (result?.workflow) {
                     // Direct result (legacy or fast path)
                     workflowForm.updateFormData({

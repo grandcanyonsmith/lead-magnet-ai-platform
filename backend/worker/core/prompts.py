@@ -44,9 +44,10 @@ STYLED_HTML_INSTRUCTIONS = (
     "2. **Structure**: Return a valid, standalone HTML5 document (<!DOCTYPE html>...</html>).\n"
     "3. **Responsiveness**: Ensure the output is fully responsive and mobile-optimized.\n"
     "4. **Deliverable Focus**: Use the CONTENT as raw material to create the final lead-magnet deliverable. Do not include step labels, internal notes, or raw submission JSON. Condense or reorganize as needed to produce a clean deliverable, but do not invent facts.\n"
-    "5. **No Signup/Opt-in UI**: Do not include forms, lead-capture fields, or signup CTAs. This is the post-signup deliverable the customer receives.\n"
-    "6. **No Template Placeholders**: Do not include {{...}} placeholder tokens. If TEMPLATE_HTML contains placeholders, replace them with real text derived from CONTENT.\n"
-    "7. **No Hallucinations**: Do not invent new content. Only format what is provided.\n\n"
+    "5. **Personalization**: SUBMISSION_DATA_JSON contains the end user's form responses. You MUST personalize the deliverable for this specific person — greet them by name, reference their role or answers in the body, and make the document feel individually crafted. Never ignore SUBMISSION_DATA_JSON.\n"
+    "6. **No Signup/Opt-in UI**: Do not include forms, lead-capture fields, or signup CTAs. This is the post-signup deliverable the customer receives.\n"
+    "7. **No Template Placeholders**: Do not include {{...}} placeholder tokens. If TEMPLATE_HTML contains placeholders, replace them with real text derived from CONTENT.\n"
+    "8. **No Hallucinations**: Do not invent new content. Only format what is provided.\n\n"
     "## Output Format\n"
     "Return ONLY the raw HTML code. Do not wrap it in Markdown code blocks. Do not add conversational text."
 )
@@ -55,7 +56,7 @@ STYLED_HTML_PROMPT_TEMPLATE = (
     "TEMPLATE_HTML (style reference):\n<<<\n{template_html}\n>>>\n\n"
     "TEMPLATE_STYLE_GUIDANCE:\n{template_style}\n\n"
     "{content_label}:\n<<<\n{content}\n>>>\n\n"
-    "SUBMISSION_DATA_JSON (optional personalization context):\n<<<\n{submission_data_json}\n>>>\n"
+    "SUBMISSION_DATA_JSON (personalize the deliverable for this person):\n<<<\n{submission_data_json}\n>>>\n"
 )
 
 # --- Image Naming ---

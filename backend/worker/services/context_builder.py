@@ -247,8 +247,9 @@ class ContextBuilder:
             Accumulated context string
         """
         accumulated_context = f"=== Form Submission ===\n{initial_context}\n\n"
+        internal_types = {'s3_upload', 'form_submission', 'html_generation', 'final_output'}
         for step_data in execution_steps:
-            if step_data.get('step_type') == 'ai_generation':
+            if step_data.get('step_type') not in internal_types:
                 step_name = step_data.get('step_name', 'Unknown Step')
                 step_output_raw = step_data.get('output', '')
                 step_output_text = ContextBuilder._stringify_step_output(step_output_raw)
@@ -323,23 +324,24 @@ class ContextBuilder:
         if not execution_steps:
             return ""
 
-        ai_steps = [s for s in execution_steps if s.get('step_type') == 'ai_generation']
-        if not ai_steps:
+        internal_types = {'s3_upload', 'form_submission', 'html_generation', 'final_output'}
+        workflow_steps = [s for s in execution_steps if s.get('step_type') not in internal_types]
+        if not workflow_steps:
             return ""
 
         deliverable_orders = set(deliverable_step_orders or [])
         if deliverable_orders:
             terminal_steps = [
-                step for step in ai_steps
+                step for step in workflow_steps
                 if normalize_step_order(step) in deliverable_orders
             ]
             if not terminal_steps:
                 deliverable_orders = set()
 
         if not deliverable_orders:
-            max_order = max(normalize_step_order(step) for step in ai_steps)
+            max_order = max(normalize_step_order(step) for step in workflow_steps)
             terminal_steps = [
-                step for step in ai_steps
+                step for step in workflow_steps
                 if normalize_step_order(step) == max_order
             ]
 

@@ -79,6 +79,14 @@ class AIStepProcessor:
         defaults = PROMPT_CONFIGS["ai_generation"]
         step_model = step.get('model', defaults["model"])
         step_instructions = step.get('instructions', '')
+        if initial_context and "=== Form Submission ===" in initial_context:
+            step_instructions = (
+                step_instructions.rstrip()
+                + "\n\nIMPORTANT — Personalization: The context includes a Form Submission "
+                "with the end user's details. You MUST tailor the deliverable to this "
+                "specific person — address them by name, reference their role or answers, "
+                "and make the output feel individually crafted rather than generic."
+            )
         # Extract reasoning effort from step config, default to 'high' for GPT-5 family
         step_reasoning_effort = step.get('reasoning_effort')
         if step_reasoning_effort is None and isinstance(step_model, str) and step_model.startswith('gpt-5'):

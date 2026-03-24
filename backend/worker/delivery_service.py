@@ -180,7 +180,10 @@ class DeliveryService:
             research_content: Optional research content for AI message generation
         """
         submission_data = submission.get('submission_data', {})
-        phone_number = submission_data.get('phone') or submission_data.get('phone_number') or submission.get('submitter_phone')
+        # Prefer the already-extracted submitter_phone (set at submission time via
+        # normalizePhoneNumber) over raw submission_data lookups which use opaque
+        # field IDs as keys and rarely match 'phone'/'phone_number'.
+        phone_number = submission.get('submitter_phone') or submission_data.get('phone') or submission_data.get('phone_number')
         
         logger.info(f"SMS Notification: Starting for job {job_id}, phone: {phone_number[:10] if phone_number and len(phone_number) > 10 else phone_number if phone_number else 'N/A'}...")
         
@@ -222,7 +225,8 @@ class DeliveryService:
                     job_id,
                     submission_data,
                     output_url,
-                    research_content
+                    research_content,
+                    submission=submission
                 )
                 logger.info(f"SMS Notification: AI message generated successfully, length: {len(sms_message) if sms_message else 0}")
             except Exception as e:
@@ -235,9 +239,8 @@ class DeliveryService:
                 # Default message
                 sms_message = f"Thank you! Your personalized report is ready: {output_url}"
             else:
-                # Replace placeholders in manual message
                 sms_message = sms_message.replace('{output_url}', output_url)
-                sms_message = sms_message.replace('{name}', submission_data.get('name', 'there'))
+                sms_message = sms_message.replace('{name}', submission.get('submitter_name') or submission_data.get('name', 'there'))
                 sms_message = sms_message.replace('{job_id}', job_id)
         
         if not sms_message:
@@ -303,7 +306,8 @@ class DeliveryService:
         job_id: str,
         submission_data: Dict[str, Any],
         output_url: str,
-        research_content: Optional[str] = None
+        research_content: Optional[str] = None,
+        submission: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         Generate SMS message using AI based on context.
@@ -312,24 +316,27 @@ class DeliveryService:
             workflow: Workflow configuration
             tenant_id: Tenant ID
             job_id: Job ID
-            submission_data: Submission data
+            submission_data: Submission data (raw field-ID keys)
             output_url: URL to the generated artifact
             research_content: Optional research content
+            submission: Optional full submission dict with extracted submitter fields
             
         Returns:
             Generated SMS message string
         """
         sms_instructions = workflow.get('delivery_sms_ai_instructions', '')
-        
-        # Build context for SMS generation
+        sub = submission or {}
+
         context_parts = []
         if research_content:
-            context_parts.append(f"Research Content: {research_content[:500]}...")  # Truncate for SMS context
-        
-        # Convert Decimal values to float for JSON serialization
-        from utils.decimal_utils import convert_decimals_to_float
-        serializable_submission_data = convert_decimals_to_float(submission_data)
-        context_parts.append(f"Form Submission: {json.dumps(serializable_submission_data)}")
+            context_parts.append(f"Research Content: {research_content[:500]}...")
+
+        submitter_name = sub.get('submitter_name') or submission_data.get('name', '')
+        submitter_email = sub.get('submitter_email') or submission_data.get('email', '')
+        if submitter_name:
+            context_parts.append(f"Recipient Name: {submitter_name}")
+        if submitter_email:
+            context_parts.append(f"Recipient Email: {submitter_email}")
         context_parts.append(f"Lead Magnet URL: {output_url}")
         
         context = "\n".join(context_parts)
