@@ -1,0 +1,345 @@
+{
+  "workflow_name": "ICP Creator V4",
+  "workflow_description": "Evidence-backed Ideal Customer Profile with structured research, automation-safe outputs, and deterministic brand asset generation. 2-step pipeline using JSON Schema structured outputs.",
+  "steps": [
+    {
+      "step_name": "ICP Deep Research & Analysis",
+      "step_description": "Conducts web research on the target market and produces a comprehensive, structured ICP document with evidence-backed insights.",
+      "model": "gpt-4-turbo",
+      "reasoning_effort": "high",
+      "service_tier": "auto",
+      "max_output_tokens": 16000,
+      "instructions": "Act as a Senior Market Research Analyst specializing in B2B customer profiling.\n\nYour task: Build a comprehensive, evidence-backed Ideal Customer Profile using the submission data provided.\n\n## Input\nUse the form submission fields — particularly [industry], [target_audience], [product_service], [pain_points], and any other provided context — as your research seed.\n\n## Research Requirements\n1. Use web_search to find real data: industry reports, forum discussions, job postings, review sites, and competitor messaging.\n2. Every pain point, trigger, and objection must cite or reference a real source.\n3. Prioritize specificity over breadth — a narrow, actionable ICP beats a generic one.\n\n## Output Contract\nReturn structured JSON matching the output schema exactly. Fill every field. Use the evidence you gathered — do not fabricate statistics.\n\n## Quality Standards\n- Pain points: 5-8 items ranked by severity, each with real-world evidence\n- Goals: Tied to measurable business metrics with realistic timelines\n- Objections: Include a counter-argument for each\n- Messaging angles: Each must have a hook and supporting proof point\n- Channels: Ranked by relevance to this specific persona\n- Sources: Include all URLs consulted during research",
+      "step_order": 0,
+      "depends_on": [],
+      "tools": ["web_search"],
+      "tool_choice": "required",
+      "output_format": {
+        "type": "json_schema",
+        "name": "icp_research_output",
+        "description": "Structured Ideal Customer Profile research document with evidence-backed insights",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "profile_summary": {
+              "type": "object",
+              "description": "High-level ICP summary",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Short descriptive title for this ICP (e.g. 'Mid-Market SaaS CFO')"
+                },
+                "one_liner": {
+                  "type": "string",
+                  "description": "One-sentence description of who this customer is and why they buy"
+                },
+                "industry": {
+                  "type": "string",
+                  "description": "Primary industry or vertical"
+                },
+                "company_size": {
+                  "type": "string",
+                  "description": "Employee count range (e.g. '50-200 employees')"
+                },
+                "revenue_range": {
+                  "type": "string",
+                  "description": "Annual revenue range (e.g. '$5M-$50M ARR')"
+                },
+                "geography": {
+                  "type": "string",
+                  "description": "Target geography or market"
+                }
+              },
+              "required": ["title", "one_liner", "industry", "company_size", "revenue_range", "geography"],
+              "additionalProperties": false
+            },
+            "decision_maker": {
+              "type": "object",
+              "description": "Primary decision maker / buyer persona",
+              "properties": {
+                "job_title": {
+                  "type": "string",
+                  "description": "Most common job title"
+                },
+                "role_description": {
+                  "type": "string",
+                  "description": "What this person does day-to-day"
+                },
+                "seniority_level": {
+                  "type": "string",
+                  "description": "C-suite / VP / Director / Manager / IC"
+                },
+                "reports_to": {
+                  "type": "string",
+                  "description": "Who this person reports to"
+                },
+                "key_responsibilities": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Top 3-5 responsibilities"
+                },
+                "success_metrics": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "KPIs they are measured on"
+                }
+              },
+              "required": ["job_title", "role_description", "seniority_level", "reports_to", "key_responsibilities", "success_metrics"],
+              "additionalProperties": false
+            },
+            "pain_points": {
+              "type": "array",
+              "description": "Ranked list of pain points with evidence",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "pain": {
+                    "type": "string",
+                    "description": "The specific pain point"
+                  },
+                  "severity": {
+                    "type": "string",
+                    "description": "critical, high, medium, or low"
+                  },
+                  "business_impact": {
+                    "type": "string",
+                    "description": "How this pain affects the business (revenue, time, risk)"
+                  },
+                  "evidence": {
+                    "type": "string",
+                    "description": "Real-world evidence: forum quote, stat, or source reference"
+                  }
+                },
+                "required": ["pain", "severity", "business_impact", "evidence"],
+                "additionalProperties": false
+              }
+            },
+            "goals_and_outcomes": {
+              "type": "array",
+              "description": "Desired outcomes with measurable targets",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "goal": {
+                    "type": "string",
+                    "description": "The specific business goal"
+                  },
+                  "target_metric": {
+                    "type": "string",
+                    "description": "How success is measured (e.g. '30% reduction in churn')"
+                  },
+                  "timeline": {
+                    "type": "string",
+                    "description": "Expected timeline to achieve (e.g. '6-12 months')"
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "high, medium, or low"
+                  }
+                },
+                "required": ["goal", "target_metric", "timeline", "priority"],
+                "additionalProperties": false
+              }
+            },
+            "buying_triggers": {
+              "type": "array",
+              "description": "Events or situations that trigger a purchase decision",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "trigger": {
+                    "type": "string",
+                    "description": "The specific trigger event"
+                  },
+                  "signal": {
+                    "type": "string",
+                    "description": "How to detect this trigger (e.g. job posting, news, tech stack change)"
+                  }
+                },
+                "required": ["trigger", "signal"],
+                "additionalProperties": false
+              }
+            },
+            "objections_and_counters": {
+              "type": "array",
+              "description": "Common objections with prepared counter-arguments",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "objection": {
+                    "type": "string",
+                    "description": "The objection or concern"
+                  },
+                  "root_cause": {
+                    "type": "string",
+                    "description": "Why they really feel this way"
+                  },
+                  "counter": {
+                    "type": "string",
+                    "description": "Evidence-based counter-argument"
+                  }
+                },
+                "required": ["objection", "root_cause", "counter"],
+                "additionalProperties": false
+              }
+            },
+            "messaging": {
+              "type": "object",
+              "description": "Messaging strategy and angles",
+              "properties": {
+                "value_proposition": {
+                  "type": "string",
+                  "description": "Core value proposition for this ICP"
+                },
+                "positioning_statement": {
+                  "type": "string",
+                  "description": "For [target], who [need], our [product] is a [category] that [benefit]. Unlike [alternatives], we [differentiator]."
+                },
+                "angles": {
+                  "type": "array",
+                  "description": "Messaging angles with hooks",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "angle_name": {
+                        "type": "string",
+                        "description": "Short label for this angle"
+                      },
+                      "hook": {
+                        "type": "string",
+                        "description": "Attention-grabbing opening line"
+                      },
+                      "supporting_proof": {
+                        "type": "string",
+                        "description": "Data point or proof that backs this angle"
+                      }
+                    },
+                    "required": ["angle_name", "hook", "supporting_proof"],
+                    "additionalProperties": false
+                  }
+                },
+                "language_patterns": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Words and phrases this persona actually uses (from forums, reviews, job posts)"
+                }
+              },
+              "required": ["value_proposition", "positioning_statement", "angles", "language_patterns"],
+              "additionalProperties": false
+            },
+            "channels": {
+              "type": "array",
+              "description": "Best channels to reach this persona, ranked by effectiveness",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "channel": {
+                    "type": "string",
+                    "description": "Channel name (e.g. 'LinkedIn', 'Industry conferences', 'Google Search')"
+                  },
+                  "effectiveness": {
+                    "type": "string",
+                    "description": "high, medium, or low"
+                  },
+                  "tactic": {
+                    "type": "string",
+                    "description": "Specific tactic for this channel"
+                  }
+                },
+                "required": ["channel", "effectiveness", "tactic"],
+                "additionalProperties": false
+              }
+            },
+            "competitive_landscape": {
+              "type": "object",
+              "description": "Key competitors and differentiation opportunities",
+              "properties": {
+                "main_alternatives": {
+                  "type": "array",
+                  "description": "What this persona currently uses or considers",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "description": "Competitor or alternative name"
+                      },
+                      "weakness": {
+                        "type": "string",
+                        "description": "Key weakness or gap"
+                      }
+                    },
+                    "required": ["name", "weakness"],
+                    "additionalProperties": false
+                  }
+                },
+                "differentiation_opportunities": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Specific ways to stand out"
+                }
+              },
+              "required": ["main_alternatives", "differentiation_opportunities"],
+              "additionalProperties": false
+            },
+            "sources": {
+              "type": "array",
+              "description": "All sources consulted during research",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "Source title or description"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "Source URL"
+                  }
+                },
+                "required": ["title", "url"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "profile_summary",
+            "decision_maker",
+            "pain_points",
+            "goals_and_outcomes",
+            "buying_triggers",
+            "objections_and_counters",
+            "messaging",
+            "channels",
+            "competitive_landscape",
+            "sources"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "step_name": "ICP Document & Brand Assets",
+      "step_description": "Transforms the structured ICP research into a polished, branded HTML deliverable with deterministic logo recreation.",
+      "model": "gpt-5.2",
+      "reasoning_effort": "high",
+      "service_tier": "auto",
+      "max_output_tokens": 16000,
+      "instructions": "Act as a Senior Brand Strategist and Document Designer.\n\nYour task: Transform the structured ICP research data from Step 0 into a premium, executive-ready HTML deliverable.\n\n## Input\nStep 0 provides a complete JSON object with: profile_summary, decision_maker, pain_points, goals_and_outcomes, buying_triggers, objections_and_counters, messaging, channels, competitive_landscape, and sources.\n\n## Document Requirements\n\n### Content Structure\n1. **Executive Summary** — 3-4 sentence overview pulling from profile_summary and the top pain points\n2. **Ideal Customer Snapshot** — Company profile + decision maker persona in a visual card layout\n3. **Pain Points & Business Impact** — Severity-ranked table with evidence citations\n4. **Goals & Desired Outcomes** — Timeline-mapped goals with success metrics\n5. **Buying Triggers & Signals** — Actionable trigger-signal pairs for sales teams\n6. **Objection Handling Playbook** — Objection → Root Cause → Counter in a scannable format\n7. **Messaging Playbook** — Value prop, positioning, angles with hooks, and language patterns\n8. **Channel Strategy** — Effectiveness-ranked channels with specific tactics\n9. **Competitive Intelligence** — Alternatives table with weakness analysis + differentiation\n10. **Sources & Evidence** — Linked references for credibility\n\n### HTML & Design Requirements\n- Complete standalone HTML5 document (<!DOCTYPE html>)\n- Import 'Inter' from Google Fonts for body text and 'Space Grotesk' for headings\n- CSS custom properties for a cohesive brand palette (use professional blues/grays unless the submission suggests otherwise)\n- Mobile-responsive with media queries (single column below 768px)\n- Semantic HTML5 (<header>, <main>, <section>, <footer>)\n- Visual hierarchy: severity badges, effectiveness indicators, priority tags using CSS\n- Data tables for pain points, objections, and competitive intel\n- Card-based layout for the persona snapshot\n- Print-friendly styles (@media print)\n\n### Logo & Brand Asset\nUse the image_generation tool to create a professional logo mark for this ICP document. The logo should:\n- Be a simple, geometric icon that represents the target industry\n- Use the document's primary brand color\n- Work at small sizes (favicon-style simplicity)\n- Have a transparent background\n- No text in the logo — icon only\n\nEmbed the generated logo in the document header.\n\n### Personalization\n- Reference the submitter by name if provided in the form data\n- Tailor the executive summary to their specific product/service\n- Use the ICP's own language patterns (from messaging.language_patterns) in section headers where appropriate\n\n### Quality Bar\n- This IS the final deliverable — it must look like it came from a premium consulting firm\n- Every data point must trace back to the structured research\n- No placeholder text, no lorem ipsum, no [brackets]",
+      "step_order": 1,
+      "depends_on": [0],
+      "tools": [
+        {
+          "type": "image_generation",
+          "size": "1024x1024",
+          "quality": "high",
+          "format": "png",
+          "background": "transparent"
+        }
+      ],
+      "tool_choice": "auto",
+      "is_deliverable": true
+    }
+  ]
+}
