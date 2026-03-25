@@ -72,7 +72,7 @@ class StepProcessor:
         tenant_id: str,
         initial_context: str,
         step_outputs: List[Dict[str, Any]],
-        sorted_steps: List[Dict[str, Any]],
+        workflow_steps: List[Dict[str, Any]],
         execution_steps: List[Dict[str, Any]],
         all_image_artifact_ids: List[str]
     ) -> Tuple[Dict[str, Any], List[str]]:
@@ -90,7 +90,8 @@ class StepProcessor:
             raise ValueError("Step cannot have both webhook_url and handoff_workflow_id")
 
         # Normalize step type for webhook/handoff based on config fields (step_type is deprecated)
-        step['_sorted_steps'] = sorted_steps
+        step['_workflow_steps'] = workflow_steps
+        step['_sorted_steps'] = workflow_steps
         if has_webhook:
             step_type = 'webhook'
         elif has_handoff:
@@ -117,13 +118,13 @@ class StepProcessor:
             except Exception as e:
                 logger.warning(f"[StepProcessor] Failed to reload execution_steps, using provided list: {e}")
 
-            dependency_indices = self._resolve_dependency_indices(sorted_steps, step_index)
+            dependency_indices = self._resolve_dependency_indices(workflow_steps, step_index)
             step["_dependency_indices"] = dependency_indices
             
             all_previous_context = ContextBuilder.build_previous_context_from_step_outputs(
                 initial_context=initial_context,
                 step_outputs=step_outputs,
-                sorted_steps=sorted_steps,
+                sorted_steps=workflow_steps,
                 dependency_indices=dependency_indices,
                 include_form_submission=True
             )
@@ -168,7 +169,8 @@ class StepProcessor:
         if has_webhook and has_handoff:
             raise ValueError("Step cannot have both webhook_url and handoff_workflow_id")
 
-        step['_sorted_steps'] = sorted(steps, key=lambda s: s.get('step_order', 0))
+        step['_workflow_steps'] = steps
+        step['_sorted_steps'] = steps
         if has_webhook:
             step_type = 'webhook'
         elif has_handoff:

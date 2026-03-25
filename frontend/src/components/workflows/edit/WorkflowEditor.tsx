@@ -5,7 +5,9 @@ import { FileText, Save, AlertCircle, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { AIModel, Tool } from "@/types";
+import { WorkflowStep } from "@/types/workflow";
 import { useWorkflowEdit } from "@/hooks/useWorkflowEdit";
+
 import { useFormEdit } from "@/hooks/useFormEdit";
 import { WorkflowTab } from "@/components/workflows/edit/WorkflowTab";
 import { FormTab } from "@/components/workflows/edit/FormTab";
@@ -83,9 +85,6 @@ export function WorkflowEditor({
     workflowForm,
     handleChange,
     handleAddStep,
-    handleDeleteStep,
-    handleMoveStepUp,
-    handleMoveStepDown,
   } = workflowEdit;
 
   // Form edit hook
@@ -99,6 +98,49 @@ export function WorkflowEditor({
     moveFieldUp,
     moveFieldDown,
   } = formEdit;
+
+  const commitStepOrderChange = (nextSteps: WorkflowStep[]) => {
+    const selectedStep =
+      selectedStepIndex !== null ? steps[selectedStepIndex] : null;
+
+    setSteps(nextSteps);
+
+    if (!selectedStep) {
+      return;
+    }
+
+    const nextSelectedIndex = nextSteps.indexOf(selectedStep);
+    if (nextSelectedIndex === -1) {
+      setSelectedStepIndex(null);
+      setIsSidePanelOpen(false);
+      return;
+    }
+
+    setSelectedStepIndex(nextSelectedIndex);
+  };
+
+  const handleDeleteStep = (index: number) => {
+    const nextSteps = steps.filter((_, currentIndex) => currentIndex !== index);
+    commitStepOrderChange(nextSteps);
+  };
+
+  const handleMoveStepUp = (index: number) => {
+    if (index <= 0) return;
+
+    const nextSteps = [...steps];
+    const [movedStep] = nextSteps.splice(index, 1);
+    nextSteps.splice(index - 1, 0, movedStep);
+    commitStepOrderChange(nextSteps);
+  };
+
+  const handleMoveStepDown = (index: number) => {
+    if (index < 0 || index >= steps.length - 1) return;
+
+    const nextSteps = [...steps];
+    const [movedStep] = nextSteps.splice(index, 1);
+    nextSteps.splice(index + 1, 0, movedStep);
+    commitStepOrderChange(nextSteps);
+  };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -187,10 +229,9 @@ export function WorkflowEditor({
               cleanedTools.length > 0 ? (cleanedTools as Tool[]) : undefined,
             tool_choice:
               step.tool_choice || settings?.default_tool_choice || "required",
-            depends_on:
-              step.depends_on && step.depends_on.length > 0
-                ? step.depends_on
-                : undefined,
+            depends_on: Array.isArray(step.depends_on)
+              ? step.depends_on
+              : undefined,
           };
         }),
       });
@@ -339,7 +380,7 @@ export function WorkflowEditor({
                 setIsSidePanelOpen(true);
               }
             }}
-            onStepsReorder={setSteps}
+            onStepsReorder={commitStepOrderChange}
             onSubmit={handleSubmit}
             onCancel={handleExit}
             onDeleteStep={handleDeleteStep}

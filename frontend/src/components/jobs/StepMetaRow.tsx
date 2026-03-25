@@ -188,8 +188,6 @@ export function StepMetaRow({
     contextButtonClass,
     dependencyCount: dependencyPreviews.length,
     onToggleContext: () => togglePanel("context"),
-    isInProgress,
-    status,
   };
 
   useEffect(() => {

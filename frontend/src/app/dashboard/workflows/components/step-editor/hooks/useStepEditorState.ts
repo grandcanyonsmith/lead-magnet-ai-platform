@@ -88,6 +88,12 @@ export function useStepEditorState({
         display_height: config.display_height || 768,
         environment: config.environment || "browser",
       });
+    } else {
+      setComputerUseConfig({
+        display_width: 1024,
+        display_height: 768,
+        environment: "browser",
+      });
     }
 
     // Extract image_generation config if present
@@ -278,24 +284,35 @@ export function useStepEditorState({
     setComputerUseConfig(newConfig);
 
     const currentTools = localStep.tools || [];
-    const updatedTools = currentTools.map((t) => {
-      if (typeof t === "object" && t.type === "computer_use_preview") {
-        return {
-          ...t,
+    let foundComputerUseTool = false;
+    const updatedTools = currentTools.reduce<typeof currentTools>(
+      (nextTools, tool) => {
+        const isComputerUseTool =
+          (typeof tool === "string" && tool === "computer_use_preview") ||
+          (typeof tool === "object" && tool.type === "computer_use_preview");
+
+        if (!isComputerUseTool) {
+          nextTools.push(tool);
+          return nextTools;
+        }
+
+        if (foundComputerUseTool) {
+          return nextTools;
+        }
+
+        foundComputerUseTool = true;
+        nextTools.push({
+          type: "computer_use_preview",
           display_width: newConfig.display_width,
           display_height: newConfig.display_height,
           environment: newConfig.environment,
-        };
-      }
-      return t;
-    });
+        });
+        return nextTools;
+      },
+      [],
+    );
 
-    if (
-      isToolSelected("computer_use_preview") &&
-      !updatedTools.some(
-        (t) => typeof t === "object" && t.type === "computer_use_preview"
-      )
-    ) {
+    if (isToolSelected("computer_use_preview") && !foundComputerUseTool) {
       updatedTools.push({
         type: "computer_use_preview",
         display_width: newConfig.display_width,
@@ -330,70 +347,57 @@ export function useStepEditorState({
     setImageGenerationConfig(newConfig);
 
     const currentTools = localStep.tools || [];
-    const updatedTools = currentTools.map((t) => {
-      if (t === "image_generation") {
-        const cfg: any = {
+    let foundImageGenerationTool = false;
+    const updatedTools = currentTools.reduce<typeof currentTools>(
+      (nextTools, tool) => {
+        const isImageGenerationTool =
+          (typeof tool === "string" && tool === "image_generation") ||
+          (typeof tool === "object" && tool.type === "image_generation");
+
+        if (!isImageGenerationTool) {
+          nextTools.push(tool);
+          return nextTools;
+        }
+
+        if (foundImageGenerationTool) {
+          return nextTools;
+        }
+
+        foundImageGenerationTool = true;
+        nextTools.push({
           type: "image_generation",
           model: newConfig.model || resolvedImageDefaults.model,
           size: newConfig.size || resolvedImageDefaults.size,
           quality: newConfig.quality || resolvedImageDefaults.quality,
           background: newConfig.background || resolvedImageDefaults.background,
-        };
-        if (newConfig.format) cfg.format = newConfig.format;
-        if (newConfig.compression !== undefined)
-          cfg.compression = newConfig.compression;
-        if (newConfig.input_fidelity)
-          cfg.input_fidelity = newConfig.input_fidelity;
-        return cfg;
-      }
+          ...(newConfig.format ? { format: newConfig.format } : {}),
+          ...(newConfig.compression !== undefined
+            ? { compression: newConfig.compression }
+            : {}),
+          ...(newConfig.input_fidelity
+            ? { input_fidelity: newConfig.input_fidelity }
+            : {}),
+        });
+        return nextTools;
+      },
+      [],
+    );
 
-      if (typeof t === "object" && t.type === "image_generation") {
-        const updated: any = {
-          ...t,
-          model:
-            newConfig.model ||
-            (t as ImageGenerationToolConfig).model ||
-            resolvedImageDefaults.model,
-          size: newConfig.size || resolvedImageDefaults.size,
-          quality: newConfig.quality || resolvedImageDefaults.quality,
-          background: newConfig.background || resolvedImageDefaults.background,
-        };
-
-        if (newConfig.format) updated.format = newConfig.format;
-        else delete updated.format;
-
-        if (newConfig.compression !== undefined)
-          updated.compression = newConfig.compression;
-        else delete updated.compression;
-
-        if (newConfig.input_fidelity)
-          updated.input_fidelity = newConfig.input_fidelity;
-        else delete updated.input_fidelity;
-
-        return updated;
-      }
-
-      return t;
-    });
-
-    if (
-      isToolSelected("image_generation") &&
-      !updatedTools.some(
-        (t) => typeof t === "object" && t.type === "image_generation"
-      )
-    ) {
-      const cfg: any = {
+    if (isToolSelected("image_generation") && !foundImageGenerationTool) {
+      updatedTools.push({
         type: "image_generation",
         model: newConfig.model || resolvedImageDefaults.model,
         size: newConfig.size || resolvedImageDefaults.size,
         quality: newConfig.quality || resolvedImageDefaults.quality,
         background: newConfig.background || resolvedImageDefaults.background,
-      };
-      if (newConfig.format) cfg.format = newConfig.format;
-      if (newConfig.compression !== undefined)
-        cfg.compression = newConfig.compression;
-      if (newConfig.input_fidelity) cfg.input_fidelity = newConfig.input_fidelity;
-      updatedTools.push(cfg);
+        ...(newConfig.format ? { format: newConfig.format } : {}),
+        ...(newConfig.compression !== undefined
+          ? { compression: newConfig.compression }
+          : {}),
+        ...(newConfig.input_fidelity
+          ? { input_fidelity: newConfig.input_fidelity }
+          : {}),
+      });
     }
 
     handleChange("tools", updatedTools);

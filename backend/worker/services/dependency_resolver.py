@@ -24,6 +24,11 @@ class DependencyResolver:
     """
 
     @staticmethod
+    def _has_explicit_dependency_list(step: Dict) -> bool:
+        depends_on = step.get('depends_on')
+        return depends_on is not None and isinstance(depends_on, list)
+
+    @staticmethod
     def _build_order_to_index(steps: List[Dict]) -> Dict[int, int]:
         """
         Build a mapping from step_order to array index for normalization.
@@ -72,7 +77,7 @@ class DependencyResolver:
         """
         deps: List[int] = []
         
-        if step.get('depends_on') and isinstance(step.get('depends_on'), list):
+        if DependencyResolver._has_explicit_dependency_list(step):
             # Explicit dependencies provided
             deps = normalize_dependency_list(step['depends_on'])
         else:
@@ -102,7 +107,7 @@ class DependencyResolver:
         for index, step in enumerate(steps):
             deps: List[int] = []
             
-            if step.get('depends_on') and isinstance(step.get('depends_on'), list):
+            if DependencyResolver._has_explicit_dependency_list(step):
                 # Explicit dependencies provided - normalize step_order values to array indices
                 for dep_value in normalize_dependency_list(step['depends_on']):
                     dep_index = DependencyResolver._normalize_dependency_index(
@@ -233,7 +238,7 @@ class DependencyResolver:
         # Check for invalid dependency indices
         coerced_values: List[Dict[str, Any]] = []
         for index, step in enumerate(steps):
-            if step.get('depends_on') and isinstance(step.get('depends_on'), list):
+            if DependencyResolver._has_explicit_dependency_list(step):
                 step_order = normalize_step_order(step)
                 step_name = step.get('step_name', 'Unknown')
                 

@@ -295,7 +295,7 @@ export function useStepDetailData() {
   const handleSaveStep = async (updatedStep: WorkflowStep) => {
     if (!workflow || editingStepIndex === null || !workflow.steps) {
       toast.error("Unable to save: Workflow data not available");
-      return;
+      return false;
     }
 
     try {
@@ -315,10 +315,12 @@ export function useStepDetailData() {
       latestStepUpdateRef.current = null;
       setEditingStepIndex(null);
       setIsSidePanelOpen(false);
-      refreshJob();
+      await refreshJob();
+      return true;
     } catch (saveError: unknown) {
       console.error("Failed to save step:", saveError);
       toast.error("Failed to save step. Please try again.");
+      return false;
     }
   };
 
@@ -331,7 +333,10 @@ export function useStepDetailData() {
           JSON.stringify(latestStepUpdateRef.current);
 
       if (hasChanges) {
-        await handleSaveStep(latestStepUpdateRef.current);
+        const didSave = await handleSaveStep(latestStepUpdateRef.current);
+        if (didSave) {
+          latestStepUpdateRef.current = null;
+        }
         return;
       }
     }

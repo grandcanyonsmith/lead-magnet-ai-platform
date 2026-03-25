@@ -33,11 +33,11 @@ export function useJobUpdates({
 
   const handleSaveStep = async (updatedStep: WorkflowStep) => {
     if (savingStepRef.current) {
-      return;
+      return false;
     }
     if (!workflow || editingStepIndex === null || !workflow.steps) {
       toast.error("Unable to save: Workflow data not available");
-      return;
+      return false;
     }
 
     savingStepRef.current = true;
@@ -64,9 +64,11 @@ export function useJobUpdates({
       setShowRerunDialog(true);
 
       router.refresh();
+      return true;
     } catch (error: any) {
       console.error("Failed to save step:", error);
       toast.error("Failed to save step. Please try again.");
+      return false;
     } finally {
       savingStepRef.current = false;
     }
@@ -202,11 +204,11 @@ export function useJobUpdates({
           JSON.stringify(latestStepUpdateRef.current);
 
       if (hasChanges) {
-        try {
-          await handleSaveStep(latestStepUpdateRef.current);
-        } catch (error) {
-          throw error;
+        const didSave = await handleSaveStep(latestStepUpdateRef.current);
+        if (didSave) {
+          latestStepUpdateRef.current = null;
         }
+        return;
       }
 
       latestStepUpdateRef.current = null;

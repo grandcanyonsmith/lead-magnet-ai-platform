@@ -125,26 +125,30 @@ class HandoffStepHandler(AbstractStepHandler):
             if include_submission_data and isinstance(submission_data, dict):
                 outgoing_submission_data.update(submission_data)
 
-            sorted_steps = step.get("_sorted_steps", []) or []
+            workflow_steps = step.get("_workflow_steps") or step.get("_sorted_steps", []) or []
             deliverable_context = ContextBuilder.build_deliverable_context_from_step_outputs(
                 step_outputs=step_outputs,
-                sorted_steps=sorted_steps,
+                sorted_steps=workflow_steps,
             )
             deliverable_steps: Dict[str, Any] = {}
             if deliverable_context:
-                target_indices = ContextBuilder._resolve_deliverable_indices(sorted_steps)
+                target_indices = ContextBuilder._resolve_deliverable_indices(workflow_steps)
+                indexed_outputs = ContextBuilder._index_step_outputs(step_outputs)
                 for idx in target_indices:
-                    if idx >= len(step_outputs):
+                    step_output = indexed_outputs.get(idx)
+                    if not step_output:
                         continue
-                    step_output = step_outputs[idx]
-                    step_index = step_output.get("step_index", idx)
-                    step_name = step_output.get("step_name", f"Step {step_index + 1}")
+                    deliverable_step_index = step_output.get("step_index", idx)
+                    deliverable_step_name = step_output.get(
+                        "step_name",
+                        f"Step {deliverable_step_index + 1}",
+                    )
                     output_text = ContextBuilder._stringify_step_output(step_output.get("output", "")).strip()
                     if not output_text:
                         continue
-                    deliverable_steps[f"step_{step_index}"] = {
-                        "step_name": step_name,
-                        "step_index": step_index,
+                    deliverable_steps[f"step_{deliverable_step_index}"] = {
+                        "step_name": deliverable_step_name,
+                        "step_index": deliverable_step_index,
                         "output": output_text,
                         "artifact_id": step_output.get("artifact_id"),
                         "image_urls": step_output.get("image_urls", []),

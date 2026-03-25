@@ -263,10 +263,11 @@ class WebhookStepService:
 
         deliverable_steps: Dict[str, Any] = {}
         target_indices = ContextBuilder._resolve_deliverable_indices(sorted_steps)
+        indexed_outputs = ContextBuilder._index_step_outputs(step_outputs)
         for idx in target_indices:
-            if idx >= len(step_outputs):
+            step_output = indexed_outputs.get(idx)
+            if not step_output:
                 continue
-            step_output = step_outputs[idx]
             step_index = step_output.get("step_index", idx)
             step_name = step_output.get("step_name", f"Step {step_index + 1}")
             output_text = ContextBuilder._stringify_step_output(step_output.get("output", "")).strip()

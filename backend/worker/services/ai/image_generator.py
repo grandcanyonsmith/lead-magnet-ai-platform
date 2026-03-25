@@ -1,7 +1,7 @@
 import logging
 import json
 from dataclasses import dataclass
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Callable, Dict, Any, List, Optional, Tuple
 
 from services.openai_client import OpenAIClient
 from services.image_handler import ImageHandler
@@ -239,15 +239,26 @@ class ImagesApiRunner:
         full_context: str,
         step_name: Optional[str],
         step_instructions: str,
+        progress_callback: Optional[Callable[[str, str], None]] = None,
     ) -> Tuple[List[str], List[Dict[str, Any]]]:
         image_urls: List[str] = []
         images_output: List[Dict[str, Any]] = []
+        valid_plan = [
+            item
+            for item in plan
+            if isinstance(item.prompt, str) and item.prompt.strip()
+        ]
+        total_images = len(valid_plan)
 
-        for plan_item in plan:
-            prompt = plan_item.prompt
-            if not isinstance(prompt, str) or not prompt.strip():
-                continue
+        for image_index, plan_item in enumerate(valid_plan, start=1):
+            prompt = plan_item.prompt.strip()
             label = plan_item.label
+
+            if progress_callback:
+                progress_callback(
+                    f"Generating image {image_index}/{total_images}: {label}",
+                    "generating",
+                )
 
             img_resp = self.openai_client.generate_images(
                 model=image_model,
@@ -297,6 +308,11 @@ class ImagesApiRunner:
                             "url": url,
                         }
                     )
+                    if progress_callback:
+                        progress_callback(
+                            f"Generated image {image_index}/{total_images}: {label}",
+                            "generating",
+                        )
 
         return image_urls, images_output
 
@@ -330,6 +346,7 @@ class ImageGenerator:
         step_name: Optional[str],
         step_instructions: str,
         prompt_overrides: Optional[Dict[str, Any]] = None,
+        progress_callback: Optional[Callable[[str, str], None]] = None,
     ) -> Tuple[str, Dict, Dict, Dict]:
         """
         Image-generation path using the Images API.
@@ -346,6 +363,9 @@ class ImageGenerator:
             'tool_choice': tool_choice,
         })
 
+        if progress_callback:
+            progress_callback("Planning image prompts...", "planning")
+
         plan_result = self.prompt_planner.plan(
             model=model,
             context=context,
@@ -359,6 +379,13 @@ class ImageGenerator:
             step_instructions=step_instructions,
             prompt_overrides=prompt_overrides,
         )
+
+        if progress_callback:
+            progress_callback(
+                f"Planned {len(plan_result.images)} image prompt"
+                f"{'' if len(plan_result.images) == 1 else 's'}.",
+                "planning",
+            )
 
         generation_config = ImageGenerationConfig(
             size=image_tool.get("size", "auto"),
@@ -377,6 +404,7 @@ class ImageGenerator:
             full_context=full_context,
             step_name=step_name,
             step_instructions=step_instructions,
+            progress_callback=progress_callback,
         )
 
         output_obj = {

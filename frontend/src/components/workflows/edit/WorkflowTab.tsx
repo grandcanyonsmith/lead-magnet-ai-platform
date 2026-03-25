@@ -376,13 +376,7 @@ export function WorkflowTab({
             onStepClick={onStepClick}
             onTriggerClick={() => onStepClick(-2)}
             onAddStep={onAddStep}
-            onStepsReorder={(newSteps) => {
-              const reorderedSteps = newSteps.map((step, index) => ({
-                ...step,
-                step_order: index,
-              }));
-              onStepsReorder(reorderedSteps);
-            }}
+            onStepsReorder={onStepsReorder}
           />
         </div>
       </Card>

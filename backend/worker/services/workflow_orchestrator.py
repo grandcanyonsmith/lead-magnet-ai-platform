@@ -88,15 +88,19 @@ class WorkflowOrchestrator:
             field_label_map
         )
         
-        # Sort steps by step_order if present
-        sorted_steps = sorted(steps, key=normalize_step_order)
+        # Execute by step_order for legacy compatibility, but keep original workflow
+        # indices so dependencies and reruns stay aligned with the persisted steps array.
+        sorted_step_entries = sorted(
+            enumerate(steps),
+            key=lambda entry: normalize_step_order(entry[1]),
+        )
         
         # Process each step
         accumulated_context = ""
         step_outputs = []
         all_image_artifact_ids = []
         
-        for step_index, step in enumerate(sorted_steps):
+        for step_index, step in sorted_step_entries:
             step_output_dict, image_artifact_ids = self.step_processor.process_step_batch_mode(
                 step=step,
                 step_index=step_index,
@@ -104,7 +108,7 @@ class WorkflowOrchestrator:
                 tenant_id=job['tenant_id'],
                 initial_context=initial_context,
                 step_outputs=step_outputs,
-                sorted_steps=sorted_steps,
+                workflow_steps=steps,
                 execution_steps=execution_steps,
                 all_image_artifact_ids=all_image_artifact_ids
             )
@@ -153,13 +157,16 @@ class WorkflowOrchestrator:
             tenant_id=job['tenant_id']
         )
         
-        deliverable_indices = ContextBuilder._resolve_deliverable_indices(sorted_steps)
-        if deliverable_indices and deliverable_indices[-1] < len(step_outputs):
-            report_artifact_id = step_outputs[deliverable_indices[-1]].get('artifact_id')
-        elif step_outputs:
+        deliverable_indices = ContextBuilder._resolve_deliverable_indices(steps)
+        step_outputs_by_index = ContextBuilder._index_step_outputs(step_outputs)
+        report_artifact_id = None
+        for deliverable_index in reversed(deliverable_indices):
+            artifact_id = step_outputs_by_index.get(deliverable_index, {}).get('artifact_id')
+            if artifact_id:
+                report_artifact_id = artifact_id
+                break
+        if report_artifact_id is None and step_outputs:
             report_artifact_id = step_outputs[-1].get('artifact_id')
-        else:
-            report_artifact_id = None
         
         return final_content, final_artifact_type, final_filename, report_artifact_id, all_image_artifact_ids
     
@@ -192,10 +199,9 @@ class WorkflowOrchestrator:
         """
         # Build deliverable-focused context from explicit deliverable steps or terminal steps.
         steps = workflow.get('steps', [])
-        sorted_steps = sorted(steps, key=normalize_step_order)
         deliverable_context = ContextBuilder.build_deliverable_context_from_step_outputs(
             step_outputs=step_outputs,
-            sorted_steps=sorted_steps
+            sorted_steps=steps
         )
         if not deliverable_context:
             if step_outputs:

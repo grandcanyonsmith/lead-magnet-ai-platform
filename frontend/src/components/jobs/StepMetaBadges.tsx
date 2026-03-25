@@ -1,6 +1,5 @@
-import type { ComponentType } from "react";
-import { Brain, ChevronDown, ChevronUp, Zap } from "lucide-react";
-import type { StepStatus } from "@/types/job";
+import { Brain, ChevronDown, Zap } from "lucide-react";
+
 import { getToolName, type Tool } from "@/utils/stepMeta";
 import { Badge } from "@/components/ui/badges/Badge";
 
@@ -59,8 +58,6 @@ export type StepMetaBadgesProps = {
   contextButtonClass: string;
   dependencyCount: number;
   onToggleContext: () => void;
-  isInProgress: boolean;
-  status: StepStatus;
 };
 
 export function StepMetaBadges({
@@ -86,8 +83,6 @@ export function StepMetaBadges({
   showContext,
   dependencyCount,
   onToggleContext,
-  isInProgress,
-  status,
 }: StepMetaBadgesProps) {
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold tabular-nums text-gray-500 dark:text-gray-400">
@@ -169,21 +164,6 @@ export function StepMetaBadges({
         />
       )}
 
-      {isInProgress && (
-        <Badge
-          label="Processing..."
-          variant="default"
-          className="bg-blue-50 text-blue-700 border-blue-200 animate-pulse border"
-        />
-      )}
-
-      {status === "failed" && (
-        <Badge
-          label="Failed"
-          variant="destructive"
-          className="bg-red-50 text-red-700 border-red-200 border"
-        />
-      )}
     </div>
   );
 }

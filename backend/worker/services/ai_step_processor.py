@@ -11,6 +11,7 @@ from typing import Dict, Any, List, Tuple, Optional
 from ai_service import AIService
 from artifact_service import ArtifactService
 from services.context_builder import ContextBuilder
+from services.container_file_citation_service import ContainerFileCitationService
 from services.execution_step_manager import ExecutionStepManager
 from services.usage_service import UsageService
 from services.image_artifact_service import ImageArtifactService
@@ -43,6 +44,10 @@ class AIStepProcessor:
         self.artifact_service = artifact_service
         self.usage_service = usage_service
         self.image_artifact_service = image_artifact_service
+        self.container_file_citation_service = ContainerFileCitationService(
+            openai_client=self.ai_service.openai_client.client,
+            artifact_service=self.artifact_service,
+        )
     
     def process_ai_step(
         self,
@@ -216,7 +221,48 @@ class AIStepProcessor:
                         log_text_parts.append(error.strip())
 
         if log_text_parts:
-             step_output += "\n".join(log_text_parts)
+            step_output += "\n".join(log_text_parts)
+
+        generated_file_artifacts: List[Dict[str, Any]] = []
+        generated_file_artifact_ids: List[str] = []
+        try:
+            step_output, generated_file_artifacts = (
+                self.container_file_citation_service.sync_generated_files(
+                    raw_response=response_details.get("raw_api_response"),
+                    content=step_output,
+                    tenant_id=tenant_id,
+                    job_id=job_id,
+                )
+            )
+        except Exception as generated_file_error:
+            logger.warning(
+                "[AIStepProcessor] Failed to sync code interpreter container files",
+                extra={
+                    "job_id": job_id,
+                    "step_index": step_index,
+                    "error": str(generated_file_error),
+                },
+                exc_info=True,
+            )
+            generated_file_artifacts = []
+
+        response_details["output_text"] = step_output
+
+        if generated_file_artifacts:
+            generated_file_artifact_ids = [
+                artifact["artifact_id"]
+                for artifact in generated_file_artifacts
+                if artifact.get("artifact_id")
+            ]
+            generated_file_urls = [
+                artifact["public_url"]
+                for artifact in generated_file_artifacts
+                if artifact.get("public_url")
+            ]
+
+            response_details["generated_file_artifacts"] = generated_file_artifacts
+            response_details["generated_file_artifact_ids"] = generated_file_artifact_ids
+            response_details["generated_file_urls"] = generated_file_urls
 
         if shell_executor_logs:
             try:
@@ -322,7 +368,7 @@ class AIStepProcessor:
             'image_artifact_ids_count': len(image_artifact_ids),
             'image_artifact_ids': image_artifact_ids
         })
-        
+
         # Store artifact ID in response_details for easy access
         response_details['artifact_id'] = step_artifact_id
         

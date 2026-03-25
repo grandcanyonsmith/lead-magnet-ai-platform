@@ -9,6 +9,10 @@ import {
   resolveTextVerbosity,
   resolveToolChoice,
 } from "@/utils/workflowDefaults";
+import {
+  normalizeEditedWorkflowSteps,
+  normalizeLoadedWorkflowSteps,
+} from "@/utils/workflowStepNormalization";
 import { useWorkflowId } from "./useWorkflowId";
 import { useOrderedList } from "./useOrderedList";
 
@@ -50,8 +54,7 @@ export function useWorkflowEdit(
   );
 
   const normalizeSteps = useCallback(
-    (nextSteps: WorkflowStep[]) =>
-      nextSteps.map((step, index) => ({ ...step, step_order: index })),
+    (nextSteps: WorkflowStep[]) => normalizeEditedWorkflowSteps(nextSteps),
     [],
   );
   const [steps, setStepsState] = useState<WorkflowStep[]>([]);
@@ -141,14 +144,21 @@ export function useWorkflowEdit(
           step_description: step.step_description || "",
           step_type: step.step_type || "ai_generation",
           model: step.model || "gpt-5.2",
+          reasoning_effort: step.reasoning_effort,
           instructions: step.instructions?.trim() || defaultInstructions,
           service_tier: step.service_tier || resolvedDefaultServiceTier,
           text_verbosity:
             resolveTextVerbosity(step.text_verbosity) ?? resolvedDefaultTextVerbosity,
           is_deliverable: step.is_deliverable === true,
-          step_order: step.step_order !== undefined ? step.step_order : index,
+          max_output_tokens: step.max_output_tokens,
+          output_format: step.output_format,
+          step_order: index,
           tools: step.tools || ["web_search"],
           tool_choice: step.tool_choice || resolvedDefaultToolChoice,
+          shell_settings: step.shell_settings,
+          depends_on: Array.isArray(step.depends_on)
+            ? [...step.depends_on]
+            : undefined,
           // Webhook step fields
           webhook_url: step.webhook_url || "",
           webhook_method: step.webhook_method || "POST",
@@ -171,9 +181,10 @@ export function useWorkflowEdit(
           handoff_bypass_required_inputs: step.handoff_bypass_required_inputs,
           handoff_include_submission_data: step.handoff_include_submission_data,
           handoff_include_context: step.handoff_include_context,
+          include_form_data: step.include_form_data,
         };
       });
-      setSteps(loadedSteps);
+      setStepsState(normalizeLoadedWorkflowSteps(loadedSteps));
 
       if (workflow.form) {
         setFormId(workflow.form.form_id);

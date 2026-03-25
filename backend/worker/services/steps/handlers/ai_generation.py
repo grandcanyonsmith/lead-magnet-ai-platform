@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from typing import Dict, Any, List, Tuple
 from datetime import datetime
 from services.steps.base import AbstractStepHandler
@@ -12,6 +13,13 @@ from core import log_context
 from core.prompts import PROMPT_CONFIGS
 
 logger = logging.getLogger(__name__)
+
+_FILE_WORD_RE = re.compile(r'\bfile\b')
+
+
+def _has_file_keyword(text: str) -> bool:
+    """Match 'file' only as a whole word — avoids false positives on 'profile', 'filed', etc."""
+    return bool(_FILE_WORD_RE.search(text))
 
 class AIStepHandler(AbstractStepHandler):
     """Handler for AI generation steps."""
@@ -94,9 +102,8 @@ class AIStepHandler(AbstractStepHandler):
                 "mockup",
                 "dist/",
                 "bundle",
-                "file", # Generic file keyword
             ]
-        )
+        ) or _has_file_keyword(instructions_lower)
         
         if force_shell and shell_keyword_hit and not has_image_generation_tool:
             # For file-producing steps, restrict tools to shell only to guarantee execution.
@@ -227,6 +234,11 @@ class AIStepHandler(AbstractStepHandler):
                 
                 step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000
                 image_urls = response_details.get('image_urls', [])
+                generated_file_artifact_ids = list(response_details.get('generated_file_artifact_ids') or [])
+                related_artifact_ids = list(image_artifact_ids)
+                for artifact_id in generated_file_artifact_ids:
+                    if artifact_id not in related_artifact_ids:
+                        related_artifact_ids.append(artifact_id)
                 
                 step_output_result = {
                     'step_name': step_name,
@@ -235,6 +247,7 @@ class AIStepHandler(AbstractStepHandler):
                     'artifact_id': step_artifact_id,
                     'image_urls': image_urls,
                     'image_artifact_ids': image_artifact_ids,
+                    'generated_file_artifact_ids': generated_file_artifact_ids,
                     'usage_info': usage_info,
                     'duration_ms': int(step_duration),
                     'success': True
@@ -269,7 +282,7 @@ class AIStepHandler(AbstractStepHandler):
                 # Update job with execution steps
                 self.services['db_service'].update_job(job_id, {'execution_steps': execution_steps}, s3_service=self.services['s3_service'])
 
-                return step_output_result, image_artifact_ids
+                return step_output_result, related_artifact_ids
 
             except Exception as step_error:
                 step_duration = (datetime.utcnow() - step_start_time).total_seconds() * 1000

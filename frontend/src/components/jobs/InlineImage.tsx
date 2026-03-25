@@ -69,7 +69,7 @@ export function InlineImage({
   return (
     <div
       className={`${
-        isCompact ? "my-2 max-w-[160px]" : "my-4 w-full"
+        isCompact ? "my-2 w-full max-w-[160px] shrink-0" : "my-4 w-full"
       } ${className}`}
     >
       <div

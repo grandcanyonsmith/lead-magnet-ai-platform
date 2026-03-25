@@ -4,6 +4,7 @@ Handles artifact storage in S3 and DynamoDB.
 """
 
 import logging
+import mimetypes
 import os
 import requests
 from datetime import datetime
@@ -173,12 +174,14 @@ class ArtifactService:
             'md': 'text/markdown',
             'txt': 'text/plain',
             'json': 'application/json',
+            'svg': 'image/svg+xml',
             'png': 'image/png',
             'jpg': 'image/jpeg',
             'jpeg': 'image/jpeg',
             'pdf': 'application/pdf',
         }
-        return types.get(ext, 'application/octet-stream')
+        guessed_type, _ = mimetypes.guess_type(filename)
+        return types.get(ext) or guessed_type or 'application/octet-stream'
     
     def store_image_artifact(
         self,
@@ -360,14 +363,6 @@ class ArtifactService:
             'public_url_preview': public_url[:80] + '...' if len(public_url) > 80 else public_url,
             'file_size_bytes': file_size,
             'is_external_url': is_external_url
-        })
-        
-        self.db.put_artifact(artifact)
-        
-        logger.info(f"[ArtifactService] Image artifact stored successfully", extra={
-            'artifact_id': artifact_id,
-            'artifact_filename': filename,
-            's3_key': s3_key
         })
         
         # Share artifact with shared workflows (non-blocking)

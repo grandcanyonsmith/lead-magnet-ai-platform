@@ -50,9 +50,9 @@ class WebhookStepHandler(AbstractStepHandler):
             if not submission:
                 submission = {'submission_data': {}}
 
-            # Execute webhook
-            # Use injected sorted_steps if available, otherwise fallback to empty list
-            sorted_steps = step.get('_sorted_steps', [])
+            # Use the persisted workflow step order so dependency indices line up with
+            # webhook payload step references during reruns and reordered workflows.
+            sorted_steps = step.get('_workflow_steps') or step.get('_sorted_steps', [])
             
             webhook_result, success = self.webhook_step_service.execute_webhook_step(
                 step=step,

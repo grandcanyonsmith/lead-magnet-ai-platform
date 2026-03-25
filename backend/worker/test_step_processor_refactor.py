@@ -72,7 +72,7 @@ class TestStepProcessorRefactor(unittest.TestCase):
             tenant_id='tenant_123',
             initial_context='',
             step_outputs=[],
-            sorted_steps=[step],
+            workflow_steps=[step],
             execution_steps=[],
             all_image_artifact_ids=[]
         )
@@ -98,12 +98,42 @@ class TestStepProcessorRefactor(unittest.TestCase):
             tenant_id='tenant_123',
             initial_context='',
             step_outputs=[],
-            sorted_steps=[step],
+            workflow_steps=[step],
             execution_steps=[],
             all_image_artifact_ids=[]
         )
         
         webhook_handler.execute.assert_called_once()
+
+    def test_check_dependencies_matches_execution_steps_to_workflow_indices(self):
+        steps = [
+            {
+                'step_name': 'Second',
+                'step_order': 1,
+                'depends_on': [1],
+            },
+            {
+                'step_name': 'First',
+                'step_order': 0,
+                'depends_on': [],
+            },
+        ]
+        execution_steps = [
+            {
+                'step_name': 'First',
+                'step_order': 2,
+                'step_type': 'ai_generation',
+                'output': 'done',
+                'timestamp': '2026-03-25T00:00:00',
+            }
+        ]
+
+        self.processor._check_dependencies(
+            step=steps[0],
+            step_index=0,
+            steps=steps,
+            execution_steps=execution_steps,
+        )
 
 if __name__ == '__main__':
     unittest.main()

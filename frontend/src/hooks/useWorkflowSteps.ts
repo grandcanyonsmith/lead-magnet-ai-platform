@@ -8,6 +8,10 @@ import {
   resolveTextVerbosity,
   resolveToolChoice,
 } from "@/utils/workflowDefaults";
+import {
+  normalizeEditedWorkflowSteps,
+  normalizeLoadedWorkflowSteps,
+} from "@/utils/workflowStepNormalization";
 
 interface UseWorkflowStepsOptions {
   initialSteps?: WorkflowStep[];
@@ -34,15 +38,32 @@ export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowSt
   const resolvedDefaultServiceTier = resolveServiceTier(defaultServiceTier);
   const resolvedDefaultTextVerbosity = resolveTextVerbosity(defaultTextVerbosity);
 
-  const [steps, setSteps] = useState<WorkflowStep[]>(
-    initialSteps ||
-      buildDefaultSteps(
-        resolvedDefaultToolChoice,
-        resolvedDefaultServiceTier,
-        resolvedDefaultTextVerbosity,
-      ),
+  const [steps, setStepsState] = useState<WorkflowStep[]>(
+    normalizeLoadedWorkflowSteps(
+      initialSteps ||
+        buildDefaultSteps(
+          resolvedDefaultToolChoice,
+          resolvedDefaultServiceTier,
+          resolvedDefaultTextVerbosity,
+        ),
+    ),
   );
   const [isLoaded, setIsLoaded] = useState(false);
+
+  const setSteps = useCallback(
+    (
+      nextSteps:
+        | WorkflowStep[]
+        | ((prev: WorkflowStep[]) => WorkflowStep[]),
+    ) => {
+      setStepsState((prev) => {
+        const resolved =
+          typeof nextSteps === "function" ? nextSteps(prev) : nextSteps;
+        return normalizeLoadedWorkflowSteps(resolved);
+      });
+    },
+    [],
+  );
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -52,7 +73,7 @@ export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowSt
         if (saved) {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setSteps(parsed);
+            setStepsState(normalizeLoadedWorkflowSteps(parsed));
           }
         }
       } catch (e) {
@@ -77,84 +98,90 @@ export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowSt
   }, [steps, persistKey, isLoaded]);
 
   const updateStep = useCallback((index: number, step: WorkflowStep) => {
-    setSteps((prev) => {
+    setStepsState((prev) => {
       const newSteps = [...prev];
-      newSteps[index] = { ...step, step_order: index };
-      return newSteps;
+      newSteps[index] = step;
+      return normalizeEditedWorkflowSteps(newSteps);
     });
   }, []);
 
   const addStep = useCallback(() => {
-    setSteps((prev) => [
-      ...prev,
-      {
-        step_name: `Step ${prev.length + 1}`,
-        step_description: "",
-        model: "gpt-5.2",
-        instructions: "",
-        step_order: prev.length,
-        tools: [],
-        tool_choice: resolvedDefaultToolChoice,
-        service_tier: resolvedDefaultServiceTier,
-        text_verbosity: resolvedDefaultTextVerbosity,
-      },
-    ]);
+    setStepsState((prev) =>
+      normalizeEditedWorkflowSteps([
+        ...prev,
+        {
+          step_name: `Step ${prev.length + 1}`,
+          step_description: "",
+          model: "gpt-5.2",
+          instructions: "",
+          step_order: prev.length,
+          tools: [],
+          tool_choice: resolvedDefaultToolChoice,
+          service_tier: resolvedDefaultServiceTier,
+          text_verbosity: resolvedDefaultTextVerbosity,
+        },
+      ]),
+    );
   }, [resolvedDefaultToolChoice, resolvedDefaultServiceTier, resolvedDefaultTextVerbosity]);
 
   const deleteStep = useCallback((index: number) => {
-    setSteps((prev) => {
+    setStepsState((prev) => {
       const newSteps = prev.filter((_, i) => i !== index);
-      return newSteps.map((step, i) => ({ ...step, step_order: i }));
+      return normalizeEditedWorkflowSteps(newSteps);
     });
   }, []);
 
   const moveStepUp = useCallback((index: number) => {
     if (index === 0) return;
-    setSteps((prev) => {
+    setStepsState((prev) => {
       const newSteps = [...prev];
       [newSteps[index - 1], newSteps[index]] = [
         newSteps[index],
         newSteps[index - 1],
       ];
-      return newSteps.map((step, i) => ({ ...step, step_order: i }));
+      return normalizeEditedWorkflowSteps(newSteps);
     });
   }, []);
 
   const moveStepDown = useCallback((index: number) => {
-    setSteps((prev) => {
+    setStepsState((prev) => {
       if (index === prev.length - 1) return prev;
       const newSteps = [...prev];
       [newSteps[index], newSteps[index + 1]] = [
         newSteps[index + 1],
         newSteps[index],
       ];
-      return newSteps.map((step, i) => ({ ...step, step_order: i }));
+      return normalizeEditedWorkflowSteps(newSteps);
     });
   }, []);
 
   const reorderSteps = useCallback((newSteps: WorkflowStep[]) => {
-    setSteps(newSteps.map((step, i) => ({ ...step, step_order: i })));
+    setStepsState(normalizeEditedWorkflowSteps(newSteps));
   }, []);
 
   const setStepsFromAIGeneration = useCallback((aiSteps: WorkflowStep[]) => {
     if (aiSteps && Array.isArray(aiSteps) && aiSteps.length > 0) {
-      setSteps(
-        aiSteps.map((step: any) => ({
-          step_name: step.step_name || "Step",
-          step_description: step.step_description || "",
-          model: step.model || "gpt-5.2",
-          reasoning_effort: step.reasoning_effort,
-          service_tier: resolvedDefaultServiceTier ?? step.service_tier,
-          text_verbosity:
-            resolvedDefaultTextVerbosity ?? resolveTextVerbosity(step.text_verbosity),
-          max_output_tokens: step.max_output_tokens,
-          output_format: step.output_format,
-          instructions: step.instructions || "",
-          step_order: step.step_order !== undefined ? step.step_order : 0,
-          tools: step.tools || [],
-          tool_choice: step.tool_choice || resolvedDefaultToolChoice,
-          depends_on: step.depends_on,
-        })),
+      setStepsState(
+        normalizeLoadedWorkflowSteps(
+          aiSteps.map((step: any) => ({
+            step_name: step.step_name || "Step",
+            step_description: step.step_description || "",
+            model: step.model || "gpt-5.2",
+            reasoning_effort: step.reasoning_effort,
+            service_tier: resolvedDefaultServiceTier ?? step.service_tier,
+            text_verbosity:
+              resolvedDefaultTextVerbosity ?? resolveTextVerbosity(step.text_verbosity),
+            max_output_tokens: step.max_output_tokens,
+            output_format: step.output_format,
+            instructions: step.instructions || "",
+            step_order: step.step_order !== undefined ? step.step_order : 0,
+            tools: step.tools || [],
+            tool_choice: step.tool_choice || resolvedDefaultToolChoice,
+            depends_on: step.depends_on,
+            shell_settings: step.shell_settings,
+            include_form_data: step.include_form_data,
+          })),
+        ),
       );
     }
   }, [resolvedDefaultToolChoice, resolvedDefaultServiceTier, resolvedDefaultTextVerbosity]);
@@ -170,7 +197,7 @@ export function useWorkflowSteps(optionsOrSteps?: WorkflowStep[] | UseWorkflowSt
       }
       return newSteps;
     });
-  }, []);
+  }, [setSteps]);
 
   return {
     steps,

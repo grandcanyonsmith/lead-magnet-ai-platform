@@ -7,16 +7,9 @@ import { StepHeader } from "./StepHeader";
 import { StepInputOutput } from "./StepInputOutput";
 import { ImagePreview } from "./ImagePreview";
 import { StreamViewerUI } from "@/components/ui/StreamViewerUI";
-import { PreviewCard } from "@/components/artifacts/PreviewCard";
-import { CompactTextPreview } from "./CompactTextPreview";
 import { RecursiveBlock } from "@/components/ui/recursive/RecursiveBlock";
 import { BlockNode } from "@/types/recursive";
-import {
-  buildOutputPreviewText,
-  formatLivePreviewText,
-  formatLiveUpdatedAt,
-  getStepImageFiles,
-} from "@/utils/executionSteps";
+import { getStepImageFiles } from "@/utils/executionSteps";
 import { parseLogs } from "@/utils/logParsing";
 import { getStepInput } from "@/utils/stepInput";
 
@@ -146,13 +139,6 @@ export const RecursiveStep: React.FC<RecursiveStepProps> = (props) => {
       liveStep && liveStep.step_order === currentStepOrder
         ? liveStep.updated_at
         : undefined;
-    
-    const liveUpdatedAtLabel = formatLiveUpdatedAt(liveUpdatedAtForStep);
-    const livePreview =
-      typeof liveOutputForStep === "string"
-        ? formatLivePreviewText(liveOutputForStep)
-        : "";
-    const showLivePreview = Boolean(livePreview || liveUpdatedAtLabel);
 
     const stepInput = getStepInput(currentStep.input);
     const stepTools = stepInput?.tools || currentStep.tools;
@@ -167,14 +153,7 @@ export const RecursiveStep: React.FC<RecursiveStepProps> = (props) => {
       );
 
     const stepImageFiles =
-       // For child steps, we assume they are expanded if we are rendering content
        getStepImageFiles(currentStep, imageArtifacts);
-
-    const inlineOutputPreview =
-      variant === "compact" && stepStatus === "completed"
-        ? buildOutputPreviewText(currentStep)
-        : null;
-    const showInlineOutputs = Boolean(inlineOutputPreview);
 
     const liveLogs = liveOutputForStep ? parseLogs(liveOutputForStep) : [];
 
@@ -191,12 +170,6 @@ export const RecursiveStep: React.FC<RecursiveStepProps> = (props) => {
       toolChoice: stepToolChoice,
     };
 
-    // Calculate detailsHref for this specific step
-    const detailsHref =
-      jobId && currentStepOrder !== undefined
-        ? `/dashboard/jobs/${jobId}/steps/${currentStepOrder}`
-        : undefined;
-
     return (
       <div className="bg-muted/30">
         {isLiveStep && shouldShowLivePanel && (
@@ -207,37 +180,6 @@ export const RecursiveStep: React.FC<RecursiveStepProps> = (props) => {
               hasComputerUse={hasComputerUse}
               className="h-[500px] border-0 rounded-none shadow-none"
             />
-          </div>
-        )}
-
-        {showInlineOutputs && inlineOutputPreview && (
-          <div className="border-t border-border/60 bg-muted/20 px-4 py-3">
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <PreviewCard
-                title="Output"
-                description={inlineOutputPreview.typeLabel}
-                showDescription
-                preview={
-                  <CompactTextPreview
-                    text={inlineOutputPreview.text}
-                    format={inlineOutputPreview.type}
-                    onCopy={() => onCopy(inlineOutputPreview.text)}
-                    onExpand={() => {
-                      // For inline preview expand, we might want to expand the step
-                      // But here we are already in content (expanded)
-                      // Wait, inline output is for COMPACT variant.
-                      // If variant is compact, we show inline output.
-                      // But renderContent is only called if expanded?
-                      // No, renderContent is called if isExpanded is true.
-                      // If variant is compact, we might still be expanded?
-                      // Yes.
-                    }}
-                  />
-                }
-                className="group flex w-full flex-col text-left"
-                previewClassName="aspect-[3/2] sm:aspect-[8/5]"
-              />
-            </div>
           </div>
         )}
 

@@ -27,6 +27,19 @@ class ContextBuilder:
         return str(output)
 
     @staticmethod
+    def _index_step_outputs(step_outputs: List[Dict[str, Any]]) -> Dict[int, Dict[str, Any]]:
+        indexed_outputs: Dict[int, Dict[str, Any]] = {}
+
+        for position, step_output in enumerate(step_outputs):
+            step_index = step_output.get("step_index", position)
+            if not isinstance(step_index, int):
+                continue
+
+            indexed_outputs[step_index] = step_output
+
+        return indexed_outputs
+
+    @staticmethod
     def _resolve_deliverable_indices(sorted_steps: List[Dict[str, Any]]) -> List[int]:
         """Resolve which workflow steps should be treated as deliverable sources."""
         from utils.step_utils import normalize_step_order
@@ -300,11 +313,13 @@ class ContextBuilder:
         if not target_indices:
             return ""
 
+        indexed_outputs = ContextBuilder._index_step_outputs(step_outputs)
         deliverable_outputs: List[str] = []
         for idx in target_indices:
-            if idx >= len(step_outputs):
+            step_output = indexed_outputs.get(idx)
+            if not step_output:
                 continue
-            output = step_outputs[idx].get('output', '')
+            output = step_output.get('output', '')
             output_text = ContextBuilder._stringify_step_output(output).strip()
             if output_text:
                 deliverable_outputs.append(output_text)

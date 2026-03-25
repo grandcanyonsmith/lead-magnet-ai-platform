@@ -77,6 +77,7 @@ def test_generate_report_with_image_generation_uses_images_api_and_returns_urls(
         tenant_id="tenant_test",
         job_id="job_test",
         reasoning_effort="high",
+        step_index=1,
     )
 
     assert isinstance(output_text, str) and output_text.strip().startswith("{")
@@ -138,9 +139,85 @@ def test_generate_report_with_empty_planner_images_falls_back_and_returns_urls()
         tenant_id="tenant_test",
         job_id="job_test",
         reasoning_effort="high",
+        step_index=1,
     )
 
     assert response_details["image_urls"] == ["https://cdn.example.com/fallback.png"]
     assert usage_info.get("images_generated") == 1
     assert isinstance(output_text, str) and output_text.strip().startswith("{")
     assert "make an image of a cow" in (captured_prompt.get("prompt") or "")
+
+
+def test_generate_report_with_image_generation_publishes_live_progress():
+    db_service = Mock()
+    db_service.get_settings.return_value = {}
+    svc = AIService(db_service=db_service)
+
+    planner_text = json.dumps(
+        {
+            "images": [
+                {"label": "Primary Logo", "prompt": "Generate a clean primary logo for Breakthrough Studios"},
+                {"label": "Inverse Logo", "prompt": "Generate an inverse logo for Breakthrough Studios on dark background"},
+            ]
+        }
+    )
+
+    svc.openai_client.build_api_params = Mock(return_value={"model": "gpt-5.2"})
+    svc.openai_client.make_api_call = Mock(return_value=Mock())
+    svc.openai_client.process_api_response = Mock(
+        return_value=(
+            planner_text,
+            {"model": "gpt-5.2", "input_tokens": 1, "output_tokens": 1, "total_tokens": 2, "cost_usd": 0},
+            {"model": "gpt-5.2"},
+            {"output_text": planner_text},
+        )
+    )
+
+    image_response = SimpleNamespace(data=[SimpleNamespace(b64_json="dGVzdA==")])
+    svc.openai_client.generate_images = Mock(side_effect=[image_response, image_response])
+    svc.image_handler.upload_base64_image_to_s3 = Mock(
+        side_effect=["https://cdn.example.com/img1.png", "https://cdn.example.com/img2.png"]
+    )
+
+    output_text, usage_info, request_details, response_details = svc.generate_report(
+        model="gpt-5.2",
+        instructions="Generate brand images",
+        context="Brand context here",
+        previous_context="",
+        tools=[
+            {
+                "type": "image_generation",
+                "model": "gpt-image-1.5",
+                "size": "auto",
+                "quality": "high",
+                "background": "auto",
+                "format": "png",
+                "compression": 80,
+            }
+        ],
+        tool_choice="required",
+        tenant_id="tenant_test",
+        job_id="job_test",
+        reasoning_effort="high",
+        step_index=1,
+    )
+
+    live_step_updates = [
+        call.args[1]["live_step"]
+        for call in db_service.update_job.call_args_list
+        if len(call.args) > 1 and isinstance(call.args[1], dict) and "live_step" in call.args[1]
+    ]
+
+    assert live_step_updates, "expected live step updates during image generation"
+    assert live_step_updates[0]["status"] == "planning"
+    assert "Planning image prompts" in live_step_updates[0]["output_text"]
+    assert any("Generating image 1/2" in update["output_text"] for update in live_step_updates)
+    assert any("Generated image 2/2" in update["output_text"] for update in live_step_updates)
+    assert live_step_updates[-1]["status"] == "final"
+    assert live_step_updates[-1]["output_text"].strip().startswith("{")
+    assert isinstance(output_text, str) and output_text.strip().startswith("{")
+    assert response_details["image_urls"] == [
+        "https://cdn.example.com/img1.png",
+        "https://cdn.example.com/img2.png",
+    ]
+    assert usage_info.get("images_generated") == 2

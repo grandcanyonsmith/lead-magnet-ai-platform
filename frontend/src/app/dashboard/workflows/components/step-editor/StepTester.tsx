@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   FiPlay,
   FiStopCircle,
@@ -29,9 +29,11 @@ export default function StepTester({ step, index }: StepTesterProps) {
   const [testResult, setTestResult] = useState<any>(null);
   const [showStream, setShowStream] = useState(false);
   const [testOverrides, setTestOverrides] = useState<Record<string, any>>({});
+  const [streamSessionId, setStreamSessionId] = useState(0);
   const [pollInterval, setPollInterval] = useState<ReturnType<
     typeof setInterval
   > | null>(null);
+  const activeRequestBodyRef = useRef<any>(null);
 
   // Helper to determine API URL (duplicated from base.client.ts)
   const getApiUrl = () => {
@@ -61,6 +63,7 @@ export default function StepTester({ step, index }: StepTesterProps) {
     setPollInterval(null);
     setIsTesting(false);
     setShowStream(false);
+    activeRequestBodyRef.current = null;
     toast("Test cancelled");
   };
 
@@ -102,9 +105,144 @@ export default function StepTester({ step, index }: StepTesterProps) {
     }
   };
 
+  const buildStreamRequestBody = (
+    inputData: Record<string, any>,
+    runId: string,
+  ) => {
+    const instructions = step.instructions || "";
+
+    const codeInterpreterContainer = (() => {
+      if (!inputData || typeof inputData !== "object") return null;
+      const containerOverride = inputData.code_interpreter_container;
+      const containerId =
+        typeof inputData.code_interpreter_container_id === "string"
+          ? inputData.code_interpreter_container_id.trim()
+          : "";
+      const memoryLimit =
+        typeof inputData.code_interpreter_memory_limit === "string"
+          ? inputData.code_interpreter_memory_limit.trim()
+          : "";
+
+      let container: Record<string, any> | null = null;
+      if (
+        containerOverride &&
+        typeof containerOverride === "object" &&
+        !Array.isArray(containerOverride)
+      ) {
+        container = { ...(containerOverride as Record<string, any>) };
+      } else if (containerId) {
+        container = { type: "explicit", id: containerId };
+      }
+
+      if (container && memoryLimit && !("memory_limit" in container)) {
+        container.memory_limit = memoryLimit;
+      }
+
+      return container;
+    })();
+
+    const tools = (() => {
+      const baseTools = Array.isArray(step.tools) ? [...step.tools] : [];
+      if (!codeInterpreterContainer) return baseTools;
+
+      let hasCodeInterpreter = false;
+      const patched = baseTools.map((tool: any) => {
+        if (tool === "code_interpreter") {
+          hasCodeInterpreter = true;
+          return {
+            type: "code_interpreter",
+            container: codeInterpreterContainer,
+          };
+        }
+        if (tool && typeof tool === "object" && tool.type === "code_interpreter") {
+          hasCodeInterpreter = true;
+          return {
+            ...tool,
+            container: {
+              ...(tool.container || {}),
+              ...codeInterpreterContainer,
+            },
+          };
+        }
+        return tool;
+      });
+
+      if (!hasCodeInterpreter) {
+        patched.push({
+          type: "code_interpreter",
+          container: codeInterpreterContainer,
+        });
+      }
+
+      return patched;
+    })();
+    const toolChoice = step.tool_choice || "required";
+
+    // Enforce computer-use-preview model when computer_use_preview tool is present
+    let model = step.model || "computer-use-preview";
+    const hasComputerUse = Array.isArray(tools) &&
+      tools.some(
+        (t: any) =>
+          (typeof t === "string" && t === "computer_use_preview") ||
+          (typeof t === "object" && t.type === "computer_use_preview"),
+      );
+    if (hasComputerUse && model !== "computer-use-preview") {
+      console.warn(
+        `[StepTester] Overriding model from ${model} to computer-use-preview (required for computer_use_preview tool)`,
+      );
+      model = "computer-use-preview";
+    } else if (!hasComputerUse && !step.model) {
+      // Default to gpt-5.2 for shell if no model specified
+      model = "gpt-5.2";
+    }
+
+    // Determine input_text from testInput or default
+    const rawPrompt =
+      (typeof inputData.input_text === "string" &&
+      inputData.input_text.trim().length > 0
+        ? inputData.input_text
+        : undefined) ||
+      (typeof inputData.user_prompt === "string" &&
+      inputData.user_prompt.trim().length > 0
+        ? inputData.user_prompt
+        : undefined) ||
+      "Start the task.";
+
+    // Inject the full test input JSON into the model context so shell/CUA steps can
+    // reference variables (e.g., {"coursetopic": "..."}), even when no explicit
+    // user prompt is provided.
+    const {
+      input_text: _ignoredInputText,
+      user_prompt: _ignoredUserPrompt,
+      code_interpreter_container: _ignoredContainer,
+      code_interpreter_container_id: _ignoredContainerId,
+      code_interpreter_memory_limit: _ignoredMemoryLimit,
+      ...vars
+    } = inputData || {};
+    const varsJson =
+      vars && Object.keys(vars).length > 0 ? JSON.stringify(vars, null, 2) : "";
+    const inputText = varsJson
+      ? `Input variables (JSON):\n${varsJson}\n\nTask:\n${rawPrompt}`
+      : rawPrompt;
+
+    return {
+      job_id: runId,
+      model,
+      instructions,
+      input_text: inputText,
+      tools,
+      tool_choice: toolChoice,
+      params: vars,
+      reasoning_effort: step.reasoning_effort,
+      service_tier: step.service_tier,
+      text_verbosity: step.text_verbosity,
+      ...testOverrides,
+    };
+  };
+
   const handleTestStep = async () => {
     try {
-      let inputData = {};
+      let inputData: Record<string, any> = {};
       try {
         inputData = JSON.parse(testInput);
       } catch {
@@ -120,6 +258,7 @@ export default function StepTester({ step, index }: StepTesterProps) {
       setIsTesting(true);
       setTestResult(null);
       setShowStream(false);
+      activeRequestBodyRef.current = null;
 
       // Check if this is a CUA step (computer use) or Shell step
       const tools = step.tools || [];
@@ -151,6 +290,9 @@ export default function StepTester({ step, index }: StepTesterProps) {
         !isHandoffStep;
 
       if (hasComputerUse || hasShell || hasWebSearch || isAiGeneration) {
+        const runId = `test-step-${Date.now()}`;
+        activeRequestBodyRef.current = buildStreamRequestBody(inputData, runId);
+        setStreamSessionId((current) => current + 1);
         setShowStream(true);
         // We don't start polling here; StreamViewer will handle the request
         return;
@@ -205,7 +347,7 @@ export default function StepTester({ step, index }: StepTesterProps) {
 
             setTestResult({
               execution_steps: steps,
-              primary_output: steps[0]?.output,
+              primary_output: getPrimaryOutput({ execution_steps: steps }),
             });
             toast.success("Test completed");
             return;
@@ -321,155 +463,22 @@ export default function StepTester({ step, index }: StepTesterProps) {
             </button>
           </div>
 
-          {showStream && (
-             <div className="mt-6">
-               <StreamViewer 
-                 endpoint={(() => {
-                    // Use CUA endpoint for everything as it supports the full agent loop streaming
-                    // It handles computer use, shell, and generic text/tool interactions
-                    return `${getApiUrl()}/admin/cua/execute`;
-                 })()}
-                 requestBody={(() => {
-                    let inputData: any = {};
-                    try { inputData = JSON.parse(testInput); } catch {}
-                    
-                    const instructions = step.instructions || "";
-
-                    const codeInterpreterContainer = (() => {
-                      if (!inputData || typeof inputData !== "object") return null;
-                      const containerOverride = inputData.code_interpreter_container;
-                      const containerId =
-                        typeof inputData.code_interpreter_container_id === "string"
-                          ? inputData.code_interpreter_container_id.trim()
-                          : "";
-                      const memoryLimit =
-                        typeof inputData.code_interpreter_memory_limit === "string"
-                          ? inputData.code_interpreter_memory_limit.trim()
-                          : "";
-
-                      let container: Record<string, any> | null = null;
-                      if (
-                        containerOverride &&
-                        typeof containerOverride === "object" &&
-                        !Array.isArray(containerOverride)
-                      ) {
-                        container = { ...(containerOverride as Record<string, any>) };
-                      } else if (containerId) {
-                        container = { type: "explicit", id: containerId };
-                      }
-
-                      if (container && memoryLimit && !("memory_limit" in container)) {
-                        container.memory_limit = memoryLimit;
-                      }
-
-                      return container;
-                    })();
-
-                    const tools = (() => {
-                      const baseTools = Array.isArray(step.tools) ? [...step.tools] : [];
-                      if (!codeInterpreterContainer) return baseTools;
-
-                      let hasCodeInterpreter = false;
-                      const patched = baseTools.map((tool: any) => {
-                        if (tool === "code_interpreter") {
-                          hasCodeInterpreter = true;
-                          return {
-                            type: "code_interpreter",
-                            container: codeInterpreterContainer,
-                          };
-                        }
-                        if (tool && typeof tool === "object" && tool.type === "code_interpreter") {
-                          hasCodeInterpreter = true;
-                          return {
-                            ...tool,
-                            container: {
-                              ...(tool.container || {}),
-                              ...codeInterpreterContainer,
-                            },
-                          };
-                        }
-                        return tool;
-                      });
-
-                      if (!hasCodeInterpreter) {
-                        patched.push({
-                          type: "code_interpreter",
-                          container: codeInterpreterContainer,
-                        });
-                      }
-
-                      return patched;
-                    })();
-                    const toolChoice = step.tool_choice || "required";
-                    
-                    // Enforce computer-use-preview model when computer_use_preview tool is present
-                    let model = step.model || "computer-use-preview";
-                    const hasComputerUse = Array.isArray(tools) && tools.some((t: any) => 
-                        (typeof t === 'string' && t === 'computer_use_preview') || 
-                        (typeof t === 'object' && t.type === 'computer_use_preview')
-                    );
-                    if (hasComputerUse && model !== "computer-use-preview") {
-                        console.warn(`[StepTester] Overriding model from ${model} to computer-use-preview (required for computer_use_preview tool)`);
-                        model = "computer-use-preview";
-                    } else if (!hasComputerUse && !step.model) {
-                        // Default to gpt-5.2 for shell if no model specified
-                        model = "gpt-5.2";
-                    }
-                    
-                    // Determine input_text from testInput or default
-                    const rawPrompt =
-                      (typeof inputData.input_text === "string" &&
-                      inputData.input_text.trim().length > 0
-                        ? inputData.input_text
-                        : undefined) ||
-                      (typeof inputData.user_prompt === "string" &&
-                      inputData.user_prompt.trim().length > 0
-                        ? inputData.user_prompt
-                        : undefined) ||
-                      "Start the task.";
-
-                    // Inject the full test input JSON into the model context so shell/CUA steps can
-                    // reference variables (e.g., {"coursetopic": "..."}), even when no explicit
-                    // user prompt is provided.
-                    const {
-                      input_text: _ignoredInputText,
-                      user_prompt: _ignoredUserPrompt,
-                      code_interpreter_container: _ignoredContainer,
-                      code_interpreter_container_id: _ignoredContainerId,
-                      code_interpreter_memory_limit: _ignoredMemoryLimit,
-                      ...vars
-                    } = inputData || {};
-                    const varsJson =
-                      vars && Object.keys(vars).length > 0
-                        ? JSON.stringify(vars, null, 2)
-                        : "";
-                    const inputText = varsJson
-                      ? `Input variables (JSON):\n${varsJson}\n\nTask:\n${rawPrompt}`
-                      : rawPrompt;
-                    
-                    return {
-                        job_id: `test-step-${Date.now()}`,
-                        model,
-                        instructions,
-                        input_text: inputText,
-                        tools,
-                        tool_choice: toolChoice,
-                        params: vars,
-                        reasoning_effort: step.reasoning_effort,
-                        service_tier: step.service_tier,
-                        text_verbosity: step.text_verbosity,
-                        ...testOverrides
-                    };
-                 })()}
-                 onUpdateSettings={(updates) => {
-                   setTestOverrides(prev => ({ ...prev, ...updates }));
-                 }}
-                 onClose={() => {
-                    setShowStream(false);
-                    setIsTesting(false);
-                 }}
-               />
-             </div>
+          {showStream && activeRequestBodyRef.current && (
+            <div className="mt-6">
+              <StreamViewer
+                key={streamSessionId}
+                endpoint={`${getApiUrl()}/admin/cua/execute`}
+                requestBody={activeRequestBodyRef.current}
+                onUpdateSettings={(updates) => {
+                  setTestOverrides((prev) => ({ ...prev, ...updates }));
+                }}
+                onClose={() => {
+                  activeRequestBodyRef.current = null;
+                  setShowStream(false);
+                  setIsTesting(false);
+                }}
+              />
+            </div>
           )}
 
           {!showStream && testResult && (

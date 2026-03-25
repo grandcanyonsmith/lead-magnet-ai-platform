@@ -128,7 +128,7 @@ function renderImageStrip(
   return (
     <div className={`mt-5 md:mt-4 ${label ? "space-y-2" : ""}`}>
       {label && (
-        <div className="text-sm md:text-xs font-medium text-gray-600">
+        <div className="text-sm md:text-xs font-medium text-gray-600 dark:text-gray-400">
           {label}
         </div>
       )}
@@ -187,14 +187,6 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
       return null;
     }
 
-    // Debug: log when rendering images (development only)
-    if (process.env.NODE_ENV === "development") {
-      console.log(
-        `[StepContent] Rendering ${imageUrls.length} inline images:`,
-        imageUrls,
-      );
-    }
-
     return renderImageStrip(imageUrls, {
       label: "Generated Images:",
       altPrefix: "Generated image",
@@ -215,17 +207,17 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
       <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <span className="text-xs font-semibold text-gray-700">Model:</span>
-            <span className="text-xs text-gray-900 ml-2 font-mono">
+            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Model:</span>
+            <span className="text-xs text-gray-900 dark:text-gray-100 ml-2 font-mono">
               {formatted.content.model}
             </span>
           </div>
           {formatted.content.tool_choice && (
             <div>
-              <span className="text-xs font-semibold text-gray-700">
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                 Tool Choice:
               </span>
-              <span className="text-xs text-gray-900 ml-2">
+              <span className="text-xs text-gray-900 dark:text-gray-100 ml-2">
                 {formatted.content.tool_choice}
               </span>
             </div>
@@ -233,10 +225,10 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
         </div>
         {formatted.content.instructions && (
           <div>
-            <span className="text-xs font-semibold text-gray-700 block mb-2">
+            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">
               Step Instructions (directive):
             </span>
-            <div className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg border border-gray-200 max-h-64 overflow-y-auto scrollbar-hide-until-hover">
+            <div className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700 max-h-64 overflow-y-auto scrollbar-hide-until-hover">
               {formatted.content.instructions}
             </div>
           </div>
@@ -265,7 +257,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
         <div>
           {hasMetadata && (
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-gray-700">
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                 Context (form + dependencies):
               </span>
             </div>
@@ -305,7 +297,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
               className={`px-3 py-2 sm:py-1.5 text-xs font-medium rounded touch-target min-h-[44px] sm:min-h-0 ${
                 showRendered
                   ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
             >
               Rendered
@@ -315,7 +307,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
               className={`px-3 py-2 sm:py-1.5 text-xs font-medium rounded touch-target min-h-[44px] sm:min-h-0 ${
                 !showRendered
                   ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
               }`}
             >
               Source
@@ -325,7 +317,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
 
         {showRendered ? (
           <>
-            <div className="border-2 border-gray-200 rounded-xl overflow-hidden bg-white">
+            <div className="border-2 border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-950">
               <iframe
                 srcDoc={htmlContent}
                 className="w-full border-0"
@@ -398,7 +390,7 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
         <div>
           {hasMetadata && (
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-gray-700">
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                 Context (form + dependencies):
               </span>
             </div>
@@ -444,9 +436,9 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
     // Has images in text, render with inline images
     return (
       <div className="bg-gray-50 dark:bg-gray-900/50 p-4 md:p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-        <pre className="text-sm md:text-xs text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words font-mono leading-relaxed">
+        <div className="text-sm md:text-xs text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words font-mono leading-relaxed">
           {renderTextWithImages(contentString)}
-        </pre>
+        </div>
         {/* Render images from imageUrls prop */}
         {renderInlineImages()}
       </div>
