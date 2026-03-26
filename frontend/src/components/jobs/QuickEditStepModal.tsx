@@ -1,19 +1,13 @@
 "use client";
 
-import { Fragment, useState } from "react";
-import { FiX, FiSave, FiLoader, FiZap } from "react-icons/fi";
+import { useState } from "react";
+import { FiSave, FiLoader, FiZap } from "react-icons/fi";
 import { api } from "@/lib/api";
 import { toast } from "react-hot-toast";
 import { JsonViewer } from "@/components/ui/JsonViewer";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { PanelHeader } from "@/components/ui/PanelHeader";
-import {
-  Dialog,
-  DialogPanel,
-  DialogTitle,
-  Transition,
-  TransitionChild,
-} from "@headlessui/react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/Dialog";
 
 interface QuickEditStepModalProps {
   isOpen: boolean;
@@ -109,195 +103,164 @@ export function QuickEditStepModal({
   };
 
   return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={handleClose}>
-        <TransitionChild
-          as={Fragment}
-          enter="ease-out duration-200"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-150"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black/50 transition-opacity" />
-        </TransitionChild>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) handleClose();
+      }}
+    >
+      <DialogContent className="z-50 flex max-h-[90vh] w-full max-w-4xl flex-col gap-0 overflow-hidden p-0 sm:rounded-lg">
+        {/* Header */}
+        <PanelHeader className="flex-shrink-0 border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-card">
+          <div className="flex items-center gap-2">
+            <FiZap className="w-5 h-5 text-purple-600" />
+            <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
+              Quick Edit Step
+            </DialogTitle>
+          </div>
+        </PanelHeader>
 
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            <TransitionChild
-              as={Fragment}
-              enter="ease-out duration-200"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-150"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <DialogPanel className="relative z-50 w-full max-w-4xl bg-white dark:bg-card rounded-lg shadow-xl max-h-[90vh] flex flex-col">
-                {/* Header */}
-                <PanelHeader className="px-6 py-4 border-gray-200 dark:border-gray-700 bg-white dark:bg-card flex-shrink-0">
-                  <div className="flex items-center gap-2">
-                    <FiZap className="w-5 h-5 text-purple-600" />
-                    <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
-                      Quick Edit Step
-                    </DialogTitle>
-                  </div>
-                  <button
-                    onClick={handleClose}
-                    disabled={generating || saving}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors disabled:opacity-50"
-                  >
-                    <FiX className="w-5 h-5" />
-                  </button>
-                </PanelHeader>
+        {/* Content */}
+        <div className="flex-1 space-y-4 overflow-y-auto p-6">
+          {/* Step Info */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40">
+            <p className="text-sm text-gray-700 dark:text-gray-200">
+              <span className="font-medium">Step {stepOrder}:</span> {stepName}
+            </p>
+          </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {/* Step Info */}
-            <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-              <p className="text-sm text-gray-700 dark:text-gray-200">
-                <span className="font-medium">Step {stepOrder}:</span>{" "}
-                {stepName}
-              </p>
+          {/* Prompt Input */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Describe the changes you want to make
+            </label>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={4}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              placeholder="e.g., Make the tone more professional, Add more details about X, Fix grammar errors..."
+              disabled={generating || saving}
+            />
+          </div>
+
+          {/* Generate Button */}
+          {!proposedChanges && (
+            <div className="flex justify-end">
+              <button
+                onClick={handleGenerate}
+                disabled={!prompt.trim() || generating || saving}
+                className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {generating ? (
+                  <>
+                    <FiLoader className="h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <FiZap className="h-4 w-4" />
+                    Generate Changes
+                  </>
+                )}
+              </button>
             </div>
+          )}
 
-            {/* Prompt Input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Describe the changes you want to make
-              </label>
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="e.g., Make the tone more professional, Add more details about X, Fix grammar errors..."
-                disabled={generating || saving}
+          {/* Proposed Changes */}
+          {proposedChanges && (
+            <div className="space-y-4">
+              {/* Changes Summary */}
+              <AlertBanner
+                variant="info"
+                title="Summary"
+                description={proposedChanges.changes_summary}
               />
-            </div>
 
-            {/* Generate Button */}
-            {!proposedChanges && (
-              <div className="flex justify-end">
+              {/* Before/After Comparison */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* Original */}
+                <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-900/50">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                      Original Output
+                    </span>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto bg-white p-4 dark:bg-card">
+                    {typeof proposedChanges.original_output === "string" ? (
+                      <pre className="break-words font-mono text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-200">
+                        {proposedChanges.original_output}
+                      </pre>
+                    ) : (
+                      <JsonViewer
+                        value={proposedChanges.original_output}
+                        raw={formatOutput(proposedChanges.original_output)}
+                        defaultMode="tree"
+                        defaultExpandedDepth={2}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Edited */}
+                <div className="overflow-hidden rounded-lg border border-green-200 dark:border-green-900/40">
+                  <div className="border-b border-green-200 bg-green-50 px-4 py-2 dark:border-green-900/40 dark:bg-green-900/20">
+                    <span className="text-sm font-semibold text-green-700 dark:text-green-200">
+                      Edited Output
+                    </span>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto bg-white p-4 dark:bg-card">
+                    {typeof proposedChanges.edited_output === "string" ? (
+                      <pre className="break-words font-mono text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-200">
+                        {proposedChanges.edited_output}
+                      </pre>
+                    ) : (
+                      <JsonViewer
+                        value={proposedChanges.edited_output}
+                        raw={formatOutput(proposedChanges.edited_output)}
+                        defaultMode="tree"
+                        defaultExpandedDepth={2}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
                 <button
-                  onClick={handleGenerate}
-                  disabled={!prompt.trim() || generating || saving}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  type="button"
+                  onClick={() => {
+                    setProposedChanges(null);
+                    setPrompt("");
+                  }}
+                  disabled={saving}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
                 >
-                  {generating ? (
+                  Start Over
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-white transition-colors hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {saving ? (
                     <>
-                      <FiLoader className="w-4 h-4 animate-spin" />
-                      Generating...
+                      <FiLoader className="h-4 w-4 animate-spin" />
+                      Saving...
                     </>
                   ) : (
                     <>
-                      <FiZap className="w-4 h-4" />
-                      Generate Changes
+                      <FiSave className="h-4 w-4" />
+                      Save Changes
                     </>
                   )}
                 </button>
               </div>
-            )}
-
-            {/* Proposed Changes */}
-            {proposedChanges && (
-              <div className="space-y-4">
-                {/* Changes Summary */}
-                <AlertBanner
-                  variant="info"
-                  title="Summary"
-                  description={proposedChanges.changes_summary}
-                />
-
-                {/* Before/After Comparison */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Original */}
-                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 dark:bg-gray-900/50 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                        Original Output
-                      </span>
-                    </div>
-                    <div className="p-4 bg-white dark:bg-card max-h-96 overflow-y-auto">
-                      {typeof proposedChanges.original_output === "string" ? (
-                        <pre className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words font-mono">
-                          {proposedChanges.original_output}
-                        </pre>
-                      ) : (
-                        <JsonViewer
-                          value={proposedChanges.original_output}
-                          raw={formatOutput(proposedChanges.original_output)}
-                          defaultMode="tree"
-                          defaultExpandedDepth={2}
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Edited */}
-                  <div className="border border-green-200 dark:border-green-900/40 rounded-lg overflow-hidden">
-                    <div className="bg-green-50 dark:bg-green-900/20 px-4 py-2 border-b border-green-200 dark:border-green-900/40">
-                      <span className="text-sm font-semibold text-green-700 dark:text-green-200">
-                        Edited Output
-                      </span>
-                    </div>
-                    <div className="p-4 bg-white dark:bg-card max-h-96 overflow-y-auto">
-                      {typeof proposedChanges.edited_output === "string" ? (
-                        <pre className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap break-words font-mono">
-                          {proposedChanges.edited_output}
-                        </pre>
-                      ) : (
-                        <JsonViewer
-                          value={proposedChanges.edited_output}
-                          raw={formatOutput(proposedChanges.edited_output)}
-                          defaultMode="tree"
-                          defaultExpandedDepth={2}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProposedChanges(null);
-                      setPrompt("");
-                    }}
-                    disabled={saving}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-                  >
-                    Start Over
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-                  >
-                    {saving ? (
-                      <>
-                        <FiLoader className="w-4 h-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <FiSave className="w-4 h-4" />
-                        Save Changes
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-              </DialogPanel>
-            </TransitionChild>
-          </div>
+            </div>
+          )}
         </div>
-      </Dialog>
-    </Transition>
+      </DialogContent>
+    </Dialog>
   );
 }

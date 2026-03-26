@@ -1,4 +1,4 @@
-import React, { Fragment } from "react";
+import React from "react";
 import { Folder } from "@/types";
 import {
   FolderIcon,
@@ -6,8 +6,12 @@ import {
   PencilIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { Menu, MenuButton, MenuItem, MenuItems, Transition } from "@headlessui/react";
-import clsx from "clsx";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/DropdownMenu";
 
 interface WorkflowFolderGridProps {
   folders: Folder[];
@@ -91,63 +95,49 @@ export function WorkflowFolderGrid({
               >
                 <div className="flex items-start justify-between mb-2">
                   <FolderIcon className="w-8 h-8 text-primary-100 dark:text-primary-900 fill-primary-50 dark:fill-primary-900/30 group-hover/card:text-primary-200 dark:group-hover/card:text-primary-800 transition-colors" />
-                  <Menu as="div" className="relative">
-                    <MenuButton
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 opacity-0 group-hover/card:opacity-100 transition-opacity focus:outline-none"
+                  <DropdownMenu>
+                    <div className="relative">
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 opacity-0 group-hover/card:opacity-100 transition-opacity focus:outline-none"
+                        >
+                          <EllipsisVerticalIcon className="w-4 h-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                    </div>
+                    <DropdownMenuContent
+                      align="end"
+                      side="bottom"
+                      sideOffset={4}
+                      className="w-36 bg-white rounded-lg shadow-lg ring-1 ring-black/5 z-10"
                     >
-                      <EllipsisVerticalIcon className="w-4 h-4" />
-                    </MenuButton>
-                    <Transition
-                      as={Fragment}
-                      enter="transition ease-out duration-100"
-                      enterFrom="transform opacity-0 scale-95"
-                      enterTo="transform opacity-100 scale-100"
-                      leave="transition ease-in duration-75"
-                      leaveFrom="transform opacity-100 scale-100"
-                      leaveTo="transform opacity-0 scale-95"
-                    >
-                      <MenuItems className="absolute right-0 mt-1 w-36 origin-top-right bg-white rounded-lg shadow-lg ring-1 ring-black/5 focus:outline-none z-10">
-                        <div className="py-1">
-                          <MenuItem>
-                            {({ active }) => (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingFolderId(folder.folder_id);
-                                  setEditingFolderName(folder.folder_name);
-                                }}
-                                className={clsx(
-                                  active ? "bg-gray-50" : "",
-                                  "flex w-full items-center px-4 py-2 text-xs text-gray-700",
-                                )}
-                              >
-                                <PencilIcon className="mr-2 h-3.5 w-3.5 text-gray-400" />
-                                Rename
-                              </button>
-                            )}
-                          </MenuItem>
-                          <MenuItem>
-                            {({ active }) => (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteFolder(folder.folder_id);
-                                }}
-                                className={clsx(
-                                  active ? "bg-red-50" : "",
-                                  "flex w-full items-center px-4 py-2 text-xs text-red-600",
-                                )}
-                              >
-                                <TrashIcon className="mr-2 h-3.5 w-3.5 text-red-400" />
-                                Delete
-                              </button>
-                            )}
-                          </MenuItem>
-                        </div>
-                      </MenuItems>
-                    </Transition>
-                  </Menu>
+                      <div className="py-1">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingFolderId(folder.folder_id);
+                            setEditingFolderName(folder.folder_name);
+                          }}
+                          className="flex w-full items-center px-4 py-2 text-xs text-gray-700"
+                        >
+                          <PencilIcon className="mr-2 h-3.5 w-3.5 text-gray-400" />
+                          Rename
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteFolder(folder.folder_id);
+                          }}
+                          className="flex w-full items-center px-4 py-2 text-xs text-red-600 focus:bg-red-50"
+                        >
+                          <TrashIcon className="mr-2 h-3.5 w-3.5 text-red-400" />
+                          Delete
+                        </DropdownMenuItem>
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
                 <div className="font-medium text-gray-900 dark:text-white truncate text-sm mb-0.5">
                   {folder.folder_name}

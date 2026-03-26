@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
-import { Tab } from "@headlessui/react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -138,29 +137,16 @@ export function SubHeaderTabs({
     onSelect?.(id);
   };
 
-  const tabsForSelection =
-    overflowEnabled && isSmallScreen ? mobileTabs : tabs;
-  const selectedIndex = Math.max(
-    0,
-    tabsForSelection.findIndex((tab) => tab.id === activeId),
-  );
-
-  const handleTabChange = (index: number) => {
-    const nextTab = tabsForSelection[index];
-    if (!nextTab) return;
-    handleTabClick(nextTab.id);
-  };
-
   const renderTab = (tab: SubHeaderTab) => {
     const badgeText = getBadgeText(tab.badge);
-    const tabClassName = ({ selected }: { selected: boolean }) =>
-      cn(
-        tabClass,
-        selected
-          ? "text-foreground after:scale-x-100"
-          : "hover:text-foreground hover:-translate-y-0.5 hover:after:scale-x-100",
-      );
-    const renderContent = ({ selected }: { selected: boolean }) => (
+    const selected = tab.id === activeId;
+    const tabClassName = cn(
+      tabClass,
+      selected
+        ? "text-foreground after:scale-x-100"
+        : "hover:text-foreground hover:-translate-y-0.5 hover:after:scale-x-100",
+    );
+    const content = (
       <>
         <span>{tab.label}</span>
         {badgeText && (
@@ -178,24 +164,39 @@ export function SubHeaderTabs({
 
     if (tab.href) {
       return (
-        <Tab key={tab.id} as={Link} href={tab.href} className={tabClassName}>
-          {renderContent}
-        </Tab>
+        <Link
+          key={tab.id}
+          href={tab.href}
+          role="tab"
+          aria-selected={selected}
+          tabIndex={selected ? 0 : -1}
+          className={tabClassName}
+          onClick={() => handleTabClick(tab.id)}
+        >
+          {content}
+        </Link>
       );
     }
 
     return (
-      <Tab key={tab.id} as="button" className={tabClassName}>
-        {renderContent}
-      </Tab>
+      <button
+        key={tab.id}
+        type="button"
+        role="tab"
+        aria-selected={selected}
+        tabIndex={selected ? 0 : -1}
+        className={tabClassName}
+        onClick={() => handleTabClick(tab.id)}
+      >
+        {content}
+      </button>
     );
   };
 
   const navContent = (
     <div className={cn("border-b border-border/60 bg-muted", className)}>
       <div className="px-4 sm:px-6 lg:px-12">
-        <Tab.Group selectedIndex={selectedIndex} onChange={handleTabChange}>
-          <Tab.List className="flex w-full items-center py-2" aria-label="Section navigation">
+        <div role="tablist" className="flex w-full items-center py-2" aria-label="Section navigation">
             {overflowEnabled ? (
               isSmallScreen ? (
                 <div className="flex w-full items-center gap-3">
@@ -268,8 +269,7 @@ export function SubHeaderTabs({
                 {tabs.map(renderTab)}
               </div>
             )}
-          </Tab.List>
-        </Tab.Group>
+        </div>
       </div>
     </div>
   );

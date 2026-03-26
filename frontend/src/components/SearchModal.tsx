@@ -1,22 +1,14 @@
 "use client";
 
-import React, { Fragment, useState, useEffect, useRef, useMemo } from "react";
-import {
-  Dialog,
-  DialogPanel,
-  DialogTitle,
-  Transition,
-  TransitionChild,
-} from "@headlessui/react";
-import { useRouter, usePathname } from "next/navigation";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/Dialog";
+import { useRouter } from "next/navigation";
 import {
   FiSearch,
-  FiX,
   FiHome,
   FiList,
   FiBarChart2,
   FiFileText,
-  FiSettings,
   FiCommand,
 } from "react-icons/fi";
 import { api } from "@/lib/api";
@@ -46,7 +38,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   onClose,
 }) => {
   const router = useRouter();
-  const pathname = usePathname();
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [workflows, setWorkflows] = useState<any[]>([]);
@@ -213,8 +204,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
       const job = jobs.find(
         (j) => j.submission_id === submission.submission_id,
       );
-      const workflowName =
-        job?.workflow_name || "Generated Lead Magnet";
+      const workflowName = job?.workflow_name || "Generated Lead Magnet";
       const preview = buildSubmissionPreview(submission.form_data);
 
       results.push({
@@ -233,9 +223,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   }, [query, workflows, jobs, submissions]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      onClose();
-    } else if (e.key === "ArrowDown") {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setSelectedIndex((prev) => Math.min(prev + 1, searchResults.length - 1));
       scrollToSelected();
@@ -272,171 +260,146 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const getIcon = (type: SearchResult["type"]) => {
     switch (type) {
       case "page":
-        return <FiHome className="w-4 h-4" />;
+        return <FiHome className="h-4 w-4" />;
       case "workflow":
-        return <FiList className="w-4 h-4" />;
+        return <FiList className="h-4 w-4" />;
       case "job":
-        return <FiBarChart2 className="w-4 h-4" />;
+        return <FiBarChart2 className="h-4 w-4" />;
       case "submission":
-        return <FiFileText className="w-4 h-4" />;
+        return <FiFileText className="h-4 w-4" />;
       default:
-        return <FiSearch className="w-4 h-4" />;
+        return <FiSearch className="h-4 w-4" />;
     }
   };
 
   return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog
-        as="div"
-        className="relative z-50"
-        onClose={onClose}
-        initialFocus={inputRef}
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent
+        className="top-[15%] flex max-h-[85vh] w-full max-w-2xl translate-y-0 flex-col gap-0 overflow-hidden border border-gray-200 bg-white p-0 dark:border-border dark:bg-card sm:rounded-lg"
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          inputRef.current?.focus();
+        }}
       >
-        <TransitionChild
-          as={Fragment}
-          enter="ease-out duration-200"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-150"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-gray-900/60 dark:bg-black/70 backdrop-blur-sm" />
-        </TransitionChild>
+        <DialogTitle className="sr-only">Search</DialogTitle>
 
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4">
-          <TransitionChild
-            as={Fragment}
-            enter="ease-out duration-200"
-            enterFrom="opacity-0 scale-95"
-            enterTo="opacity-100 scale-100"
-            leave="ease-in duration-150"
-            leaveFrom="opacity-100 scale-100"
-            leaveTo="opacity-0 scale-95"
-          >
-            <DialogPanel className="relative w-full max-w-2xl bg-white dark:bg-card rounded-lg shadow-2xl border border-gray-200 dark:border-border">
-              <DialogTitle className="sr-only">Search</DialogTitle>
-
-              {/* Search Input */}
-              <div className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-border">
-                <FiSearch className="w-5 h-5 text-gray-400 dark:text-muted-foreground flex-shrink-0" />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Search pages, workflows, jobs, form submissions..."
-                  className="flex-1 text-base outline-none placeholder-gray-400 dark:placeholder-muted-foreground bg-transparent text-gray-900 dark:text-foreground"
-                />
-                <div className="flex items-center gap-2">
-                  <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-gray-500 dark:text-muted-foreground bg-gray-100 dark:bg-secondary border border-gray-300 dark:border-border rounded">
-                    <FiCommand className="w-3 h-3" />K
-                  </kbd>
-                  <button
-                    onClick={onClose}
-                    className="p-1 text-gray-400 dark:text-muted-foreground hover:text-gray-600 dark:hover:text-foreground rounded hover:bg-gray-100 dark:hover:bg-secondary transition-colors"
-                    aria-label="Close"
-                  >
-                    <FiX className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Results */}
-              <div ref={resultsRef} className="max-h-96 overflow-y-auto">
-                {loading ? (
-                  <div className="p-8 text-center text-gray-500 dark:text-muted-foreground">Loading...</div>
-                ) : searchResults.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500 dark:text-muted-foreground">
-                    <FiSearch className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-muted-foreground/40" />
-                    <p>No results found</p>
-                    <p className="text-sm text-gray-400 dark:text-muted-foreground/70 mt-1">
-                      Try a different search term
-                    </p>
-                  </div>
-                ) : (
-                  <div className="py-2">
-                    {searchResults.map((result, index) => (
-                      <button
-                        key={result.id}
-                        onClick={() => handleSelect(result)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                          index === selectedIndex
-                            ? "bg-primary-50 dark:bg-primary/20 text-primary-900 dark:text-primary-foreground"
-                            : "hover:bg-gray-50 dark:hover:bg-secondary text-gray-900 dark:text-foreground"
-                        }`}
-                      >
-                        <div
-                          className={`flex-shrink-0 ${index === selectedIndex ? "text-primary-600 dark:text-primary" : "text-gray-400 dark:text-muted-foreground"}`}
-                        >
-                          {getIcon(result.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{result.title}</div>
-                          {result.subtitle && (
-                            <div
-                              className={`text-sm truncate ${index === selectedIndex ? "text-primary-600 dark:text-primary/80" : "text-gray-500 dark:text-muted-foreground"}`}
-                            >
-                              {result.subtitle}
-                            </div>
-                          )}
-                          {result.preview && (
-                            <div
-                              className={`text-xs truncate ${index === selectedIndex ? "text-primary-700 dark:text-primary/70" : "text-gray-500 dark:text-muted-foreground/80"}`}
-                            >
-                              {result.preview}
-                            </div>
-                          )}
-                        </div>
-                        {result.type === "workflow" && (
-                          <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-secondary text-gray-600 dark:text-muted-foreground rounded">
-                            Workflow
-                          </span>
-                        )}
-                        {result.type === "job" && (
-                          <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-secondary text-gray-600 dark:text-muted-foreground rounded">
-                            Job
-                          </span>
-                        )}
-                        {result.type === "submission" && (
-                          <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-secondary text-gray-600 dark:text-muted-foreground rounded">
-                            Submission
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="px-4 py-3 border-t border-gray-200 dark:border-border bg-gray-50 dark:bg-secondary/50 flex items-center justify-between text-xs text-gray-500 dark:text-muted-foreground">
-                <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 bg-white dark:bg-card border border-gray-300 dark:border-border rounded text-gray-700 dark:text-foreground">
-                      ↑↓
-                    </kbd>
-                    Navigate
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 bg-white dark:bg-card border border-gray-300 dark:border-border rounded text-gray-700 dark:text-foreground">
-                      ↵
-                    </kbd>
-                    Select
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <kbd className="px-1.5 py-0.5 bg-white dark:bg-card border border-gray-300 dark:border-border rounded text-gray-700 dark:text-foreground">
-                      Esc
-                    </kbd>
-                    Close
-                  </span>
-                </div>
-              </div>
-            </DialogPanel>
-          </TransitionChild>
+        {/* Search Input */}
+        <div className="flex items-center gap-3 border-b border-gray-200 p-4 pr-12 dark:border-border">
+          <FiSearch className="h-5 w-5 flex-shrink-0 text-gray-400 dark:text-muted-foreground" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Search pages, workflows, jobs, form submissions..."
+            className="flex-1 bg-transparent text-base text-gray-900 outline-none placeholder-gray-400 dark:text-foreground dark:placeholder-muted-foreground"
+          />
+          <div className="flex items-center gap-2">
+            <kbd className="hidden items-center gap-1 rounded border border-gray-300 bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-500 sm:inline-flex dark:border-border dark:bg-secondary dark:text-muted-foreground">
+              <FiCommand className="h-3 w-3" />K
+            </kbd>
+          </div>
         </div>
-      </Dialog>
-    </Transition>
+
+        {/* Results */}
+        <div ref={resultsRef} className="max-h-96 overflow-y-auto">
+          {loading ? (
+            <div className="p-8 text-center text-gray-500 dark:text-muted-foreground">
+              Loading...
+            </div>
+          ) : searchResults.length === 0 ? (
+            <div className="p-8 text-center text-gray-500 dark:text-muted-foreground">
+              <FiSearch className="mx-auto mb-2 h-12 w-12 text-gray-300 dark:text-muted-foreground/40" />
+              <p>No results found</p>
+              <p className="mt-1 text-sm text-gray-400 dark:text-muted-foreground/70">
+                Try a different search term
+              </p>
+            </div>
+          ) : (
+            <div className="py-2">
+              {searchResults.map((result, index) => (
+                <button
+                  key={result.id}
+                  onClick={() => handleSelect(result)}
+                  className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${
+                    index === selectedIndex
+                      ? "bg-primary-50 text-primary-900 dark:bg-primary/20 dark:text-primary-foreground"
+                      : "text-gray-900 hover:bg-gray-50 dark:text-foreground dark:hover:bg-secondary"
+                  }`}
+                >
+                  <div
+                    className={`flex-shrink-0 ${index === selectedIndex ? "text-primary-600 dark:text-primary" : "text-gray-400 dark:text-muted-foreground"}`}
+                  >
+                    {getIcon(result.type)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{result.title}</div>
+                    {result.subtitle && (
+                      <div
+                        className={`truncate text-sm ${index === selectedIndex ? "text-primary-600 dark:text-primary/80" : "text-gray-500 dark:text-muted-foreground"}`}
+                      >
+                        {result.subtitle}
+                      </div>
+                    )}
+                    {result.preview && (
+                      <div
+                        className={`truncate text-xs ${index === selectedIndex ? "text-primary-700 dark:text-primary/70" : "text-gray-500 dark:text-muted-foreground/80"}`}
+                      >
+                        {result.preview}
+                      </div>
+                    )}
+                  </div>
+                  {result.type === "workflow" && (
+                    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-secondary dark:text-muted-foreground">
+                      Workflow
+                    </span>
+                  )}
+                  {result.type === "job" && (
+                    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-secondary dark:text-muted-foreground">
+                      Job
+                    </span>
+                  )}
+                  {result.type === "submission" && (
+                    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-secondary dark:text-muted-foreground">
+                      Submission
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-500 dark:border-border dark:bg-secondary/50 dark:text-muted-foreground">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1">
+              <kbd className="rounded border border-gray-300 bg-white px-1.5 py-0.5 text-gray-700 dark:border-border dark:bg-card dark:text-foreground">
+                ↑↓
+              </kbd>
+              Navigate
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="rounded border border-gray-300 bg-white px-1.5 py-0.5 text-gray-700 dark:border-border dark:bg-card dark:text-foreground">
+                ↵
+              </kbd>
+              Select
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="rounded border border-gray-300 bg-white px-1.5 py-0.5 text-gray-700 dark:border-border dark:bg-card dark:text-foreground">
+                Esc
+              </kbd>
+              Close
+            </span>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };

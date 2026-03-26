@@ -5,7 +5,6 @@
 import React from "react";
 import { FiLoader } from "react-icons/fi";
 
-// Export new shared components
 export { LoadingState } from "./LoadingState";
 export { ErrorState } from "./ErrorState";
 export { Skeleton } from "./Skeleton";
@@ -16,7 +15,7 @@ export { KeyValueList } from "./KeyValueList";
 export { StatPill } from "./StatPill";
 export { VisuallyHidden } from "./VisuallyHidden";
 export { AlertBanner } from "./AlertBanner";
-export { Button, type ButtonProps } from "./Button";
+export { Button, buttonVariants, type ButtonProps } from "./Button";
 export { CardHeaderIntro } from "./CardHeaderIntro";
 export { Input, type InputProps } from "./Input";
 export { InlineCode } from "./InlineCode";
@@ -27,7 +26,7 @@ export { SectionLabel } from "./SectionLabel";
 export { Textarea, type TextareaProps } from "./Textarea";
 export { Select, type SelectProps } from "./Select";
 export { Avatar, type AvatarProps } from "./Avatar";
-export { Badge, type BadgeProps } from "./Badge";
+export { Badge, badgeVariants, type BadgeProps } from "./Badge";
 export {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -38,6 +37,9 @@ export {
   DropdownMenuGroup,
   DropdownMenuShortcut,
 } from "./DropdownMenu";
+
+import { Status } from "@/types/common";
+import { STATUS_LABELS, STATUS_COLORS } from "@/constants/statuses";
 
 // Legacy components for backward compatibility
 interface LoadingSpinnerProps {
@@ -53,8 +55,8 @@ export function LoadingSpinner({
     sm: "w-4 h-4",
     md: "w-6 h-6",
     lg: "w-8 h-8",
-    icon: "h-4 w-4", // Added for compatibility with button
-    default: "w-6 h-6", // Added for compatibility
+    icon: "h-4 w-4",
+    default: "w-6 h-6",
   };
 
   const selectedSize = sizeClasses[size as keyof typeof sizeClasses] || sizeClasses.md;
@@ -95,9 +97,6 @@ export function EmptyState({
     </div>
   );
 }
-
-import { Status } from "@/types/common";
-import { STATUS_LABELS, STATUS_COLORS } from "@/constants/statuses";
 
 interface StatusBadgeProps {
   status: Status | string;

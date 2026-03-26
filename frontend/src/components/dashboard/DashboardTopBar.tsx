@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+
 import Link from "next/link";
 import { Menu, Search, LogOut, Settings } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
@@ -83,7 +83,7 @@ export function DashboardTopBar({
 
             <div className="relative">
               <DropdownMenu>
-                <DropdownMenuTrigger as={Fragment}>
+                <DropdownMenuTrigger asChild>
                   <button
                     type="button"
                     aria-label="Open user menu"

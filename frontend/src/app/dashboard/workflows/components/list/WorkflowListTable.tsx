@@ -1,4 +1,4 @@
-import React, { useState, Fragment } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Workflow } from "@/types";
 import {
@@ -19,8 +19,13 @@ import {
   MagnifyingGlassIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import { Menu, MenuButton, MenuItem, MenuItems, Transition } from "@headlessui/react";
-import clsx from "clsx";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/DropdownMenu";
 import toast from "react-hot-toast";
 import { buildPublicFormUrl } from "@/utils/url";
 import { openJobDocumentInNewTab } from "@/utils/jobs/openJobDocument";
@@ -180,137 +185,90 @@ export function WorkflowListTable({
   };
 
   const renderActionsMenu = (workflow: Workflow, formUrl: string | null) => (
-    <Menu as="div" className="relative inline-block text-left">
-      <MenuButton
-        onClick={(e) => e.stopPropagation()}
-        className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none transition-colors"
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none transition-colors"
+        >
+          <EllipsisVerticalIcon className="w-5 h-5" aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        side="bottom"
+        sideOffset={8}
+        className="w-48 rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 z-20"
       >
-        <EllipsisVerticalIcon className="w-5 h-5" aria-hidden="true" />
-      </MenuButton>
-      <Transition
-        as={Fragment}
-        enter="transition ease-out duration-100"
-        enterFrom="transform opacity-0 scale-95"
-        enterTo="transform opacity-100 scale-100"
-        leave="transition ease-in duration-75"
-        leaveFrom="transform opacity-100 scale-100"
-        leaveTo="transform opacity-0 scale-95"
-      >
-        <MenuItems className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 dark:divide-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none z-20">
-          <div className="px-1 py-1">
-            <MenuItem>
-              {({ active }) => (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push(`/dashboard/workflows/${workflow.workflow_id}`);
-                  }}
-                  className={clsx(
-                    active
-                      ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
-                      : "text-gray-700 dark:text-gray-300",
-                    "group flex w-full items-center rounded-md px-2 py-2 text-sm",
-                  )}
-                >
-                  <EyeIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                  View Details
-                </button>
-              )}
-            </MenuItem>
-            <MenuItem>
-              {({ active }) => (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push(
-                      `/dashboard/workflows/${workflow.workflow_id}/edit`,
-                    );
-                  }}
-                  className={clsx(
-                    active
-                      ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300"
-                      : "text-gray-700 dark:text-gray-300",
-                    "group flex w-full items-center rounded-md px-2 py-2 text-sm",
-                  )}
-                >
-                  <PencilIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Edit Lead Magnet
-                </button>
-              )}
-            </MenuItem>
-          </div>
-          <div className="px-1 py-1">
-            <MenuItem>
-              {({ active }) => (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMove(workflow.workflow_id);
-                  }}
-                  className={clsx(
-                    active
-                      ? "bg-gray-50 dark:bg-gray-700"
-                      : "text-gray-700 dark:text-gray-300",
-                    "group flex w-full items-center rounded-md px-2 py-2 text-sm",
-                  )}
-                >
-                  <FolderArrowDownIcon
-                    className="mr-2 h-4 w-4 text-gray-400"
-                    aria-hidden="true"
-                  />
-                  Move to Folder
-                </button>
-              )}
-            </MenuItem>
-            {formUrl && (
-              <MenuItem>
-                {({ active }) => (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copyToClipboard(formUrl, workflow.workflow_id);
-                    }}
-                    className={clsx(
-                      active
-                        ? "bg-gray-50 dark:bg-gray-700"
-                        : "text-gray-700 dark:text-gray-300",
-                      "group flex w-full items-center rounded-md px-2 py-2 text-sm",
-                    )}
-                  >
-                    <ClipboardIcon
-                      className="mr-2 h-4 w-4 text-gray-400"
-                      aria-hidden="true"
-                    />
-                    Copy Form Link
-                  </button>
-                )}
-              </MenuItem>
-            )}
-          </div>
-          <div className="px-1 py-1">
-            <MenuItem>
-              {({ active }) => (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(workflow.workflow_id);
-                  }}
-                  className={clsx(
-                    active
-                      ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300"
-                      : "text-red-600 dark:text-red-400",
-                    "group flex w-full items-center rounded-md px-2 py-2 text-sm",
-                  )}
-                >
-                  <TrashIcon className="mr-2 h-4 w-4 text-red-400" aria-hidden="true" />
-                  Delete
-                </button>
-              )}
-            </MenuItem>
-          </div>
-        </MenuItems>
-      </Transition>
-    </Menu>
+        <div className="px-1 py-1">
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/dashboard/workflows/${workflow.workflow_id}`);
+            }}
+            className="group flex w-full items-center rounded-md px-2 py-2 text-sm text-gray-700 dark:text-gray-300 focus:bg-primary-50 focus:text-primary-700 dark:focus:bg-primary-900/20 dark:focus:text-primary-300"
+          >
+            <EyeIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+            View Details
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`);
+            }}
+            className="group flex w-full items-center rounded-md px-2 py-2 text-sm text-gray-700 dark:text-gray-300 focus:bg-primary-50 focus:text-primary-700 dark:focus:bg-primary-900/20 dark:focus:text-primary-300"
+          >
+            <PencilIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+            Edit Lead Magnet
+          </DropdownMenuItem>
+        </div>
+        <DropdownMenuSeparator className="bg-gray-100 dark:bg-gray-700" />
+        <div className="px-1 py-1">
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMove(workflow.workflow_id);
+            }}
+            className="group flex w-full items-center rounded-md px-2 py-2 text-sm text-gray-700 dark:text-gray-300 focus:bg-gray-50 dark:focus:bg-gray-700"
+          >
+            <FolderArrowDownIcon
+              className="mr-2 h-4 w-4 text-gray-400"
+              aria-hidden="true"
+            />
+            Move to Folder
+          </DropdownMenuItem>
+          {formUrl && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                copyToClipboard(formUrl, workflow.workflow_id);
+              }}
+              className="group flex w-full items-center rounded-md px-2 py-2 text-sm text-gray-700 dark:text-gray-300 focus:bg-gray-50 dark:focus:bg-gray-700"
+            >
+              <ClipboardIcon
+                className="mr-2 h-4 w-4 text-gray-400"
+                aria-hidden="true"
+              />
+              Copy Form Link
+            </DropdownMenuItem>
+          )}
+        </div>
+        <DropdownMenuSeparator className="bg-gray-100 dark:bg-gray-700" />
+        <div className="px-1 py-1">
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(workflow.workflow_id);
+            }}
+            className="group flex w-full items-center rounded-md px-2 py-2 text-sm text-red-600 dark:text-red-400 focus:bg-red-50 focus:text-red-700 dark:focus:bg-red-900/20 dark:focus:text-red-300"
+          >
+            <TrashIcon className="mr-2 h-4 w-4 text-red-400" aria-hidden="true" />
+            Delete
+          </DropdownMenuItem>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 
   if (workflows.length === 0) {
