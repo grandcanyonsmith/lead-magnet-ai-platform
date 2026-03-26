@@ -1,9 +1,7 @@
-import { useMemo, useState, useEffect } from "react";
 import { ExecutionSteps } from "@/components/jobs/ExecutionSteps";
-import { ArtifactGallery } from "@/components/jobs/detail/ArtifactGallery";
-import { FinalDeliverableCard } from "@/components/jobs/detail/FinalDeliverableCard";
+import { ExecutionConfigCard } from "@/components/jobs/detail/ExecutionConfigCard";
+import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { SectionCard } from "@/components/ui/SectionCard";
 import type { Artifact } from "@/types/artifact";
 import type { FormSubmission } from "@/types/form";
 import type { ArtifactGalleryItem, Job, MergedStep } from "@/types/job";
@@ -43,12 +41,6 @@ interface JobExecutionTabProps {
 export function JobExecutionTab({
   job,
   mergedSteps,
-  expandedSteps,
-  onToggleStep,
-  onExpandAllSteps,
-  onCollapseAllSteps,
-  onQuickUpdateStep,
-  updatingStepIndex,
   executionStepsError,
   onRefresh,
   refreshing,
@@ -57,56 +49,11 @@ export function JobExecutionTab({
   fileArtifactsByStep,
   loadingArtifacts,
   submission,
-  onResubmit,
-  resubmitting,
   onEditStep,
-  onRerunStepClick,
-  rerunningStep,
-  artifactGalleryItems,
-  onPreview,
 }: JobExecutionTabProps) {
   const canRetryExecution = Boolean(onRefresh) && !refreshing;
-  const isCompleted = job.status === "completed";
-  const [viewMode, setViewMode] = useState<"compact" | "expanded">(
-    isCompleted ? "expanded" : "compact",
-  );
-  const timelineStepOrders = useMemo(
-    () =>
-      mergedSteps
-        .filter((step) => step.step_type !== "form_submission")
-        .map((step) => step.step_order)
-        .filter((order): order is number => order !== undefined && order !== null),
-    [mergedSteps],
-  );
-
-  useEffect(() => {
-    if (isCompleted && timelineStepOrders.length > 0) {
-      onExpandAllSteps?.(timelineStepOrders);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCompleted]);
-
-  const handleViewModeChange = (nextMode: "compact" | "expanded") => {
-    setViewMode(nextMode);
-    if (nextMode === "expanded") {
-      onExpandAllSteps?.(timelineStepOrders);
-    } else {
-      onCollapseAllSteps?.();
-    }
-  };
-
-  const { finalDeliverables, otherArtifacts } = useMemo(() => {
-    const finals: ArtifactGalleryItem[] = [];
-    const others: ArtifactGalleryItem[] = [];
-    for (const item of artifactGalleryItems) {
-      if (item.kind === "jobOutput") {
-        finals.push(item);
-      } else {
-        others.push(item);
-      }
-    }
-    return { finalDeliverables: finals, otherArtifacts: others };
-  }, [artifactGalleryItems]);
+  const showSubmission = Boolean(submission);
+  const hasSteps = mergedSteps.length > 0;
 
   return (
     <div className="space-y-6">
@@ -120,59 +67,27 @@ export function JobExecutionTab({
         />
       )}
 
+      {(showSubmission || hasSteps) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {showSubmission && submission && (
+            <SubmissionSummary submission={submission} />
+          )}
+          {hasSteps && <ExecutionConfigCard steps={mergedSteps} />}
+        </div>
+      )}
+
       <ExecutionSteps
         jobId={job.job_id}
-        variant={viewMode}
         steps={mergedSteps}
-        expandedSteps={expandedSteps}
-        onToggleStep={onToggleStep}
-        onExpandAll={onExpandAllSteps}
-        onCollapseAll={onCollapseAllSteps}
-        onVariantChange={handleViewModeChange}
         onCopy={onCopy}
         jobStatus={job.status}
         liveStep={job.live_step}
         onEditStep={onEditStep}
-        onQuickUpdateStep={onQuickUpdateStep}
-        updatingStepIndex={updatingStepIndex}
         canEdit={true}
         imageArtifactsByStep={imageArtifactsByStep}
         fileArtifactsByStep={fileArtifactsByStep}
         loadingImageArtifacts={loadingArtifacts}
-        onRerunStepClick={onRerunStepClick}
-        rerunningStep={rerunningStep}
-        submission={submission}
-        onResubmit={onResubmit}
-        resubmitting={resubmitting}
       />
-
-      <SectionCard
-        title="Outputs"
-        description="Review the generated assets and reports."
-        actions={
-          artifactGalleryItems.length > 0 ? (
-            <span className="text-xs font-semibold text-muted-foreground">
-              {artifactGalleryItems.length} item
-              {artifactGalleryItems.length === 1 ? "" : "s"}
-            </span>
-          ) : null
-        }
-      >
-        <div id="job-tab-panel-artifacts" className="space-y-4">
-          {finalDeliverables.map((item) => (
-            <FinalDeliverableCard
-              key={item.id}
-              item={item}
-              onPreview={onPreview}
-            />
-          ))}
-          <ArtifactGallery
-            items={otherArtifacts}
-            loading={loadingArtifacts}
-            onPreview={onPreview}
-          />
-        </div>
-      </SectionCard>
     </div>
   );
 }

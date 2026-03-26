@@ -407,7 +407,7 @@ export function JobTabs({
         activeTab={activeTab}
         onTabChange={handleTabChange}
         className="h-full"
-        tabListClassName="bg-transparent border-b border-border mb-4"
+        tabListClassName="sticky top-0 z-20 bg-background border-b border-border mb-4"
         tabContentClassName="flex-1 overflow-hidden"
       />
     </section>
