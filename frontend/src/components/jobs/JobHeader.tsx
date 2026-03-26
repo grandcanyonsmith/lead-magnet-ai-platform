@@ -390,7 +390,6 @@ export function JobHeader({
       <PageHeader
         heading={headingContent}
         className="mb-0 pb-4"
-        actionsInlineOnMobile
         bottomContent={
           <JobHeaderStats
             stats={stats}
@@ -398,27 +397,29 @@ export function JobHeader({
           />
         }
       >
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Previous job"
-            title={isNavDisabled ? "Loading jobs..." : "Previous job"}
-            onClick={() => handleJobNavigate(previousJobHref)}
-            disabled={isNavDisabled || !previousJobHref}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronLeftIcon className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            aria-label="Next job"
-            title={isNavDisabled ? "Loading jobs..." : "Next job"}
-            onClick={() => handleJobNavigate(nextJobHref)}
-            disabled={isNavDisabled || !nextJobHref}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronRightIcon className="h-5 w-5" />
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Previous job"
+              title={isNavDisabled ? "Loading jobs..." : "Previous job"}
+              onClick={() => handleJobNavigate(previousJobHref)}
+              disabled={isNavDisabled || !previousJobHref}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeftIcon className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              aria-label="Next job"
+              title={isNavDisabled ? "Loading jobs..." : "Next job"}
+              onClick={() => handleJobNavigate(nextJobHref)}
+              disabled={isNavDisabled || !nextJobHref}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRightIcon className="h-5 w-5" />
+            </button>
+          </div>
 
           {onRefresh && (
             <button

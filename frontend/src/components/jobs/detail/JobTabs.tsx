@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { JobSummaryTab } from "@/components/jobs/detail/JobSummaryTab";
 import { RecursiveTabs, TabNode } from "@/components/ui/recursive/RecursiveTabs";
+import { getJobDuration } from "@/utils/jobs/duration";
 import type {
   ArtifactGalleryItem,
   Job,
@@ -270,6 +271,25 @@ export function JobTabs({
       ? 0 // Use 0 or undefined for loading state in generic tabs
       : trackingSessionCount ?? 0;
       
+  const overviewTotalCost = useMemo(() => {
+    if (!job?.execution_steps || !Array.isArray(job.execution_steps)) return null;
+    const aiSteps = job.execution_steps.filter(
+      (s) => s.step_type === "ai_generation" || s.step_type === "workflow_step",
+    );
+    if (aiSteps.length === 0) return null;
+    const sum = aiSteps.reduce((acc, s) => {
+      const c = s.usage_info?.cost_usd;
+      if (c === undefined || c === null) return acc;
+      return acc + (typeof c === "number" ? c : parseFloat(String(c)) || 0);
+    }, 0);
+    return sum > 0 ? sum : null;
+  }, [job?.execution_steps]);
+
+  const overviewDuration = useMemo(() => {
+    const d = getJobDuration(job);
+    return d?.label ?? null;
+  }, [job]);
+
   const tabs: TabNode[] = useMemo(() => {
     const badgeValues: Partial<Record<JobTabId, number>> = {
       overview: artifactsBadge,
@@ -287,6 +307,10 @@ export function JobTabs({
             artifactGalleryItems={artifactGalleryItems}
             loadingArtifacts={loadingArtifacts}
             onPreview={openPreview}
+            job={job}
+            mergedSteps={mergedSteps}
+            totalCost={overviewTotalCost}
+            jobDurationFormatted={overviewDuration}
           />
         ),
       },
@@ -367,7 +391,8 @@ export function JobTabs({
     onTrackingSessionsLoaded, onTrackingSessionsLoadingChange, onTrackingStatsLoaded, onTrackingStatsLoadingChange,
     form,
     // Add dependencies for badgeValues
-    artifactsBadge, stepsBadge, trackingBadge
+    artifactsBadge, stepsBadge, trackingBadge,
+    overviewTotalCost, overviewDuration,
   ]);
 
   const handleTabChange = (id: string) => {
