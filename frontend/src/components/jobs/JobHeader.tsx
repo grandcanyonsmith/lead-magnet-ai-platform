@@ -271,7 +271,7 @@ export function JobHeader({
   const statusSummaryParts: string[] = [];
   if (effectiveStatus === "completed" || effectiveStatus === "failed") {
     const label = effectiveStatus === "completed" ? "Completed" : "Failed";
-    const duration = jobDuration?.formatted;
+    const duration = jobDuration?.label;
     statusSummaryParts.push(duration ? `${label} in ${duration}` : label);
   } else if (effectiveStatus === "processing") {
     statusSummaryParts.push("Processing...");
