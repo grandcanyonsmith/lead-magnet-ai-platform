@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { EyeIcon, PencilSquareIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import { PreviewCard } from "@/components/artifacts/PreviewCard";
 import { OutputPreview } from "@/components/jobs/detail/OutputPreview";
@@ -94,12 +94,50 @@ function groupDuplicateArtifacts(
   );
 }
 
+interface StepGroup {
+  stepOrder: number;
+  stepName: string;
+  items: ArtifactGalleryItem[];
+}
+
+function groupByStep(items: ArtifactGalleryItem[]): StepGroup[] {
+  const groupMap = new Map<number, StepGroup>();
+  const ungrouped: ArtifactGalleryItem[] = [];
+
+  for (const item of items) {
+    if (item.stepOrder !== undefined && item.stepOrder !== null) {
+      let group = groupMap.get(item.stepOrder);
+      if (!group) {
+        group = {
+          stepOrder: item.stepOrder,
+          stepName: item.stepName || `Step ${item.stepOrder}`,
+          items: [],
+        };
+        groupMap.set(item.stepOrder, group);
+      }
+      group.items.push(item);
+    } else {
+      ungrouped.push(item);
+    }
+  }
+
+  const sorted = [...groupMap.values()].sort((a, b) => a.stepOrder - b.stepOrder);
+
+  if (ungrouped.length > 0) {
+    sorted.push({ stepOrder: -1, stepName: "Other", items: ungrouped });
+  }
+
+  return sorted;
+}
+
 export function ArtifactGallery({
   items,
   loading,
   onPreview,
 }: ArtifactGalleryProps) {
   const displayItems = groupDuplicateArtifacts(items);
+  const stepGroups = useMemo(() => groupByStep(displayItems), [displayItems]);
+  const hasMultipleGroups = stepGroups.length > 1;
 
   if (loading && items.length === 0) {
     return (
@@ -128,10 +166,41 @@ export function ArtifactGallery({
     );
   }
 
+  if (!hasMultipleGroups) {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" style={{ contain: 'layout' }}>
+        {displayItems.map((item) => (
+          <ArtifactCard key={item.id} item={item} onPreview={onPreview} />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" style={{ contain: 'layout' }}>
-      {displayItems.map((item) => (
-        <ArtifactCard key={item.id} item={item} onPreview={onPreview} />
+    <div className="space-y-8">
+      {stepGroups.map((group) => (
+        <div key={group.stepOrder}>
+          <div className="flex items-center gap-3 mb-3">
+            {group.stepOrder > 0 && (
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary shrink-0">
+                {group.stepOrder}
+              </span>
+            )}
+            <div className="min-w-0">
+              <h4 className="text-sm font-semibold text-foreground truncate">
+                {group.stepOrder > 0 ? `Step ${group.stepOrder}: ${group.stepName}` : group.stepName}
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                {group.items.length} artifact{group.items.length === 1 ? "" : "s"}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" style={{ contain: 'layout' }}>
+            {group.items.map((item) => (
+              <ArtifactCard key={item.id} item={item} onPreview={onPreview} />
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );

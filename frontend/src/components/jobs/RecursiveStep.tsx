@@ -117,6 +117,7 @@ export const RecursiveStep: React.FC<RecursiveStepProps> = (props) => {
         onQuickUpdateStep={onQuickUpdateStep}
         updatingStepIndex={updatingStepIndex}
         detailsHref={detailsHref}
+        variant={variant}
       />
     );
   };
