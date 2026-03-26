@@ -4,6 +4,7 @@ import { PreviewCard } from "@/components/artifacts/PreviewCard";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { Artifact } from "@/types/artifact";
 import { MergedStep } from "@/types/job";
+import { getStepImageFiles } from "@/utils/executionSteps";
 import { getStepInput } from "@/utils/stepInput";
 import { renderToolBadges, truncateUrl } from "@/utils/stepUtils";
 
@@ -21,13 +22,14 @@ export function GeneratedImagesList({
   loading = false,
   renderCopyButton,
 }: GeneratedImagesListProps) {
+  const imageFiles = getStepImageFiles(step, imageArtifacts);
   const hasImageUrls =
     step.image_urls &&
     Array.isArray(step.image_urls) &&
     step.image_urls.length > 0;
-  const hasImageArtifacts = imageArtifacts.length > 0;
+  const hasImages = imageFiles.length > 0;
 
-  if (!hasImageUrls && !hasImageArtifacts) {
+  if (!hasImages) {
     return null;
   }
 
@@ -70,19 +72,48 @@ export function GeneratedImagesList({
         </div>
       )}
 
-      {/* Render from image_urls if available */}
-      {hasImageUrls && step.image_urls ? (
-        <div className="grid grid-cols-1 gap-2.5 md:gap-2 sm:grid-cols-2">
-          {step.image_urls.map((imageUrl: string, imgIdx: number) => (
+      <div className="grid grid-cols-1 gap-2.5 md:gap-2 sm:grid-cols-2">
+        {imageFiles.map((file, imgIdx) => {
+          const imageUrl =
+            file.type === "imageArtifact"
+              ? file.data.object_url || file.data.public_url
+              : file.data;
+          if (!imageUrl) return null;
+
+          const fileLabel =
+            file.type === "imageArtifact"
+              ? file.data.file_name ||
+                file.data.artifact_name ||
+                `Image ${imgIdx + 1}`
+              : `Generated image ${imgIdx + 1}`;
+          const contentType =
+            file.type === "imageArtifact"
+              ? file.data.content_type || "image/png"
+              : "image/png";
+          const artifactId =
+            file.type === "imageArtifact" ? file.data.artifact_id : undefined;
+          const metaTitle =
+            file.type === "imageArtifact" ? fileLabel : imageUrl;
+          const metaLabel =
+            file.type === "imageArtifact" ? fileLabel : truncateUrl(imageUrl);
+
+          return (
             <PreviewCard
-              key={`url-${imgIdx}`}
-              title={`Generated image ${imgIdx + 1}`}
+              key={file.key}
+              title={fileLabel}
+              description={
+                file.type === "imageArtifact" ? file.data.content_type : undefined
+              }
+              showDescription={
+                file.type === "imageArtifact" && Boolean(file.data.content_type)
+              }
               preview={
                 <PreviewRenderer
-                  contentType="image/png"
+                  contentType={contentType}
                   objectUrl={imageUrl}
-                  fileName={`Generated image ${imgIdx + 1}`}
+                  fileName={fileLabel}
                   className="h-full w-full"
+                  artifactId={artifactId}
                 />
               }
               meta={
@@ -91,68 +122,19 @@ export function GeneratedImagesList({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[10px] text-muted-foreground hover:text-foreground truncate"
-                  title={imageUrl}
+                  title={metaTitle}
                   onClick={(event) => event.stopPropagation()}
                 >
-                  {truncateUrl(imageUrl)}
+                  {metaLabel}
                 </a>
               }
               actions={renderCopyButton(imageUrl)}
               className="group flex w-full flex-col text-left"
               previewClassName="aspect-video bg-muted/60"
             />
-          ))}
-        </div>
-      ) : (
-        /* Fallback: Render from artifacts */
-        hasImageArtifacts && (
-          <div className="grid grid-cols-1 gap-2.5 md:gap-2 sm:grid-cols-2">
-            {imageArtifacts.map((artifact: Artifact, imgIdx: number) => {
-              const artifactUrl = artifact.object_url || artifact.public_url;
-              if (!artifactUrl) return null;
-              const fileLabel =
-                artifact.file_name ||
-                artifact.artifact_name ||
-                `Image ${imgIdx + 1}`;
-
-              return (
-                <PreviewCard
-                  key={`artifact-${artifact.artifact_id || imgIdx}`}
-                  title={fileLabel}
-                  description={artifact.content_type}
-                  showDescription={Boolean(artifact.content_type)}
-                  preview={
-                    <PreviewRenderer
-                      contentType={artifact.content_type || "image/png"}
-                      objectUrl={artifactUrl}
-                      fileName={fileLabel}
-                      className="h-full w-full"
-                      artifactId={artifact.artifact_id}
-                    />
-                  }
-                  meta={
-                    <a
-                      href={artifactUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] text-muted-foreground hover:text-foreground truncate"
-                      title={fileLabel}
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      {artifact.file_name ||
-                        artifact.artifact_name ||
-                        truncateUrl(artifactUrl)}
-                    </a>
-                  }
-                  actions={renderCopyButton(artifactUrl)}
-                  className="group flex w-full flex-col text-left"
-                  previewClassName="aspect-video bg-muted/60"
-                />
-              );
-            })}
-          </div>
-        )
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }

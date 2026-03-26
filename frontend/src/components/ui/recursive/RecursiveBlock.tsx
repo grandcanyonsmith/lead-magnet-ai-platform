@@ -60,7 +60,7 @@ export const RecursiveBlock: React.FC<RecursiveBlockProps> = ({
       {/* Header / Block Container */}
       <div
         className={cn(
-          "relative flex flex-col rounded-lg border bg-card text-card-foreground shadow-sm",
+          "relative flex flex-col rounded-lg bg-card text-card-foreground shadow-[0_1px_24px_rgba(0,0,0,0.04)] dark:shadow-[0_1px_24px_rgba(0,0,0,0.15)]",
           node.status && "border-l-4",
           statusColor
         )}
@@ -79,13 +79,13 @@ export const RecursiveBlock: React.FC<RecursiveBlockProps> = ({
           {node.isCollapsible !== false && (
             <button
               type="button"
-              className="p-1 rounded-md hover:bg-muted text-muted-foreground"
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground"
               aria-label={isExpanded ? "Collapse" : "Expand"}
             >
               {isExpanded ? (
-                <ChevronDownIcon className="w-4 h-4" />
+                <ChevronDownIcon className="w-5 h-5" />
               ) : (
-                <ChevronRightIcon className="w-4 h-4" />
+                <ChevronRightIcon className="w-5 h-5" />
               )}
             </button>
           )}
@@ -104,14 +104,14 @@ export const RecursiveBlock: React.FC<RecursiveBlockProps> = ({
 
         {/* Body (Always Visible) */}
         {renderBody && (
-          <div className="border-t border-border/50">
+          <div className="bg-muted/20">
             {renderBody(node)}
           </div>
         )}
 
         {/* Content Body (Expanded) */}
         {isExpanded && (
-          <div className="border-t border-border/50">
+          <div className="bg-muted/10">
             {renderContent ? (
               renderContent(node)
             ) : (

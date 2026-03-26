@@ -205,9 +205,18 @@ class WorkflowOrchestrator:
         )
         if not deliverable_context:
             if step_outputs:
-                deliverable_context = ContextBuilder._stringify_step_output(
-                    step_outputs[-1].get('output', '')
-                )
+                for fallback in reversed(step_outputs):
+                    raw = fallback.get('output', '')
+                    if ContextBuilder._is_image_only_output(raw):
+                        continue
+                    text = ContextBuilder._stringify_step_output(raw).strip()
+                    if text:
+                        deliverable_context = text
+                        break
+                if not deliverable_context:
+                    deliverable_context = ContextBuilder._stringify_step_output(
+                        step_outputs[-1].get('output', '')
+                    )
             else:
                 logger.warning(
                     "[WorkflowOrchestrator] Deliverable context empty; falling back to full accumulated context",

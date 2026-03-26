@@ -20,6 +20,54 @@ function normalizeUrlKey(url: string | null | undefined): string | null {
   }
 }
 
+function getFilenameFromUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname.split("/").pop() || "";
+  } catch {
+    return url.split("/").pop() || url;
+  }
+}
+
+function normalizeFilename(filename: string): string {
+  try {
+    return decodeURIComponent(filename || "").split("?")[0].trim().toLowerCase();
+  } catch {
+    return (filename || "").split("?")[0].trim().toLowerCase();
+  }
+}
+
+function getArtifactFileName(artifact: Artifact): string {
+  return artifact.file_name || artifact.artifact_name || "";
+}
+
+function isImageArtifact(artifact: Artifact): boolean {
+  const artifactType = String(artifact.artifact_type || "").toLowerCase();
+  const contentType = String(artifact.content_type || artifact.mime_type || "").toLowerCase();
+  const fileName = getArtifactFileName(artifact);
+
+  return (
+    artifactType.includes("image") ||
+    contentType.startsWith("image/") ||
+    /\.(png|jpe?g|gif|webp|svg)$/i.test(fileName)
+  );
+}
+
+function artifactMatchesImageUrl(artifact: Artifact, imageUrl: string): boolean {
+  const artifactUrl = artifact.object_url || artifact.public_url;
+  const normalizedArtifactUrl = normalizeUrlKey(artifactUrl);
+  const normalizedImageUrl = normalizeUrlKey(imageUrl);
+
+  if (normalizedArtifactUrl && normalizedImageUrl && normalizedArtifactUrl === normalizedImageUrl) {
+    return true;
+  }
+
+  const artifactName = normalizeFilename(getArtifactFileName(artifact));
+  const imageName = normalizeFilename(getFilenameFromUrl(imageUrl));
+
+  return Boolean(artifactName && imageName && artifactName === imageName);
+}
+
 interface BuildArtifactGalleryItemsArgs {
   job?: Pick<Job, "job_id" | "output_url" | "completed_at" | "failed_at"> | null;
   artifacts?: Artifact[] | null;
@@ -35,6 +83,7 @@ export function buildArtifactGalleryItems({
 }: BuildArtifactGalleryItemsArgs): ArtifactGalleryItem[] {
   const items: ArtifactGalleryItem[] = [];
   const seen = new Set<string>();
+  const imageArtifacts = (artifacts ?? []).filter(isImageArtifact);
   const stepMetaByArtifactId = new Map<
     string,
     { stepOrder?: number; stepName?: string; stepType?: string }
@@ -175,10 +224,17 @@ export function buildArtifactGalleryItems({
       step.step_name,
     );
     step.image_urls.forEach((url, idx) => {
-      if (!url || seen.has(url)) {
+      const normalizedUrl = normalizeUrlKey(url);
+      if (!url || !normalizedUrl || seen.has(normalizedUrl)) {
         return;
       }
-      seen.add(url);
+      const hasMatchingImageArtifact = imageArtifacts.some((artifact) =>
+        artifactMatchesImageUrl(artifact, url),
+      );
+      if (hasMatchingImageArtifact) {
+        return;
+      }
+      seen.add(normalizedUrl);
       const sortOrder = (step.step_order ?? 0) * 1000 + idx + 0.5;
       items.push({
         id: `image-url-${step.step_order ?? 0}-${idx}`,

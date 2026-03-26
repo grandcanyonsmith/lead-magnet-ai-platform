@@ -24,7 +24,7 @@ interface ArtifactGalleryProps {
   onPreview: (item: ArtifactGalleryItem) => void;
 }
 
-function groupFinalHtmlArtifacts(
+function groupDuplicateArtifacts(
   items: ArtifactGalleryItem[],
 ): ArtifactGalleryItem[] {
   const groups = new Map<string, ArtifactGalleryItem[]>();
@@ -37,10 +37,22 @@ function groupFinalHtmlArtifacts(
     const fileName = String(
       item.artifact?.file_name || item.artifact?.artifact_name || "",
     ).toLowerCase();
+    const isImage =
+      item.kind === "imageUrl" ||
+      item.kind === "imageArtifact" ||
+      item.artifact?.content_type?.startsWith("image/") ||
+      /\.(png|jpe?g|gif|webp|svg)$/i.test(fileName);
 
-    // Group repeated html_final artifacts (commonly "final.html") into a single card.
     if (item.kind === "artifact" && artifactType === "html_final" && fileName) {
-      const key = `${artifactType}:${fileName}`;
+      const key = `html:${fileName}`;
+      const arr = groups.get(key) || [];
+      arr.push(item);
+      groups.set(key, arr);
+      continue;
+    }
+
+    if (isImage && item.stepOrder !== undefined) {
+      const key = `img:step-${item.stepOrder}`;
       const arr = groups.get(key) || [];
       arr.push(item);
       groups.set(key, arr);
@@ -51,7 +63,7 @@ function groupFinalHtmlArtifacts(
   }
 
   const grouped: ArtifactGalleryItem[] = [];
-  for (const [key, versions] of groups.entries()) {
+  for (const [, versions] of groups.entries()) {
     if (versions.length <= 1) {
       grouped.push(versions[0]);
       continue;
@@ -61,17 +73,19 @@ function groupFinalHtmlArtifacts(
       (acc, cur) => ((cur.sortOrder ?? 0) > (acc.sortOrder ?? 0) ? cur : acc),
       versions[0],
     );
-    const versionNumber = versions.length;
+    const extraCount = versions.length - 1;
     const baseDescription =
       latest.description ||
       latest.artifact?.artifact_type?.replace(/_/g, " ") ||
       latest.artifact?.file_name ||
-      "html final";
+      latest.label;
 
     grouped.push({
       ...latest,
-      id: `group-${key}`,
-      description: `${baseDescription} · v${versionNumber}`,
+      id: `group-${latest.id}`,
+      description: extraCount > 0
+        ? `${baseDescription} +${extraCount} variant${extraCount > 1 ? "s" : ""}`
+        : baseDescription,
     });
   }
 
@@ -85,12 +99,12 @@ export function ArtifactGallery({
   loading,
   onPreview,
 }: ArtifactGalleryProps) {
-  const displayItems = groupFinalHtmlArtifacts(items);
+  const displayItems = groupDuplicateArtifacts(items);
 
   if (loading && items.length === 0) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[...Array(3)].map((_, i) => (
           <Card key={i} className="animate-pulse p-4">
             <div className="aspect-[4/3] w-full rounded-xl bg-gray-100 dark:bg-gray-800" />
             <div className="mt-4 space-y-2">
@@ -115,7 +129,7 @@ export function ArtifactGallery({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" style={{ contain: 'layout' }}>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" style={{ contain: 'layout' }}>
       {displayItems.map((item) => (
         <ArtifactCard key={item.id} item={item} onPreview={onPreview} />
       ))}

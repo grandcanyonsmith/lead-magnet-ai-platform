@@ -1,15 +1,11 @@
 import React, { useMemo } from "react";
-import Link from "next/link";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
 import { MergedStep, JobLiveStep } from "@/types/job";
 import { Artifact } from "@/types/artifact";
 import { StepHeader } from "./StepHeader";
 import { StepInputOutput } from "./StepInputOutput";
-import { ImagePreview } from "./ImagePreview";
 import { StreamViewerUI } from "@/components/ui/StreamViewerUI";
 import { RecursiveBlock } from "@/components/ui/recursive/RecursiveBlock";
 import { BlockNode } from "@/types/recursive";
-import { getStepImageFiles } from "@/utils/executionSteps";
 import { parseLogs } from "@/utils/logParsing";
 import { getStepInput } from "@/utils/stepInput";
 
@@ -142,7 +138,6 @@ export const RecursiveStep: React.FC<RecursiveStepProps> = (props) => {
 
     const stepInput = getStepInput(currentStep.input);
     const stepTools = stepInput?.tools || currentStep.tools;
-    const stepToolChoice = stepInput?.tool_choice || currentStep.tool_choice;
     
     const hasComputerUse =
       Array.isArray(stepTools) &&
@@ -152,9 +147,6 @@ export const RecursiveStep: React.FC<RecursiveStepProps> = (props) => {
           (tool && typeof tool === "object" && tool.type === "computer_use_preview"),
       );
 
-    const stepImageFiles =
-       getStepImageFiles(currentStep, imageArtifacts);
-
     const liveLogs = liveOutputForStep ? parseLogs(liveOutputForStep) : [];
 
     const shouldShowLivePanel =
@@ -162,13 +154,6 @@ export const RecursiveStep: React.FC<RecursiveStepProps> = (props) => {
       (liveOutputForStep && liveOutputForStep.length > 0) ||
       Boolean(liveStep?.error) ||
       Boolean(liveStep?.status);
-
-    const imagePreviewProps = {
-      imageIndex: 0,
-      model: currentStep.model,
-      tools: stepTools,
-      toolChoice: stepToolChoice,
-    };
 
     return (
       <div className="bg-muted/30">
@@ -196,26 +181,6 @@ export const RecursiveStep: React.FC<RecursiveStepProps> = (props) => {
           canEdit={canEdit}
           variant={variant}
         />
-
-        {stepImageFiles.length > 0 && (
-          <div className="px-3 sm:px-4 pb-3 sm:pb-4 bg-muted/20">
-            {stepImageFiles.map((file) =>
-              file.type === "imageArtifact" ? (
-                <ImagePreview
-                  key={file.key}
-                  artifact={file.data}
-                  {...imagePreviewProps}
-                />
-              ) : (
-                <ImagePreview
-                  key={file.key}
-                  imageUrl={file.data}
-                  {...imagePreviewProps}
-                />
-              ),
-            )}
-          </div>
-        )}
       </div>
     );
   };

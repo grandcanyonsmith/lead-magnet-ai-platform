@@ -65,6 +65,7 @@ export function StepOutput({
         <StepContent
           formatted={outputContent}
           imageUrls={stepImageUrls}
+          showImagePreviews={false}
         />
       )}
     </CollapsibleSectionCard>

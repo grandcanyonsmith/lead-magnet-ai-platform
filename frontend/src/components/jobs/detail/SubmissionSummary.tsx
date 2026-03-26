@@ -114,13 +114,33 @@ export function SubmissionSummary({
     <section className={`mb-4 sm:mb-6 ${className}`}>
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card shadow-sm overflow-visible">
         <div className="flex flex-col gap-3 p-4 sm:p-6 md:flex-row md:items-center md:justify-between bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/50 dark:to-transparent">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
               Form Submission
             </p>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               {displayName || "Submitted Answers"}
             </h2>
+            {entries.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                {entries
+                  .filter(([key]) => !["name", "full_name", "first_name", "submitter_name"].includes(key.toLowerCase()))
+                  .slice(0, 4)
+                  .map(([key, value]) => (
+                    <span key={key} className="truncate max-w-[200px]">
+                      <span className="font-medium text-foreground/70 capitalize">
+                        {key.replace(/_/g, " ")}:
+                      </span>{" "}
+                      {typeof value === "string" ? value : JSON.stringify(value)}
+                    </span>
+                  ))}
+                {entries.filter(([key]) => !["name", "full_name", "first_name", "submitter_name"].includes(key.toLowerCase())).length > 4 && (
+                  <span className="text-muted-foreground/60">
+                    +{entries.filter(([key]) => !["name", "full_name", "first_name", "submitter_name"].includes(key.toLowerCase())).length - 4} more
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex w-full items-center justify-end gap-2 md:w-auto">
             <Menu as="div" className="relative inline-flex w-full justify-end text-left md:w-auto">

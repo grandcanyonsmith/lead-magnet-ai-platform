@@ -101,7 +101,6 @@ export function StepMetaBadges({
         <Badge
           icon={<Zap className="h-3 w-3 text-amber-500" />}
           label={`Speed: ${speedLabel}`}
-          count={speedCount}
           onClick={onToggleSpeed}
           variant="secondary"
           className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800/60 border"
@@ -113,7 +112,6 @@ export function StepMetaBadges({
         <Badge
           icon={<Brain className="h-3 w-3 text-indigo-500" />}
           label={`Reasoning: ${reasoningLabel}`}
-          count={reasoningCount}
           onClick={onToggleReasoning}
           variant="secondary"
           className="bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800/60 border"
@@ -155,7 +153,6 @@ export function StepMetaBadges({
       {hasContext && (
         <Badge
           label="Context"
-          count={dependencyCount}
           icon={<ChevronDown className={`h-3 w-3 ${showContext ? "rotate-180" : ""}`} />}
           onClick={onToggleContext}
           variant="secondary"

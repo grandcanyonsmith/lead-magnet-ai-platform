@@ -68,6 +68,7 @@ interface StepContentProps {
     structure?: "ai_input";
   };
   imageUrls?: string[]; // Optional array of image URLs to render inline
+  showImagePreviews?: boolean;
 }
 
 /**
@@ -147,7 +148,11 @@ function renderImageStrip(
   );
 }
 
-export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
+export function StepContent({
+  formatted,
+  imageUrls = [],
+  showImagePreviews = true,
+}: StepContentProps) {
   const [showRendered, setShowRendered] = useState(true);
 
   const getContentString = (): string => {
@@ -183,6 +188,10 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
 
   // Render inline images from imageUrls prop
   const renderInlineImages = () => {
+    if (!showImagePreviews) {
+      return null;
+    }
+
     if (!imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
       return null;
     }
@@ -244,12 +253,13 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
       typeof formatted.content === "object";
 
     // Extract image URLs from the JSON object (or from raw string if not parseable)
-    const extractedImageUrls =
-      normalizedJsonValue && typeof normalizedJsonValue === "object"
+    const extractedImageUrls = showImagePreviews
+      ? normalizedJsonValue && typeof normalizedJsonValue === "object"
         ? extractImageUrlsFromObject(normalizedJsonValue)
         : typeof normalizedJsonValue === "string"
           ? extractImageUrls(normalizedJsonValue)
-          : [];
+          : []
+      : [];
 
     return (
       <div className="space-y-4">
@@ -356,14 +366,16 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
               />
             </div>
             {/* Extract and render images from HTML source */}
-            {(() => {
-              const extractedUrls = extractImageUrls(htmlContent);
-              const combinedUrls = [...extractedUrls, ...imageUrls];
-              return renderImageStrip(combinedUrls, {
-                altPrefix: "Image from HTML",
-                keyPrefix: "html-image",
-              });
-            })()}
+            {showImagePreviews
+              ? (() => {
+                  const extractedUrls = extractImageUrls(htmlContent);
+                  const combinedUrls = [...extractedUrls, ...imageUrls];
+                  return renderImageStrip(combinedUrls, {
+                    altPrefix: "Image from HTML",
+                    keyPrefix: "html-image",
+                  });
+                })()
+              : null}
           </>
         )}
       </div>
@@ -382,7 +394,9 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
         : formatted.content.input || JSON.stringify(formatted.content, null, 2);
 
     // Extract image URLs from markdown (ReactMarkdown handles markdown image syntax, but we also want plain URLs)
-    const extractedImageUrls = extractImageUrls(markdownText);
+    const extractedImageUrls = showImagePreviews
+      ? extractImageUrls(markdownText)
+      : [];
 
     return (
       <div className="space-y-4">
@@ -417,6 +431,14 @@ export function StepContent({ formatted, imageUrls = [] }: StepContentProps) {
 
   // Render plain text content
   const renderTextContent = () => {
+    if (!showImagePreviews) {
+      return (
+        <pre className="text-sm md:text-xs text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words font-mono bg-gray-50 dark:bg-gray-900/50 p-4 md:p-4 rounded-xl border border-gray-200 dark:border-gray-700 leading-relaxed">
+          {contentString}
+        </pre>
+      );
+    }
+
     // Check if there are image URLs in the text
     const extractedUrls = extractImageUrls(contentString);
 

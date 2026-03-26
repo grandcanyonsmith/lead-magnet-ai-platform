@@ -268,6 +268,22 @@ export function JobHeader({
   const statusBorderClass = effectiveStatus
     ? STATUS_BORDER_CLASS[effectiveStatus]
     : "border-transparent";
+  const statusSummaryParts: string[] = [];
+  if (effectiveStatus === "completed" || effectiveStatus === "failed") {
+    const label = effectiveStatus === "completed" ? "Completed" : "Failed";
+    const duration = jobDuration?.formatted;
+    statusSummaryParts.push(duration ? `${label} in ${duration}` : label);
+  } else if (effectiveStatus === "processing") {
+    statusSummaryParts.push("Processing...");
+  }
+  if (stepsSummary?.total) {
+    statusSummaryParts.push(`${stepsSummary.total} step${stepsSummary.total === 1 ? "" : "s"}`);
+  }
+  if (typeof totalCost === "number" && totalCost > 0) {
+    statusSummaryParts.push(`$${totalCost.toFixed(2)}`);
+  }
+  const statusSummary = statusSummaryParts.join(" \u00b7 ");
+
   const headingContent = (
     <span className="flex min-w-0 flex-col gap-1">
       <HeaderSelect
@@ -289,6 +305,11 @@ export function JobHeader({
           menuEmptyLabel={runSelector?.menuEmptyLabel}
           size="secondary"
         />
+      )}
+      {statusSummary && (
+        <span className="text-xs text-muted-foreground font-medium">
+          {statusSummary}
+        </span>
       )}
     </span>
   );
@@ -398,9 +419,33 @@ export function JobHeader({
           >
             <ChevronRightIcon className="h-5 w-5" />
           </button>
+
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={refreshing}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ArrowPathIcon
+                className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+              />
+              {refreshing ? "Refreshing..." : "Refresh data"}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onResubmit}
+            disabled={resubmitting}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <ArrowUturnLeftIcon className="h-4 w-4" />
+            {resubmitting ? "Resubmitting..." : "Resubmit"}
+          </button>
         </div>
 
-        {hasActions && (
+        {workflow?.workflow_id && (
           <Menu as="div" className="relative inline-block text-left ml-auto">
             <Menu.Button
               aria-label="Job actions"
@@ -419,51 +464,19 @@ export function JobHeader({
             >
               <Menu.Items className="absolute right-0 mt-2 w-52 origin-top-right divide-y divide-gray-100 dark:divide-gray-800 rounded-lg bg-white dark:bg-gray-900 shadow-lg ring-1 ring-black/5 dark:ring-white/10 focus:outline-none z-50">
                 <div className="px-1 py-1">
-                  {workflow?.workflow_id && (
-                    <Menu.Item>
-                      {({ active }) => (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            resolvedEditHref
-                              ? router.push(resolvedEditHref)
-                              : null
-                          }
-                          className={getMenuItemClass(active)}
-                        >
-                          <PencilSquareIcon className="mr-2 h-4 w-4" />
-                          Edit lead magnet
-                        </button>
-                      )}
-                    </Menu.Item>
-                  )}
-                  {onRefresh && (
-                    <Menu.Item disabled={refreshing}>
-                      {({ active, disabled }) => (
-                        <button
-                          type="button"
-                          onClick={onRefresh}
-                          disabled={disabled}
-                          className={getMenuItemClass(active, disabled)}
-                        >
-                          <ArrowPathIcon
-                            className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-                          />
-                          {refreshing ? "Refreshing..." : "Refresh data"}
-                        </button>
-                      )}
-                    </Menu.Item>
-                  )}
-                  <Menu.Item disabled={resubmitting}>
-                    {({ active, disabled }) => (
+                  <Menu.Item>
+                    {({ active }) => (
                       <button
                         type="button"
-                        onClick={onResubmit}
-                        disabled={disabled}
-                        className={getMenuItemClass(active, disabled)}
+                        onClick={() =>
+                          resolvedEditHref
+                            ? router.push(resolvedEditHref)
+                            : null
+                        }
+                        className={getMenuItemClass(active)}
                       >
-                        <ArrowUturnLeftIcon className="mr-2 h-4 w-4" />
-                        {resubmitting ? "Resubmitting..." : "Resubmit"}
+                        <PencilSquareIcon className="mr-2 h-4 w-4" />
+                        Edit lead magnet
                       </button>
                     )}
                   </Menu.Item>

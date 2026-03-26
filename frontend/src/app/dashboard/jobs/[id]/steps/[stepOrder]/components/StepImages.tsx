@@ -1,88 +1,69 @@
 import React from "react";
 import { CollapsibleSectionCard } from "@/components/ui/CollapsibleSectionCard";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
+import { getStepImageFiles } from "@/utils/executionSteps";
 import { abbreviateUrl } from "@/utils/stepDetailUtils";
+import type { MergedStep } from "@/types/job";
 import type { Artifact } from "@/types/artifact";
 
 interface StepImagesProps {
-  hasImages: boolean;
-  stepImageUrls: string[];
+  step: MergedStep;
   stepImageArtifacts: Artifact[];
   loadingArtifacts: boolean;
 }
 
 export function StepImages({
-  hasImages,
-  stepImageUrls,
+  step,
   stepImageArtifacts,
   loadingArtifacts,
 }: StepImagesProps) {
+  const imageFiles = getStepImageFiles(step, stepImageArtifacts);
+  const hasImageUrls =
+    Array.isArray(step.image_urls) && step.image_urls.length > 0;
+  const hasImages = imageFiles.length > 0;
+
   if (!hasImages) return null;
 
   return (
     <CollapsibleSectionCard
       title="Generated images"
       description="Images created during this step."
-      preview={`${stepImageUrls.length + stepImageArtifacts.length} image${
-        stepImageUrls.length + stepImageArtifacts.length === 1 ? "" : "s"
-      }`}
+      preview={`${imageFiles.length} image${imageFiles.length === 1 ? "" : "s"}`}
     >
-      {loadingArtifacts && stepImageUrls.length === 0 ? (
+      {loadingArtifacts && !hasImageUrls ? (
         <p className="text-sm text-gray-500 dark:text-gray-400">
           Loading images...
         </p>
       ) : (
         <div className="flex flex-nowrap gap-3 overflow-x-auto pb-2 scrollbar-hide-until-hover">
-          {stepImageUrls.map((url, index) => (
-            <div
-              key={`url-${index}`}
-              className="shrink-0 w-56 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800"
-            >
-              <div className="aspect-square">
-                <PreviewRenderer
-                  contentType="image/png"
-                  objectUrl={url}
-                  fileName={`Generated image ${index + 1}`}
-                  className="w-full h-full"
-                />
-              </div>
-              <div className="px-2 py-2">
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[11px] text-primary-600 dark:text-primary-400 hover:text-primary-700 truncate block"
-                  title={url}
-                >
-                  {abbreviateUrl(url)}
-                </a>
-              </div>
-            </div>
-          ))}
-          {stepImageArtifacts.map((artifact: Artifact, index: number) => {
+          {imageFiles.map((file, index) => {
+            const artifact =
+              file.type === "imageArtifact" ? file.data : undefined;
             const artifactUrl =
-              artifact.object_url || artifact.public_url;
+              file.type === "imageArtifact"
+                ? artifact?.object_url || artifact?.public_url
+                : file.data;
             if (!artifactUrl) return null;
+
             const artifactLabel =
-              artifact.file_name ||
-              artifact.artifact_name ||
-              abbreviateUrl(artifactUrl);
+              file.type === "imageArtifact"
+                ? artifact?.file_name ||
+                  artifact?.artifact_name ||
+                  abbreviateUrl(artifactUrl)
+                : `Generated image ${index + 1}`;
+
             return (
               <div
-                key={`artifact-${artifact.artifact_id || index}`}
+                key={file.key}
                 className="shrink-0 w-56 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800"
               >
                 <div className="aspect-square">
                   <PreviewRenderer
-                    contentType={artifact.content_type || "image/png"}
+                    contentType={artifact?.content_type || "image/png"}
                     objectUrl={artifactUrl}
-                    fileName={
-                      artifact.file_name ||
-                      artifact.artifact_name ||
-                      `Image ${index + 1}`
-                    }
+                    fileName={artifactLabel}
                     className="w-full h-full"
-                    artifactId={artifact.artifact_id}
+                    artifactId={artifact?.artifact_id}
                   />
                 </div>
                 <div className="px-2 py-2">
@@ -91,13 +72,11 @@ export function StepImages({
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[11px] text-primary-600 dark:text-primary-400 hover:text-primary-700 truncate block"
-                    title={
-                      artifact.file_name ||
-                      artifact.artifact_name ||
-                      artifactUrl
-                    }
+                    title={file.type === "imageArtifact" ? artifactLabel : artifactUrl}
                   >
-                    {artifactLabel}
+                    {file.type === "imageArtifact"
+                      ? artifactLabel
+                      : abbreviateUrl(artifactUrl)}
                   </a>
                 </div>
               </div>

@@ -91,9 +91,11 @@ export async function openJobDocumentInNewTab(
     ? toast.loading("Opening document...")
     : null;
 
-  // Try to open a window immediately (synchronously, before any await)
-  // This helps avoid popup blockers when called from user interactions
-  const loadingWindow = window.open("about:blank", "_blank", "noopener,noreferrer");
+  // Open a window synchronously (before any await) to avoid popup blockers.
+  // Must NOT use "noopener" here — blob URLs are scoped to the browsing
+  // context group, and noopener creates a separate group that cannot
+  // resolve blob: origins.  We null-out opener after navigation instead.
+  const loadingWindow = window.open("about:blank", "_blank");
   const windowWasBlocked = !loadingWindow || loadingWindow.closed || typeof loadingWindow.closed === "undefined";
 
   // Set up loading content in the window if we successfully opened it
@@ -162,22 +164,19 @@ export async function openJobDocumentInNewTab(
     if (!windowWasBlocked && loadingWindow) {
       try {
         loadingWindow.location.href = blobUrl;
+        try { loadingWindow.opener = null; } catch { /* cross-origin */ }
       } catch {
-        // If navigation fails, fall back to anchor click
         const link = document.createElement("a");
         link.href = blobUrl;
         link.target = "_blank";
-        link.rel = "noopener noreferrer";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
       }
     } else {
-      // Window was blocked, use anchor click method
       const link = document.createElement("a");
       link.href = blobUrl;
       link.target = "_blank";
-      link.rel = "noopener noreferrer";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

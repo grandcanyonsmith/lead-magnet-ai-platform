@@ -28,29 +28,29 @@ export function OutputCardActions({ url }: OutputCardActionsProps) {
       <button
         type="button"
         onClick={handleCopy}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         aria-label="Copy link"
       >
-        <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+        <ClipboardDocumentIcon className="h-4 w-4" />
       </button>
       <a
         href={url}
         target="_blank"
         rel="noopener noreferrer"
         onClick={(event) => event.stopPropagation()}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         aria-label="Open link"
       >
-        <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+        <ArrowTopRightOnSquareIcon className="h-4 w-4" />
       </a>
       <a
         href={url}
         download
         onClick={(event) => event.stopPropagation()}
-        className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         aria-label="Download file"
       >
-        <ArrowDownTrayIcon className="h-3.5 w-3.5" />
+        <ArrowDownTrayIcon className="h-4 w-4" />
       </a>
     </div>
   );

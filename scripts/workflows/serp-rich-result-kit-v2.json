@@ -1,0 +1,198 @@
+{
+  "workflow_name": "SERP Rich Result Kit",
+  "workflow_description": "A personalized Rich Snippet Booster that turns a single domain input into: (1) best-fit rich snippet recommendations with copy/paste JSON-LD, (2) conservative CTR uplift estimates, (3) SERP mockup images, and (4) a premium interactive HTML report with before/after comparisons and implementation checklist. 2-step pipeline: structured research via web search, then HTML deliverable with generated SERP mockups.",
+  "steps": [
+    {
+      "step_name": "Domain Research + Schema Strategy",
+      "step_description": "Crawls the target domain via web search, inventories key pages, selects top 5 schema types, generates copy/paste JSON-LD for each, estimates CTR uplift, and scores AI visibility. Outputs strict JSON.",
+      "model": "gpt-5.2",
+      "reasoning_effort": "high",
+      "service_tier": "auto",
+      "max_output_tokens": 65536,
+      "instructions": "Act as a Senior Technical SEO Strategist and Schema Engineer.\n\n## Input\nUse all available form fields:\n- [domain] (required) — the website to analyze\n- [business_type] (optional) — e.g. SaaS, ecommerce, local, publisher, course creator\n- [top_country] (optional) — primary audience geography\n- [cms] (optional) — WordPress, Webflow, Shopify, Kajabi, etc.\n\n## Task Overview\nConduct a comprehensive domain analysis and produce a complete rich snippet strategy with copy/paste JSON-LD schemas. You must fill every field in the output schema with real, evidence-backed data.\n\n## Phase 1: Domain Reconnaissance\n1. Normalize the domain: strip protocol/path/query, keep root host.\n2. Determine canonical_base_url (https://[domain]/ vs https://www.[domain]/).\n3. Discover 8-15 key URLs: homepage, pricing/plans, product/course pages, blog index + 2-3 posts, FAQ page, about/contact, sitemap.\n4. For each URL, extract visible evidence:\n   - Page title (or SERP title)\n   - Short summary of what the page offers\n   - Price evidence (exact text + currency if visible)\n   - Rating/review evidence (exact text + count if visible)\n   - FAQ evidence (question/answer pairs if visible)\n   - Video evidence (YouTube/Vimeo embeds)\n   - Breadcrumb evidence (navigation path)\n   - Author/instructor evidence\n   - Date evidence (published/modified)\n5. Classify each URL by template type: homepage, pricing, product, course, blog_post, blog_index, faq, about, contact, other.\n6. Check for internal search capability.\n\n## Phase 2: Snippet Strategy\nSelect exactly 5 schema types best suited to this site. Prioritize by site type:\n- course_creator: Organization, Product/Course, FAQPage, VideoObject, BreadcrumbList\n- saas: Organization, Product/SoftwareApplication, FAQPage, VideoObject, BreadcrumbList\n- ecommerce: Product, BreadcrumbList, Organization, FAQPage, VideoObject\n- publisher: Article/BlogPosting, Organization, BreadcrumbList, FAQPage, WebSite\n\nFor each snippet, determine status:\n- \"ready\" — all required evidence exists, JSON-LD can be deployed now\n- \"needs_data\" — schema type is applicable but some evidence is missing (e.g. video URL needed)\n- \"on_hold\" — requires UI changes first (e.g. no breadcrumb navigation exists)\n\n## Phase 3: JSON-LD Generation\nFor each of the 5 snippets, generate a valid JSON-LD block:\n- Use @context: https://schema.org\n- Use canonical_base_url for all internal URLs\n- Only include properties backed by visible evidence\n- Do NOT fabricate ratings, reviews, prices, or dates\n- If rating_evidence is empty, do NOT include AggregateRating\n- Format as a complete <script type=\"application/ld+json\">...</script> tag\n\n## Phase 4: Uplift Estimates\n- Assign each page template to one primary snippet uplift driver (avoid double counting)\n- Use conservative ranges: BreadcrumbList +2-5%, Product/Course +3-10%, VideoObject +2-8%, Article +1-3%, Organization 0% direct, FAQPage +0-3%\n- Provide 2 scenario examples (e.g. \"if 500 clicks/mo, BreadcrumbList +5% = +25 clicks\")\n\n## Phase 5: Before/After Comparisons\nFor each snippet, write realistic before/after scenarios:\n- Google Before: what the SERP listing looks like now (plain)\n- Google After: what it looks like with the schema (enhanced)\n- ChatGPT Before: how AI responds about the brand now\n- ChatGPT After: how AI responds after schema improves crawlability\n\n## Phase 6: Visibility Score\n- Search for the brand name in web results to gauge AI and search visibility\n- Score from 0-100 based on: schema presence, AI mentions, SERP features, brand recognition\n- Estimate how many times out of 5 queries ChatGPT, Claude, and Perplexity would mention this brand\n\n## Phase 7: Placement Instructions\nProvide per-CMS instructions for installing JSON-LD:\n- Generic (any site)\n- WordPress (plugin or theme header)\n- Webflow (custom code in page settings)\n- Shopify (theme.liquid)\n- Kajabi (code injection)\n- Custom/other\n\n## Hard Rules\n- Do NOT invent prices, ratings, reviews, FAQs, dates, or videos\n- If evidence is missing, set the field to an empty string and note it\n- Keep page inventory to 8-15 URLs max\n- All URLs must be absolute, starting with https://\n- Every field in the schema must be populated — use empty string for genuinely unknown values",
+      "step_order": 0,
+      "depends_on": [],
+      "tools": ["web_search"],
+      "tool_choice": "required",
+      "output_format": {
+        "type": "json_schema",
+        "name": "serp_rich_result_research",
+        "description": "Complete domain analysis with schema strategy, JSON-LD, uplift estimates, and visibility scoring",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "domain_info": {
+              "type": "object",
+              "properties": {
+                "canonical_base_url": { "type": "string" },
+                "domain_normalized": { "type": "string" },
+                "brand_name": { "type": "string" },
+                "site_type": { "type": "string" },
+                "cms_detected": { "type": "string" },
+                "top_country": { "type": "string" },
+                "has_internal_search": { "type": "boolean" },
+                "search_url_template": { "type": "string" }
+              },
+              "required": ["canonical_base_url", "domain_normalized", "brand_name", "site_type", "cms_detected", "top_country", "has_internal_search", "search_url_template"],
+              "additionalProperties": false
+            },
+            "page_inventory": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "url": { "type": "string" },
+                  "template_type": { "type": "string" },
+                  "title": { "type": "string" },
+                  "summary": { "type": "string" },
+                  "price_evidence": { "type": "string" },
+                  "rating_evidence": { "type": "string" },
+                  "faq_evidence": { "type": "string" },
+                  "video_evidence": { "type": "string" },
+                  "breadcrumb_evidence": { "type": "string" },
+                  "author_evidence": { "type": "string" },
+                  "dates_evidence": { "type": "string" }
+                },
+                "required": ["url", "template_type", "title", "summary", "price_evidence", "rating_evidence", "faq_evidence", "video_evidence", "breadcrumb_evidence", "author_evidence", "dates_evidence"],
+                "additionalProperties": false
+              }
+            },
+            "snippets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "snippet_type": { "type": "string" },
+                  "display_title": { "type": "string" },
+                  "description": { "type": "string" },
+                  "icon_name": { "type": "string" },
+                  "status": { "type": "string" },
+                  "status_label": { "type": "string" },
+                  "priority": { "type": "string" },
+                  "rationale": { "type": "string" },
+                  "placement_templates": { "type": "array", "items": { "type": "string" } },
+                  "example_urls": { "type": "array", "items": { "type": "string" } },
+                  "eligibility_notes": { "type": "array", "items": { "type": "string" } },
+                  "risk_flags": { "type": "array", "items": { "type": "string" } },
+                  "ctr_uplift_min_pct": { "type": "number" },
+                  "ctr_uplift_max_pct": { "type": "number" },
+                  "json_ld": { "type": "string" },
+                  "meta_label": { "type": "string" },
+                  "meta_value": { "type": "string" },
+                  "google_before_url": { "type": "string" },
+                  "google_before_title": { "type": "string" },
+                  "google_before_desc": { "type": "string" },
+                  "google_before_issue": { "type": "string" },
+                  "google_after_url": { "type": "string" },
+                  "google_after_title": { "type": "string" },
+                  "google_after_desc": { "type": "string" },
+                  "google_after_benefit": { "type": "string" },
+                  "google_after_features": { "type": "string" },
+                  "chat_before_q": { "type": "string" },
+                  "chat_before_a": { "type": "string" },
+                  "chat_before_issue": { "type": "string" },
+                  "chat_after_q": { "type": "string" },
+                  "chat_after_a": { "type": "string" },
+                  "chat_after_benefit": { "type": "string" },
+                  "action_type": { "type": "string" },
+                  "action_title": { "type": "string" },
+                  "action_text": { "type": "string" }
+                },
+                "required": [
+                  "snippet_type", "display_title", "description", "icon_name",
+                  "status", "status_label", "priority", "rationale",
+                  "placement_templates", "example_urls", "eligibility_notes", "risk_flags",
+                  "ctr_uplift_min_pct", "ctr_uplift_max_pct", "json_ld",
+                  "meta_label", "meta_value",
+                  "google_before_url", "google_before_title", "google_before_desc", "google_before_issue",
+                  "google_after_url", "google_after_title", "google_after_desc", "google_after_benefit", "google_after_features",
+                  "chat_before_q", "chat_before_a", "chat_before_issue",
+                  "chat_after_q", "chat_after_a", "chat_after_benefit",
+                  "action_type", "action_title", "action_text"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "uplift_summary": {
+              "type": "object",
+              "properties": {
+                "baseline_source": { "type": "string" },
+                "baseline_clicks_month": { "type": "string" },
+                "total_estimated_uplift_range": { "type": "string" },
+                "scenarios": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "baseline_clicks": { "type": "string" },
+                      "snippet_type": { "type": "string" },
+                      "uplift_pct": { "type": "string" },
+                      "extra_clicks": { "type": "string" }
+                    },
+                    "required": ["baseline_clicks", "snippet_type", "uplift_pct", "extra_clicks"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["baseline_source", "baseline_clicks_month", "total_estimated_uplift_range", "scenarios"],
+              "additionalProperties": false
+            },
+            "placement_instructions": {
+              "type": "object",
+              "properties": {
+                "generic": { "type": "string" },
+                "wordpress": { "type": "string" },
+                "webflow": { "type": "string" },
+                "shopify": { "type": "string" },
+                "kajabi": { "type": "string" },
+                "custom": { "type": "string" }
+              },
+              "required": ["generic", "wordpress", "webflow", "shopify", "kajabi", "custom"],
+              "additionalProperties": false
+            },
+            "visibility_score": {
+              "type": "object",
+              "properties": {
+                "score": { "type": "number" },
+                "chatgpt_mentions": { "type": "number" },
+                "claude_mentions": { "type": "number" },
+                "perplexity_mentions": { "type": "number" },
+                "key_findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": { "type": "string" },
+                      "description": { "type": "string" }
+                    },
+                    "required": ["title", "description"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["score", "chatgpt_mentions", "claude_mentions", "perplexity_mentions", "key_findings"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["domain_info", "page_inventory", "snippets", "uplift_summary", "placement_instructions", "visibility_score"],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "step_name": "Rich Snippet Report + SERP Mockups",
+      "step_description": "Transforms the structured JSON from Step 0 into a premium interactive HTML report with SERP mockup images, before/after comparisons, copy-to-clipboard JSON-LD, and implementation CTA.",
+      "model": "gpt-5.2",
+      "reasoning_effort": "high",
+      "service_tier": "auto",
+      "max_output_tokens": 65536,
+      "instructions": "Act as a Senior Web Designer and SEO Deliverable Specialist.\n\n## CRITICAL OUTPUT REQUIREMENT\nYour text output MUST be a complete, standalone HTML5 document starting with <!DOCTYPE html> and ending with </html>. Do NOT output JSON, markdown, or any other format. No preamble, no explanation — just the raw HTML.\n\n## Input\nStep 0 provides a complete JSON with: domain_info, page_inventory, snippets (array of 5), uplift_summary, placement_instructions, visibility_score.\n\n## HTML Document Structure\n\n### 1. Header\n- Sticky top bar with CC360 branding: <img src=\"https://cc360-pages.s3.us-west-2.amazonaws.com/course-creator-360-logo.webp\" alt=\"Course Creator 360\">\n- Background: linear-gradient blue (#0475FF to #0369D9)\n- Include a \"Download\" button that calls window.print()\n\n### 2. Executive Summary\n- White card, centered, max-width 56rem\n- \"Analysis Complete\" pill badge at top\n- Heading: \"Your AI & Google Visibility Report\"\n- Subtitle: \"Based on our analysis of {domain_info.domain_normalized}\"\n- **Animated Score Ring**: SVG circle with stroke-dashoffset animation showing visibility_score.score out of 100. Use CSS variable --score for the value.\n- **Three AI Mention Cards** stacked vertically beside the score ring (or below on mobile):\n  - ChatGPT Mentions: {visibility_score.chatgpt_mentions}/5 (red if 0-1, amber if 2-3, green if 4-5)\n  - Claude Mentions: {visibility_score.claude_mentions}/5\n  - Perplexity Mentions: {visibility_score.perplexity_mentions}/5\n- **Key Findings** cards (2 cards) from visibility_score.key_findings[], each with icon, title, description\n\n### 3. Snippet Carousel (MOST IMPORTANT SECTION)\nBuild a JavaScript-powered carousel with 5 slides, one per snippets[] item.\n\n**Carousel Header** (sticky within the card):\n- Left: Status icon (colored circle: green=ready, amber=needs_data, red=on_hold) + snippet number + display_title + status badge pill\n- Description text\n- Meta info pill: {meta_label}: {meta_value}\n- \"Copy Schema\" button (copies json_ld to clipboard)\n- Right: Slide counter (\"1 / 5\") + prev/next arrow buttons\n\n**Carousel Slide Content** for each snippet:\n\n**A. Google Search: Before & After**\n- Two-column grid (stack on mobile)\n- Before card (red-tinted background): mock SERP listing showing google_before_url, google_before_title, google_before_desc. Red issue callout: google_before_issue\n- After card (green-tinted background): enhanced SERP listing rendered in CSS (no images). Parse google_after_features to determine what to show:\n  - If snippet has ratings: show star rating row (yellow unicode stars + count + price)\n  - If snippet has FAQ: show expandable Q/A items below the listing\n  - If snippet has video: show a CSS video thumbnail placeholder with play button and duration\n  - If snippet has breadcrumbs: show breadcrumb navigation path instead of plain URL\n  - If snippet has logo: show a small brand badge beside the listing\n- Green benefit callout: google_after_benefit\n\n**B. ChatGPT: Before & After**\n- Two-column grid (stack on mobile)\n- Before card: dark chat UI (#343541 background) with user question (chat_before_q) and AI response (chat_before_a). Red issue callout: chat_before_issue\n- After card: same dark chat UI with chat_after_q and chat_after_a. Green benefit callout: chat_after_benefit\n\n**C. Action Notice** (only if action_type is not empty):\n- Warning banner (amber for \"warning\", red for \"error\")\n- Icon + action_title + action_text\n\n### 4. CTA Section\n- Full-width red gradient background (#FF2F00)\n- \"Need Help Implementing?\" pill badge\n- Heading: \"Want Us to Implement These Snippets?\"\n- Body text about implementation service\n- White button: \"Get Implementation Help\" with calendar icon\n\n### 5. Footer\n- Dark background (#111827)\n- CC360 logo (white/inverted) + copyright 2025\n\n## JavaScript Requirements\n- Carousel state management: currentIndex, renderSlide(index), nextSlide(), prevSlide()\n- Copy to clipboard: copySchema(index) function using navigator.clipboard.writeText(). Show \"Copied!\" feedback for 2 seconds.\n- Keyboard navigation: ArrowLeft/ArrowRight for carousel\n- All snippet data stored in a JS array matching the snippets[] from Step 0\n- Lucide icons via CDN: <script src=\"https://unpkg.com/lucide@latest\"></script>\n- Re-initialize icons after each slide render: lucide.createIcons()\n\n## CSS & Design Requirements\n- Import Poppins font from Google Fonts\n- Tailwind CSS via CDN: <script src=\"https://cdn.tailwindcss.com\"></script>\n- Configure Tailwind with custom colors: primary (#FF2F00), accent (#0475FF)\n- CSS custom properties for gradients and shadows\n- Mobile-responsive: single column below 768px, proper touch targets\n- Score ring animation: stroke-dasharray/dashoffset with CSS transition\n- Card hover effects: subtle shadow increase + translateY\n- Print styles: hide nav elements via @media print\n- All CSS in a single <style> block (no external stylesheets except Google Fonts + Tailwind)\n- SERP mockup cards: use CSS styling to mimic Google search results (white card, green URL, blue title, gray description). No external images needed.\n\n## Personalization\n- Use domain_info.brand_name and domain_info.domain_normalized throughout\n- Reference the user by name if provided in form data\n- Tailor the CTA to the detected business type\n\n## Quality Bar\n- Every snippet from Step 0 must appear as a carousel slide\n- Every JSON-LD block must be copyable via the Copy Schema button\n- No placeholder text, no lorem ipsum, no [brackets]\n- Your text response is ONLY the HTML document",
+      "step_order": 1,
+      "depends_on": [0],
+      "tools": [],
+      "tool_choice": "none",
+      "is_deliverable": true
+    }
+  ]
+}

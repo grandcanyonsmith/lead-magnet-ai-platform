@@ -214,6 +214,7 @@ export function StepOutput({
                   <StepContent
                     formatted={formattedOutput}
                     imageUrls={stepImageUrls}
+                    showImagePreviews={false}
                   />
                 );
               })()}

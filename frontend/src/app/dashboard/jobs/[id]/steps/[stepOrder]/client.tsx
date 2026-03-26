@@ -41,7 +41,6 @@ export default function StepDetailClient() {
     loadingArtifacts,
     stepImageUrls,
     stepImageArtifacts,
-    hasImages,
     isLiveStep,
     liveOutputText,
     hasLiveOutput,
@@ -238,8 +237,7 @@ export default function StepDetailClient() {
         />
 
         <StepImages
-          hasImages={hasImages}
-          stepImageUrls={stepImageUrls}
+          step={step}
           stepImageArtifacts={stepImageArtifacts}
           loadingArtifacts={loadingArtifacts}
         />

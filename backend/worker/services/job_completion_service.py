@@ -14,6 +14,8 @@ from delivery_service import DeliveryService
 from services.execution_step_manager import ExecutionStepManager
 from services.usage_service import UsageService
 from services.artifact_finalizer import ArtifactFinalizer
+from services.context_builder import ContextBuilder
+from utils.content_detector import detect_content_type
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +47,136 @@ class JobCompletionService:
         self.delivery_service = delivery_service
         self.usage_service = usage_service
         self.artifact_finalizer = ArtifactFinalizer(self.artifact_service)
-    
+
+    def generate_html_from_steps(
+        self,
+        job_id: str,
+        job: Dict[str, Any],
+        workflow: Dict[str, Any],
+        submission_data: Dict[str, Any],
+        execution_steps: List[Dict[str, Any]],
+        initial_context: str = ""
+    ) -> Dict[str, Any]:
+        """
+        Finalize a Step-Functions-orchestrated job after all workflow steps
+        have completed.  Extracts the deliverable step output, detects the
+        content type, stores the final artifact, and marks the job complete.
+
+        Called by processor.process_single_step when step_type == 'html_generation'.
+        """
+        try:
+            job_with_steps = self.db.get_job(job_id, s3_service=self.s3)
+            if job_with_steps and job_with_steps.get('execution_steps'):
+                execution_steps = job_with_steps['execution_steps']
+                logger.info(
+                    "[generate_html_from_steps] Reloaded execution_steps from S3",
+                    extra={'job_id': job_id, 'count': len(execution_steps)}
+                )
+
+            steps = workflow.get('steps', [])
+
+            step_outputs = self._extract_step_outputs(execution_steps)
+
+            deliverable_context = ContextBuilder.build_deliverable_context_from_step_outputs(
+                step_outputs=step_outputs,
+                sorted_steps=steps
+            )
+            if not deliverable_context and step_outputs:
+                for fallback in reversed(step_outputs):
+                    raw = fallback.get('output', '')
+                    if ContextBuilder._is_image_only_output(raw):
+                        continue
+                    text = ContextBuilder._stringify_step_output(raw).strip()
+                    if text:
+                        deliverable_context = text
+                        break
+                if not deliverable_context:
+                    deliverable_context = ContextBuilder._stringify_step_output(
+                        step_outputs[-1].get('output', '')
+                    )
+
+            final_content = deliverable_context or ""
+            last_step_name = step_outputs[-1].get('step_name', '') if step_outputs else ''
+            file_ext = detect_content_type(str(final_content), str(last_step_name))
+            if file_ext == '.html':
+                final_artifact_type = 'html_final'
+                final_filename = 'final.html'
+            elif file_ext == '.json':
+                final_artifact_type = 'json_final'
+                final_filename = 'final.json'
+            else:
+                final_artifact_type = 'markdown_final'
+                final_filename = 'final.md'
+
+            deliverable_indices = ContextBuilder._resolve_deliverable_indices(steps)
+            step_outputs_by_index = ContextBuilder._index_step_outputs(step_outputs)
+            report_artifact_id = None
+            for idx in reversed(deliverable_indices):
+                artifact_id = step_outputs_by_index.get(idx, {}).get('artifact_id')
+                if artifact_id:
+                    report_artifact_id = artifact_id
+                    break
+            if report_artifact_id is None and step_outputs:
+                report_artifact_id = step_outputs[-1].get('artifact_id')
+
+            all_image_artifact_ids: List[str] = []
+            for exec_step in execution_steps:
+                for img_id in (exec_step.get('image_artifact_ids') or []):
+                    if img_id and img_id not in all_image_artifact_ids:
+                        all_image_artifact_ids.append(img_id)
+
+            submission_id = job.get('submission_id')
+            submission = self.db.get_submission(submission_id) if submission_id else {}
+
+            public_url = self.finalize_job(
+                job_id=job_id,
+                job=job,
+                workflow=workflow,
+                submission=submission,
+                final_content=final_content,
+                final_artifact_type=final_artifact_type,
+                final_filename=final_filename,
+                report_artifact_id=report_artifact_id,
+                all_image_artifact_ids=all_image_artifact_ids,
+                execution_steps=execution_steps
+            )
+
+            return {'success': True, 'job_id': job_id, 'output_url': public_url}
+
+        except Exception as e:
+            logger.exception(
+                f"[generate_html_from_steps] Failed for job {job_id}: {e}"
+            )
+            self.db.update_job(job_id, {
+                'status': 'failed',
+                'error_message': f"HTML generation failed: {str(e)}",
+                'updated_at': datetime.utcnow().isoformat()
+            })
+            return {'success': False, 'error': str(e)}
+
+    @staticmethod
+    def _extract_step_outputs(
+        execution_steps: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Build step_outputs list from execution_steps for the context builder."""
+        from utils.step_utils import normalize_step_order
+
+        internal_types = {'s3_upload', 'form_submission', 'html_generation', 'final_output'}
+        outputs: List[Dict[str, Any]] = []
+        for exec_step in execution_steps:
+            if exec_step.get('step_type') in internal_types:
+                continue
+            step_order = normalize_step_order(exec_step)
+            outputs.append({
+                'step_name': exec_step.get('step_name', f'Step {step_order}'),
+                'step_index': step_order - 1,
+                'output': exec_step.get('output', ''),
+                'artifact_id': exec_step.get('artifact_id'),
+                'image_urls': exec_step.get('image_urls', [])
+            })
+        outputs.sort(key=lambda x: x.get('step_index', 0))
+        return outputs
+
     def finalize_job(
         self,
         job_id: str,

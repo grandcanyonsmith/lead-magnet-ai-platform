@@ -54,11 +54,11 @@ export function StepHeader({
       <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between">
         <div className="order-1 flex items-start gap-4">
           <div className="min-w-0 space-y-1">
-            {showMeta && <StepTimingRow step={step} status={status} />}
             <div className="flex items-center gap-2">
               <StepStatusIcon status={status} />
             </div>
             <StepTitle step={step} status={status} detailsHref={detailsHref} />
+            {showMeta && <StepTimingRow step={step} status={status} />}
           </div>
         </div>
 

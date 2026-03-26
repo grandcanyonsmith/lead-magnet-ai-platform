@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ExecutionSteps } from "@/components/jobs/ExecutionSteps";
 import { ArtifactGallery } from "@/components/jobs/detail/ArtifactGallery";
+import { FinalDeliverableCard } from "@/components/jobs/detail/FinalDeliverableCard";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { SectionCard } from "@/components/ui/SectionCard";
 import type { Artifact } from "@/types/artifact";
@@ -65,7 +66,10 @@ export function JobExecutionTab({
   onPreview,
 }: JobExecutionTabProps) {
   const canRetryExecution = Boolean(onRefresh) && !refreshing;
-  const [viewMode, setViewMode] = useState<"compact" | "expanded">("compact");
+  const isCompleted = job.status === "completed";
+  const [viewMode, setViewMode] = useState<"compact" | "expanded">(
+    isCompleted ? "expanded" : "compact",
+  );
   const timelineStepOrders = useMemo(
     () =>
       mergedSteps
@@ -75,6 +79,13 @@ export function JobExecutionTab({
     [mergedSteps],
   );
 
+  useEffect(() => {
+    if (isCompleted && timelineStepOrders.length > 0) {
+      onExpandAllSteps?.(timelineStepOrders);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCompleted]);
+
   const handleViewModeChange = (nextMode: "compact" | "expanded") => {
     setViewMode(nextMode);
     if (nextMode === "expanded") {
@@ -83,6 +94,19 @@ export function JobExecutionTab({
       onCollapseAllSteps?.();
     }
   };
+
+  const { finalDeliverables, otherArtifacts } = useMemo(() => {
+    const finals: ArtifactGalleryItem[] = [];
+    const others: ArtifactGalleryItem[] = [];
+    for (const item of artifactGalleryItems) {
+      if (item.kind === "jobOutput") {
+        finals.push(item);
+      } else {
+        others.push(item);
+      }
+    }
+    return { finalDeliverables: finals, otherArtifacts: others };
+  }, [artifactGalleryItems]);
 
   return (
     <div className="space-y-6">
@@ -135,8 +159,15 @@ export function JobExecutionTab({
         }
       >
         <div id="job-tab-panel-artifacts" className="space-y-4">
+          {finalDeliverables.map((item) => (
+            <FinalDeliverableCard
+              key={item.id}
+              item={item}
+              onPreview={onPreview}
+            />
+          ))}
           <ArtifactGallery
-            items={artifactGalleryItems}
+            items={otherArtifacts}
             loading={loadingArtifacts}
             onPreview={onPreview}
           />

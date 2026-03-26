@@ -45,7 +45,7 @@ export function StepInputOutput({
   const isFailed = status === "failed";
 
   const contentHeightClass =
-    variant === "expanded" ? "max-h-none" : "max-h-[350px] md:max-h-72";
+    variant === "expanded" ? "max-h-none" : "max-h-[600px]";
   const liveOutputHeightClass =
     variant === "expanded" ? "max-h-96" : "max-h-48";
   const layoutClass =

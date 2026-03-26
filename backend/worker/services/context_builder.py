@@ -40,6 +40,28 @@ class ContextBuilder:
         return indexed_outputs
 
     @staticmethod
+    def _is_image_only_output(output: Any) -> bool:
+        """Return True if the output is image-generation metadata JSON
+        (i.e. the step only produced images, not a real text deliverable)."""
+        if isinstance(output, str):
+            stripped = output.strip()
+            if not stripped or stripped[0] != '{':
+                return False
+            try:
+                obj = json.loads(stripped)
+            except Exception:
+                return False
+        elif isinstance(output, dict):
+            obj = output
+        else:
+            return False
+        return (
+            "image_model" in obj
+            and "images" in obj
+            and isinstance(obj.get("images"), list)
+        )
+
+    @staticmethod
     def _resolve_deliverable_indices(sorted_steps: List[Dict[str, Any]]) -> List[int]:
         """Resolve which workflow steps should be treated as deliverable sources."""
         from utils.step_utils import normalize_step_order
@@ -49,7 +71,7 @@ class ContextBuilder:
 
         deliverable_indices = [
             idx for idx, step in enumerate(sorted_steps)
-            if step.get('is_deliverable') is True
+            if step.get('is_deliverable') in (True, "true", "True", 1)
         ]
         if deliverable_indices:
             return deliverable_indices
@@ -305,6 +327,9 @@ class ContextBuilder:
         This intentionally excludes earlier step outputs to avoid leaking
         internal research, raw notes, or submission scaffolding into the
         customer-facing deliverable.
+
+        Image-generation-only outputs (JSON with ``image_model`` /
+        ``images``) are skipped so they never become the final deliverable.
         """
         if not step_outputs or not sorted_steps:
             return ""
@@ -320,6 +345,12 @@ class ContextBuilder:
             if not step_output:
                 continue
             output = step_output.get('output', '')
+            if ContextBuilder._is_image_only_output(output):
+                logger.debug(
+                    "[ContextBuilder] Skipping image-only output at index %d",
+                    idx,
+                )
+                continue
             output_text = ContextBuilder._stringify_step_output(output).strip()
             if output_text:
                 deliverable_outputs.append(output_text)
@@ -333,6 +364,9 @@ class ContextBuilder:
     ) -> str:
         """
         Build deliverable-only context from execution steps (single-step mode).
+
+        Image-generation-only outputs are skipped so they never become the
+        final deliverable.
         """
         from utils.step_utils import normalize_step_order
 
@@ -363,6 +397,8 @@ class ContextBuilder:
         deliverable_outputs: List[str] = []
         for step in terminal_steps:
             output = step.get('output', '')
+            if ContextBuilder._is_image_only_output(output):
+                continue
             output_text = ContextBuilder._stringify_step_output(output).strip()
             if output_text:
                 deliverable_outputs.append(output_text)

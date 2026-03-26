@@ -20,8 +20,40 @@ import type { ComponentProps } from "react";
 type TabGroupId = "general" | "workflow" | "insights" | "advanced";
 
 const TabFallback = ({ label }: { label: string }) => (
-  <div className="rounded-xl border border-border bg-card/60 p-6 text-sm text-muted-foreground">
-    Loading {label}...
+  <div className="space-y-4 animate-pulse">
+    <div className="rounded-xl border border-border bg-card/60 p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="h-5 w-40 rounded bg-muted" />
+        <div className="h-4 w-24 rounded bg-muted" />
+      </div>
+      <div className="h-2 w-full rounded-full bg-muted mb-4" />
+      <div className="space-y-3">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="rounded-lg border border-border/60 p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-3 w-3 rounded-full bg-muted" />
+              <div className="h-4 w-48 rounded bg-muted" />
+            </div>
+            <div className="mt-2 flex gap-2">
+              <div className="h-5 w-20 rounded-full bg-muted" />
+              <div className="h-5 w-24 rounded-full bg-muted" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div className="rounded-xl border border-border bg-card/60 p-5">
+      <div className="h-5 w-24 rounded bg-muted mb-3" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="rounded-lg border border-border/60 p-3">
+            <div className="aspect-[4/3] w-full rounded bg-muted mb-3" />
+            <div className="h-4 w-3/4 rounded bg-muted" />
+          </div>
+        ))}
+      </div>
+    </div>
+    <span className="sr-only">Loading {label}...</span>
   </div>
 );
 
