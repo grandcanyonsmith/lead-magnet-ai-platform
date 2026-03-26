@@ -11,7 +11,7 @@ import { useState, useEffect, useMemo } from "react";
 import { api } from "@/lib/api";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
 import { Artifact } from "@/types/artifact";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { useSettings } from "@/hooks/api/useSettings";
 import { buildPublicFormUrl } from "@/utils/url";
 import { SectionCard } from "@/components/ui/SectionCard";

@@ -9,7 +9,7 @@ import { useQuery } from "@/hooks/useQuery";
 import { useMutation } from "@/hooks/useMutation";
 import { api } from "@/lib/api";
 import { normalizeError } from "./hookHelpers";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 interface CloudflareStatus {
   connected: boolean;

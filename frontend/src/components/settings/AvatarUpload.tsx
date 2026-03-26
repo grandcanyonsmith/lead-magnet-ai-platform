@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { FiCamera, FiUpload, FiX, FiCheck } from "react-icons/fi";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 export function AvatarUpload() {
   const { user, refreshAuth } = useAuth();

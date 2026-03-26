@@ -28,7 +28,7 @@ import { StreamHeader } from "./stream/StreamHeader";
 import { StreamConsole } from "./stream/StreamConsole";
 import { StreamPreview } from "./stream/StreamPreview";
 import { MergedStep } from "@/types/job";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 interface StreamViewerProps {
   endpoint: string;

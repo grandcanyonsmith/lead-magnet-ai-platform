@@ -23,7 +23,7 @@ import { ExportButton } from "./ExportButton";
 import { BillingClient, SubscriptionInfo } from "@/lib/api/billing.client";
 import { authService } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/Card";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { CardHeaderIntro } from "@/components/ui/CardHeaderIntro";

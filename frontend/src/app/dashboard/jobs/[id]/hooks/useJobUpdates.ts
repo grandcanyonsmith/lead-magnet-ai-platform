@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { WorkflowStep } from "@/types";
 import { ImageGenerationToolConfig } from "@/types/workflow";

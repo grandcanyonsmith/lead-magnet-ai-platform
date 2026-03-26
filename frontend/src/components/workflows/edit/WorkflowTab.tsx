@@ -2,7 +2,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useWorkflowAI } from "@/hooks/useWorkflowAI";
 import { WorkflowStep, WorkflowFormData } from "@/types/workflow";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";

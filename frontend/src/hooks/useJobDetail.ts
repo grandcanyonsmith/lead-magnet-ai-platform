@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { logger } from "@/utils/logger";
 import type { Job } from "@/types/job";

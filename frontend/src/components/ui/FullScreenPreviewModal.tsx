@@ -11,7 +11,7 @@ import {
   MagnifyingGlassMinusIcon,
 } from "@heroicons/react/24/outline";
 import { PreviewRenderer } from "@/components/artifacts/PreviewRenderer";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/Dialog";
 
 interface FullScreenPreviewModalProps {

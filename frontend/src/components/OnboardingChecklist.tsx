@@ -25,7 +25,7 @@ import {
 } from "react-icons/fi";
 import confetti from "canvas-confetti";
 import { useEffect } from "react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { OnboardingChecklistProps } from "./OnboardingChecklist/types";
 import {
   CHECKLIST_ITEMS,
@@ -147,28 +147,18 @@ function OnboardingChecklistComponent({
   const onDismissHandler = useCallback(() => {
     handleDismiss();
     onDismiss?.();
-    toast.success(
-      (t) => (
-        <div className="flex items-center gap-2">
-          <span>Checklist dismissed.</span>
-          <button
-            onClick={() => {
-              handleUndoDismiss();
-              toast.dismiss(t.id);
-              toast.success("Checklist restored", { duration: 2000 });
-            }}
-            className="underline font-medium hover:no-underline"
-            type="button"
-          >
-            Undo
-          </button>
-        </div>
-      ),
-      {
-        duration: 5000,
-        id: "onboarding-checklist-dismissed",
+    toast.success("Checklist dismissed.", {
+      id: "onboarding-checklist-dismissed",
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          handleUndoDismiss();
+          toast.dismiss("onboarding-checklist-dismissed");
+          toast.success("Checklist restored", { duration: 2000 });
+        },
       },
-    );
+    });
   }, [handleDismiss, handleUndoDismiss, onDismiss]);
 
   // Keyboard navigation handler

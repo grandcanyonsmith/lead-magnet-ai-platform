@@ -13,7 +13,7 @@ import {
   FiExternalLink,
 } from "react-icons/fi";
 import type { WebhookLog } from "@/lib/api/webhookLogs.client";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { Select } from "@/components/ui/Select";
 
 const formatRelativeTime = (dateString: string) => {

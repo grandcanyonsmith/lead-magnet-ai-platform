@@ -13,7 +13,7 @@ import {
 } from "react-icons/fi";
 import { WorkflowStep } from "@/types/workflow";
 import { api } from "@/lib/api";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { JsonViewer } from "@/components/ui/JsonViewer";
 import StreamViewer from "./StreamViewer";
 

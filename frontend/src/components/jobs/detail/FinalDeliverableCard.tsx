@@ -5,7 +5,7 @@ import {
   ArrowDownTrayIcon,
   ArrowUpOnSquareIcon,
 } from "@heroicons/react/24/outline";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { openJobDocumentInNewTab } from "@/utils/jobs/openJobDocument";
 import { getOutputUrl, getOutputPreviewMeta, getOutputGroupKey } from "@/utils/jobs/outputs";
 import { OutputPreview } from "@/components/jobs/detail/OutputPreview";

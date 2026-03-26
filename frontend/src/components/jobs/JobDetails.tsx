@@ -11,7 +11,7 @@ import {
   FiLoader,
   FiRefreshCw,
 } from "react-icons/fi";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import {
   formatDurationSeconds,
   formatRelativeTime,

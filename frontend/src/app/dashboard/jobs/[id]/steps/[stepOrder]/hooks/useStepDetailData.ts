@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { useJobDetail } from "@/hooks/useJobDetail";
 import { useMergedSteps } from "@/hooks/useMergedSteps";
 import { useStepArtifacts } from "@/hooks/useStepArtifacts";

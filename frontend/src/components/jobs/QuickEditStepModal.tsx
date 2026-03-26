@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FiSave, FiLoader, FiZap } from "react-icons/fi";
 import { api } from "@/lib/api";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { JsonViewer } from "@/components/ui/JsonViewer";
 import { AlertBanner } from "@/components/ui/AlertBanner";
 import { PanelHeader } from "@/components/ui/PanelHeader";

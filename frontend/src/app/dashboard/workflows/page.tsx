@@ -10,7 +10,7 @@ import { WorkflowFolderGrid } from "./components/list/WorkflowFolderGrid";
 import { WorkflowListTable } from "./components/list/WorkflowListTable";
 import { FolderModals } from "./components/list/FolderModals";
 import { api } from "@/lib/api";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 export default function WorkflowsPage() {
   const { workflows, loading, refetch: refetchWorkflows } = useWorkflows();

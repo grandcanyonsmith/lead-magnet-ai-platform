@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { StepNavCard } from "@/components/jobs/detail/StepNavCard";

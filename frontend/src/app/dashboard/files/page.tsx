@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth/context";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 interface File {
   file_id: string;

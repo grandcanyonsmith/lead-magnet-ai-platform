@@ -20,7 +20,7 @@ import { DNSRecordPreview } from "./DNSRecordPreview";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Settings } from "@/types";
 import { FiCheck, FiX, FiLoader, FiExternalLink, FiShield, FiAlertCircle } from "react-icons/fi";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 interface CloudflareIntegrationProps {
   settings: Settings;

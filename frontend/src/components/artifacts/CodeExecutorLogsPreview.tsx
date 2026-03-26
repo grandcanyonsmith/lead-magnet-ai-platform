@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { FiCode, FiCopy, FiImage, FiTerminal } from "react-icons/fi";
 import { JsonViewer } from "@/components/ui/JsonViewer";
 

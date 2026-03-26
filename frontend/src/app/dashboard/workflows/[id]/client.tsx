@@ -23,7 +23,7 @@ import {
   ArrowPathIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import clsx from "clsx";
 
 const formatRelativeTime = (dateString: string) => {

@@ -28,7 +28,7 @@ import { JobsDesktopTable } from "@/components/jobs/list/DesktopTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import type { Job } from "@/types/job";
 import type { Workflow } from "@/types/workflow";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import clsx from "clsx";
 
 const TEST_WORKFLOW_REGEX = /(^|[\s-_])test([\s-_]|$)/i;

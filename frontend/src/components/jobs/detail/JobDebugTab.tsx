@@ -1,5 +1,5 @@
 import { ClipboardDocumentIcon } from "@heroicons/react/24/outline";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { JsonViewer } from "@/components/ui/JsonViewer";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Button } from "@/components/ui/Button";

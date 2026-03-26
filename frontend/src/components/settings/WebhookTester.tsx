@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { FiSend, FiCheckCircle, FiXCircle, FiLoader } from "react-icons/fi";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 interface WebhookTesterProps {
   webhookUrl: string;

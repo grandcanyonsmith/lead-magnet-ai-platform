@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { jobLogsClient, type LogEntry } from "@/lib/api/jobLogs.client";
 import { FiTerminal, FiX, FiCopy, FiTrash2, FiPlay, FiPause } from "react-icons/fi";
 import { PanelHeader } from "@/components/ui/PanelHeader";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 interface JobLogsStreamProps {
   jobId: string;

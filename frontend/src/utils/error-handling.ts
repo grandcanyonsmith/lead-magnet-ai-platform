@@ -3,7 +3,7 @@
  * Provides consistent error handling patterns across the app
  */
 
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { getErrorMessage, isNetworkError, isAuthError } from "./api-helpers";
 
 export interface ErrorHandlerOptions {

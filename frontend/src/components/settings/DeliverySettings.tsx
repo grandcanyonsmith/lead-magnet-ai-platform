@@ -7,7 +7,7 @@
 import { Settings } from "@/types";
 import { FormField } from "./FormField";
 import { FiCopy, FiRefreshCw, FiExternalLink } from "react-icons/fi";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { useRegenerateWebhookToken } from "@/hooks/api/useSettings";
 import { WebhookTester } from "./WebhookTester";
 import { CloudflareIntegration } from "./CloudflareIntegration";

@@ -2,7 +2,7 @@ import React from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { FiLayout, FiCopy } from 'react-icons/fi';
-import toast from 'react-hot-toast';
+import { toast } from "sonner";
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 
 // Regex patterns

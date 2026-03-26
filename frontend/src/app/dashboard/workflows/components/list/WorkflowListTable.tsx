@@ -26,7 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/DropdownMenu";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { buildPublicFormUrl } from "@/utils/url";
 import { openJobDocumentInNewTab } from "@/utils/jobs/openJobDocument";
 

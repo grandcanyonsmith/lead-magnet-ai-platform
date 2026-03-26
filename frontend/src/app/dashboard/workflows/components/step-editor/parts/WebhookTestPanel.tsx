@@ -2,7 +2,7 @@ import React from "react";
 import { Select } from "@/components/ui/Select";
 import { FiCopy, FiPlus, FiTrash2 } from "react-icons/fi";
 import { JsonViewer } from "@/components/ui/JsonViewer";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 interface WebhookTestPanelProps {
   httpTestLoading: boolean;

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { FiZap, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import StepDiffPreview from "@/components/workflows/edit/StepDiffPreview";
 import { WorkflowStep } from "@/types/workflow";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 interface AIAssistProps {
   workflowId?: string;

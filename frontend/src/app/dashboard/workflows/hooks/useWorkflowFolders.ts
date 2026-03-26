@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Folder } from "@/types";
 

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 interface UseEditorIframeProps {
   iframeRef: React.RefObject<HTMLIFrameElement>;

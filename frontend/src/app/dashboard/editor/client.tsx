@@ -11,7 +11,7 @@ import {
   FiRotateCw,
   FiMousePointer,
 } from "react-icons/fi";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
 import { useAIModelOptions } from "@/hooks/useAIModelOptions";

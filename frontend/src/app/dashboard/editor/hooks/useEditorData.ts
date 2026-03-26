@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { Job } from "@/types/job";
 import type { Workflow } from "@/types/workflow";

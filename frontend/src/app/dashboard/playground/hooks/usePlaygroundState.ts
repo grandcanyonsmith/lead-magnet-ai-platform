@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useSettings } from "@/hooks/api/useSettings";
 import { useWorkflowSteps } from "@/hooks/useWorkflowSteps";
 import { api } from "@/lib/api";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import type { AccumulatedContext, SidebarTab, StepResult } from "../types";
 
 export function usePlaygroundState() {

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
 import type { AIModel, ReasoningEffort } from "@/types/workflow";
