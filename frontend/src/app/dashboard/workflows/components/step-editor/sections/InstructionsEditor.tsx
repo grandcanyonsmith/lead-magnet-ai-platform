@@ -2,6 +2,14 @@ import React, { useState } from "react";
 import { WorkflowStep } from "@/types/workflow";
 import { FiMaximize2, FiFileText, FiX, FiEdit, FiEye, FiLayout } from "react-icons/fi";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
+import { Button } from "@/components/ui/Button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/Dialog";
 
 type ViewMode = "edit" | "preview" | "split";
 
@@ -30,42 +38,36 @@ export default function InstructionsEditor({
         {/* View Mode Toggle - Only show in expanded mode */}
         {isExpanded && (
           <div className="flex items-center gap-2 p-3 border-b border-border bg-muted/10">
-            <button
+            <Button
               type="button"
+              size="sm"
+              variant={expandedViewMode === "edit" ? "default" : "outline"}
               onClick={() => setExpandedViewMode("edit")}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                expandedViewMode === "edit"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
+              className="h-8 gap-2 px-3 text-xs font-medium"
             >
               <FiEdit className="w-3.5 h-3.5" />
               Edit
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              size="sm"
+              variant={expandedViewMode === "preview" ? "default" : "outline"}
               onClick={() => setExpandedViewMode("preview")}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                expandedViewMode === "preview"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
+              className="h-8 gap-2 px-3 text-xs font-medium"
             >
               <FiEye className="w-3.5 h-3.5" />
               Preview
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              size="sm"
+              variant={expandedViewMode === "split" ? "default" : "outline"}
               onClick={() => setExpandedViewMode("split")}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                expandedViewMode === "split"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
+              className="h-8 gap-2 px-3 text-xs font-medium"
             >
               <FiLayout className="w-3.5 h-3.5" />
               Split
-            </button>
+            </Button>
           </div>
         )}
 
@@ -146,36 +148,42 @@ export default function InstructionsEditor({
           <h5 className="text-sm font-semibold text-foreground">Instructions</h5>
           <div className="flex items-center gap-2">
             {!collapsedShowPreview && (
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => setCollapsedShowPreview(true)}
-                className="inline-flex items-center gap-2 rounded-md border border-border/60 px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="h-7 gap-2 px-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
                 title="Show preview"
               >
                 <FiEye className="h-3.5 w-3.5" />
                 Preview
-              </button>
+              </Button>
             )}
             {collapsedShowPreview && (
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => setCollapsedShowPreview(false)}
-                className="inline-flex items-center gap-2 rounded-md border border-border/60 px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="h-7 gap-2 px-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
                 title="Show editor"
               >
                 <FiEdit className="h-3.5 w-3.5" />
                 Edit
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setIsInstructionsExpanded(true)}
-              className="inline-flex items-center gap-2 rounded-md border border-border/60 px-2 py-1 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted"
+              className="h-7 gap-2 px-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
               title="Expand instructions"
             >
               <FiMaximize2 className="h-3.5 w-3.5" />
               Expand
-            </button>
+            </Button>
           </div>
         </div>
         {renderEditor(false)}
@@ -184,49 +192,50 @@ export default function InstructionsEditor({
         </p>
       </div>
 
-      {/* Expanded Instructions Modal */}
-      {isInstructionsExpanded && (
-        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
-          <div className="w-full max-w-7xl h-[90vh] flex flex-col bg-card border border-border rounded-xl shadow-2xl animate-in zoom-in-95 duration-200 ring-1 ring-border/50">
-            <div className="flex items-center justify-between p-4 border-b border-border bg-muted/20 rounded-t-xl">
+      <Dialog open={isInstructionsExpanded} onOpenChange={setIsInstructionsExpanded}>
+        <DialogContent
+          showCloseButton={false}
+          className="!flex h-[90vh] max-w-7xl flex-col gap-0 overflow-hidden rounded-xl border border-border bg-card p-0 shadow-2xl ring-1 ring-border/50"
+        >
+          <DialogHeader className="border-b border-border bg-muted/20 p-4 text-left">
+            <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <FiFileText className="w-5 h-5 text-primary" />
+                <div className="rounded-lg bg-primary/10 p-2">
+                  <FiFileText className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground">
+                  <DialogTitle className="text-lg font-semibold text-foreground">
                     Instructions Editor
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground">
                     Step {index + 1}: {step.step_name}
-                  </p>
+                  </DialogDescription>
                 </div>
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setIsInstructionsExpanded(false)}
-                className="p-2 hover:bg-muted hover:text-foreground text-muted-foreground rounded-lg transition-colors"
+                className="text-muted-foreground hover:text-foreground"
                 title="Close editor"
               >
-                <FiX className="w-6 h-6" />
-              </button>
+                <FiX className="h-5 w-5" />
+              </Button>
             </div>
-            <div className="flex-1 overflow-hidden">
-              {renderEditor(true)}
-            </div>
-            <div className="p-4 bg-muted/20 border-t border-border flex justify-between items-center rounded-b-xl">
-              <span className="text-xs text-muted-foreground">
-                {step.instructions?.length || 0} characters
-              </span>
-              <button
-                onClick={() => setIsInstructionsExpanded(false)}
-                className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 font-medium text-sm shadow-sm transition-all hover:shadow-md active:scale-95"
-              >
-                Done
-              </button>
-            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {renderEditor(true)}
           </div>
-        </div>
-      )}
+          <div className="flex items-center justify-between border-t border-border bg-muted/20 p-4">
+            <span className="text-xs text-muted-foreground">
+              {step.instructions?.length || 0} characters
+            </span>
+            <Button onClick={() => setIsInstructionsExpanded(false)}>
+              Done
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -6,7 +6,23 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { AlertBanner } from "@/components/ui/AlertBanner";
-import { PanelHeader } from "@/components/ui/PanelHeader";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/Dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/AlertDialog";
 import { WorkflowVersionSummary } from "@/types";
 
 interface WorkflowVersionModalProps {
@@ -37,6 +53,7 @@ export function WorkflowVersionModal({
   const [versions, setVersions] = useState<WorkflowVersionSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
+  const [pendingRestoreVersion, setPendingRestoreVersion] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadVersions = useCallback(async () => {
@@ -65,13 +82,6 @@ export function WorkflowVersionModal({
 
   const handleRestore = async (version: number) => {
     if (!workflowId) return;
-    if (
-      !confirm(
-        `Restore lead magnet to version v${version}? This will create a new version with the restored settings.`,
-      )
-    ) {
-      return;
-    }
 
     setRestoringVersion(version);
     try {
@@ -90,33 +100,29 @@ export function WorkflowVersionModal({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div
-          className="fixed inset-0 bg-black/50 transition-opacity"
-          onClick={onClose}
-        />
-        <div className="relative z-50 w-full max-w-2xl rounded-xl bg-white dark:bg-card shadow-xl border border-gray-200 dark:border-border">
-          <PanelHeader className="px-6 py-4 border-gray-200 dark:border-border bg-white dark:bg-card">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-foreground">
-                Version History
-              </h3>
-              <p className="text-xs text-gray-500 dark:text-muted-foreground mt-1">
-                Track and restore previous lead magnet configurations.
-              </p>
-            </div>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              Close
-            </Button>
-          </PanelHeader>
+    <>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            onClose();
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl p-0">
+          <DialogHeader className="border-b border-border bg-card px-6 py-4 text-left">
+            <DialogTitle className="pr-8 text-lg font-semibold text-foreground">
+              Version History
+            </DialogTitle>
+            <DialogDescription className="mt-1 pr-8 text-xs text-muted-foreground">
+              Track and restore previous lead magnet configurations.
+            </DialogDescription>
+          </DialogHeader>
 
-          <div className="p-6 space-y-4">
+          <div className="space-y-4 p-6">
             {loading && (
-              <div className="text-sm text-gray-500 dark:text-muted-foreground">
+              <div className="text-sm text-muted-foreground">
                 Loading versions...
               </div>
             )}
@@ -125,7 +131,7 @@ export function WorkflowVersionModal({
             )}
 
             {!loading && !error && versions.length === 0 && (
-              <div className="text-sm text-gray-500 dark:text-muted-foreground">
+              <div className="text-sm text-muted-foreground">
                 No versions found yet.
               </div>
             )}
@@ -137,21 +143,21 @@ export function WorkflowVersionModal({
                 return (
                   <div
                     key={version.version}
-                    className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 dark:border-border bg-gray-50/60 dark:bg-secondary/40 px-4 py-3"
+                    className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-4 py-3"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-foreground">
+                        <span className="text-sm font-semibold text-foreground">
                           v{version.version}
                         </span>
                         {isCurrent && (
                           <Badge variant="success">Current</Badge>
                         )}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         Saved {formatTimestamp(version.created_at)}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {version.step_count} steps ·{" "}
                         {version.template_version
                           ? `template v${version.template_version}`
@@ -159,24 +165,58 @@ export function WorkflowVersionModal({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      {!isCurrent && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          isLoading={restoringVersion === version.version}
-                          onClick={() => handleRestore(version.version)}
-                        >
-                          Restore
-                        </Button>
-                      )}
-                    </div>
+                    {!isCurrent && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        isLoading={restoringVersion === version.version}
+                        onClick={() => setPendingRestoreVersion(version.version)}
+                      >
+                        Restore
+                      </Button>
+                    )}
                   </div>
                 );
               })}
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={pendingRestoreVersion !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingRestoreVersion(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Restore version
+              {pendingRestoreVersion !== null ? ` v${pendingRestoreVersion}` : ""}
+              ?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will create a new version using the selected workflow settings so
+              you can safely roll back if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingRestoreVersion !== null) {
+                  void handleRestore(pendingRestoreVersion);
+                }
+                setPendingRestoreVersion(null);
+              }}
+            >
+              Restore version
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

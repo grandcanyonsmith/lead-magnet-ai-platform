@@ -3,6 +3,14 @@
 import { FiX } from "react-icons/fi";
 import { WorkflowTrigger } from "@/types/workflow";
 import WorkflowTriggerEditor from "./WorkflowTriggerEditor";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/Sheet";
+import { Button } from "@/components/ui/Button";
 
 interface WorkflowTriggerSidePanelProps {
   trigger: WorkflowTrigger;
@@ -21,48 +29,46 @@ export default function WorkflowTriggerSidePanel({
   workflowId,
   settings,
 }: WorkflowTriggerSidePanelProps) {
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* Side Panel */}
-      <div
-        className={`fixed right-0 top-0 h-full w-full max-w-2xl bg-white dark:bg-gray-950 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        } overflow-y-auto`}
+    <Sheet
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+    >
+      <SheetContent
+        side="right"
+        showCloseButton={false}
+        className="w-full max-w-2xl overflow-y-auto border-l border-border bg-background p-0 sm:max-w-2xl"
       >
-        <div className="sticky top-0 z-10 border-b border-slate-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 px-6 py-5 shadow-sm backdrop-blur-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-gray-400 select-none">
+        <div className="sticky top-0 z-10 border-b border-border bg-background/80 px-6 py-5 shadow-sm backdrop-blur-md">
+          <div className="flex items-center justify-between gap-4">
+            <SheetHeader className="space-y-0 text-left">
+              <div className="select-none text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Editing Trigger
               </div>
-              <h2 className="mt-1 text-2xl font-semibold text-slate-900 dark:text-white">
+              <SheetTitle className="mt-1 text-2xl font-semibold text-foreground">
                 Workflow Trigger
-              </h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-gray-400">
+              </SheetTitle>
+              <SheetDescription className="mt-1 text-sm text-muted-foreground">
                 Choose how this workflow starts.
-              </p>
-            </div>
-            <button
+              </SheetDescription>
+            </SheetHeader>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onClose}
-              className="rounded-full border border-slate-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 p-2 text-slate-400 dark:text-gray-400 shadow-sm transition hover:border-primary-200 dark:hover:border-primary-800 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-slate-50 dark:hover:bg-gray-800"
+              className="rounded-full border border-border bg-background text-muted-foreground shadow-sm transition hover:border-primary/30 hover:bg-muted hover:text-primary"
               aria-label="Close panel"
             >
               <FiX className="h-5 w-5" aria-hidden />
-            </button>
+            </Button>
           </div>
         </div>
 
-        <div className="space-y-6 bg-white dark:bg-gray-950 px-6 py-6 pb-24">
+        <div className="space-y-6 bg-background px-6 py-6 pb-24">
           <WorkflowTriggerEditor
             trigger={trigger}
             onChange={onChange}
@@ -70,8 +76,8 @@ export default function WorkflowTriggerSidePanel({
             settings={settings}
           />
         </div>
-      </div>
-    </>
+      </SheetContent>
+    </Sheet>
   );
 }
 
