@@ -151,8 +151,8 @@ export function StepEditModal({
     >
       <DialogContent className="z-50 max-h-[90vh] w-full max-w-2xl gap-0 overflow-y-auto p-0 sm:rounded-lg">
         {/* Header */}
-        <PanelHeader className="border-gray-200 bg-white dark:border-gray-700 dark:bg-card">
-          <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
+        <PanelHeader className="border-border bg-card">
+          <DialogTitle className="text-lg font-semibold text-foreground">
             Edit Step
           </DialogTitle>
         </PanelHeader>
@@ -176,7 +176,7 @@ export function StepEditModal({
 
           {/* Step Name */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-1 block text-sm font-medium text-foreground">
               Step Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -185,7 +185,7 @@ export function StepEditModal({
               onChange={(e) =>
                 setFormData({ ...formData, step_name: e.target.value })
               }
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:border-transparent focus:ring-2 focus:ring-primary-500"
               placeholder="e.g., Deep Research"
               required
             />
@@ -193,7 +193,7 @@ export function StepEditModal({
 
           {/* Step Description */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-1 block text-sm font-medium text-foreground">
               Step Description
             </label>
             <input
@@ -202,14 +202,14 @@ export function StepEditModal({
               onChange={(e) =>
                 setFormData({ ...formData, step_description: e.target.value })
               }
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:border-transparent focus:ring-2 focus:ring-primary-500"
               placeholder="Brief description of this step"
             />
           </div>
 
           {/* Instructions */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-1 block text-sm font-medium text-foreground">
               Instructions <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -218,7 +218,7 @@ export function StepEditModal({
                 setFormData({ ...formData, instructions: e.target.value })
               }
               rows={6}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:border-transparent focus:ring-2 focus:ring-primary-500"
               placeholder="Detailed instructions for this step..."
               required
             />
@@ -226,7 +226,7 @@ export function StepEditModal({
 
           {/* AI Model */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-1 block text-sm font-medium text-foreground">
               AI Model <span className="text-red-500">*</span>
             </label>
             <Select
@@ -234,7 +234,7 @@ export function StepEditModal({
               onChange={(nextValue) =>
                 setFormData({ ...formData, model: nextValue as AIModel })
               }
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:border-transparent focus:ring-2 focus:ring-primary-500"
               disabled={modelsLoading || !!modelsError}
               placeholder={modelsLoading ? "Loading models..." : undefined}
               searchable={true}
@@ -254,7 +254,7 @@ export function StepEditModal({
 
           {/* Reasoning Effort (GPT-5 family) */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-1 block text-sm font-medium text-foreground">
               Reasoning Effort
             </label>
             <Select
@@ -265,7 +265,7 @@ export function StepEditModal({
                   reasoning_effort: nextValue || undefined,
                 } as any)
               }
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:border-transparent focus:ring-2 focus:ring-primary-500"
               placeholder="Default"
             >
               <option value="">Default</option>
@@ -273,7 +273,7 @@ export function StepEditModal({
               <option value="medium">Medium</option>
               <option value="high">High</option>
             </Select>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-xs text-muted-foreground">
               Optional. Controls how much reasoning the model uses (mainly for GPT-5
               models).
             </p>
@@ -281,20 +281,20 @@ export function StepEditModal({
 
           {/* Tools */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-2 block text-sm font-medium text-foreground">
               Tools
             </label>
             <div className="grid grid-cols-2 gap-2">
               {TOOL_TYPES.map((tool) => (
                 <label
                   key={tool}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 p-2 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/50"
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-border p-2 transition-colors hover:bg-accent"
                 >
                   <Checkbox
                     checked={isToolSelected(tool)}
                     onChange={() => handleToolToggle(tool)}
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-200">
+                  <span className="text-sm text-foreground">
                     {tool}
                   </span>
                 </label>
@@ -304,7 +304,7 @@ export function StepEditModal({
 
           {/* Tool Choice */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-1 block text-sm font-medium text-foreground">
               Tool Choice
             </label>
             <Select
@@ -315,7 +315,7 @@ export function StepEditModal({
                   tool_choice: nextValue as ToolChoice,
                 })
               }
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-transparent focus:ring-2 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:border-transparent focus:ring-2 focus:ring-primary-500"
             >
               {TOOL_CHOICES.map((choice) => (
                 <option key={choice} value={choice}>
@@ -323,7 +323,7 @@ export function StepEditModal({
                 </option>
               ))}
             </Select>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-xs text-muted-foreground">
               Controls how the AI uses the selected tools
             </p>
           </div>
@@ -331,14 +331,14 @@ export function StepEditModal({
           {/* Dependencies */}
           {allSteps.length > 0 && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="mb-1 block text-sm font-medium text-foreground">
                 Dependencies (optional)
               </label>
-              <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mb-2 text-xs text-muted-foreground">
                 Select which steps must complete before this step runs. Leave empty
                 to auto-detect from step order.
               </p>
-              <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+              <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-border p-3">
                 {allSteps.map((otherStep, otherIndex) => {
                   const editingIndex =
                     currentStepIndex !== undefined
@@ -370,7 +370,7 @@ export function StepEditModal({
                           setFormData({ ...formData, depends_on: newDeps });
                         }}
                       />
-                      <span className="text-sm text-gray-900 dark:text-gray-200">
+                      <span className="text-sm text-foreground">
                         Step {otherIndex + 1}: {otherStep.step_name}
                       </span>
                     </label>
@@ -378,7 +378,7 @@ export function StepEditModal({
                 })}
               </div>
               {formData.depends_on && formData.depends_on.length > 0 && (
-                <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                <p className="mt-2 text-xs text-muted-foreground">
                   Depends on:{" "}
                   {formData.depends_on
                     .map((dep: number) => `Step ${dep + 1}`)
@@ -389,12 +389,12 @@ export function StepEditModal({
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+          <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
             <button
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+              className="rounded-lg border border-border bg-background px-4 py-2 text-foreground transition-colors hover:bg-accent disabled:opacity-50"
             >
               Cancel
             </button>

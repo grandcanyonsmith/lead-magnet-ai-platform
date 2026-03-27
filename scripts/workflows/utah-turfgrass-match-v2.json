@@ -7,7 +7,7 @@
       "step_description": "Collect Utah-specific turf rules, city conditions, suppliers, pricing, and a ranked recommendation in one structured pass.",
       "model": "gpt-5.2",
       "reasoning_effort": "high",
-      "service_tier": "priority",
+      "service_tier": "auto",
       "text_verbosity": "low",
       "max_output_tokens": 65536,
       "instructions": "Role: Utah Turfgrass Research Analyst.\n\nUse web_search extensively and only return structured JSON.\n\nNormalize the form values into these aliases: [first_name] from name/first_name/full_name, [email] from email or field_1, [phone] from phone, [city] from field_2, [sun_exposure] from field_3, [water_priority] from field_4, [traffic_level] from field_5.\n\nDefaults when missing: lawn_sqft = 2500, pets = no, irrigation = auto, soil_type = unknown, soil_ph = unknown, budget_priority = med, install_type = unsure, timeline = 2-4_weeks, winter_salt_exposure = no, mowing_preference = low_maintenance, shade_from_trees = no.\n\nResearch goals: 1) Build a city fact pack for [city]. 2) Build Utah turf rules and species entries from authoritative sources. 3) Find nearby suppliers and real price points for the most likely choices. 4) Rank the top 3 turf options with transparent scoring, quantity guidance, and cost ranges.\n\nQuality rules: prefer .edu, .gov, extension, and primary supplier pages; use real URLs only; if a value cannot be verified, leave it blank or mark it as estimated in the relevant notes field; do not write the final report copy or HTML yet.\n\nReturn JSON only that matches the schema exactly.",
@@ -635,7 +635,7 @@
       "step_description": "Generate a branded landscape cover image for the report hero.",
       "model": "gpt-5.2",
       "reasoning_effort": "low",
-      "service_tier": "priority",
+      "service_tier": "auto",
       "text_verbosity": "low",
       "max_output_tokens": 1500,
       "instructions": "Role: Brand Designer.\n\nCreate exactly one landscape cover image for the report hero section.\n\nImage requirements:\n- 16:9 layout.\n- Text on image: \"Utah Turfgrass Match\" and subtext \"Personalized for [first_name] \u2022 [city], UT\".\n- Visual: subtle Utah landscape silhouette plus abstract grass texture; modern SaaS-style minimalism.\n- Colors: fresh greens plus neutral slate/white.\n- No logos required.\n\nUse image_generation to generate the image. Return JSON only with image_prompt, intended_use, and alt_text. Do not write the final HTML report in this step.",
@@ -654,7 +654,29 @@
       ],
       "tool_choice": "required",
       "output_format": {
-        "type": "text"
+        "type": "json_schema",
+        "name": "utah_turfgrass_cover_image",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "image_prompt": {
+              "type": "string"
+            },
+            "intended_use": {
+              "type": "string"
+            },
+            "alt_text": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "image_prompt",
+            "intended_use",
+            "alt_text"
+          ],
+          "additionalProperties": false
+        }
       }
     },
     {
@@ -662,7 +684,7 @@
       "step_description": "Turn the research packet and cover image into the final HTML report plus delivery payload.",
       "model": "gpt-5.2",
       "reasoning_effort": "high",
-      "service_tier": "priority",
+      "service_tier": "auto",
       "text_verbosity": "low",
       "max_output_tokens": 32000,
       "instructions": "Role: Senior Frontend Writer and lifecycle marketer.\n\nUse the structured packet from Step 0 plus the generated image URL(s) from Step 1.\n\nReturn a concise, standalone HTML5 document as raw text only. It must start with <!DOCTYPE html> and end with </html>. Keep the report compact: each section should use either 1 short paragraph or up to 3 bullets, and the overall document should stay lean and production-ready. Include these sections in order: title and subtitle; key takeaways; executive summary; top pick; 2 strong alternatives; local price and supplier snapshot; avoid costly re-dos; 30-day success plan; mini-FAQ; disclaimers and source note; CTA footer.\n\nDesign rules: use inline CSS only, mobile-responsive layout, print-friendly rules, CSS custom properties, and a clean Google Fonts pair. Use compact tables for suppliers and prices. Keep the tone local, practical, and confident.\n\nEmbed the generated image URL in the hero section. Also include a compact hidden <script type=\"application/json\" id=\"delivery-payload\"> block near the end of the HTML containing JSON for email, sms, crm_payload, and cover_image metadata.\n\nReturn HTML only, not JSON, not Markdown.",

@@ -141,7 +141,7 @@ export function WorkflowListTable({
   ) => {
     if (loadingJobs[workflowId]) {
       return (
-        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">
+        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
           <ArrowPathIcon className="w-3 h-3 mr-1 animate-spin" />
           Loading
         </div>
@@ -178,7 +178,7 @@ export function WorkflowListTable({
       );
     }
     return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
         No documents
       </span>
     );
@@ -190,7 +190,7 @@ export function WorkflowListTable({
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none transition-colors"
+          className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent focus:outline-none transition-colors"
         >
           <EllipsisVerticalIcon className="w-5 h-5" aria-hidden="true" />
         </button>
@@ -199,7 +199,7 @@ export function WorkflowListTable({
         align="end"
         side="bottom"
         sideOffset={8}
-        className="w-48 rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black/5 dark:ring-white/10 z-20"
+        className="w-48 rounded-lg bg-card shadow-lg ring-1 ring-black/5 dark:ring-white/10 z-20"
       >
         <div className="px-1 py-1">
           <DropdownMenuItem
@@ -207,7 +207,7 @@ export function WorkflowListTable({
               e.stopPropagation();
               router.push(`/dashboard/workflows/${workflow.workflow_id}`);
             }}
-            className="group flex w-full items-center rounded-md px-2 py-2 text-sm text-gray-700 dark:text-gray-300 focus:bg-primary-50 focus:text-primary-700 dark:focus:bg-primary-900/20 dark:focus:text-primary-300"
+            className="group flex w-full items-center rounded-md px-2 py-2 text-sm text-foreground focus:bg-primary-50 focus:text-primary-700 dark:focus:bg-primary-900/20 dark:focus:text-primary-300"
           >
             <EyeIcon className="mr-2 h-4 w-4" aria-hidden="true" />
             View Details
@@ -217,23 +217,23 @@ export function WorkflowListTable({
               e.stopPropagation();
               router.push(`/dashboard/workflows/${workflow.workflow_id}/edit`);
             }}
-            className="group flex w-full items-center rounded-md px-2 py-2 text-sm text-gray-700 dark:text-gray-300 focus:bg-primary-50 focus:text-primary-700 dark:focus:bg-primary-900/20 dark:focus:text-primary-300"
+            className="group flex w-full items-center rounded-md px-2 py-2 text-sm text-foreground focus:bg-primary-50 focus:text-primary-700 dark:focus:bg-primary-900/20 dark:focus:text-primary-300"
           >
             <PencilIcon className="mr-2 h-4 w-4" aria-hidden="true" />
             Edit Lead Magnet
           </DropdownMenuItem>
         </div>
-        <DropdownMenuSeparator className="bg-gray-100 dark:bg-gray-700" />
+        <DropdownMenuSeparator className="bg-muted" />
         <div className="px-1 py-1">
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
               handleMove(workflow.workflow_id);
             }}
-            className="group flex w-full items-center rounded-md px-2 py-2 text-sm text-gray-700 dark:text-gray-300 focus:bg-gray-50 dark:focus:bg-gray-700"
+            className="group flex w-full items-center rounded-md px-2 py-2 text-sm text-foreground focus:bg-accent"
           >
             <FolderArrowDownIcon
-              className="mr-2 h-4 w-4 text-gray-400"
+              className="mr-2 h-4 w-4 text-muted-foreground"
               aria-hidden="true"
             />
             Move to Folder
@@ -244,17 +244,17 @@ export function WorkflowListTable({
                 e.stopPropagation();
                 copyToClipboard(formUrl, workflow.workflow_id);
               }}
-              className="group flex w-full items-center rounded-md px-2 py-2 text-sm text-gray-700 dark:text-gray-300 focus:bg-gray-50 dark:focus:bg-gray-700"
+              className="group flex w-full items-center rounded-md px-2 py-2 text-sm text-foreground focus:bg-accent"
             >
               <ClipboardIcon
-                className="mr-2 h-4 w-4 text-gray-400"
+                className="mr-2 h-4 w-4 text-muted-foreground"
                 aria-hidden="true"
               />
               Copy Form Link
             </DropdownMenuItem>
           )}
         </div>
-        <DropdownMenuSeparator className="bg-gray-100 dark:bg-gray-700" />
+        <DropdownMenuSeparator className="bg-muted" />
         <div className="px-1 py-1">
           <DropdownMenuItem
             onClick={(e) => {
@@ -275,19 +275,19 @@ export function WorkflowListTable({
     if (hasWorkflows) {
       // Empty search results
       return (
-        <div className="bg-white dark:bg-card rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center max-w-lg mx-auto mt-12">
-          <div className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600 mb-4">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-12 text-center max-w-lg mx-auto mt-12">
+          <div className="mx-auto h-12 w-12 text-muted-foreground/40 mb-4">
             <MagnifyingGlassIcon className="h-full w-full" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <h3 className="text-lg font-medium text-foreground mb-2">
             No matching lead magnets
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
+          <p className="text-muted-foreground mb-6">
             Try adjusting your search query or filters.
           </p>
           <button
             onClick={onClearSearch}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            className="inline-flex items-center px-4 py-2 border border-border rounded-lg shadow-sm text-sm font-medium text-foreground bg-card hover:bg-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
           >
             Clear search
           </button>
@@ -296,14 +296,14 @@ export function WorkflowListTable({
     } else {
       // No workflows at all
       return (
-        <div className="bg-white dark:bg-card rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center max-w-lg mx-auto mt-12">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-12 text-center max-w-lg mx-auto mt-12">
           <div className="mx-auto h-12 w-12 bg-primary-100 dark:bg-primary-900/20 rounded-xl flex items-center justify-center mb-4">
             <PlusIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <h3 className="text-lg font-medium text-foreground mb-2">
             No lead magnets yet
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
+          <p className="text-muted-foreground mb-6">
             Get started by creating your first AI-powered lead magnet workflow.
           </p>
           <button
@@ -330,7 +330,7 @@ export function WorkflowListTable({
           return (
             <div
               key={workflow.workflow_id}
-              className="group relative bg-white dark:bg-card rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 cursor-pointer transition-all hover:shadow-md active:scale-[0.99]"
+              className="group relative bg-card rounded-xl shadow-sm border border-border p-4 cursor-pointer transition-all hover:shadow-md active:scale-[0.99]"
               onClick={() =>
                 router.push(`/dashboard/workflows/${workflow.workflow_id}`)
               }
@@ -341,11 +341,11 @@ export function WorkflowListTable({
                     <DocumentTextIcon className="h-6 w-6" />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    <div className="text-sm font-semibold text-foreground truncate">
                       {workflow.workflow_name}
                     </div>
                     {workflow.workflow_description && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                      <div className="text-xs text-muted-foreground line-clamp-2">
                         {workflow.workflow_description}
                       </div>
                     )}
@@ -358,7 +358,7 @@ export function WorkflowListTable({
 
               <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
                     Form
                   </span>
                   {workflow.form ? (
@@ -376,39 +376,39 @@ export function WorkflowListTable({
                         <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5 flex-shrink-0" />
                       </a>
                     ) : (
-                      <span className="text-gray-900 dark:text-white">
+                      <span className="text-foreground">
                         {workflow.form.form_name}
                       </span>
                     )
                   ) : (
-                    <span className="text-gray-400 italic">
+                    <span className="text-muted-foreground italic">
                       No form attached
                     </span>
                   )}
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
                     Created
                   </span>
-                  <span className="text-gray-700 dark:text-gray-200">
+                  <span className="text-foreground">
                     {formatRelativeTime(workflow.created_at)}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
                     Updated
                   </span>
-                  <span className="text-gray-700 dark:text-gray-200">
+                  <span className="text-foreground">
                     {formatRelativeTime(
                       workflow.updated_at || workflow.created_at,
                     )}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
                     Last used
                   </span>
-                  <span className="text-gray-700 dark:text-gray-200">
+                  <span className="text-foreground">
                     {latestJob ? formatRelativeTime(latestJob.created_at) : "-"}
                   </span>
                 </div>
@@ -423,7 +423,7 @@ export function WorkflowListTable({
                     latestJob,
                   )}
                 </div>
-                <span className="text-xs font-medium text-gray-400 dark:text-gray-500">
+                <span className="text-xs font-medium text-muted-foreground/70">
                   View details
                 </span>
               </div>
@@ -432,15 +432,15 @@ export function WorkflowListTable({
         })}
       </div>
 
-      <div className="hidden md:block bg-white dark:bg-card rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="hidden md:block bg-card rounded-xl shadow-sm border border-border overflow-hidden">
         {/* Desktop Table View */}
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50/50 dark:bg-gray-800/50">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/40">
               <tr>
                 <th
                   scope="col"
-                  className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors select-none"
+                  className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted/60 transition-colors select-none"
                   onClick={() => handleSort("name")}
                 >
                   <div className="flex items-center gap-1">
@@ -455,7 +455,7 @@ export function WorkflowListTable({
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors select-none"
+                  className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted/60 transition-colors select-none"
                   onClick={() => handleSort("form")}
                 >
                   <div className="flex items-center gap-1">
@@ -470,7 +470,7 @@ export function WorkflowListTable({
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors select-none"
+                  className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted/60 transition-colors select-none"
                   onClick={() => handleSort("created_at")}
                 >
                   <div className="flex items-center gap-1">
@@ -485,7 +485,7 @@ export function WorkflowListTable({
                 </th>
                 <th
                   scope="col"
-                  className="hidden xl:table-cell px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors select-none"
+                  className="hidden xl:table-cell px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted/60 transition-colors select-none"
                   onClick={() => handleSort("updated_at")}
                 >
                   <div className="flex items-center gap-1">
@@ -500,7 +500,7 @@ export function WorkflowListTable({
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/50 transition-colors select-none"
+                  className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted/60 transition-colors select-none"
                   onClick={() => handleSort("last_generated")}
                 >
                   <div className="flex items-center gap-1">
@@ -515,7 +515,7 @@ export function WorkflowListTable({
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 >
                   Latest Report
                 </th>
@@ -524,7 +524,7 @@ export function WorkflowListTable({
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-card divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="bg-card divide-y divide-border">
               {workflows.map((workflow) => {
                 const formUrl = workflow.form
                   ? publicUrlFor(workflow.form)
@@ -535,7 +535,7 @@ export function WorkflowListTable({
                 return (
                   <tr
                     key={workflow.workflow_id}
-                    className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer group"
+                    className="hover:bg-muted/40 transition-colors cursor-pointer group"
                     onClick={() =>
                       router.push(
                         `/dashboard/workflows/${workflow.workflow_id}`,
@@ -548,18 +548,18 @@ export function WorkflowListTable({
                           <DocumentTextIcon className="h-6 w-6" />
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                          <div className="text-sm font-medium text-foreground group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                             {workflow.workflow_name}
                           </div>
                           {workflow.workflow_description && (
-                            <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
+                            <div className="text-sm text-muted-foreground truncate max-w-xs">
                               {workflow.workflow_description}
                             </div>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
                       {workflow.form ? (
                         formUrl ? (
                           <a
@@ -575,36 +575,36 @@ export function WorkflowListTable({
                             <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5 flex-shrink-0" />
                           </a>
                         ) : (
-                          <span className="text-gray-900 dark:text-white">
+                          <span className="text-foreground">
                             {workflow.form.form_name}
                           </span>
                         )
                       ) : (
-                        <span className="text-gray-400 italic">
+                        <span className="text-muted-foreground italic">
                           No form attached
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       <div className="flex items-center gap-1.5">
                         {formatRelativeTime(workflow.created_at)}
                       </div>
                     </td>
-                    <td className="hidden xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="hidden xl:table-cell px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       <div className="flex items-center gap-1.5">
-                        <ClockIcon className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <ClockIcon className="w-4 h-4 text-muted-foreground/70" />
                         {formatRelativeTime(
                           workflow.updated_at || workflow.created_at,
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {latestJob ? (
-                        <div className="flex items-center gap-1.5 text-gray-900 dark:text-white">
+                        <div className="flex items-center gap-1.5 text-foreground">
                           {formatRelativeTime(latestJob.created_at)}
                         </div>
                       ) : (
-                        <span className="text-gray-400 dark:text-gray-600 text-xs">
+                        <span className="text-muted-foreground/70 text-xs">
                           -
                         </span>
                       )}

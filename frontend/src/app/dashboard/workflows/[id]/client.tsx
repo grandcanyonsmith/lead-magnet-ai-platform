@@ -198,17 +198,17 @@ export default function WorkflowDetailPage() {
       <div className="max-w-7xl mx-auto space-y-8 animate-pulse px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-end">
           <div className="space-y-3">
-            <div className="h-8 bg-gray-200 dark:bg-secondary rounded w-64"></div>
-            <div className="h-4 bg-gray-100 dark:bg-secondary rounded w-96"></div>
+            <div className="h-8 bg-muted rounded w-64"></div>
+            <div className="h-4 bg-muted rounded w-96"></div>
           </div>
           <div className="flex gap-2">
-            <div className="h-10 bg-gray-200 dark:bg-secondary rounded-lg w-24"></div>
-            <div className="h-10 bg-gray-200 dark:bg-secondary rounded-lg w-24"></div>
+            <div className="h-10 bg-muted rounded-lg w-24"></div>
+            <div className="h-10 bg-muted rounded-lg w-24"></div>
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-96 bg-white dark:bg-card border border-gray-200 dark:border-border rounded-xl"></div>
-          <div className="h-96 bg-white dark:bg-card border border-gray-200 dark:border-border rounded-xl"></div>
+          <div className="lg:col-span-2 h-96 bg-card border border-border rounded-xl"></div>
+          <div className="h-96 bg-card border border-border rounded-xl"></div>
         </div>
       </div>
     );
@@ -219,7 +219,7 @@ export default function WorkflowDetailPage() {
       <div className="max-w-3xl mx-auto mt-12 px-4 sm:px-6">
         <button
           onClick={() => router.back()}
-          className="group flex items-center text-sm font-medium text-gray-500 dark:text-muted-foreground hover:text-gray-900 dark:hover:text-foreground mb-6 transition-colors"
+          className="group flex items-center text-sm font-medium text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeftIcon className="w-4 h-4 mr-1 group-hover:-translate-x-0.5 transition-transform" />
           Back
@@ -243,15 +243,15 @@ export default function WorkflowDetailPage() {
       <div className="mb-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-foreground tracking-tight truncate">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight truncate">
               {workflow.workflow_name}
             </h1>
             {workflow.workflow_description ? (
-              <p className="mt-2 text-sm text-gray-500 dark:text-muted-foreground leading-relaxed max-w-3xl">
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed max-w-3xl">
                 {workflow.workflow_description}
               </p>
             ) : (
-              <p className="mt-2 text-sm text-gray-400 dark:text-muted-foreground/70 italic">
+              <p className="mt-2 text-sm text-muted-foreground/70 italic">
                 No description provided
               </p>
             )}
@@ -262,7 +262,7 @@ export default function WorkflowDetailPage() {
               onClick={() =>
                 router.push(`/dashboard/workflows/${workflowId}/edit`)
               }
-              className="inline-flex w-full items-center justify-center px-4 py-2 border border-gray-300 dark:border-border text-gray-700 dark:text-foreground font-bold rounded-lg hover:bg-gray-50 dark:hover:bg-secondary transition-all shadow-sm text-sm sm:w-auto"
+              className="inline-flex w-full items-center justify-center px-4 py-2 border border-border text-foreground font-bold rounded-lg hover:bg-accent transition-all shadow-sm text-sm sm:w-auto"
             >
               <PencilIcon className="w-4 h-4 mr-2" />
               Edit
@@ -282,11 +282,11 @@ export default function WorkflowDetailPage() {
         {/* Main Content: Info & Form */}
         <div className="lg:col-span-2 space-y-8">
           {/* Form Status Card */}
-          <section className="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-border shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30 flex items-center justify-between">
+          <section className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-border/60 bg-muted/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <IdentificationIcon className="h-5 w-5 text-gray-400 dark:text-muted-foreground" />
-                <h2 className="text-sm font-bold text-gray-900 dark:text-foreground uppercase tracking-wider">
+                <IdentificationIcon className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">
                   Public Form
                 </h2>
               </div>
@@ -302,10 +302,10 @@ export default function WorkflowDetailPage() {
                 <div className="space-y-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-foreground">
+                      <h3 className="text-lg font-bold text-foreground">
                         {workflow.form.form_name}
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-muted-foreground mt-1 break-all sm:break-normal sm:truncate">
+                      <p className="text-sm text-muted-foreground mt-1 break-all sm:break-normal sm:truncate">
                         {workflow.form.public_slug &&
                           buildPublicFormUrl(
                             workflow.form.public_slug,
@@ -355,7 +355,7 @@ export default function WorkflowDetailPage() {
                         "flex items-center justify-center gap-2 px-4 py-2.5 font-bold rounded-xl transition-all shadow-md active:scale-[0.98]",
                         workflow.form.public_slug
                           ? "bg-primary-600 dark:bg-primary text-white dark:text-primary-foreground hover:bg-primary-700 dark:hover:bg-primary/90 cursor-pointer"
-                          : "bg-gray-400 dark:bg-gray-600 text-white cursor-not-allowed opacity-60"
+                          : "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
                       )}
                     >
                       <ArrowTopRightOnSquareIcon className="w-5 h-5" />
@@ -367,22 +367,22 @@ export default function WorkflowDetailPage() {
                           `/dashboard/forms/${workflow.form.form_id}/edit`,
                         )
                       }
-                      className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 dark:border-border text-gray-700 dark:text-foreground font-bold rounded-xl hover:bg-gray-50 dark:hover:bg-secondary transition-all shadow-sm active:scale-[0.98]"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 border border-border text-foreground font-bold rounded-xl hover:bg-accent transition-all shadow-sm active:scale-[0.98]"
                     >
-                      <PencilIcon className="w-5 h-5 text-gray-400 dark:text-muted-foreground" />
+                      <PencilIcon className="w-5 h-5 text-muted-foreground" />
                       Configure Fields
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="py-8 text-center bg-gray-50/50 dark:bg-secondary/30 rounded-xl border-2 border-dashed border-gray-200 dark:border-border">
-                  <div className="mx-auto h-12 w-12 text-gray-300 dark:text-muted-foreground/40 mb-3">
+                <div className="py-8 text-center bg-muted/40 rounded-xl border-2 border-dashed border-border">
+                  <div className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3">
                     <LinkIcon className="h-full w-full" />
                   </div>
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-foreground">
+                  <h3 className="text-sm font-bold text-foreground">
                     No Form Linked
                   </h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-muted-foreground mb-6">
+                  <p className="mt-1 text-sm text-muted-foreground mb-6">
                     Create a form to start collecting leads for this magnet.
                   </p>
                   <button
@@ -408,35 +408,35 @@ export default function WorkflowDetailPage() {
           </section>
 
           {/* Configuration Summary */}
-          <section className="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-border shadow-sm overflow-hidden">
-            <div className="px-6 py-5 border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30 flex items-center gap-2">
-              <Cog6ToothIcon className="h-5 w-5 text-gray-400 dark:text-muted-foreground" />
-              <h2 className="text-sm font-bold text-gray-900 dark:text-foreground uppercase tracking-wider">
+          <section className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-border/60 bg-muted/40 flex items-center gap-2">
+              <Cog6ToothIcon className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">
                 Tool Settings
               </h2>
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
               <div className="space-y-6">
                 <div>
-                  <h4 className="text-[11px] font-bold text-gray-400 dark:text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
                     <FingerPrintIcon className="h-3.5 w-3.5" />
                     System IDs
                   </h4>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-[10px] text-gray-400 dark:text-muted-foreground/70 mb-0.5">
+                      <p className="text-[10px] text-muted-foreground/70 mb-0.5">
                         Template ID
                       </p>
-                      <p className="text-xs font-mono text-gray-700 dark:text-foreground bg-gray-50 dark:bg-secondary px-2 py-1 rounded block max-w-full break-all">
+                      <p className="text-xs font-mono text-foreground bg-muted px-2 py-1 rounded block max-w-full break-all">
                         {workflow.template_id || "None"}
                       </p>
                     </div>
                     {workflow.template_version && (
                       <div>
-                        <p className="text-[10px] text-gray-400 dark:text-muted-foreground/70 mb-0.5">
+                        <p className="text-[10px] text-muted-foreground/70 mb-0.5">
                           Template Version
                         </p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-foreground">
+                        <p className="text-sm font-medium text-foreground">
                           v{workflow.template_version}
                         </p>
                       </div>
@@ -446,33 +446,33 @@ export default function WorkflowDetailPage() {
 
                 {workflow.delivery_webhook_url && (
                   <div>
-                    <h4 className="text-[11px] font-bold text-gray-400 dark:text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
                       <LinkIcon className="h-3.5 w-3.5" />
                       Webhooks
                     </h4>
-                    <p className="text-[10px] text-gray-400 dark:text-muted-foreground/70 mb-0.5">
+                    <p className="text-[10px] text-muted-foreground/70 mb-0.5">
                       Webhook Endpoint
                     </p>
-                    <p className="text-xs font-mono text-gray-700 dark:text-foreground bg-blue-50/50 dark:bg-primary/10 px-2 py-1 rounded break-all leading-relaxed border border-blue-100 dark:border-primary/20">
+                    <p className="text-xs font-mono text-foreground bg-blue-50/50 dark:bg-primary/10 px-2 py-1 rounded break-all leading-relaxed border border-blue-100 dark:border-primary/20">
                       {workflow.delivery_webhook_url}
                     </p>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-6 border-t md:border-t-0 md:border-l border-gray-100 dark:border-border pt-6 md:pt-0 md:pl-8">
+              <div className="space-y-6 border-t md:border-t-0 md:border-l border-border/60 pt-6 md:pt-0 md:pl-8">
                 <div>
-                  <h4 className="text-[11px] font-bold text-gray-400 dark:text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
                     <CalendarIcon className="h-3.5 w-3.5" />
                     Timeline
                   </h4>
                   <div className="space-y-4 mt-3">
-                    <div className="relative pl-4 border-l-2 border-gray-100 dark:border-border py-0.5">
-                      <div className="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full bg-gray-200 dark:bg-secondary border-2 border-white dark:border-card shadow-sm" />
-                      <p className="text-[10px] text-gray-400 dark:text-muted-foreground/70 uppercase font-bold">
+                    <div className="relative pl-4 border-l-2 border-border/60 py-0.5">
+                      <div className="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full bg-muted border-2 border-white dark:border-card shadow-sm" />
+                      <p className="text-[10px] text-muted-foreground/70 uppercase font-bold">
                         Created
                       </p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-foreground mt-0.5">
+                      <p className="text-sm font-medium text-foreground mt-0.5">
                         {workflow.created_at
                           ? new Date(workflow.created_at).toLocaleString(
                               undefined,
@@ -486,7 +486,7 @@ export default function WorkflowDetailPage() {
                       <p className="text-[10px] text-primary-500 dark:text-primary uppercase font-bold">
                         Last Updated
                       </p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-foreground mt-0.5">
+                      <p className="text-sm font-medium text-foreground mt-0.5">
                         {workflow.updated_at
                           ? new Date(workflow.updated_at).toLocaleString(
                               undefined,
@@ -500,11 +500,11 @@ export default function WorkflowDetailPage() {
 
                 {workflow.delivery_phone && (
                   <div>
-                    <h4 className="text-[11px] font-bold text-gray-400 dark:text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
                       <ChatBubbleLeftRightIcon className="h-3.5 w-3.5" />
                       SMS Alerts
                     </h4>
-                    <p className="text-sm font-medium text-gray-900 dark:text-foreground bg-gray-50 dark:bg-secondary px-3 py-2 rounded-lg inline-block">
+                    <p className="text-sm font-medium text-foreground bg-muted px-3 py-2 rounded-lg inline-block">
                       {workflow.delivery_phone}
                     </p>
                   </div>
@@ -516,11 +516,11 @@ export default function WorkflowDetailPage() {
 
         {/* Sidebar: Recent Runs */}
         <div className="space-y-6">
-          <section className="bg-white dark:bg-card rounded-2xl border border-gray-200 dark:border-border shadow-sm overflow-hidden lg:sticky lg:top-8">
-            <div className="px-6 py-5 border-b border-gray-100 dark:border-border bg-gray-50/50 dark:bg-secondary/30 flex items-center justify-between">
+          <section className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden lg:sticky lg:top-8">
+            <div className="px-6 py-5 border-b border-border/60 bg-muted/40 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ClockIcon className="h-5 w-5 text-gray-400 dark:text-muted-foreground" />
-                <h2 className="text-sm font-bold text-gray-900 dark:text-foreground uppercase tracking-wider">
+                <ClockIcon className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">
                   Recent Leads
                 </h2>
               </div>
@@ -538,10 +538,10 @@ export default function WorkflowDetailPage() {
             <div className="divide-y divide-gray-100 dark:divide-border">
               {jobs.length === 0 ? (
                 <div className="px-6 py-12 text-center">
-                  <div className="h-10 w-10 text-gray-200 dark:text-muted-foreground/40 mx-auto mb-3">
+                  <div className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3">
                     <DocumentTextIcon className="h-full w-full" />
                   </div>
-                  <p className="text-sm text-gray-400 dark:text-muted-foreground font-medium tracking-tight">
+                  <p className="text-sm text-muted-foreground font-medium tracking-tight">
                     No generation history yet
                   </p>
                 </div>
@@ -580,12 +580,12 @@ export default function WorkflowDetailPage() {
                       onClick={() =>
                         router.push(`/dashboard/jobs/${job.job_id}`)
                       }
-                      className="group p-4 hover:bg-gray-50 dark:hover:bg-secondary/50 transition-colors cursor-pointer border-b border-gray-100 dark:border-border last:border-0"
+                      className="group p-4 hover:bg-muted/40 transition-colors cursor-pointer border-b border-border/60 last:border-0"
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="min-w-0 pr-2">
                           <h3
-                            className="text-sm font-bold text-gray-900 dark:text-foreground truncate"
+                            className="text-sm font-bold text-foreground truncate"
                             title={submitterName}
                           >
                             {submitterName}
@@ -609,12 +609,12 @@ export default function WorkflowDetailPage() {
 
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col">
-                          <span className="text-xs font-medium text-gray-900 dark:text-foreground">
+                          <span className="text-xs font-medium text-foreground">
                             {job.created_at
                               ? formatRelativeTime(job.created_at)
                               : "—"}
                           </span>
-                          <span className="text-[10px] text-gray-400 dark:text-muted-foreground/70 mt-0.5">
+                          <span className="text-[10px] text-muted-foreground/70 mt-0.5">
                             {job.created_at
                               ? new Date(job.created_at).toLocaleDateString()
                               : ""}
@@ -622,7 +622,7 @@ export default function WorkflowDetailPage() {
                         </div>
 
                         <div className="flex flex-col items-end gap-2">
-                          <span className="text-xs font-mono text-gray-500 dark:text-muted-foreground">
+                          <span className="text-xs font-mono text-muted-foreground">
                             {durationSeconds
                               ? formatDuration(durationSeconds)
                               : "—"}

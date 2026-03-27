@@ -92,7 +92,7 @@ export default function WorkflowsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="space-y-6">
       <WorkflowHeader
         currentFolder={currentFolder}
         setCurrentFolderId={setCurrentFolderId}

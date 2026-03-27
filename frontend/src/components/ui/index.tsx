@@ -38,6 +38,8 @@ export {
   DropdownMenuShortcut,
 } from "./DropdownMenu";
 
+export { ScrollArea, ScrollBar } from "./ScrollArea";
+
 import { Status } from "@/types/common";
 import { STATUS_LABELS, STATUS_COLORS } from "@/constants/statuses";
 

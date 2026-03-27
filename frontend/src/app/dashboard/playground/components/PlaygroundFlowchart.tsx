@@ -5,6 +5,7 @@ import { usePlaygroundContext } from "../context/PlaygroundContext";
 const WorkflowFlowchart = dynamic(
   () => import("../../workflows/components/WorkflowFlowchart"),
   {
+    ssr: false,
     loading: () => (
       <div className="h-[600px] w-full rounded-3xl border border-slate-200 dark:border-border bg-slate-50/70 dark:bg-card/60 flex items-center justify-center text-sm text-muted-foreground">
         Loading flowchart...

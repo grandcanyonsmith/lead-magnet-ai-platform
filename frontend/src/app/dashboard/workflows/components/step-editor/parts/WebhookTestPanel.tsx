@@ -51,13 +51,13 @@ export function WebhookTestPanel({
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-card shadow-sm overflow-hidden mt-6">
-      <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20 flex items-center justify-between gap-4">
+    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden mt-6">
+      <div className="px-5 py-4 border-b border-border bg-muted/40 flex items-center justify-between gap-4">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             Test request
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Sends the request server-side and shows what was sent and what came
             back.
           </p>
@@ -70,8 +70,8 @@ export function WebhookTestPanel({
           }
           className={`px-4 py-2 text-sm font-medium rounded-lg transition-all active:scale-[0.98] ${
             httpTestLoading
-              ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed border border-gray-200 dark:border-gray-700"
-              : "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-200 shadow-sm"
+              ? "bg-muted text-muted-foreground cursor-not-allowed border border-border"
+              : "bg-foreground text-background hover:bg-foreground/90 shadow-sm"
           }`}
         >
           {httpTestLoading
@@ -84,10 +84,10 @@ export function WebhookTestPanel({
 
       <div className="p-4 space-y-5">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Use data from a previous run (optional)
           </label>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          <p className="text-xs text-muted-foreground mb-2">
             Select a completed run so placeholders like{" "}
             <span className="font-mono">{"{{steps.0.output}}"}</span> and{" "}
             <span className="font-mono">{"{{steps.0.artifact_url}}"}</span>{" "}
@@ -95,7 +95,7 @@ export function WebhookTestPanel({
           </p>
 
           {!workflowId ? (
-            <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30 px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
+            <div className="rounded-lg border border-dashed border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
               Save this workflow to enable run selection.
             </div>
           ) : (
@@ -105,7 +105,7 @@ export function WebhookTestPanel({
                 onChange={(nextValue) => {
                   setSelectedRunId(nextValue);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
                 placeholder="No run selected"
               >
                 <option value="">No run selected</option>
@@ -127,7 +127,7 @@ export function WebhookTestPanel({
               {selectedRunId && (
                 <div className="mt-2">
                   {selectedRunLoading && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-muted-foreground">
                       Loading run data…
                     </p>
                   )}
@@ -138,7 +138,7 @@ export function WebhookTestPanel({
                   )}
                   {selectedRunVars?.steps &&
                     Array.isArray(selectedRunVars.steps) && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-muted-foreground">
                         Loaded{" "}
                         <span className="font-medium">
                           {selectedRunVars.steps.length}
@@ -154,7 +154,7 @@ export function WebhookTestPanel({
 
         <div>
           <div className="flex items-center justify-between gap-2 mb-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="block text-sm font-medium text-foreground">
               Test values (optional)
             </label>
             <button
@@ -166,7 +166,7 @@ export function WebhookTestPanel({
               Add value
             </button>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          <p className="text-xs text-muted-foreground mb-3">
             These replace <span className="font-mono">{"{{key}}"}</span>{" "}
             placeholders during testing.
           </p>
@@ -184,7 +184,7 @@ export function WebhookTestPanel({
                     setHttpTestValues(newVals);
                   }}
                   placeholder="key"
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
+                  className="flex-1 px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
                 />
                 <input
                   type="text"
@@ -197,7 +197,7 @@ export function WebhookTestPanel({
                     setHttpTestValues(newVals);
                   }}
                   placeholder="value"
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
+                  className="flex-1 px-3 py-2 border border-border rounded-lg bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm transition-all"
                 />
                 <button
                   type="button"
@@ -206,7 +206,7 @@ export function WebhookTestPanel({
                     delete newVals[key];
                     setHttpTestValues(newVals);
                   }}
-                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                   title="Remove value"
                 >
                   <FiTrash2 className="w-4 h-4" />
@@ -263,13 +263,13 @@ export function WebhookTestPanel({
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-                    <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  <div className="rounded-xl border border-border bg-card overflow-hidden">
+                    <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border bg-muted/50 text-sm font-semibold text-foreground">
                       <span>Sent</span>
                       <button
                         type="button"
                         onClick={() => copyJson(sentPayload, "Request")}
-                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
                       >
                         <FiCopy className="w-3.5 h-3.5" />
                         Copy
@@ -285,13 +285,13 @@ export function WebhookTestPanel({
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-                    <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  <div className="rounded-xl border border-border bg-card overflow-hidden">
+                    <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border bg-muted/50 text-sm font-semibold text-foreground">
                       <span>Response</span>
                       <button
                         type="button"
                         onClick={() => copyJson(responsePayload, "Response")}
-                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
                       >
                         <FiCopy className="w-3.5 h-3.5" />
                         Copy

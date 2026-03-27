@@ -272,7 +272,7 @@ function JobsContent() {
 
   if (loading) {
     return (
-      <div className="space-y-8 animate-pulse max-w-7xl mx-auto">
+      <div className="space-y-8 animate-pulse">
         <div className="flex justify-between items-end">
           <div className="space-y-3">
             <div className="h-8 bg-gray-200 dark:bg-secondary rounded w-64"></div>
@@ -309,7 +309,7 @@ function JobsContent() {
       setWorkflowFilter={setWorkflowFilter}
       workflows={workflows}
     >
-      <div className="max-w-7xl mx-auto">
+      <div className="space-y-6">
         <PageHeader
           heading="Leads & Results"
           description="Track your collected leads and generated reports."
@@ -521,7 +521,7 @@ function JobsContent() {
 
 export default function JobsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+    <Suspense fallback={<div className="min-h-screen bg-muted/30" />}>
       <JobsContent />
     </Suspense>
   );

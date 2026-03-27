@@ -37,7 +37,12 @@ test.describe('Authentication', () => {
     await expect(page).toHaveURL(/\/dashboard|\/onboarding/)
   })
 
-  test.skip(!!process.env.CI, 'Skipped in CI: User menu button not reliably found in CI environment', async ({ page, login, logout }) => {
+  test('should logout successfully', async ({ page, login, logout }) => {
+    test.skip(
+      !!process.env.CI,
+      'Skipped in CI: User menu button not reliably found in CI environment',
+    )
+
     // Skipped in CI: User menu button not reliably found in test environment
     // This appears to be an environment-specific issue with sidebar rendering
     // Logout functionality works in manual testing and local runs

@@ -172,7 +172,7 @@ export default function AgencyUsersPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="space-y-4 sm:space-y-6">
       <div className="mb-4 sm:mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
           <FiUsers className="w-5 h-5 sm:w-6 sm:h-6" />

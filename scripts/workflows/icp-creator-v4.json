@@ -1,6 +1,6 @@
 {
   "workflow_name": "ICP Creator V4",
-  "workflow_description": "Evidence-backed 360° Ideal Customer Profile with structured research, automation-safe outputs, and deterministic brand asset generation. 3-step pipeline: (1) deep market & competitive intelligence via web research, (2) ICP synthesis merging research with form data into the final 12-section JSON, (3) premium HTML deliverable with generated brand assets.",
+  "workflow_description": "Evidence-backed 360\u00b0 Ideal Customer Profile with structured research, automation-safe outputs, and deterministic brand asset generation. 3-step pipeline: (1) deep market & competitive intelligence via web research, (2) ICP synthesis merging research with form data into the final 12-section JSON, (3) premium HTML deliverable with generated brand assets.",
   "steps": [
     {
       "step_name": "Deep Market & Competitive Intelligence",
@@ -9,15 +9,17 @@
       "reasoning_effort": "high",
       "service_tier": "auto",
       "max_output_tokens": 65536,
-      "instructions": "Act as a Senior Competitive Intelligence Analyst and Market Researcher.\n\nYour task: Conduct deep web research to gather raw intelligence that will feed into a comprehensive Ideal Customer Profile. You are the RESEARCH step — your job is to find real data, real URLs, real quotes, and real competitive intelligence. Do NOT synthesize or polish — just gather and structure the evidence.\n\n## Input\nUse the form submission fields as your research brief:\n- [brand_name] — the brand to position against competitors\n- [website_url] — extract brand colors, fonts, visual style from this site\n- [industry], [target_audience] — defines the market to research\n- [product_service] — the offering to compare against competitors\n- [pain_points] — seed topics for forum/community research\n\n## Research Assignments\n\n### 1. Competitor Intelligence (MOST IMPORTANT — spend the most search effort here)\nFind 4+ DIRECT competitors — companies selling similar products/services to the same audience.\nFor each direct competitor, you MUST find:\n- Real website URL (verify it loads)\n- Favicon URL (typically https://domain.com/favicon.ico)\n- What they actually sell (read their sales pages)\n- Their unique selling proposition\n- Real pricing (from their pricing pages, reviews, or sales calls documented online)\n- 4 specific, evidence-backed strengths (cite what you found)\n- 4 specific, evidence-backed weaknesses (cite gaps, complaints, reviews)\n- A 1-2 sentence assessment\n\nFind 3+ INDIRECT competitors — alternative solutions or platforms the audience might use instead.\nFor each: name, website, what they offer, where they overlap, why someone might choose them.\n\nFind 4+ INFLUENCERS the target audience follows:\n- Search YouTube, LinkedIn, and podcast directories for thought leaders in the industry\n- Get their real profile/channel URLs\n- Find actual subscriber/follower counts\n- Note their expertise area\n\nAlso capture:\n- Market gaps you identified (things no competitor does well)\n- The pricing landscape (range across all competitors)\n\n### 2. Media Landscape\nResearch what this specific audience actually reads, listens to, and watches:\n- 3+ BLOGS with real URLs and favicon URLs\n- 3+ BOOKS with Amazon URLs and cover image URLs (use m.media-amazon.com image URLs)\n- 3+ PODCASTS with real URLs and logo URLs\n- 2+ FORUMS or communities with real URLs and logo URLs\n- 3+ SOCIAL PLATFORMS they're active on with URLs and logo URLs\n\n### 3. Audience Research\nResearch the actual demographic and behavioral profile:\n- Age range, gender distribution, income range, geographic focus, education level, typical job titles, family status\n- Find 10+ REAL QUOTES from forums, Reddit, Facebook groups, reviews, or community discussions where this audience talks about their struggles and desires. Capture the source, exact quote (or close paraphrase), and the theme it relates to.\n- Document the language patterns: how they describe their pain points, what words they use for their aspirations\n- Document buying behavior patterns you observe\n- Document common objections found in reviews, forums, or competitor complaint threads\n\n### 4. Brand Style Extraction\nIf [website_url] is provided, visit it and extract:\n- Primary, secondary, and accent colors (hex codes) with descriptive names\n- Heading and body fonts (identify Google Font names if possible)\n- Overall visual style description\n- Note the source URL\n\nIf no website is provided or it's inaccessible, provide professional defaults appropriate for the industry.\n\n## Quality Requirements\n- Every URL must be real and verifiable — do NOT fabricate URLs\n- Every competitor must have real pricing data (even if approximate)\n- Forum quotes should reflect real language patterns (paraphrase if you can't get exact quotes)\n- Brand colors must be actual hex codes\n- Influencer audience sizes must be approximately accurate\n- Search extensively — make 15+ web searches across different angles",
+      "instructions": "Act as a Senior Competitive Intelligence Analyst and Market Researcher.\n\nYour task: Conduct deep web research to gather raw intelligence that will feed into a comprehensive Ideal Customer Profile. You are the RESEARCH step \u2014 your job is to find real data, real URLs, real quotes, and real competitive intelligence. Do NOT synthesize or polish \u2014 just gather and structure the evidence.\n\n## Input\nUse the form submission fields as your research brief:\n- [brand_name] \u2014 the brand to position against competitors\n- [website_url] \u2014 extract brand colors, fonts, visual style from this site\n- [industry], [target_audience] \u2014 defines the market to research\n- [product_service] \u2014 the offering to compare against competitors\n- [pain_points] \u2014 seed topics for forum/community research\n\n## Research Assignments\n\n### 1. Competitor Intelligence (MOST IMPORTANT \u2014 spend the most search effort here)\nFind 4+ DIRECT competitors \u2014 companies selling similar products/services to the same audience.\nFor each direct competitor, you MUST find:\n- Real website URL (verify it loads)\n- Favicon URL (typically https://domain.com/favicon.ico)\n- What they actually sell (read their sales pages)\n- Their unique selling proposition\n- Real pricing (from their pricing pages, reviews, or sales calls documented online)\n- 4 specific, evidence-backed strengths (cite what you found)\n- 4 specific, evidence-backed weaknesses (cite gaps, complaints, reviews)\n- A 1-2 sentence assessment\n\nFind 3+ INDIRECT competitors \u2014 alternative solutions or platforms the audience might use instead.\nFor each: name, website, what they offer, where they overlap, why someone might choose them.\n\nFind 4+ INFLUENCERS the target audience follows:\n- Search YouTube, LinkedIn, and podcast directories for thought leaders in the industry\n- Get their real profile/channel URLs\n- Find actual subscriber/follower counts\n- Note their expertise area\n\nAlso capture:\n- Market gaps you identified (things no competitor does well)\n- The pricing landscape (range across all competitors)\n\n### 2. Media Landscape\nResearch what this specific audience actually reads, listens to, and watches:\n- 3+ BLOGS with real URLs and favicon URLs\n- 3+ BOOKS with Amazon URLs and cover image URLs (use m.media-amazon.com image URLs)\n- 3+ PODCASTS with real URLs and logo URLs\n- 2+ FORUMS or communities with real URLs and logo URLs\n- 3+ SOCIAL PLATFORMS they're active on with URLs and logo URLs\n\n### 3. Audience Research\nResearch the actual demographic and behavioral profile:\n- Age range, gender distribution, income range, geographic focus, education level, typical job titles, family status\n- Find 10+ REAL QUOTES from forums, Reddit, Facebook groups, reviews, or community discussions where this audience talks about their struggles and desires. Capture the source, exact quote (or close paraphrase), and the theme it relates to.\n- Document the language patterns: how they describe their pain points, what words they use for their aspirations\n- Document buying behavior patterns you observe\n- Document common objections found in reviews, forums, or competitor complaint threads\n\n### 4. Brand Style Extraction\nIf [website_url] is provided, visit it and extract:\n- Primary, secondary, and accent colors (hex codes) with descriptive names\n- Heading and body fonts (identify Google Font names if possible)\n- Overall visual style description\n- Note the source URL\n\nIf no website is provided or it's inaccessible, provide professional defaults appropriate for the industry.\n\n## Quality Requirements\n- Every URL must be real and verifiable \u2014 do NOT fabricate URLs\n- Every competitor must have real pricing data (even if approximate)\n- Forum quotes should reflect real language patterns (paraphrase if you can't get exact quotes)\n- Brand colors must be actual hex codes\n- Influencer audience sizes must be approximately accurate\n- Search extensively \u2014 make 15+ web searches across different angles",
       "step_order": 0,
       "depends_on": [],
-      "tools": ["web_search"],
+      "tools": [
+        "web_search"
+      ],
       "tool_choice": "required",
       "output_format": {
         "type": "json_schema",
         "name": "icp_market_research",
-        "description": "Raw market intelligence gathered via web research — competitors, media, audience data, and brand extraction",
+        "description": "Raw market intelligence gathered via web research \u2014 competitors, media, audience data, and brand extraction",
         "strict": true,
         "schema": {
           "type": "object",
@@ -31,17 +33,51 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": { "type": "string" },
-                      "website": { "type": "string" },
-                      "logoUrl": { "type": "string" },
-                      "offering": { "type": "string" },
-                      "usp": { "type": "string" },
-                      "pricing": { "type": "string" },
-                      "strengths": { "type": "array", "items": { "type": "string" } },
-                      "weaknesses": { "type": "array", "items": { "type": "string" } },
-                      "notes": { "type": "string" }
+                      "name": {
+                        "type": "string"
+                      },
+                      "website": {
+                        "type": "string"
+                      },
+                      "logoUrl": {
+                        "type": "string"
+                      },
+                      "offering": {
+                        "type": "string"
+                      },
+                      "usp": {
+                        "type": "string"
+                      },
+                      "pricing": {
+                        "type": "string"
+                      },
+                      "strengths": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "weaknesses": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "notes": {
+                        "type": "string"
+                      }
                     },
-                    "required": ["name", "website", "logoUrl", "offering", "usp", "pricing", "strengths", "weaknesses", "notes"],
+                    "required": [
+                      "name",
+                      "website",
+                      "logoUrl",
+                      "offering",
+                      "usp",
+                      "pricing",
+                      "strengths",
+                      "weaknesses",
+                      "notes"
+                    ],
                     "additionalProperties": false
                   }
                 },
@@ -50,13 +86,29 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": { "type": "string" },
-                      "website": { "type": "string" },
-                      "offering": { "type": "string" },
-                      "overlap": { "type": "string" },
-                      "whyChooseThem": { "type": "string" }
+                      "name": {
+                        "type": "string"
+                      },
+                      "website": {
+                        "type": "string"
+                      },
+                      "offering": {
+                        "type": "string"
+                      },
+                      "overlap": {
+                        "type": "string"
+                      },
+                      "whyChooseThem": {
+                        "type": "string"
+                      }
                     },
-                    "required": ["name", "website", "offering", "overlap", "whyChooseThem"],
+                    "required": [
+                      "name",
+                      "website",
+                      "offering",
+                      "overlap",
+                      "whyChooseThem"
+                    ],
                     "additionalProperties": false
                   }
                 },
@@ -65,20 +117,41 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": { "type": "string" },
-                      "url": { "type": "string" },
-                      "platform": { "type": "string" },
-                      "expertise": { "type": "string" },
-                      "audienceSize": { "type": "string" },
-                      "collaborationAngle": { "type": "string" }
+                      "name": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
+                      },
+                      "platform": {
+                        "type": "string"
+                      },
+                      "expertise": {
+                        "type": "string"
+                      },
+                      "audienceSize": {
+                        "type": "string"
+                      },
+                      "collaborationAngle": {
+                        "type": "string"
+                      }
                     },
-                    "required": ["name", "url", "platform", "expertise", "audienceSize", "collaborationAngle"],
+                    "required": [
+                      "name",
+                      "url",
+                      "platform",
+                      "expertise",
+                      "audienceSize",
+                      "collaborationAngle"
+                    ],
                     "additionalProperties": false
                   }
                 },
                 "marketGaps": {
                   "type": "array",
-                  "items": { "type": "string" },
+                  "items": {
+                    "type": "string"
+                  },
                   "description": "Gaps in the market no competitor fills well"
                 },
                 "pricingLandscape": {
@@ -86,23 +159,39 @@
                   "description": "Summary of pricing across all competitors"
                 }
               },
-              "required": ["direct", "indirect", "influencers", "marketGaps", "pricingLandscape"],
+              "required": [
+                "direct",
+                "indirect",
+                "influencers",
+                "marketGaps",
+                "pricingLandscape"
+              ],
               "additionalProperties": false
             },
             "mediaLandscape": {
               "type": "object",
-              "description": "Media sources this audience consumes — all URLs must be real",
+              "description": "Media sources this audience consumes \u2014 all URLs must be real",
               "properties": {
                 "blogs": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": { "type": "string" },
-                      "url": { "type": "string" },
-                      "logoUrl": { "type": "string" }
+                      "name": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
+                      },
+                      "logoUrl": {
+                        "type": "string"
+                      }
                     },
-                    "required": ["name", "url", "logoUrl"],
+                    "required": [
+                      "name",
+                      "url",
+                      "logoUrl"
+                    ],
                     "additionalProperties": false
                   }
                 },
@@ -111,12 +200,25 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "title": { "type": "string" },
-                      "author": { "type": "string" },
-                      "url": { "type": "string" },
-                      "coverUrl": { "type": "string" }
+                      "title": {
+                        "type": "string"
+                      },
+                      "author": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
+                      },
+                      "coverUrl": {
+                        "type": "string"
+                      }
                     },
-                    "required": ["title", "author", "url", "coverUrl"],
+                    "required": [
+                      "title",
+                      "author",
+                      "url",
+                      "coverUrl"
+                    ],
                     "additionalProperties": false
                   }
                 },
@@ -125,11 +227,21 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": { "type": "string" },
-                      "url": { "type": "string" },
-                      "logoUrl": { "type": "string" }
+                      "name": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
+                      },
+                      "logoUrl": {
+                        "type": "string"
+                      }
                     },
-                    "required": ["name", "url", "logoUrl"],
+                    "required": [
+                      "name",
+                      "url",
+                      "logoUrl"
+                    ],
                     "additionalProperties": false
                   }
                 },
@@ -138,11 +250,21 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": { "type": "string" },
-                      "url": { "type": "string" },
-                      "logoUrl": { "type": "string" }
+                      "name": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
+                      },
+                      "logoUrl": {
+                        "type": "string"
+                      }
                     },
-                    "required": ["name", "url", "logoUrl"],
+                    "required": [
+                      "name",
+                      "url",
+                      "logoUrl"
+                    ],
                     "additionalProperties": false
                   }
                 },
@@ -151,16 +273,32 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": { "type": "string" },
-                      "url": { "type": "string" },
-                      "logoUrl": { "type": "string" }
+                      "name": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
+                      },
+                      "logoUrl": {
+                        "type": "string"
+                      }
                     },
-                    "required": ["name", "url", "logoUrl"],
+                    "required": [
+                      "name",
+                      "url",
+                      "logoUrl"
+                    ],
                     "additionalProperties": false
                   }
                 }
               },
-              "required": ["blogs", "books", "podcasts", "forums", "socialPlatforms"],
+              "required": [
+                "blogs",
+                "books",
+                "podcasts",
+                "forums",
+                "socialPlatforms"
+              ],
               "additionalProperties": false
             },
             "audienceResearch": {
@@ -170,15 +308,37 @@
                 "demographics": {
                   "type": "object",
                   "properties": {
-                    "ageRange": { "type": "string" },
-                    "gender": { "type": "string" },
-                    "incomeRange": { "type": "string" },
-                    "location": { "type": "string" },
-                    "education": { "type": "string" },
-                    "occupation": { "type": "string" },
-                    "familyStatus": { "type": "string" }
+                    "ageRange": {
+                      "type": "string"
+                    },
+                    "gender": {
+                      "type": "string"
+                    },
+                    "incomeRange": {
+                      "type": "string"
+                    },
+                    "location": {
+                      "type": "string"
+                    },
+                    "education": {
+                      "type": "string"
+                    },
+                    "occupation": {
+                      "type": "string"
+                    },
+                    "familyStatus": {
+                      "type": "string"
+                    }
                   },
-                  "required": ["ageRange", "gender", "incomeRange", "location", "education", "occupation", "familyStatus"],
+                  "required": [
+                    "ageRange",
+                    "gender",
+                    "incomeRange",
+                    "location",
+                    "education",
+                    "occupation",
+                    "familyStatus"
+                  ],
                   "additionalProperties": false
                 },
                 "forumQuotes": {
@@ -187,36 +347,64 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "source": { "type": "string", "description": "Where the quote was found (e.g. 'Reddit r/selfpublish')" },
-                      "quote": { "type": "string", "description": "The actual quote or close paraphrase" },
-                      "theme": { "type": "string", "description": "The pain/desire theme (e.g. 'completion anxiety', 'financial pressure', 'tech overwhelm')" }
+                      "source": {
+                        "type": "string",
+                        "description": "Where the quote was found (e.g. 'Reddit r/selfpublish')"
+                      },
+                      "quote": {
+                        "type": "string",
+                        "description": "The actual quote or close paraphrase"
+                      },
+                      "theme": {
+                        "type": "string",
+                        "description": "The pain/desire theme (e.g. 'completion anxiety', 'financial pressure', 'tech overwhelm')"
+                      }
                     },
-                    "required": ["source", "quote", "theme"],
+                    "required": [
+                      "source",
+                      "quote",
+                      "theme"
+                    ],
                     "additionalProperties": false
                   }
                 },
                 "painLanguage": {
                   "type": "array",
-                  "items": { "type": "string" },
+                  "items": {
+                    "type": "string"
+                  },
                   "description": "Common words and phrases this audience uses to describe their problems"
                 },
                 "desireLanguage": {
                   "type": "array",
-                  "items": { "type": "string" },
+                  "items": {
+                    "type": "string"
+                  },
                   "description": "Common words and phrases this audience uses to describe what they want"
                 },
                 "buyingPatterns": {
                   "type": "array",
-                  "items": { "type": "string" },
+                  "items": {
+                    "type": "string"
+                  },
                   "description": "Observed buying behaviors and preferences"
                 },
                 "commonObjections": {
                   "type": "array",
-                  "items": { "type": "string" },
+                  "items": {
+                    "type": "string"
+                  },
                   "description": "Objections found in reviews, forums, and competitor discussions"
                 }
               },
-              "required": ["demographics", "forumQuotes", "painLanguage", "desireLanguage", "buyingPatterns", "commonObjections"],
+              "required": [
+                "demographics",
+                "forumQuotes",
+                "painLanguage",
+                "desireLanguage",
+                "buyingPatterns",
+                "commonObjections"
+              ],
               "additionalProperties": false
             },
             "brandExtraction": {
@@ -229,35 +417,69 @@
                     "primary": {
                       "type": "object",
                       "properties": {
-                        "name": { "type": "string" },
-                        "hex": { "type": "string" },
-                        "usage": { "type": "string" }
+                        "name": {
+                          "type": "string"
+                        },
+                        "hex": {
+                          "type": "string"
+                        },
+                        "usage": {
+                          "type": "string"
+                        }
                       },
-                      "required": ["name", "hex", "usage"],
+                      "required": [
+                        "name",
+                        "hex",
+                        "usage"
+                      ],
                       "additionalProperties": false
                     },
                     "secondary": {
                       "type": "object",
                       "properties": {
-                        "name": { "type": "string" },
-                        "hex": { "type": "string" },
-                        "usage": { "type": "string" }
+                        "name": {
+                          "type": "string"
+                        },
+                        "hex": {
+                          "type": "string"
+                        },
+                        "usage": {
+                          "type": "string"
+                        }
                       },
-                      "required": ["name", "hex", "usage"],
+                      "required": [
+                        "name",
+                        "hex",
+                        "usage"
+                      ],
                       "additionalProperties": false
                     },
                     "accent": {
                       "type": "object",
                       "properties": {
-                        "name": { "type": "string" },
-                        "hex": { "type": "string" },
-                        "usage": { "type": "string" }
+                        "name": {
+                          "type": "string"
+                        },
+                        "hex": {
+                          "type": "string"
+                        },
+                        "usage": {
+                          "type": "string"
+                        }
                       },
-                      "required": ["name", "hex", "usage"],
+                      "required": [
+                        "name",
+                        "hex",
+                        "usage"
+                      ],
                       "additionalProperties": false
                     }
                   },
-                  "required": ["primary", "secondary", "accent"],
+                  "required": [
+                    "primary",
+                    "secondary",
+                    "accent"
+                  ],
                   "additionalProperties": false
                 },
                 "typography": {
@@ -266,33 +488,66 @@
                     "headings": {
                       "type": "object",
                       "properties": {
-                        "font": { "type": "string" },
-                        "description": { "type": "string" }
+                        "font": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        }
                       },
-                      "required": ["font", "description"],
+                      "required": [
+                        "font",
+                        "description"
+                      ],
                       "additionalProperties": false
                     },
                     "body": {
                       "type": "object",
                       "properties": {
-                        "font": { "type": "string" },
-                        "description": { "type": "string" }
+                        "font": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        }
                       },
-                      "required": ["font", "description"],
+                      "required": [
+                        "font",
+                        "description"
+                      ],
                       "additionalProperties": false
                     }
                   },
-                  "required": ["headings", "body"],
+                  "required": [
+                    "headings",
+                    "body"
+                  ],
                   "additionalProperties": false
                 },
-                "visualStyle": { "type": "string", "description": "Overall visual style description" },
-                "source": { "type": "string", "description": "URL the brand data was extracted from, or 'defaults — no brand found'" }
+                "visualStyle": {
+                  "type": "string",
+                  "description": "Overall visual style description"
+                },
+                "source": {
+                  "type": "string",
+                  "description": "URL the brand data was extracted from, or 'defaults \u2014 no brand found'"
+                }
               },
-              "required": ["colors", "typography", "visualStyle", "source"],
+              "required": [
+                "colors",
+                "typography",
+                "visualStyle",
+                "source"
+              ],
               "additionalProperties": false
             }
           },
-          "required": ["competitorIntel", "mediaLandscape", "audienceResearch", "brandExtraction"],
+          "required": [
+            "competitorIntel",
+            "mediaLandscape",
+            "audienceResearch",
+            "brandExtraction"
+          ],
           "additionalProperties": false
         }
       }
@@ -304,11 +559,13 @@
       "reasoning_effort": "high",
       "service_tier": "auto",
       "max_output_tokens": 65536,
-      "instructions": "Act as a Senior ICP Strategist and Voice-of-Customer Copywriter.\n\nYour task: Merge the raw market research from Step 0 with the form submission data to produce the final, polished 12-section ICP document. You are the SYNTHESIS step — your job is creative assembly, voice-of-customer writing, and strategic framing.\n\n## Inputs Available to You\n\n### From Step 0 (Research Intelligence):\n- **competitorIntel**: Direct/indirect competitors and influencers with real URLs, pricing, strengths/weaknesses\n- **mediaLandscape**: Blogs, books, podcasts, forums, social platforms with real URLs and logos\n- **audienceResearch**: Demographics, 10+ forum quotes, pain/desire language patterns, buying patterns, common objections\n- **brandExtraction**: Colors, fonts, visual style extracted from the brand's website\n\n### From Form Submission:\n- [brand_name], [name], [email]\n- [founder_story] — the founder's raw narrative\n- [industry], [target_audience]\n- [product_service], [product_price], [product_mechanism], [product_features], [product_delivery]\n- [pain_points] — seed pain points\n- [credentials_background], [client_results]\n\n## Section-by-Section Assembly Guide\n\n### meta\n- brandName = [brand_name] from form\n- lastUpdated = today's date in YYYY-MM-DD\n- version = \"2.0\"\n\n### founderStory\n- Take the raw [founder_story] from the form and refine it into a compelling, cohesive narrative\n- Preserve the submitter's authentic voice, key events, and emotional arc — do NOT fabricate events\n- Add a fitting title (e.g. \"The Hero's Journey\", \"From the Trenches to the Table\")\n- Keep it as one flowing paragraph or a few short paragraphs\n\n### audience.demographics\n- Use the researched demographics from Step 0's audienceResearch.demographics directly\n\n### audience.psychographics\n- Craft 5 statements per array (beliefs, lifestyle, personality, buyingBehavior)\n- ALL statements must be first person starting with \"I\" — e.g. \"I believe...\", \"I spend...\", \"I'm...\", \"I prefer...\"\n- Base these on the real forum quotes and language patterns from Step 0\n- Make them feel like the audience's actual inner monologue\n\n### audience.mediaHabits\n- Pass through Step 0's mediaLandscape directly — blogs, books, podcasts, forums, socialPlatforms\n\n### painPoints (8-10 items, sorted by severity highest first)\n- Craft each from a combination of: [pain_points] form data + Step 0's forumQuotes + painLanguage\n- severity: numeric score 0-100, reflecting how urgent and widespread the pain is\n- description: 1-2 sentences in the customer's emotional language\n- customerQuotes: 3 first-person quotes per pain point. These should sound like real people talking:\n  - \"I feel stuck holding decades of revelation with nothing in print...\"\n  - \"I'm tired of saying 'I'll write the book this year' and never crossing the finish line.\"\n  - \"I need a clear, guided path to birth my message without overwhelm.\"\n- Use the REAL LANGUAGE from Step 0's forumQuotes as inspiration — match their vocabulary, cadence, and emotional tone\n\n### desires (8-10 items)\n- Each title should start with \"To...\" — e.g. \"To publish my signature message without overwhelm\"\n- customerQuotes: 3 first-person aspiration quotes per desire — \"I want...\", \"I'm ready to...\", \"I crave...\"\n- emotionalOutcome: The feeling they achieve — \"I feel relief and quiet confidence when...\"\n- visionSnapshot: A vivid 1-sentence picture of the desired future state\n- milestones: Measurable progress markers — \"I track 30, 60, and 90 days of...\"\n- Mirror the pain points — each desire should be the inverse of a pain point\n\n### transformation\n- before: 1-2 sentences capturing the painful status quo (draw from the top pain points)\n- after: 1-2 sentences capturing the desired outcome (draw from the top desires)\n- emotionalShift: The internal shift — \"from scattered and guilty to steady and at peace\"\n- impact: The tangible life impact — \"This transformation has given me back my time...\"\n\n### coreValues\n- Derive 5-7 values from the founder story, brand positioning, and product philosophy\n- statement: Start with \"If you asked me what I stand for, I'd say: '...'\"\n- Each value: name + 2-3 sentence first-person description of what it means in practice\n\n### product\n- Build entirely from form submission data: [product_service], [product_price], [product_mechanism], [product_features], [product_delivery]\n- name: Extract or infer the product name\n- summary: 1-2 sentence elevator pitch\n- price: Display price (e.g. \"$12,000\")\n- investment: Full details including payment plans, guarantees\n- mechanism.tagline: Short framework tagline (e.g. \"Birth → Brand → Build → Increase\")\n- mechanism.description: 1-2 sentence explanation\n- features: Array of {name, description} — write descriptions in first person (\"I follow...\", \"I get...\", \"I learn...\")\n- delivery: {format, access, community, disclaimer}\n- Do NOT invent features or pricing not provided in the form data\n\n### credibility\n- Build from [credentials_background] and [client_results] form data\n- headline: One compelling line summarizing authority\n- credentials: 3-5 key credentials, frameworks created, or distinguishing facts\n- recentWins: 3-5 specific client wins with measurable results\n- clientResults: 3-5 client result statements with specific metrics\n- background: 4-6 facts establishing long-term authority\n- Do NOT fabricate testimonials or statistics\n\n### objections (8-10 items)\n- Use Step 0's commonObjections as seeds\n- concern: The objection in the customer's words — \"I don't have time to learn a whole new system\"\n- response: A concise, empathetic reframe (1-2 sentences) — never dismissive, always dignifying\n\n### competitiveLandscape\n- differentiators: Craft positioning, innovation, uniqueValue[], engagementElements[] based on the market gaps and competitive advantages identified in Step 0\n- direct: Pass through Step 0's competitor data, mapping collaborationAngle to collaboration for influencers\n- indirect: Pass through Step 0's indirect competitor data\n- influencers: Pass through Step 0's influencer data, mapping collaborationAngle → collaboration\n\n### brandGuide\n- voice: Craft from the brand's tone implied by the founder story and product positioning\n- colors: Use Step 0's brandExtraction.colors directly\n- typography: Use Step 0's brandExtraction.typography directly\n- logo: Generate standard logo specs (primary, clearSpace, variations, restrictions)\n- visualStyle: Derive from Step 0's brandExtraction.visualStyle\n\n## Quality Standards\n- Pain points: 8-10, severity 0-100, 3 customerQuotes each, sorted highest first\n- Desires: 8-10, 3 customerQuotes each, all with emotionalOutcome + visionSnapshot + milestones\n- Psychographics: exactly 5 per array, all first-person\n- Objections: 8-10 with empathetic responses\n- Core values: 5-7 with substantive descriptions\n- All competitor/media/influencer data passes through with real URLs intact\n- Customer quotes must sound like real people — natural, emotional, specific (not generic marketing copy)",
+      "instructions": "Act as a Senior ICP Strategist and Voice-of-Customer Copywriter.\n\nYour task: Merge the raw market research from Step 0 with the form submission data to produce the final, polished 12-section ICP document. You are the SYNTHESIS step \u2014 your job is creative assembly, voice-of-customer writing, and strategic framing.\n\n## Inputs Available to You\n\n### From Step 0 (Research Intelligence):\n- **competitorIntel**: Direct/indirect competitors and influencers with real URLs, pricing, strengths/weaknesses\n- **mediaLandscape**: Blogs, books, podcasts, forums, social platforms with real URLs and logos\n- **audienceResearch**: Demographics, 10+ forum quotes, pain/desire language patterns, buying patterns, common objections\n- **brandExtraction**: Colors, fonts, visual style extracted from the brand's website\n\n### From Form Submission:\n- [brand_name], [name], [email]\n- [founder_story] \u2014 the founder's raw narrative\n- [industry], [target_audience]\n- [product_service], [product_price], [product_mechanism], [product_features], [product_delivery]\n- [pain_points] \u2014 seed pain points\n- [credentials_background], [client_results]\n\n## Section-by-Section Assembly Guide\n\n### meta\n- brandName = [brand_name] from form\n- lastUpdated = today's date in YYYY-MM-DD\n- version = \"2.0\"\n\n### founderStory\n- Take the raw [founder_story] from the form and refine it into a compelling, cohesive narrative\n- Preserve the submitter's authentic voice, key events, and emotional arc \u2014 do NOT fabricate events\n- Add a fitting title (e.g. \"The Hero's Journey\", \"From the Trenches to the Table\")\n- Keep it as one flowing paragraph or a few short paragraphs\n\n### audience.demographics\n- Use the researched demographics from Step 0's audienceResearch.demographics directly\n\n### audience.psychographics\n- Craft 5 statements per array (beliefs, lifestyle, personality, buyingBehavior)\n- ALL statements must be first person starting with \"I\" \u2014 e.g. \"I believe...\", \"I spend...\", \"I'm...\", \"I prefer...\"\n- Base these on the real forum quotes and language patterns from Step 0\n- Make them feel like the audience's actual inner monologue\n\n### audience.mediaHabits\n- Pass through Step 0's mediaLandscape directly \u2014 blogs, books, podcasts, forums, socialPlatforms\n\n### painPoints (8-10 items, sorted by severity highest first)\n- Craft each from a combination of: [pain_points] form data + Step 0's forumQuotes + painLanguage\n- severity: numeric score 0-100, reflecting how urgent and widespread the pain is\n- description: 1-2 sentences in the customer's emotional language\n- customerQuotes: 3 first-person quotes per pain point. These should sound like real people talking:\n  - \"I feel stuck holding decades of revelation with nothing in print...\"\n  - \"I'm tired of saying 'I'll write the book this year' and never crossing the finish line.\"\n  - \"I need a clear, guided path to birth my message without overwhelm.\"\n- Use the REAL LANGUAGE from Step 0's forumQuotes as inspiration \u2014 match their vocabulary, cadence, and emotional tone\n\n### desires (8-10 items)\n- Each title should start with \"To...\" \u2014 e.g. \"To publish my signature message without overwhelm\"\n- customerQuotes: 3 first-person aspiration quotes per desire \u2014 \"I want...\", \"I'm ready to...\", \"I crave...\"\n- emotionalOutcome: The feeling they achieve \u2014 \"I feel relief and quiet confidence when...\"\n- visionSnapshot: A vivid 1-sentence picture of the desired future state\n- milestones: Measurable progress markers \u2014 \"I track 30, 60, and 90 days of...\"\n- Mirror the pain points \u2014 each desire should be the inverse of a pain point\n\n### transformation\n- before: 1-2 sentences capturing the painful status quo (draw from the top pain points)\n- after: 1-2 sentences capturing the desired outcome (draw from the top desires)\n- emotionalShift: The internal shift \u2014 \"from scattered and guilty to steady and at peace\"\n- impact: The tangible life impact \u2014 \"This transformation has given me back my time...\"\n\n### coreValues\n- Derive 5-7 values from the founder story, brand positioning, and product philosophy\n- statement: Start with \"If you asked me what I stand for, I'd say: '...'\"\n- Each value: name + 2-3 sentence first-person description of what it means in practice\n\n### product\n- Build entirely from form submission data: [product_service], [product_price], [product_mechanism], [product_features], [product_delivery]\n- name: Extract or infer the product name\n- summary: 1-2 sentence elevator pitch\n- price: Display price (e.g. \"$12,000\")\n- investment: Full details including payment plans, guarantees\n- mechanism.tagline: Short framework tagline (e.g. \"Birth \u2192 Brand \u2192 Build \u2192 Increase\")\n- mechanism.description: 1-2 sentence explanation\n- features: Array of {name, description} \u2014 write descriptions in first person (\"I follow...\", \"I get...\", \"I learn...\")\n- delivery: {format, access, community, disclaimer}\n- Do NOT invent features or pricing not provided in the form data\n\n### credibility\n- Build from [credentials_background] and [client_results] form data\n- headline: One compelling line summarizing authority\n- credentials: 3-5 key credentials, frameworks created, or distinguishing facts\n- recentWins: 3-5 specific client wins with measurable results\n- clientResults: 3-5 client result statements with specific metrics\n- background: 4-6 facts establishing long-term authority\n- Do NOT fabricate testimonials or statistics\n\n### objections (8-10 items)\n- Use Step 0's commonObjections as seeds\n- concern: The objection in the customer's words \u2014 \"I don't have time to learn a whole new system\"\n- response: A concise, empathetic reframe (1-2 sentences) \u2014 never dismissive, always dignifying\n\n### competitiveLandscape\n- differentiators: Craft positioning, innovation, uniqueValue[], engagementElements[] based on the market gaps and competitive advantages identified in Step 0\n- direct: Pass through Step 0's competitor data, mapping collaborationAngle to collaboration for influencers\n- indirect: Pass through Step 0's indirect competitor data\n- influencers: Pass through Step 0's influencer data, mapping collaborationAngle \u2192 collaboration\n\n### brandGuide\n- voice: Craft from the brand's tone implied by the founder story and product positioning\n- colors: Use Step 0's brandExtraction.colors directly\n- typography: Use Step 0's brandExtraction.typography directly\n- logo: Generate standard logo specs (primary, clearSpace, variations, restrictions)\n- visualStyle: Derive from Step 0's brandExtraction.visualStyle\n\n## Quality Standards\n- Pain points: 8-10, severity 0-100, 3 customerQuotes each, sorted highest first\n- Desires: 8-10, 3 customerQuotes each, all with emotionalOutcome + visionSnapshot + milestones\n- Psychographics: exactly 5 per array, all first-person\n- Objections: 8-10 with empathetic responses\n- Core values: 5-7 with substantive descriptions\n- All competitor/media/influencer data passes through with real URLs intact\n- Customer quotes must sound like real people \u2014 natural, emotional, specific (not generic marketing copy)",
       "step_order": 1,
-      "depends_on": [0],
-      "tools": ["web_search"],
-      "tool_choice": "auto",
+      "depends_on": [
+        0
+      ],
+      "tools": [],
+      "tool_choice": "none",
       "output_format": {
         "type": "json_schema",
         "name": "icp_360_profile",
@@ -320,20 +577,37 @@
             "meta": {
               "type": "object",
               "properties": {
-                "brandName": { "type": "string" },
-                "lastUpdated": { "type": "string" },
-                "version": { "type": "string" }
+                "brandName": {
+                  "type": "string"
+                },
+                "lastUpdated": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                }
               },
-              "required": ["brandName", "lastUpdated", "version"],
+              "required": [
+                "brandName",
+                "lastUpdated",
+                "version"
+              ],
               "additionalProperties": false
             },
             "founderStory": {
               "type": "object",
               "properties": {
-                "title": { "type": "string" },
-                "content": { "type": "string" }
+                "title": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                }
               },
-              "required": ["title", "content"],
+              "required": [
+                "title",
+                "content"
+              ],
               "additionalProperties": false
             },
             "audience": {
@@ -342,26 +616,73 @@
                 "demographics": {
                   "type": "object",
                   "properties": {
-                    "ageRange": { "type": "string" },
-                    "gender": { "type": "string" },
-                    "incomeRange": { "type": "string" },
-                    "location": { "type": "string" },
-                    "education": { "type": "string" },
-                    "occupation": { "type": "string" },
-                    "familyStatus": { "type": "string" }
+                    "ageRange": {
+                      "type": "string"
+                    },
+                    "gender": {
+                      "type": "string"
+                    },
+                    "incomeRange": {
+                      "type": "string"
+                    },
+                    "location": {
+                      "type": "string"
+                    },
+                    "education": {
+                      "type": "string"
+                    },
+                    "occupation": {
+                      "type": "string"
+                    },
+                    "familyStatus": {
+                      "type": "string"
+                    }
                   },
-                  "required": ["ageRange", "gender", "incomeRange", "location", "education", "occupation", "familyStatus"],
+                  "required": [
+                    "ageRange",
+                    "gender",
+                    "incomeRange",
+                    "location",
+                    "education",
+                    "occupation",
+                    "familyStatus"
+                  ],
                   "additionalProperties": false
                 },
                 "psychographics": {
                   "type": "object",
                   "properties": {
-                    "beliefs": { "type": "array", "items": { "type": "string" } },
-                    "lifestyle": { "type": "array", "items": { "type": "string" } },
-                    "personality": { "type": "array", "items": { "type": "string" } },
-                    "buyingBehavior": { "type": "array", "items": { "type": "string" } }
+                    "beliefs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "lifestyle": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "personality": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "buyingBehavior": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
                   },
-                  "required": ["beliefs", "lifestyle", "personality", "buyingBehavior"],
+                  "required": [
+                    "beliefs",
+                    "lifestyle",
+                    "personality",
+                    "buyingBehavior"
+                  ],
                   "additionalProperties": false
                 },
                 "mediaHabits": {
@@ -372,11 +693,21 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "name": { "type": "string" },
-                          "url": { "type": "string" },
-                          "logoUrl": { "type": "string" }
+                          "name": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "logoUrl": {
+                            "type": "string"
+                          }
                         },
-                        "required": ["name", "url", "logoUrl"],
+                        "required": [
+                          "name",
+                          "url",
+                          "logoUrl"
+                        ],
                         "additionalProperties": false
                       }
                     },
@@ -385,12 +716,25 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "title": { "type": "string" },
-                          "author": { "type": "string" },
-                          "url": { "type": "string" },
-                          "coverUrl": { "type": "string" }
+                          "title": {
+                            "type": "string"
+                          },
+                          "author": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "coverUrl": {
+                            "type": "string"
+                          }
                         },
-                        "required": ["title", "author", "url", "coverUrl"],
+                        "required": [
+                          "title",
+                          "author",
+                          "url",
+                          "coverUrl"
+                        ],
                         "additionalProperties": false
                       }
                     },
@@ -399,11 +743,21 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "name": { "type": "string" },
-                          "url": { "type": "string" },
-                          "logoUrl": { "type": "string" }
+                          "name": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "logoUrl": {
+                            "type": "string"
+                          }
                         },
-                        "required": ["name", "url", "logoUrl"],
+                        "required": [
+                          "name",
+                          "url",
+                          "logoUrl"
+                        ],
                         "additionalProperties": false
                       }
                     },
@@ -412,11 +766,21 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "name": { "type": "string" },
-                          "url": { "type": "string" },
-                          "logoUrl": { "type": "string" }
+                          "name": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "logoUrl": {
+                            "type": "string"
+                          }
                         },
-                        "required": ["name", "url", "logoUrl"],
+                        "required": [
+                          "name",
+                          "url",
+                          "logoUrl"
+                        ],
                         "additionalProperties": false
                       }
                     },
@@ -425,20 +789,40 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "name": { "type": "string" },
-                          "url": { "type": "string" },
-                          "logoUrl": { "type": "string" }
+                          "name": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "logoUrl": {
+                            "type": "string"
+                          }
                         },
-                        "required": ["name", "url", "logoUrl"],
+                        "required": [
+                          "name",
+                          "url",
+                          "logoUrl"
+                        ],
                         "additionalProperties": false
                       }
                     }
                   },
-                  "required": ["blogs", "books", "podcasts", "forums", "socialPlatforms"],
+                  "required": [
+                    "blogs",
+                    "books",
+                    "podcasts",
+                    "forums",
+                    "socialPlatforms"
+                  ],
                   "additionalProperties": false
                 }
               },
-              "required": ["demographics", "psychographics", "mediaHabits"],
+              "required": [
+                "demographics",
+                "psychographics",
+                "mediaHabits"
+              ],
               "additionalProperties": false
             },
             "painPoints": {
@@ -446,12 +830,28 @@
               "items": {
                 "type": "object",
                 "properties": {
-                  "title": { "type": "string" },
-                  "description": { "type": "string" },
-                  "severity": { "type": "number" },
-                  "customerQuotes": { "type": "array", "items": { "type": "string" } }
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "severity": {
+                    "type": "number"
+                  },
+                  "customerQuotes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
                 },
-                "required": ["title", "description", "severity", "customerQuotes"],
+                "required": [
+                  "title",
+                  "description",
+                  "severity",
+                  "customerQuotes"
+                ],
                 "additionalProperties": false
               }
             },
@@ -460,61 +860,120 @@
               "items": {
                 "type": "object",
                 "properties": {
-                  "title": { "type": "string" },
-                  "customerQuotes": { "type": "array", "items": { "type": "string" } },
-                  "emotionalOutcome": { "type": "string" },
-                  "visionSnapshot": { "type": "string" },
-                  "milestones": { "type": "string" }
+                  "title": {
+                    "type": "string"
+                  },
+                  "customerQuotes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "emotionalOutcome": {
+                    "type": "string"
+                  },
+                  "visionSnapshot": {
+                    "type": "string"
+                  },
+                  "milestones": {
+                    "type": "string"
+                  }
                 },
-                "required": ["title", "customerQuotes", "emotionalOutcome", "visionSnapshot", "milestones"],
+                "required": [
+                  "title",
+                  "customerQuotes",
+                  "emotionalOutcome",
+                  "visionSnapshot",
+                  "milestones"
+                ],
                 "additionalProperties": false
               }
             },
             "transformation": {
               "type": "object",
               "properties": {
-                "before": { "type": "string" },
-                "after": { "type": "string" },
-                "emotionalShift": { "type": "string" },
-                "impact": { "type": "string" }
+                "before": {
+                  "type": "string"
+                },
+                "after": {
+                  "type": "string"
+                },
+                "emotionalShift": {
+                  "type": "string"
+                },
+                "impact": {
+                  "type": "string"
+                }
               },
-              "required": ["before", "after", "emotionalShift", "impact"],
+              "required": [
+                "before",
+                "after",
+                "emotionalShift",
+                "impact"
+              ],
               "additionalProperties": false
             },
             "coreValues": {
               "type": "object",
               "properties": {
-                "statement": { "type": "string" },
+                "statement": {
+                  "type": "string"
+                },
                 "values": {
                   "type": "array",
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": { "type": "string" },
-                      "description": { "type": "string" }
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
                     },
-                    "required": ["name", "description"],
+                    "required": [
+                      "name",
+                      "description"
+                    ],
                     "additionalProperties": false
                   }
                 }
               },
-              "required": ["statement", "values"],
+              "required": [
+                "statement",
+                "values"
+              ],
               "additionalProperties": false
             },
             "product": {
               "type": "object",
               "properties": {
-                "name": { "type": "string" },
-                "summary": { "type": "string" },
-                "price": { "type": "string" },
-                "investment": { "type": "string" },
+                "name": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "price": {
+                  "type": "string"
+                },
+                "investment": {
+                  "type": "string"
+                },
                 "mechanism": {
                   "type": "object",
                   "properties": {
-                    "tagline": { "type": "string" },
-                    "description": { "type": "string" }
+                    "tagline": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
                   },
-                  "required": ["tagline", "description"],
+                  "required": [
+                    "tagline",
+                    "description"
+                  ],
                   "additionalProperties": false
                 },
                 "features": {
@@ -522,38 +981,94 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": { "type": "string" },
-                      "description": { "type": "string" }
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
                     },
-                    "required": ["name", "description"],
+                    "required": [
+                      "name",
+                      "description"
+                    ],
                     "additionalProperties": false
                   }
                 },
                 "delivery": {
                   "type": "object",
                   "properties": {
-                    "format": { "type": "string" },
-                    "access": { "type": "string" },
-                    "community": { "type": "string" },
-                    "disclaimer": { "type": "string" }
+                    "format": {
+                      "type": "string"
+                    },
+                    "access": {
+                      "type": "string"
+                    },
+                    "community": {
+                      "type": "string"
+                    },
+                    "disclaimer": {
+                      "type": "string"
+                    }
                   },
-                  "required": ["format", "access", "community", "disclaimer"],
+                  "required": [
+                    "format",
+                    "access",
+                    "community",
+                    "disclaimer"
+                  ],
                   "additionalProperties": false
                 }
               },
-              "required": ["name", "summary", "price", "investment", "mechanism", "features", "delivery"],
+              "required": [
+                "name",
+                "summary",
+                "price",
+                "investment",
+                "mechanism",
+                "features",
+                "delivery"
+              ],
               "additionalProperties": false
             },
             "credibility": {
               "type": "object",
               "properties": {
-                "headline": { "type": "string" },
-                "credentials": { "type": "array", "items": { "type": "string" } },
-                "recentWins": { "type": "array", "items": { "type": "string" } },
-                "clientResults": { "type": "array", "items": { "type": "string" } },
-                "background": { "type": "array", "items": { "type": "string" } }
+                "headline": {
+                  "type": "string"
+                },
+                "credentials": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "recentWins": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "clientResults": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "background": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
               },
-              "required": ["headline", "credentials", "recentWins", "clientResults", "background"],
+              "required": [
+                "headline",
+                "credentials",
+                "recentWins",
+                "clientResults",
+                "background"
+              ],
               "additionalProperties": false
             },
             "objections": {
@@ -561,10 +1076,17 @@
               "items": {
                 "type": "object",
                 "properties": {
-                  "concern": { "type": "string" },
-                  "response": { "type": "string" }
+                  "concern": {
+                    "type": "string"
+                  },
+                  "response": {
+                    "type": "string"
+                  }
                 },
-                "required": ["concern", "response"],
+                "required": [
+                  "concern",
+                  "response"
+                ],
                 "additionalProperties": false
               }
             },
@@ -574,12 +1096,31 @@
                 "differentiators": {
                   "type": "object",
                   "properties": {
-                    "positioning": { "type": "string" },
-                    "innovation": { "type": "string" },
-                    "uniqueValue": { "type": "array", "items": { "type": "string" } },
-                    "engagementElements": { "type": "array", "items": { "type": "string" } }
+                    "positioning": {
+                      "type": "string"
+                    },
+                    "innovation": {
+                      "type": "string"
+                    },
+                    "uniqueValue": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "engagementElements": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
                   },
-                  "required": ["positioning", "innovation", "uniqueValue", "engagementElements"],
+                  "required": [
+                    "positioning",
+                    "innovation",
+                    "uniqueValue",
+                    "engagementElements"
+                  ],
                   "additionalProperties": false
                 },
                 "direct": {
@@ -587,17 +1128,51 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": { "type": "string" },
-                      "website": { "type": "string" },
-                      "logoUrl": { "type": "string" },
-                      "offering": { "type": "string" },
-                      "usp": { "type": "string" },
-                      "pricing": { "type": "string" },
-                      "strengths": { "type": "array", "items": { "type": "string" } },
-                      "weaknesses": { "type": "array", "items": { "type": "string" } },
-                      "notes": { "type": "string" }
+                      "name": {
+                        "type": "string"
+                      },
+                      "website": {
+                        "type": "string"
+                      },
+                      "logoUrl": {
+                        "type": "string"
+                      },
+                      "offering": {
+                        "type": "string"
+                      },
+                      "usp": {
+                        "type": "string"
+                      },
+                      "pricing": {
+                        "type": "string"
+                      },
+                      "strengths": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "weaknesses": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "notes": {
+                        "type": "string"
+                      }
                     },
-                    "required": ["name", "website", "logoUrl", "offering", "usp", "pricing", "strengths", "weaknesses", "notes"],
+                    "required": [
+                      "name",
+                      "website",
+                      "logoUrl",
+                      "offering",
+                      "usp",
+                      "pricing",
+                      "strengths",
+                      "weaknesses",
+                      "notes"
+                    ],
                     "additionalProperties": false
                   }
                 },
@@ -606,13 +1181,29 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": { "type": "string" },
-                      "website": { "type": "string" },
-                      "offering": { "type": "string" },
-                      "overlap": { "type": "string" },
-                      "whyChooseThem": { "type": "string" }
+                      "name": {
+                        "type": "string"
+                      },
+                      "website": {
+                        "type": "string"
+                      },
+                      "offering": {
+                        "type": "string"
+                      },
+                      "overlap": {
+                        "type": "string"
+                      },
+                      "whyChooseThem": {
+                        "type": "string"
+                      }
                     },
-                    "required": ["name", "website", "offering", "overlap", "whyChooseThem"],
+                    "required": [
+                      "name",
+                      "website",
+                      "offering",
+                      "overlap",
+                      "whyChooseThem"
+                    ],
                     "additionalProperties": false
                   }
                 },
@@ -621,19 +1212,43 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": { "type": "string" },
-                      "url": { "type": "string" },
-                      "platform": { "type": "string" },
-                      "expertise": { "type": "string" },
-                      "audienceSize": { "type": "string" },
-                      "collaboration": { "type": "string" }
+                      "name": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
+                      },
+                      "platform": {
+                        "type": "string"
+                      },
+                      "expertise": {
+                        "type": "string"
+                      },
+                      "audienceSize": {
+                        "type": "string"
+                      },
+                      "collaboration": {
+                        "type": "string"
+                      }
                     },
-                    "required": ["name", "url", "platform", "expertise", "audienceSize", "collaboration"],
+                    "required": [
+                      "name",
+                      "url",
+                      "platform",
+                      "expertise",
+                      "audienceSize",
+                      "collaboration"
+                    ],
                     "additionalProperties": false
                   }
                 }
               },
-              "required": ["differentiators", "direct", "indirect", "influencers"],
+              "required": [
+                "differentiators",
+                "direct",
+                "indirect",
+                "influencers"
+              ],
               "additionalProperties": false
             },
             "brandGuide": {
@@ -642,14 +1257,39 @@
                 "voice": {
                   "type": "object",
                   "properties": {
-                    "description": { "type": "string" },
-                    "tone": { "type": "string" },
-                    "style": { "type": "string" },
-                    "vibe": { "type": "string" },
-                    "attributes": { "type": "array", "items": { "type": "string" } },
-                    "avoid": { "type": "array", "items": { "type": "string" } }
+                    "description": {
+                      "type": "string"
+                    },
+                    "tone": {
+                      "type": "string"
+                    },
+                    "style": {
+                      "type": "string"
+                    },
+                    "vibe": {
+                      "type": "string"
+                    },
+                    "attributes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "avoid": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
                   },
-                  "required": ["description", "tone", "style", "vibe", "attributes", "avoid"],
+                  "required": [
+                    "description",
+                    "tone",
+                    "style",
+                    "vibe",
+                    "attributes",
+                    "avoid"
+                  ],
                   "additionalProperties": false
                 },
                 "colors": {
@@ -658,35 +1298,69 @@
                     "primary": {
                       "type": "object",
                       "properties": {
-                        "name": { "type": "string" },
-                        "hex": { "type": "string" },
-                        "usage": { "type": "string" }
+                        "name": {
+                          "type": "string"
+                        },
+                        "hex": {
+                          "type": "string"
+                        },
+                        "usage": {
+                          "type": "string"
+                        }
                       },
-                      "required": ["name", "hex", "usage"],
+                      "required": [
+                        "name",
+                        "hex",
+                        "usage"
+                      ],
                       "additionalProperties": false
                     },
                     "secondary": {
                       "type": "object",
                       "properties": {
-                        "name": { "type": "string" },
-                        "hex": { "type": "string" },
-                        "usage": { "type": "string" }
+                        "name": {
+                          "type": "string"
+                        },
+                        "hex": {
+                          "type": "string"
+                        },
+                        "usage": {
+                          "type": "string"
+                        }
                       },
-                      "required": ["name", "hex", "usage"],
+                      "required": [
+                        "name",
+                        "hex",
+                        "usage"
+                      ],
                       "additionalProperties": false
                     },
                     "accent": {
                       "type": "object",
                       "properties": {
-                        "name": { "type": "string" },
-                        "hex": { "type": "string" },
-                        "usage": { "type": "string" }
+                        "name": {
+                          "type": "string"
+                        },
+                        "hex": {
+                          "type": "string"
+                        },
+                        "usage": {
+                          "type": "string"
+                        }
                       },
-                      "required": ["name", "hex", "usage"],
+                      "required": [
+                        "name",
+                        "hex",
+                        "usage"
+                      ],
                       "additionalProperties": false
                     }
                   },
-                  "required": ["primary", "secondary", "accent"],
+                  "required": [
+                    "primary",
+                    "secondary",
+                    "accent"
+                  ],
                   "additionalProperties": false
                 },
                 "typography": {
@@ -695,23 +1369,40 @@
                     "headings": {
                       "type": "object",
                       "properties": {
-                        "font": { "type": "string" },
-                        "description": { "type": "string" }
+                        "font": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        }
                       },
-                      "required": ["font", "description"],
+                      "required": [
+                        "font",
+                        "description"
+                      ],
                       "additionalProperties": false
                     },
                     "body": {
                       "type": "object",
                       "properties": {
-                        "font": { "type": "string" },
-                        "description": { "type": "string" }
+                        "font": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        }
                       },
-                      "required": ["font", "description"],
+                      "required": [
+                        "font",
+                        "description"
+                      ],
                       "additionalProperties": false
                     }
                   },
-                  "required": ["headings", "body"],
+                  "required": [
+                    "headings",
+                    "body"
+                  ],
                   "additionalProperties": false
                 },
                 "logo": {
@@ -720,50 +1411,110 @@
                     "primary": {
                       "type": "object",
                       "properties": {
-                        "description": { "type": "string" },
-                        "usage": { "type": "string" },
-                        "specs": { "type": "array", "items": { "type": "string" } }
+                        "description": {
+                          "type": "string"
+                        },
+                        "usage": {
+                          "type": "string"
+                        },
+                        "specs": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
                       },
-                      "required": ["description", "usage", "specs"],
+                      "required": [
+                        "description",
+                        "usage",
+                        "specs"
+                      ],
                       "additionalProperties": false
                     },
-                    "clearSpace": { "type": "string" },
+                    "clearSpace": {
+                      "type": "string"
+                    },
                     "variations": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "name": { "type": "string" },
-                          "description": { "type": "string" },
-                          "usage": { "type": "string" }
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "usage": {
+                            "type": "string"
+                          }
                         },
-                        "required": ["name", "description", "usage"],
+                        "required": [
+                          "name",
+                          "description",
+                          "usage"
+                        ],
                         "additionalProperties": false
                       }
                     },
-                    "restrictions": { "type": "array", "items": { "type": "string" } }
+                    "restrictions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
                   },
-                  "required": ["primary", "clearSpace", "variations", "restrictions"],
+                  "required": [
+                    "primary",
+                    "clearSpace",
+                    "variations",
+                    "restrictions"
+                  ],
                   "additionalProperties": false
                 },
                 "visualStyle": {
                   "type": "object",
                   "properties": {
-                    "approach": { "type": "string" },
-                    "elements": { "type": "array", "items": { "type": "string" } }
+                    "approach": {
+                      "type": "string"
+                    },
+                    "elements": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
                   },
-                  "required": ["approach", "elements"],
+                  "required": [
+                    "approach",
+                    "elements"
+                  ],
                   "additionalProperties": false
                 }
               },
-              "required": ["voice", "colors", "typography", "logo", "visualStyle"],
+              "required": [
+                "voice",
+                "colors",
+                "typography",
+                "logo",
+                "visualStyle"
+              ],
               "additionalProperties": false
             }
           },
           "required": [
-            "meta", "founderStory", "audience", "painPoints", "desires",
-            "transformation", "coreValues", "product", "credibility",
-            "objections", "competitiveLandscape", "brandGuide"
+            "meta",
+            "founderStory",
+            "audience",
+            "painPoints",
+            "desires",
+            "transformation",
+            "coreValues",
+            "product",
+            "credibility",
+            "objections",
+            "competitiveLandscape",
+            "brandGuide"
           ],
           "additionalProperties": false
         }
@@ -776,9 +1527,11 @@
       "reasoning_effort": "high",
       "service_tier": "auto",
       "max_output_tokens": 65536,
-      "instructions": "Act as a Senior Brand Strategist, Document Designer, and Visual Identity Specialist.\n\n## CRITICAL OUTPUT REQUIREMENT\nYour text output MUST be a complete, standalone HTML5 document starting with <!DOCTYPE html> and ending with </html>. Do NOT output JSON, markdown, or any other format. The ONLY thing you output as text is the full HTML document. No preamble, no explanation, no summary — just the raw HTML.\n\n## Input\nStep 1 provides the complete ICP JSON with 12 top-level sections: meta, founderStory, audience, painPoints, desires, transformation, coreValues, product, credibility, objections, competitiveLandscape, and brandGuide.\n\n## Process\n\n### Step A: Generate 4 images\nUse the image_generation tool to generate exactly 4 images:\n\n1. **Full Logo (Icon + Wordmark)**: A professional logo combining a geometric icon with the brand name (meta.brandName) as a wordmark. Use brandGuide.colors.primary.hex for the icon and brandGuide.colors.secondary.hex for the text. Clean, balanced layout. Transparent background.\n\n2. **Icon Only**: Just the geometric icon mark from image 1 — no text, no wordmark. Use brandGuide.colors.primary.hex as the fill color. Simple enough to work at 32x32px. Transparent background. No letters, no gradients.\n\n3. **Inverse Logo (Icon + Wordmark)**: The same full logo design as image 1, but rendered in white (#FFFFFF) on a solid background using brandGuide.colors.secondary.hex. This is the dark-background version.\n\n4. **Persona Avatar**: A realistic, professional portrait matching the audience demographics (age range, gender, occupation from audience.demographics). The setting and attire should match the persona's professional context. No text in image.\n\nNote the returned image URLs — you will embed them as <img> tags in the HTML.\n\n### Step B: Build the complete HTML document\nAfter generating the images, output the FULL HTML document as your text response. Embed the generated image URLs as <img src=\"...\"> tags in the appropriate sections.\n\n## HTML Document Structure (all 21 sections required)\n\n1. **Header** — Logo <img> + meta.brandName + date from meta.lastUpdated\n2. **Founder Story** — founderStory.title as heading, founderStory.content as a styled narrative block with pull-quote styling\n3. **Audience: Demographics** — Card layout with all audience.demographics fields (ageRange, gender, incomeRange, location, education, occupation, familyStatus)\n4. **Audience: Psychographics** — Four columns/cards for beliefs, lifestyle, personality, buyingBehavior from audience.psychographics — each item displayed as a styled first-person quote\n5. **Audience: Media Habits** — Grid of media cards organized by type (blogs, books, podcasts, forums, socialPlatforms) from audience.mediaHabits. Show favicon/logo images inline with links. For books, show cover images.\n6. **Pain Points** — From painPoints[]. Each pain point as a card with title, severity bar (visual 0-100), description, and customerQuotes displayed as styled quote blocks. Sort by severity (highest first).\n7. **Desires** — From desires[]. Each desire as a card with title, customerQuotes, emotionalOutcome callout, visionSnapshot, and milestones.\n8. **Transformation** — Before/after comparison layout using transformation.before, .after, .emotionalShift, .impact. Use a visual arrow or journey metaphor.\n9. **Core Values** — From coreValues. Show the statement as a hero callout, then each value as a card with name and description.\n10. **Product Profile** — From product. Hero section with name and summary, mechanism tagline + description, features grid (name + description for each), delivery details (format, access, community, disclaimer), and price/investment callout.\n11. **Credibility & Authority** — From credibility. Headline as hero text, then credentials, recentWins, clientResults, and background as organized lists with visual distinction between categories.\n12. **Objections Playbook** — From objections[]. Two-column layout: concern on left, response on right. Scannable format for sales teams.\n13. **Competitive Landscape: Differentiators** — From competitiveLandscape.differentiators. Positioning statement callout, innovation description, uniqueValue as a feature list, engagementElements as tags.\n14. **Competitive Landscape: Direct Competitors** — From competitiveLandscape.direct[]. Each competitor as a detailed card with logo <img>, name, website link, offering, USP, pricing, strengths list, weaknesses list, and summary notes.\n15. **Competitive Landscape: Indirect Competitors** — From competitiveLandscape.indirect[]. Table or card layout with name, website, offering, overlap, and whyChooseThem.\n16. **Competitive Landscape: Influencers** — From competitiveLandscape.influencers[]. Grid of influencer cards with name, platform, expertise, audience size, and link.\n17. **Brand Guide: Voice** — From brandGuide.voice. Description, tone, style, vibe as styled text, attributes as tags, avoid list.\n18. **Brand Guide: Colors** — From brandGuide.colors. Three color swatches (actual colored <div> elements) showing name, hex code, and usage for primary, secondary, and accent.\n19. **Brand Guide: Typography** — From brandGuide.typography. Show heading and body font pairings with actual rendered examples using the imported Google Fonts, plus descriptions.\n20. **Brand Guide: Logo & Visual Style** — From brandGuide.logo and brandGuide.visualStyle. Show all 3 logo variations (full logo, icon only, inverse) in a row. Logo specs, variations, restrictions, visual approach, and elements.\n21. **Footer** — Generated date from meta.lastUpdated, logo, disclaimer\n\n## HTML & Design Requirements\n- Complete standalone HTML5 document: starts with <!DOCTYPE html>, ends with </html>\n- Import the fonts specified in brandGuide.typography.headings.font and brandGuide.typography.body.font from Google Fonts via <link> tags\n- Define CSS custom properties from brandGuide.colors: --primary, --secondary, --accent\n- Mobile-responsive with @media queries (single column below 768px)\n- Semantic HTML5 (<header>, <main>, <section>, <footer>)\n- Severity bars for pain points: colored <div> with width proportional to severity score (0-100%)\n- Card-based layouts for audience, pain points, desires, competitors, and values\n- Quote styling for customerQuotes: <blockquote> elements with quotation mark decorations\n- Two-column before/after layout for transformation section\n- Color palette swatches: actual colored <div> elements with inline background-color styles\n- All URLs from mediaHabits and competitiveLandscape rendered as clickable <a href> links\n- Generated images embedded as <img src=\"URL\"> tags (use the URLs returned from image_generation)\n- Print-friendly styles via @media print\n- All CSS must be in a single <style> block in the <head> — no external stylesheets except Google Fonts\n\n## Personalization\n- Use meta.brandName throughout the document as the brand identity\n- Reference the submitter by name if provided in the form data\n- Tailor section headers to match the brand's industry and audience\n\n## Quality Bar\n- This IS the final client deliverable — it must look like it came from a premium consulting firm\n- Every data point from the Step 1 JSON must appear in the HTML — no omissions\n- All 21 sections present — no skipping, no merging sections that should be separate\n- No placeholder text, no lorem ipsum, no [brackets]\n- All 4 generated images embedded via <img> tags (full logo in header, icon only in footer/favicon reference, inverse logo + icon only in Brand Guide section, persona avatar in Demographics section)\n- Your text response is ONLY the HTML document — no JSON, no markdown, no commentary",
+      "instructions": "Act as a Senior Brand Strategist, Document Designer, and Visual Identity Specialist.\n\n## CRITICAL OUTPUT REQUIREMENT\nYour text output MUST be a complete, standalone HTML5 document starting with <!DOCTYPE html> and ending with </html>. Do NOT output JSON, markdown, or any other format. The ONLY thing you output as text is the full HTML document. No preamble, no explanation, no summary \u2014 just the raw HTML.\n\n## Input\nStep 1 provides the complete ICP JSON with 12 top-level sections: meta, founderStory, audience, painPoints, desires, transformation, coreValues, product, credibility, objections, competitiveLandscape, and brandGuide.\n\n## Process\n\n### Step A: Generate 4 images\nUse the image_generation tool to generate exactly 4 images:\n\n1. **Full Logo (Icon + Wordmark)**: A professional logo combining a geometric icon with the brand name (meta.brandName) as a wordmark. Use brandGuide.colors.primary.hex for the icon and brandGuide.colors.secondary.hex for the text. Clean, balanced layout. Transparent background.\n\n2. **Icon Only**: Just the geometric icon mark from image 1 \u2014 no text, no wordmark. Use brandGuide.colors.primary.hex as the fill color. Simple enough to work at 32x32px. Transparent background. No letters, no gradients.\n\n3. **Inverse Logo (Icon + Wordmark)**: The same full logo design as image 1, but rendered in white (#FFFFFF) on a solid background using brandGuide.colors.secondary.hex. This is the dark-background version.\n\n4. **Persona Avatar**: A realistic, professional portrait matching the audience demographics (age range, gender, occupation from audience.demographics). The setting and attire should match the persona's professional context. No text in image.\n\nNote the returned image URLs \u2014 you will embed them as <img> tags in the HTML.\n\n### Step B: Build the complete HTML document\nAfter generating the images, output the FULL HTML document as your text response. Embed the generated image URLs as <img src=\"...\"> tags in the appropriate sections.\n\n## HTML Document Structure (all 21 sections required)\n\n1. **Header** \u2014 Logo <img> + meta.brandName + date from meta.lastUpdated\n2. **Founder Story** \u2014 founderStory.title as heading, founderStory.content as a styled narrative block with pull-quote styling\n3. **Audience: Demographics** \u2014 Card layout with all audience.demographics fields (ageRange, gender, incomeRange, location, education, occupation, familyStatus)\n4. **Audience: Psychographics** \u2014 Four columns/cards for beliefs, lifestyle, personality, buyingBehavior from audience.psychographics \u2014 each item displayed as a styled first-person quote\n5. **Audience: Media Habits** \u2014 Grid of media cards organized by type (blogs, books, podcasts, forums, socialPlatforms) from audience.mediaHabits. Show favicon/logo images inline with links. For books, show cover images.\n6. **Pain Points** \u2014 From painPoints[]. Each pain point as a card with title, severity bar (visual 0-100), description, and customerQuotes displayed as styled quote blocks. Sort by severity (highest first).\n7. **Desires** \u2014 From desires[]. Each desire as a card with title, customerQuotes, emotionalOutcome callout, visionSnapshot, and milestones.\n8. **Transformation** \u2014 Before/after comparison layout using transformation.before, .after, .emotionalShift, .impact. Use a visual arrow or journey metaphor.\n9. **Core Values** \u2014 From coreValues. Show the statement as a hero callout, then each value as a card with name and description.\n10. **Product Profile** \u2014 From product. Hero section with name and summary, mechanism tagline + description, features grid (name + description for each), delivery details (format, access, community, disclaimer), and price/investment callout.\n11. **Credibility & Authority** \u2014 From credibility. Headline as hero text, then credentials, recentWins, clientResults, and background as organized lists with visual distinction between categories.\n12. **Objections Playbook** \u2014 From objections[]. Two-column layout: concern on left, response on right. Scannable format for sales teams.\n13. **Competitive Landscape: Differentiators** \u2014 From competitiveLandscape.differentiators. Positioning statement callout, innovation description, uniqueValue as a feature list, engagementElements as tags.\n14. **Competitive Landscape: Direct Competitors** \u2014 From competitiveLandscape.direct[]. Each competitor as a detailed card with logo <img>, name, website link, offering, USP, pricing, strengths list, weaknesses list, and summary notes.\n15. **Competitive Landscape: Indirect Competitors** \u2014 From competitiveLandscape.indirect[]. Table or card layout with name, website, offering, overlap, and whyChooseThem.\n16. **Competitive Landscape: Influencers** \u2014 From competitiveLandscape.influencers[]. Grid of influencer cards with name, platform, expertise, audience size, and link.\n17. **Brand Guide: Voice** \u2014 From brandGuide.voice. Description, tone, style, vibe as styled text, attributes as tags, avoid list.\n18. **Brand Guide: Colors** \u2014 From brandGuide.colors. Three color swatches (actual colored <div> elements) showing name, hex code, and usage for primary, secondary, and accent.\n19. **Brand Guide: Typography** \u2014 From brandGuide.typography. Show heading and body font pairings with actual rendered examples using the imported Google Fonts, plus descriptions.\n20. **Brand Guide: Logo & Visual Style** \u2014 From brandGuide.logo and brandGuide.visualStyle. Show all 3 logo variations (full logo, icon only, inverse) in a row. Logo specs, variations, restrictions, visual approach, and elements.\n21. **Footer** \u2014 Generated date from meta.lastUpdated, logo, disclaimer\n\n## HTML & Design Requirements\n- Complete standalone HTML5 document: starts with <!DOCTYPE html>, ends with </html>\n- Import the fonts specified in brandGuide.typography.headings.font and brandGuide.typography.body.font from Google Fonts via <link> tags\n- Define CSS custom properties from brandGuide.colors: --primary, --secondary, --accent\n- Mobile-responsive with @media queries (single column below 768px)\n- Semantic HTML5 (<header>, <main>, <section>, <footer>)\n- Severity bars for pain points: colored <div> with width proportional to severity score (0-100%)\n- Card-based layouts for audience, pain points, desires, competitors, and values\n- Quote styling for customerQuotes: <blockquote> elements with quotation mark decorations\n- Two-column before/after layout for transformation section\n- Color palette swatches: actual colored <div> elements with inline background-color styles\n- All URLs from mediaHabits and competitiveLandscape rendered as clickable <a href> links\n- Generated images embedded as <img src=\"URL\"> tags (use the URLs returned from image_generation)\n- Print-friendly styles via @media print\n- All CSS must be in a single <style> block in the <head> \u2014 no external stylesheets except Google Fonts\n\n## Personalization\n- Use meta.brandName throughout the document as the brand identity\n- Reference the submitter by name if provided in the form data\n- Tailor section headers to match the brand's industry and audience\n\n## Quality Bar\n- This IS the final client deliverable \u2014 it must look like it came from a premium consulting firm\n- Every data point from the Step 1 JSON must appear in the HTML \u2014 no omissions\n- All 21 sections present \u2014 no skipping, no merging sections that should be separate\n- No placeholder text, no lorem ipsum, no [brackets]\n- All 4 generated images embedded via <img> tags (full logo in header, icon only in footer/favicon reference, inverse logo + icon only in Brand Guide section, persona avatar in Demographics section)\n- Your text response is ONLY the HTML document \u2014 no JSON, no markdown, no commentary",
       "step_order": 2,
-      "depends_on": [1],
+      "depends_on": [
+        1
+      ],
       "tools": [
         {
           "type": "image_generation",
