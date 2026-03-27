@@ -1,12 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { StepNavCard } from "@/components/jobs/detail/StepNavCard";
-import FlowchartSidePanel from "@/app/dashboard/workflows/components/FlowchartSidePanel";
 
 import { useStepDetailData } from "./hooks/useStepDetailData";
 import { StepHeader } from "./components/StepHeader";
@@ -14,6 +14,14 @@ import { StepOutput } from "./components/StepOutput";
 import { StepInput } from "./components/StepInput";
 import { StepImages } from "./components/StepImages";
 import { StepStats } from "./components/StepStats";
+
+const FlowchartSidePanel = dynamic(
+  () => import("@/app/dashboard/workflows/components/FlowchartSidePanel"),
+  {
+    ssr: false,
+    loading: () => null,
+  },
+);
 
 export default function StepDetailClient() {
   const {

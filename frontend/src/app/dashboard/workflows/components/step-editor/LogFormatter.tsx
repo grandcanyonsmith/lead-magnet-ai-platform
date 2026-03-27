@@ -1,8 +1,7 @@
 import React from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { FiLayout, FiCopy } from 'react-icons/fi';
 import { toast } from "sonner";
+import { LazySyntaxHighlighter } from "@/components/artifacts/logs/LazySyntaxHighlighter";
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 
 // Regex patterns
@@ -183,8 +182,8 @@ const renderMarkdown = (value: string, options?: { forceCodeLanguage?: string })
                 : String(children);
             return (
               <div className="my-2 rounded-lg border border-gray-800 bg-black/30 overflow-hidden">
-                <SyntaxHighlighter
-                  style={vscDarkPlus}
+                <LazySyntaxHighlighter
+                  value={raw.replace(/\n$/, '')}
                   language={match[1]}
                   PreTag="div"
                   customStyle={{
@@ -195,9 +194,7 @@ const renderMarkdown = (value: string, options?: { forceCodeLanguage?: string })
                     lineHeight: '1.6',
                   }}
                   {...props}
-                >
-                  {raw.replace(/\n$/, '')}
-                </SyntaxHighlighter>
+                />
               </div>
             );
           }

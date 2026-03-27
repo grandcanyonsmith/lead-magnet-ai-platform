@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { FiCopy, FiLayout } from 'react-icons/fi';
 
+import { LazySyntaxHighlighter } from "@/components/artifacts/logs/LazySyntaxHighlighter";
 import { JsonViewer } from "@/components/ui/JsonViewer";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 
@@ -164,14 +163,12 @@ export const ContentRenderer: React.FC<{ content: any; type: ContentType }> = ({
             code({ node, inline, className, children, ...props }: any) {
               const match = /language-(\w+)/.exec(className || '');
               return !inline && match ? (
-                <SyntaxHighlighter
-                  style={vscDarkPlus}
+                <LazySyntaxHighlighter
+                  value={String(children).replace(/\n$/, '')}
                   language={match[1]}
                   PreTag="div"
                   {...props}
-                >
-                  {String(children).replace(/\n$/, '')}
-                </SyntaxHighlighter>
+                />
               ) : (
                 <code className={className} {...props}>
                   {children}
