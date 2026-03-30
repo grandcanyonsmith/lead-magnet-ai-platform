@@ -342,8 +342,8 @@ export default function JobDetailClient() {
   const handleResubmitClick = () => setShowResubmitModal(true);
 
   const handleResubmitConfirm = async () => {
-    await handleResubmit();
     setShowResubmitModal(false);
+    await handleResubmit();
   };
 
   const handleEditStep = (stepIndex: number) => {
@@ -444,8 +444,6 @@ export default function JobDetailClient() {
           workflowSelector={workflowSelector}
           runSelector={runSelector}
         />
-        <div id="job-edit-subheader" className="w-full" />
-
         <JobDetailModals
           showResubmitModal={showResubmitModal}
           setShowResubmitModal={setShowResubmitModal}

@@ -79,6 +79,7 @@ export default function FlowchartSidePanel({
 
   return (
     <Sheet
+      modal={false}
       open={isOpen}
       onOpenChange={(open) => {
         if (!open) {
@@ -89,7 +90,7 @@ export default function FlowchartSidePanel({
       <SheetContent
         side="right"
         showCloseButton={false}
-        className="w-full max-w-2xl overflow-y-auto border-l border-border bg-background p-0 sm:max-w-2xl"
+        className="w-full max-w-full overflow-y-auto border-l border-border bg-background p-0 sm:w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-2rem)] xl:w-[1180px] xl:max-w-[1180px]"
       >
         <div className="sticky top-0 z-10 border-b border-border bg-background/80 px-6 py-5 shadow-sm backdrop-blur-md">
           <div className="flex items-start justify-between gap-4">
@@ -126,7 +127,7 @@ export default function FlowchartSidePanel({
           </div>
         </div>
 
-        <div className="space-y-6 bg-background px-6 py-6 pb-24">
+        <div className="space-y-6 bg-muted/[0.03] px-4 py-5 pb-24 sm:px-6 sm:py-6">
           {localStep && (
             <WorkflowStepEditor
               step={localStep}

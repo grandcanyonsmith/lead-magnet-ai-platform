@@ -1,17 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowPathIcon,
   ArrowUturnLeftIcon,
-  CheckIcon,
-  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   EllipsisVerticalIcon,
-  MagnifyingGlassIcon,
   PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -19,13 +15,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/DropdownMenu";
-import type {
-  BreadcrumbItem,
-  BreadcrumbMenuItem,
-} from "@/contexts/BreadcrumbsContext";
+import type { BreadcrumbItem } from "@/contexts/BreadcrumbsContext";
 import type { Status } from "@/types/common";
 import type { Job, JobDurationInfo, JobStepSummary } from "@/types/job";
 import type { Workflow } from "@/types/workflow";
@@ -75,153 +67,6 @@ const STATUS_BORDER_CLASS: Record<Status, string> = {
   failed: "border-red-500",
 };
 
-const SEARCH_THRESHOLD = 7;
-const EMPTY_MENU_ITEMS: BreadcrumbMenuItem[] = [];
-
-type HeaderSelectSize = "primary" | "secondary";
-
-interface HeaderSelectProps {
-  label: string;
-  menuItems?: BreadcrumbMenuItem[];
-  menuLabel?: string;
-  menuSearchPlaceholder?: string;
-  menuEmptyLabel?: string;
-  size?: HeaderSelectSize;
-  ariaLabel?: string;
-}
-
-function HeaderSelect({
-  label,
-  menuItems,
-  menuLabel,
-  menuSearchPlaceholder,
-  menuEmptyLabel,
-  size = "primary",
-  ariaLabel,
-}: HeaderSelectProps) {
-  const items = menuItems ?? EMPTY_MENU_ITEMS;
-  const [query, setQuery] = useState("");
-  const normalizedQuery = query.trim().toLowerCase();
-  const showSearch = items.length >= SEARCH_THRESHOLD;
-  const filteredItems = useMemo(() => {
-    if (!normalizedQuery) return items;
-    return items.filter((item) => {
-      const labelMatch = item.label.toLowerCase().includes(normalizedQuery);
-      const descriptionMatch =
-        typeof item.description === "string" &&
-        item.description.toLowerCase().includes(normalizedQuery);
-      return labelMatch || descriptionMatch;
-    });
-  }, [items, normalizedQuery]);
-  const emptyLabel =
-    menuEmptyLabel || (normalizedQuery ? "No matches found." : "No items.");
-  const triggerTextClass =
-    size === "primary"
-      ? "text-sm sm:text-lg font-semibold text-foreground"
-      : "text-xs sm:text-sm font-medium text-muted-foreground";
-  const iconClass =
-    size === "primary"
-      ? "h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"
-      : "h-3.5 w-3.5 text-muted-foreground";
-  const gapClass = size === "primary" ? "gap-2" : "gap-1";
-  const iconOffsetClass = size === "primary" ? "mt-1" : "mt-0.5";
-  const menuWidthClass = size === "primary" ? "w-72 lg:w-80" : "w-64 lg:w-72";
-  const hasMenu =
-    items.length > 0 || Boolean(menuEmptyLabel) || Boolean(menuLabel);
-
-  if (!hasMenu) {
-    return (
-      <span className="min-w-0">
-        <span
-          className={`block min-w-0 whitespace-normal break-words ${triggerTextClass}`}
-          title={label}
-        >
-          {label}
-        </span>
-      </span>
-    );
-  }
-
-  return (
-    <div className="relative inline-flex w-full">
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          type="button"
-          aria-label={ariaLabel}
-          className={`group flex w-full items-start ${gapClass} rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60`}
-        >
-          <span className="min-w-0">
-            <span
-              className={`block min-w-0 whitespace-normal break-words ${triggerTextClass}`}
-              title={label}
-            >
-              {label}
-            </span>
-          </span>
-          <ChevronDownIcon
-            className={`${iconClass} ${iconOffsetClass} shrink-0`}
-          />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="start"
-          side="bottom"
-          className={`${menuWidthClass} z-[70]`}
-        >
-          {menuLabel && (
-            <DropdownMenuLabel className="px-2 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-              {menuLabel}
-            </DropdownMenuLabel>
-          )}
-          {showSearch && (
-            <div className="px-2 pb-2">
-              <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={menuSearchPlaceholder || "Search..."}
-                  className="w-full rounded-md border border-border bg-background py-1.5 pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-              </div>
-            </div>
-          )}
-          <div className="max-h-72 overflow-y-auto scrollbar-hide">
-            {filteredItems.length > 0 ? (
-              filteredItems.map((item) => (
-                <DropdownMenuItem key={item.id} className="cursor-pointer">
-                  <Link href={item.href} className="flex w-full items-start gap-2">
-                    <div className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">
-                        {item.label}
-                      </span>
-                      {item.description && (
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {item.description}
-                        </span>
-                      )}
-                    </div>
-                    {item.isActive && (
-                      <CheckIcon
-                        className="mt-0.5 h-4 w-4 text-primary-500"
-                        aria-hidden="true"
-                      />
-                    )}
-                  </Link>
-                </DropdownMenuItem>
-              ))
-            ) : (
-              <div className="px-2 py-2 text-xs text-muted-foreground">
-                {emptyLabel}
-              </div>
-            )}
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
-}
-
 export function JobHeader({
   error,
   resubmitting,
@@ -261,7 +106,7 @@ export function JobHeader({
   const runLabel =
     runSelector?.label ||
     (job?.job_id ? `Job ${job.job_id.slice(0, 8)}` : "");
-  const showRunSelector = Boolean(runLabel);
+  const showRunBreadcrumb = Boolean(runLabel);
 
   const effectiveStatus = error ? "failed" : job?.status;
   const statusBorderClass = effectiveStatus
@@ -281,33 +126,60 @@ export function JobHeader({
   if (typeof totalCost === "number" && totalCost > 0) {
     statusSummaryParts.push(`$${totalCost.toFixed(2)}`);
   }
-  const statusSummary = statusSummaryParts.join(" \u00b7 ");
-
   const headingContent = (
-    <span className="flex min-w-0 flex-col gap-1">
-      <HeaderSelect
-        label={workflowLabel}
-        ariaLabel="Select lead magnet"
-        menuItems={workflowSelector?.menuItems}
-        menuLabel={workflowSelector?.menuLabel}
-        menuSearchPlaceholder={workflowSelector?.menuSearchPlaceholder}
-        menuEmptyLabel={workflowSelector?.menuEmptyLabel}
-        size="primary"
-      />
-      {showRunSelector && (
-        <HeaderSelect
-          label={runLabel}
-          ariaLabel="Select run"
-          menuItems={runSelector?.menuItems}
-          menuLabel={runSelector?.menuLabel}
-          menuSearchPlaceholder={runSelector?.menuSearchPlaceholder}
-          menuEmptyLabel={runSelector?.menuEmptyLabel}
-          size="secondary"
-        />
-      )}
-      {statusSummary && (
-        <span className="text-xs text-muted-foreground font-medium">
-          {statusSummary}
+    <span className="flex min-w-0 flex-col gap-2">
+      <span className="flex min-w-0 flex-wrap items-center gap-1 text-xs font-medium text-muted-foreground sm:text-sm">
+        <Link
+          href="/dashboard/jobs"
+          className="transition-colors hover:text-foreground"
+        >
+          Leads &amp; Results
+        </Link>
+        <ChevronRightIcon className="h-3.5 w-3.5 text-muted-foreground/60" />
+        {workflowSelector?.href ? (
+          <Link
+            href={workflowSelector.href}
+            className="max-w-[14rem] truncate transition-colors hover:text-foreground sm:max-w-[18rem]"
+            title={workflowLabel}
+          >
+            {workflowLabel}
+          </Link>
+        ) : (
+          <span
+            className="max-w-[14rem] truncate sm:max-w-[18rem]"
+            title={workflowLabel}
+          >
+            {workflowLabel}
+          </span>
+        )}
+        {showRunBreadcrumb && (
+          <>
+            <ChevronRightIcon className="h-3.5 w-3.5 text-muted-foreground/60" />
+            <span
+              className="max-w-[16rem] truncate text-foreground/80 sm:max-w-[22rem]"
+              title={runLabel}
+            >
+              {runLabel}
+            </span>
+          </>
+        )}
+      </span>
+      <span
+        className="block min-w-0 truncate text-foreground"
+        title={workflowLabel}
+      >
+        {workflowLabel}
+      </span>
+      {statusSummaryParts.length > 0 && (
+        <span className="flex flex-wrap items-center gap-2">
+          {statusSummaryParts.map((part) => (
+            <span
+              key={part}
+              className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground"
+            >
+              {part}
+            </span>
+          ))}
         </span>
       )}
     </span>
@@ -346,7 +218,7 @@ export function JobHeader({
   };
 
   return (
-    <div className="mb-6 sm:mb-7 space-y-3 sm:space-y-4">
+    <div className="mb-3 sm:mb-4 space-y-3 sm:space-y-4">
       {error && (
         <div className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-red-700 dark:text-red-200 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-pulse">
           <div>
@@ -376,7 +248,8 @@ export function JobHeader({
 
       <PageHeader
         heading={headingContent}
-        className="mb-0 pb-4"
+        className="mb-0 pb-3 border-b-0"
+        actionsInlineOnMobile
         bottomContent={
           <JobHeaderStats
             stats={stats}

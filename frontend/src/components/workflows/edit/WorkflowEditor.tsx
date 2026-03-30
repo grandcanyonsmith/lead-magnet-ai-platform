@@ -273,64 +273,103 @@ export function WorkflowEditor({
   }
 
   return (
-    <div className="space-y-6 w-full pb-20">
+    <div className={`${loadingFullPage ? "space-y-6" : "space-y-4"} w-full pb-20`}>
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sticky top-0 z-30 bg-background/95 backdrop-blur py-3 sm:py-4 border-b">
-        <div className="flex items-start gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleExit}
-            className="h-9 w-9 text-muted-foreground hover:text-foreground -ml-2"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl">
-                Edit Lead Magnet
-              </h1>
+      {loadingFullPage ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sticky top-0 z-30 bg-background/95 backdrop-blur py-3 sm:py-4 border-b">
+          <div className="flex items-start gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleExit}
+              className="h-9 w-9 text-muted-foreground hover:text-foreground -ml-2"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl">
+                  Edit Lead Magnet
+                </h1>
+              </div>
+              <p className="hidden sm:block text-sm text-muted-foreground">
+                Configure your workflow logic and intake form.
+              </p>
             </div>
-            <p className="hidden sm:block text-sm text-muted-foreground">
-              Configure your workflow logic and intake form.
-            </p>
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+            <Badge variant="secondary" className="w-fit">
+              Version v{workflowVersion}
+            </Badge>
+            <Button
+              variant="outline"
+              onClick={handleExit}
+              disabled={submitting}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() =>
+                workflowId
+                  ? router.push(`/dashboard/workflows/${workflowId}/versions`)
+                  : null
+              }
+              disabled={submitting || !workflowId}
+              className="w-full sm:w-auto"
+            >
+              Version History
+            </Button>
+            <Button
+              onClick={() => handleSubmit()}
+              disabled={submitting}
+              isLoading={submitting}
+              className="w-full sm:w-auto"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
+            </Button>
           </div>
         </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
-          <Badge variant="secondary" className="w-fit">
+      ) : (
+        <div className="flex items-center justify-between gap-3 py-2 border-b border-border/60">
+          <Badge variant="secondary">
             Version v{workflowVersion}
           </Badge>
-          <Button
-            variant="outline"
-            onClick={handleExit}
-            disabled={submitting}
-            className="w-full sm:w-auto"
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() =>
-              workflowId
-                ? router.push(`/dashboard/workflows/${workflowId}/versions`)
-                : null
-            }
-            disabled={submitting || !workflowId}
-            className="w-full sm:w-auto"
-          >
-            Version History
-          </Button>
-          <Button
-            onClick={() => handleSubmit()}
-            disabled={submitting}
-            isLoading={submitting}
-            className="w-full sm:w-auto"
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Save Changes
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExit}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                workflowId
+                  ? router.push(`/dashboard/workflows/${workflowId}/versions`)
+                  : null
+              }
+              disabled={submitting || !workflowId}
+            >
+              Version History
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => handleSubmit()}
+              disabled={submitting}
+              isLoading={submitting}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-destructive/20 dark:border-destructive/40 bg-destructive/10 dark:bg-destructive/20 p-4 text-destructive dark:text-destructive">

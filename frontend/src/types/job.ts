@@ -80,6 +80,7 @@ export interface JobStatusResponse {
   completed_at?: string | null;
   failed_at?: string | null;
   live_step?: JobLiveStep | null;
+  execution_steps_s3_key?: string | null;
 }
 
 export interface JobSubmissionPreview {

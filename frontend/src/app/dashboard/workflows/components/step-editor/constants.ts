@@ -124,14 +124,38 @@ export const STEP_EDITOR_SECTIONS = [
   {
     id: "basics",
     label: "Basics",
-    description: "Name, model, and defaults",
+    description: "Name and purpose",
     icon: FiSettings,
+  },
+  {
+    id: "instructions",
+    label: "Instructions",
+    description: "Prompt and markdown preview",
+    icon: FiFileText,
+  },
+  {
+    id: "model",
+    label: "AI Settings",
+    description: "Model, reasoning, and output",
+    icon: FiCpu,
+  },
+  {
+    id: "tools",
+    label: "Tools & Data",
+    description: "Tools, MCP, and dependencies",
+    icon: FiTerminal,
   },
   {
     id: "integrations",
     label: "Integrations",
     description: "Webhooks and handoff",
     icon: FiGlobe,
+  },
+  {
+    id: "refine",
+    label: "Test & Refine",
+    description: "AI assist and step testing",
+    icon: FiZap,
   },
 ] as const;
 

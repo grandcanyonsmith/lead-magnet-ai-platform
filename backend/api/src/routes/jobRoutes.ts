@@ -133,6 +133,18 @@ export function registerJobRoutes(): void {
     },
   );
 
+  // Stream job status/live output (SSE)
+  router.register(
+    "GET",
+    "/admin/jobs/:id/status/stream",
+    async (params, _body, _query, tenantId, context) => {
+      logger.info("[Router] Matched /admin/jobs/:id/status/stream route", {
+        id: params.id,
+      });
+      return await jobsController.streamStatus(tenantId!, params.id, context);
+    },
+  );
+
   // Get shell executor auto uploads for a job
   router.register(
     "GET",

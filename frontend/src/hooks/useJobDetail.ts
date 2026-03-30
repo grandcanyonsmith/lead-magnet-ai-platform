@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { logger } from "@/utils/logger";
-import type { Job } from "@/types/job";
+import type { Job, JobStatusResponse } from "@/types/job";
 import type { Workflow } from "@/types/workflow";
 import type { FormSubmission, Form } from "@/types/form";
 
@@ -418,6 +418,7 @@ export function useJobExecution({
     () => job?.execution_steps_s3_key || null,
     [job?.execution_steps_s3_key],
   );
+  const jobStatus = job?.status;
 
   useEffect(() => {
     setHasLoadedExecutionSteps(false);
@@ -538,59 +539,141 @@ export function useJobExecution({
     if (!enableExecutionSteps || !enablePolling) {
       return;
     }
-    if (!job || !jobId) {
+    if (!jobId) {
       return;
     }
 
-    const shouldPoll =
-      job.status === "processing" ||
-      job.status === "pending" ||
+    const shouldTrack =
+      jobStatus === "processing" ||
+      jobStatus === "pending" ||
       rerunningStep !== null;
-    if (!shouldPoll) {
+    if (!shouldTrack) {
       return;
     }
 
+    let active = true;
     let lastStepsFetchAt = 0;
-    const pollInterval = setInterval(async () => {
-      try {
-        const now = Date.now();
-        const data = await api.getJobStatus(jobId);
-        setJob((prevJob) =>
-          prevJob
-            ? {
-                ...prevJob,
-                status: data.status,
-                updated_at: data.updated_at ?? prevJob.updated_at,
-                started_at: data.started_at ?? prevJob.started_at,
-                completed_at: data.completed_at ?? prevJob.completed_at,
-                failed_at: data.failed_at ?? prevJob.failed_at,
-                live_step: data.live_step ?? null,
-              }
-            : prevJob,
-        );
-        // Execution steps come from S3 and are more expensive to fetch; keep them at ~3s cadence.
-        if (now - lastStepsFetchAt > 2500) {
-          lastStepsFetchAt = now;
-          await loadExecutionSteps(jobRef.current ?? job);
-        }
+    let fallbackPollInterval: ReturnType<typeof setInterval> | null = null;
+    const abortController = new AbortController();
 
-        if (rerunningStep !== null && data.status !== "processing") {
-          setRerunningStep(null);
-        }
-      } catch (err) {
-        logger.debug("Polling error", {
+    const applyJobStatusUpdate = (data: JobStatusResponse) => {
+      if (!active) {
+        return;
+      }
+
+      setJob((prevJob) =>
+        prevJob
+          ? {
+              ...prevJob,
+              status: data.status,
+              updated_at: data.updated_at ?? prevJob.updated_at,
+              started_at: data.started_at ?? prevJob.started_at,
+              completed_at: data.completed_at ?? prevJob.completed_at,
+              failed_at: data.failed_at ?? prevJob.failed_at,
+              live_step: data.live_step ?? null,
+              execution_steps_s3_key:
+                data.execution_steps_s3_key ??
+                prevJob.execution_steps_s3_key ??
+                null,
+            }
+          : prevJob,
+      );
+
+      if (rerunningStep !== null && data.status !== "processing") {
+        setRerunningStep(null);
+      }
+    };
+
+    const maybeLoadExecutionSteps = async () => {
+      if (!enableExecutionSteps) {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastStepsFetchAt <= 2500) {
+        return;
+      }
+
+      lastStepsFetchAt = now;
+
+      try {
+        await loadExecutionSteps(jobRef.current);
+      } catch (error) {
+        logger.debug("Execution steps refresh error", {
           context: "useJobExecution",
-          error: err,
+          error,
         });
       }
-    }, 1000);
+    };
+
+    const startFallbackPolling = () => {
+      if (fallbackPollInterval || !active) {
+        return;
+      }
+
+      fallbackPollInterval = setInterval(async () => {
+        try {
+          const data = await api.getJobStatus(jobId);
+          applyJobStatusUpdate(data);
+          await maybeLoadExecutionSteps();
+        } catch (err) {
+          logger.debug("Polling error", {
+            context: "useJobExecution",
+            error: err,
+          });
+        }
+      }, 1000);
+    };
+
+    void (async () => {
+      const streamResult = await api.jobs.streamJobStatus(
+        jobId,
+        {
+          onSnapshot: (data) => {
+            applyJobStatusUpdate(data);
+            void maybeLoadExecutionSteps();
+          },
+          onUpdate: (data) => {
+            applyJobStatusUpdate(data);
+            void maybeLoadExecutionSteps();
+          },
+          onComplete: (data) => {
+            if (data) {
+              applyJobStatusUpdate(data);
+            }
+            void loadExecutionSteps(jobRef.current).catch((error) => {
+              logger.debug("Final execution steps refresh error", {
+                context: "useJobExecution",
+                error,
+              });
+            });
+          },
+          onError: (error) => {
+            logger.debug("Job SSE stream error", {
+              context: "useJobExecution",
+              error,
+            });
+            startFallbackPolling();
+          },
+        },
+        abortController.signal,
+      );
+
+      if (streamResult.fallback) {
+        startFallbackPolling();
+      }
+    })();
 
     return () => {
-      clearInterval(pollInterval);
+      active = false;
+      abortController.abort();
+      if (fallbackPollInterval) {
+        clearInterval(fallbackPollInterval);
+      }
     };
   }, [
-    job,
     jobId,
+    jobStatus,
     loadExecutionSteps,
     rerunningStep,
     setJob,

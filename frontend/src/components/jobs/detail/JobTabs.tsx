@@ -87,7 +87,7 @@ const JobImproveTab = dynamic<JobImproveTabProps>(
     import("@/components/jobs/detail/JobImproveTab").then(
       (mod) => mod.JobImproveTab,
     ),
-  { loading: () => <TabFallback label="improvement insights" /> },
+  { loading: () => <TabFallback label="AI improvement history" /> },
 );
 
 const JobTrackingTab = dynamic<JobTrackingTabProps>(
@@ -131,8 +131,8 @@ const TAB_CONFIG = [
   },
   {
     id: "improve",
-    label: "Improve",
-    description: "Review & refine workflow",
+    label: "AI History",
+    description: "Review AI improvement proposals",
     group: "workflow" as TabGroupId,
   },
   {
@@ -348,7 +348,7 @@ export function JobTabs({
       },
       {
         id: "improve",
-        label: "Improve",
+        label: "AI History",
         content: (
           <JobImproveTab
             job={job}
@@ -401,14 +401,14 @@ export function JobTabs({
   };
 
   return (
-    <section className="mt-4 sm:mt-5 flex flex-1 min-h-0 flex-col">
+    <section className="flex flex-1 min-h-0 flex-col">
       <RecursiveTabs
         tabs={tabs}
         activeTab={activeTab}
         onTabChange={handleTabChange}
         className="h-full"
-        tabListClassName="sticky top-0 z-20 bg-background border-b border-border mb-4"
-        tabContentClassName="flex-1 overflow-hidden"
+        tabListClassName="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border mb-4"
+        tabContentClassName="flex-1"
       />
     </section>
   );

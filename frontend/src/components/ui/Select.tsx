@@ -152,18 +152,23 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
           >
             <Listbox.Options
               anchor="bottom start"
-              className="z-50 mt-1 max-h-60 w-[var(--button-width)] max-w-[calc(100vw-2rem)] overflow-auto rounded-md border border-input bg-popover py-1 text-sm shadow-md ring-1 ring-black/5 focus:outline-none"
+              modal={false}
+              onWheel={(e) => e.stopPropagation()}
+              className="z-[60] mt-1 max-h-60 w-[var(--button-width)] max-w-[calc(100vw-2rem)] overflow-auto overscroll-contain rounded-md border border-input bg-popover py-1 text-sm shadow-md ring-1 ring-black/5 focus:outline-none"
             >
               {searchable && (
                 <div className="sticky top-0 z-10 bg-popover px-2 py-1.5 border-b border-input mb-1">
                   <input
                     type="text"
+                    autoFocus
                     className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                     placeholder={searchPlaceholder || "Search..."}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
+                    onWheel={(e) => e.stopPropagation()}
                   />
                 </div>
               )}

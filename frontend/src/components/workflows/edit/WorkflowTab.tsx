@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/Label";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Separator } from "@/components/ui/Separator";
 import { Sparkles, Zap, ChevronDown, ChevronUp } from "lucide-react";
 const WorkflowFlowchart = dynamic(
   () => import("@/app/dashboard/workflows/components/WorkflowFlowchart"),
@@ -220,15 +219,17 @@ export function WorkflowTab({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>General Information</CardTitle>
-            <CardDescription>
+      <section className="rounded-xl border border-border/60 bg-card/60 p-5 shadow-sm">
+        <div className="grid gap-5 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] lg:gap-6">
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold text-foreground">
+              General Information
+            </h2>
+            <p className="text-sm text-muted-foreground">
               Basic details about your lead magnet workflow.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="workflow_name">
                 Lead Magnet Name <span className="text-red-500">*</span>
@@ -243,7 +244,7 @@ export function WorkflowTab({
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="workflow_description">Description</Label>
               <Textarea
                 id="workflow_description"
@@ -257,104 +258,9 @@ export function WorkflowTab({
                 className="resize-none"
               />
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className={`border-2 transition-colors ${showAIAssist ? 'border-purple-500/50 dark:border-purple-400/50 bg-purple-50/10 dark:bg-purple-900/10' : 'border-dashed'}`}>
-          <CardHeader className="pb-3">
-             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`p-2 rounded-lg ${showAIAssist ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-muted text-muted-foreground'}`}>
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">AI Copilot</CardTitle>
-                    <CardDescription>Auto-configure your workflow</CardDescription>
-                  </div>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setShowAIAssist(!showAIAssist)}
-                  className={showAIAssist ? "text-purple-600 dark:text-purple-400" : ""}
-                >
-                  {showAIAssist ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
-             </div>
-          </CardHeader>
-          
-          {showAIAssist && (
-            <CardContent>
-              {!proposal ? (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium uppercase text-muted-foreground">What would you like to change?</Label>
-                    <Textarea
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      placeholder="e.g., Add a research step at the beginning..."
-                      className="min-h-[120px] resize-none"
-                      disabled={isGenerating}
-                    />
-                  </div>
-
-                  {aiError && (
-                    <div className="text-sm text-red-500 bg-red-50 dark:bg-red-950/50 p-3 rounded-md border border-red-200 dark:border-red-900">
-                      {aiError}
-                    </div>
-                  )}
-
-                  {streamedOutput && !proposal && (
-                    <div className="rounded-md border border-purple-200/60 dark:border-purple-900/60 bg-purple-50/40 dark:bg-purple-950/40 p-3">
-                      <div className="text-[10px] font-semibold uppercase text-purple-600 dark:text-purple-300 mb-2">
-                        Live Response
-                      </div>
-                      <pre className="text-xs whitespace-pre-wrap font-mono text-purple-900 dark:text-purple-100 max-h-56 overflow-auto">
-                        {streamedOutput}
-                      </pre>
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handleGenerateAI}
-                    disabled={isGenerating || !aiPrompt.trim()}
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Zap className="mr-2 h-4 w-4 animate-spin" />
-                        Thinking...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        Generate Proposal
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ) : (
-                <WorkflowDiffPreview
-                  currentWorkflow={{
-                    workflow_name: formData.workflow_name,
-                    workflow_description: formData.workflow_description,
-                    steps: steps,
-                  }}
-                  proposal={proposal}
-                  onAccept={handleAcceptProposal}
-                  onReject={handleRejectProposal}
-                  isApplying={isApplying}
-                />
-              )}
-            </CardContent>
-          )}
-          {!showAIAssist && (
-             <CardContent className="pt-0 pb-6 text-sm text-muted-foreground">
-               Click to expand the AI assistant to help you restructure or improve your workflow automatically.
-             </CardContent>
-          )}
-        </Card>
-      </div>
+          </div>
+        </div>
+      </section>
 
       <Card className="overflow-hidden border-2 border-primary/10">
         <CardHeader className="bg-muted/30 pb-4">
@@ -380,6 +286,122 @@ export function WorkflowTab({
             onStepsReorder={onStepsReorder}
           />
         </div>
+      </Card>
+
+      <Card
+        className={`border-2 transition-colors ${
+          showAIAssist
+            ? "border-purple-500/50 bg-purple-50/10 dark:border-purple-400/50 dark:bg-purple-900/10"
+            : "border-dashed border-border/60"
+        }`}
+      >
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className={`rounded-lg p-2 ${
+                  showAIAssist
+                    ? "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <CardTitle className="text-base">AI Copilot</CardTitle>
+                <CardDescription>
+                  Generate and review workflow proposals before saving.
+                </CardDescription>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAIAssist(!showAIAssist)}
+              className={`self-start ${showAIAssist ? "text-purple-600 dark:text-purple-400" : ""}`}
+            >
+              {showAIAssist ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+
+        {showAIAssist && (
+          <CardContent>
+            {!proposal ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium uppercase text-muted-foreground">
+                    What would you like to change?
+                  </Label>
+                  <Textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder="e.g., Add a research step at the beginning..."
+                    className="min-h-[120px] resize-none"
+                    disabled={isGenerating}
+                  />
+                </div>
+
+                {aiError && (
+                  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-500 dark:border-red-900 dark:bg-red-950/50">
+                    {aiError}
+                  </div>
+                )}
+
+                {streamedOutput && !proposal && (
+                  <div className="rounded-md border border-purple-200/60 bg-purple-50/40 p-3 dark:border-purple-900/60 dark:bg-purple-950/40">
+                    <div className="mb-2 text-[10px] font-semibold uppercase text-purple-600 dark:text-purple-300">
+                      Live Response
+                    </div>
+                    <pre className="max-h-56 overflow-auto whitespace-pre-wrap font-mono text-xs text-purple-900 dark:text-purple-100">
+                      {streamedOutput}
+                    </pre>
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleGenerateAI}
+                  disabled={isGenerating || !aiPrompt.trim()}
+                  className="w-full bg-purple-600 text-white hover:bg-purple-700"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Zap className="mr-2 h-4 w-4 animate-spin" />
+                      Thinking...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Generate Proposal
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <WorkflowDiffPreview
+                currentWorkflow={{
+                  workflow_name: formData.workflow_name,
+                  workflow_description: formData.workflow_description,
+                  steps: steps,
+                }}
+                proposal={proposal}
+                onAccept={handleAcceptProposal}
+                onReject={handleRejectProposal}
+                isApplying={isApplying}
+              />
+            )}
+          </CardContent>
+        )}
+        {!showAIAssist && (
+          <CardContent className="pt-0 pb-6 text-sm text-muted-foreground">
+            Describe the changes you want, then review the proposed workflow
+            before applying it.
+          </CardContent>
+        )}
       </Card>
 
       {/* Step Editor Side Panel */}

@@ -31,6 +31,7 @@ export default function WorkflowTriggerSidePanel({
 }: WorkflowTriggerSidePanelProps) {
   return (
     <Sheet
+      modal={false}
       open={isOpen}
       onOpenChange={(open) => {
         if (!open) {

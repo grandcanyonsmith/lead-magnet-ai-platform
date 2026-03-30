@@ -368,7 +368,7 @@ export default function StepTester({ step, index }: StepTesterProps) {
   };
 
   return (
-    <div className="mt-8 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-gray-700">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}

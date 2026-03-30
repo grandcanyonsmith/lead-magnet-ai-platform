@@ -1,4 +1,7 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
+import { ChevronUpDownIcon } from "@heroicons/react/20/solid";
 import { FiEdit } from "react-icons/fi";
 import { MergedStep } from "@/types/job";
 import { SectionHeader } from "@/components/ui/sections/SectionHeader";
@@ -14,6 +17,8 @@ export function StepConfiguration({
   canEdit,
   onEditStep,
 }: StepConfigurationProps) {
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <div className="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
       <SectionHeader
@@ -44,13 +49,36 @@ export function StepConfiguration({
       />
       <div className="p-4 md:p-3 bg-white dark:bg-card space-y-3 md:space-y-2">
         {step.instructions && (
-          <div>
-            <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
-              Step Instructions (directive)
-            </span>
-            <pre className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap font-sans bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded border border-gray-200 dark:border-gray-700">
-              {step.instructions}
-            </pre>
+          <div className="group/instructions">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
+                Step Instructions (directive)
+              </span>
+              <button
+                type="button"
+                onClick={() => setExpanded((prev) => !prev)}
+                className={`inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-400 transition-all dark:text-gray-500 ${
+                  expanded
+                    ? "opacity-100 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                    : "opacity-0 group-hover/instructions:opacity-100 focus:opacity-100"
+                }`}
+                aria-label={expanded ? "Collapse instructions" : "Expand instructions"}
+                aria-expanded={expanded}
+              >
+                <ChevronUpDownIcon className="h-4 w-4" />
+              </button>
+            </div>
+            <div
+              className={`mt-1 rounded border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/50 ${
+                expanded
+                  ? "max-h-[65vh] overflow-y-auto scrollbar-hide-until-hover"
+                  : "max-h-40 overflow-hidden"
+              }`}
+            >
+              <pre className="p-2.5 text-sm whitespace-pre-wrap font-sans text-gray-700 dark:text-gray-300">
+                {step.instructions}
+              </pre>
+            </div>
           </div>
         )}
       </div>

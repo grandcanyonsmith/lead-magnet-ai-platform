@@ -68,12 +68,14 @@ export function JobDetailModals({
 }: JobDetailModalsProps) {
   return (
     <>
-      <ResubmitModal
-        isOpen={showResubmitModal}
-        onClose={() => setShowResubmitModal(false)}
-        onConfirm={handleResubmitConfirm}
-        isResubmitting={resubmitting}
-      />
+      {showResubmitModal && (
+        <ResubmitModal
+          isOpen={showResubmitModal}
+          onClose={() => setShowResubmitModal(false)}
+          onConfirm={handleResubmitConfirm}
+          isResubmitting={resubmitting}
+        />
+      )}
 
       {editingStepIndex !== null && workflow?.steps?.[editingStepIndex] && (
         <FlowchartSidePanel
@@ -93,19 +95,21 @@ export function JobDetailModals({
         />
       )}
 
-      <RerunStepDialog
-        isOpen={showRerunDialog}
-        onClose={handleCloseRerunDialog}
-        onRerunOnly={handleRerunOnly}
-        onRerunAndContinue={handleRerunAndContinue}
-        stepNumber={stepIndexForRerun !== null ? stepIndexForRerun + 1 : 0}
-        stepName={
-          stepIndexForRerun !== null
-            ? mergedSteps[stepIndexForRerun]?.step_name
-            : undefined
-        }
-        isRerunning={rerunningStep !== null}
-      />
+      {showRerunDialog && (
+        <RerunStepDialog
+          isOpen={showRerunDialog}
+          onClose={handleCloseRerunDialog}
+          onRerunOnly={handleRerunOnly}
+          onRerunAndContinue={handleRerunAndContinue}
+          stepNumber={stepIndexForRerun !== null ? stepIndexForRerun + 1 : 0}
+          stepName={
+            stepIndexForRerun !== null
+              ? mergedSteps[stepIndexForRerun]?.step_name
+              : undefined
+          }
+          isRerunning={rerunningStep !== null}
+        />
+      )}
 
       {previewItem && previewObjectUrl && (
         <FullScreenPreviewModal
