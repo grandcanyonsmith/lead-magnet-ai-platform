@@ -36,7 +36,13 @@ const HtmlPreviewCard = ({ artifact }: { artifact: Artifact }) => {
             artifactId={artifact.artifact_id}
           />
         }
-        actions={objectUrl ? <OutputCardActions url={objectUrl} /> : null}
+        actions={objectUrl ? (
+          <OutputCardActions
+            url={objectUrl}
+            artifactId={artifact.artifact_id}
+            contentType={contentType}
+          />
+        ) : null}
         overlayTopRight={
           <Badge
             variant="secondary"

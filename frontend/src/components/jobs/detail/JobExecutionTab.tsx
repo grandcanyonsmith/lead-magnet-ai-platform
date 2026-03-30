@@ -1,7 +1,13 @@
-import { ExecutionSteps } from "@/components/jobs/ExecutionSteps";
+"use client";
+
+import { useState, useMemo } from "react";
 import { ExecutionConfigCard } from "@/components/jobs/detail/ExecutionConfigCard";
 import { SubmissionSummary } from "@/components/jobs/detail/SubmissionSummary";
+import { ExecutionTimeline, ExecutionTimelineMobile } from "@/components/jobs/detail/ExecutionTimeline";
+import { StepDetailPanel } from "@/components/jobs/detail/StepDetailPanel";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { getStepStatus } from "@/components/jobs/utils";
 import type { Artifact } from "@/types/artifact";
 import type { FormSubmission } from "@/types/form";
 import type { ArtifactGalleryItem, Job, MergedStep } from "@/types/job";
@@ -55,8 +61,57 @@ export function JobExecutionTab({
   const showSubmission = Boolean(submission);
   const hasSteps = mergedSteps.length > 0;
 
+  const sortedSteps = useMemo(() => {
+    if (!mergedSteps || mergedSteps.length === 0) return [];
+    return [...mergedSteps].sort((a, b) => (a.step_order ?? 0) - (b.step_order ?? 0));
+  }, [mergedSteps]);
+
+  const visibleSteps = useMemo(
+    () => sortedSteps.filter((s) => s.step_type !== "form_submission"),
+    [sortedSteps],
+  );
+
+  const defaultStep = useMemo(() => {
+    const inProgress = visibleSteps.find(
+      (s) => getStepStatus(s, sortedSteps, job.status) === "in_progress",
+    );
+    if (inProgress) return inProgress.step_order ?? 0;
+    const lastCompleted = [...visibleSteps]
+      .reverse()
+      .find((s) => getStepStatus(s, sortedSteps, job.status) === "completed");
+    if (lastCompleted) return lastCompleted.step_order ?? 0;
+    return visibleSteps[0]?.step_order ?? 0;
+  }, [visibleSteps, sortedSteps, job.status]);
+
+  const [selectedStepOrder, setSelectedStepOrder] = useState<number>(defaultStep);
+
+  const selectedStep = useMemo(
+    () => visibleSteps.find((s) => (s.step_order ?? 0) === selectedStepOrder) ?? visibleSteps[0],
+    [visibleSteps, selectedStepOrder],
+  );
+
+  const selectedStatus = selectedStep
+    ? getStepStatus(selectedStep, sortedSteps, job.status)
+    : "pending";
+
+  const selectedLiveOutput =
+    job.live_step && job.live_step.step_order === selectedStepOrder
+      ? job.live_step.output_text
+      : undefined;
+  const selectedLiveUpdatedAt =
+    job.live_step && job.live_step.step_order === selectedStepOrder
+      ? job.live_step.updated_at
+      : undefined;
+
+  const emptyStatusCopy =
+    job.status === "failed"
+      ? "This run ended before any execution steps were recorded."
+      : job.status === "processing"
+        ? "Execution steps are still loading. Check back in a moment."
+        : "Steps will appear once the workflow starts running.";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {executionStepsError && (
         <ErrorState
           title="Execution timeline unavailable"
@@ -76,18 +131,67 @@ export function JobExecutionTab({
         </div>
       )}
 
-      <ExecutionSteps
-        jobId={job.job_id}
-        steps={mergedSteps}
-        onCopy={onCopy}
-        jobStatus={job.status}
-        liveStep={job.live_step}
-        onEditStep={onEditStep}
-        canEdit={true}
-        imageArtifactsByStep={imageArtifactsByStep}
-        fileArtifactsByStep={fileArtifactsByStep}
-        loadingImageArtifacts={loadingArtifacts}
-      />
+      {!hasSteps && (
+        <EmptyState
+          title="No execution steps available"
+          message={emptyStatusCopy}
+          className="py-10"
+        />
+      )}
+
+      {hasSteps && selectedStep && (
+        <>
+          {/* Mobile: horizontal pill strip */}
+          <div className="lg:hidden">
+            <ExecutionTimelineMobile
+              steps={mergedSteps}
+              selectedStepOrder={selectedStepOrder}
+              onSelectStep={setSelectedStepOrder}
+              jobStatus={job.status}
+            />
+            <div className="mt-4">
+              <StepDetailPanel
+                step={selectedStep}
+                status={selectedStatus}
+                onCopy={onCopy}
+                liveOutput={selectedLiveOutput}
+                liveUpdatedAt={selectedLiveUpdatedAt}
+                imageArtifacts={imageArtifactsByStep.get(selectedStepOrder)}
+                fileArtifacts={fileArtifactsByStep?.get(selectedStepOrder)}
+                loadingImageArtifacts={loadingArtifacts}
+                onEditStep={onEditStep}
+                canEdit={true}
+              />
+            </div>
+          </div>
+
+          {/* Desktop: side-by-side panels */}
+          <div className="hidden lg:flex gap-5 min-h-[55vh]">
+            <div className="w-[280px] shrink-0 overflow-y-auto rounded-xl border border-border bg-card py-2 scrollbar-hide-until-hover">
+              <ExecutionTimeline
+                steps={mergedSteps}
+                selectedStepOrder={selectedStepOrder}
+                onSelectStep={setSelectedStepOrder}
+                jobStatus={job.status}
+              />
+            </div>
+            <div className="flex-1 min-w-0 overflow-y-auto rounded-xl border border-border bg-card p-5 scrollbar-hide-until-hover">
+              <StepDetailPanel
+                step={selectedStep}
+                status={selectedStatus}
+                onCopy={onCopy}
+                liveOutput={selectedLiveOutput}
+                liveUpdatedAt={selectedLiveUpdatedAt}
+                imageArtifacts={imageArtifactsByStep.get(selectedStepOrder)}
+                fileArtifacts={fileArtifactsByStep?.get(selectedStepOrder)}
+                loadingImageArtifacts={loadingArtifacts}
+                onEditStep={onEditStep}
+                canEdit={true}
+              />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

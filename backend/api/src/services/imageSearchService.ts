@@ -9,6 +9,7 @@ export type ImageSearchResult = {
 };
 
 const OPENAI_SEARCH_MODEL = "gpt-5.2";
+const OPENAI_WEB_SEARCH_TOOL_TYPE = "web_search_preview" as const;
 const MAX_RESULTS = 8;
 const MAX_TEXT_LENGTH = 10000;
 
@@ -39,7 +40,7 @@ Rules:
       const response = await openai.responses.create({
         model: OPENAI_SEARCH_MODEL,
         input: prompt,
-        tools: [{ type: "web_search" }],
+        tools: [{ type: OPENAI_WEB_SEARCH_TOOL_TYPE }],
         tool_choice: "auto",
         reasoning: { effort: "low" },
         max_output_tokens: 4_000,

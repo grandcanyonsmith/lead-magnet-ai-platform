@@ -313,7 +313,11 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
           </Link>
         </Tooltip>
       ) : null}
-      <OutputCardActions url={artifactUrl} />
+      <OutputCardActions
+        url={artifactUrl}
+        artifactId={item.artifact?.artifact_id}
+        contentType={item.artifact?.content_type}
+      />
     </div>
   ) : isHtml && editorHref ? (
     <Tooltip content="Open in AI Editor" position="top">

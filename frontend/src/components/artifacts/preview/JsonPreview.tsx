@@ -47,6 +47,15 @@ export function JsonPreview({
   setJsonViewMode,
 }: JsonPreviewProps) {
   const COMPACT_MARKDOWN_PREVIEW_CHARS = 700;
+  const buildCompactJsonSnippet = (value?: string | null): string | null => {
+    if (!value) return null;
+    const normalized = value.replace(/\r\n/g, "\n").trim();
+    if (!normalized) return null;
+    if (normalized.length > COMPACT_MARKDOWN_PREVIEW_CHARS) {
+      return `${normalized.slice(0, COMPACT_MARKDOWN_PREVIEW_CHARS)}\n...`;
+    }
+    return normalized;
+  };
 
   const buildCompactMarkdownPreview = (value?: string | null): string | null => {
     if (!value) return null;
@@ -238,21 +247,45 @@ export function JsonPreview({
   }
 
   if (isCompactPreview) {
-    const jsonPreviewText =
-      jsonMarkdownPreview ||
-      (typeof jsonRaw === "string"
-        ? `\`\`\`json\n${jsonRaw}\n\`\`\``
+    const compactRaw =
+      typeof jsonRaw === "string"
+        ? jsonRaw
         : jsonContent
-          ? `\`\`\`json\n${JSON.stringify(jsonContent, null, 2)}\n\`\`\``
-          : null);
-    return renderCompactMarkdownPreview({
-      markdown: jsonPreviewText,
-      icon: (
-        <FiCode className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-      ),
-      emptyLabel: jsonError ? "Failed to load JSON" : "JSON Preview",
-      loadingLabel: jsonError ? "Failed to load JSON" : "Loading JSON...",
-    });
+          ? JSON.stringify(jsonContent, null, 2)
+          : null;
+    const snippet = buildCompactJsonSnippet(compactRaw);
+
+    return (
+      <CompactPreviewFrame>
+        {isInView ? (
+          snippet ? (
+            <div className="h-full w-full overflow-hidden bg-gray-50 dark:bg-gray-950 p-2">
+              <pre className="h-full overflow-hidden whitespace-pre-wrap break-words rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-2.5 py-2 text-[10px] leading-snug text-gray-800 dark:text-gray-100">
+                {snippet}
+              </pre>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+              <div className="text-center">
+                <FiCode className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                  {jsonError ? "Failed to load JSON" : "JSON file"}
+                </p>
+              </div>
+            </div>
+          )
+        ) : (
+          <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+            <div className="text-center">
+              <FiCode className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+              <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                JSON file
+              </p>
+            </div>
+          </div>
+        )}
+      </CompactPreviewFrame>
+    );
   }
 
   if (isInView) {

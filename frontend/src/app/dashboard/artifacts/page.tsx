@@ -326,7 +326,13 @@ export default function ArtifactsPage() {
                         />
                       }
                       actions={
-                        downloadUrl ? <OutputCardActions url={downloadUrl} /> : null
+                        downloadUrl ? (
+                          <OutputCardActions
+                            url={downloadUrl}
+                            artifactId={artifact.artifact_id}
+                            contentType={contentType}
+                          />
+                        ) : null
                       }
                       meta={
                         <div className="flex items-center gap-2 text-[10px] text-muted-foreground">

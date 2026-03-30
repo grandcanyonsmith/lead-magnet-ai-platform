@@ -136,7 +136,7 @@ export function JsonViewer({
                 : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700",
             )}
           >
-            Tree
+            Structured
           </button>
           <button
             type="button"
@@ -148,7 +148,7 @@ export function JsonViewer({
                 : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700",
             )}
           >
-            Raw
+            Raw JSON
           </button>
         </div>
 

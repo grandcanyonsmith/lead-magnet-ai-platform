@@ -122,7 +122,13 @@ export function JobOverviewSection({
                               />
                             }
                             actions={
-                              outputUrl ? <OutputCardActions url={outputUrl} /> : null
+                              outputUrl ? (
+                                <OutputCardActions
+                                  url={outputUrl}
+                                  artifactId={item.artifact?.artifact_id}
+                                  contentType={item.artifact?.content_type}
+                                />
+                              ) : null
                             }
                             onClick={onPreview ? () => onPreview(item) : undefined}
                             className={outputCardClassName}

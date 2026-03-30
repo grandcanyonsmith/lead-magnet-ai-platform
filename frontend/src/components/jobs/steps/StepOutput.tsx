@@ -88,6 +88,14 @@ export function StepOutput({
 
   const title = isAiStep ? "Result produced by this step" : undefined;
   const usedImageGeneration = hasImageGeneration(step, imageArtifacts);
+  const hasGeneratedFiles = fileArtifacts.length > 0;
+  const outputContent =
+    typeof step.output === "string"
+      ? step.output
+      : step.output
+        ? JSON.stringify(step.output, null, 2)
+        : "";
+  const hasInlineOutput = outputContent.trim().length > 0;
 
   const handleCopy = () => {
     if (shouldShowLiveOutput && typeof liveOutput === "string") {
@@ -181,13 +189,6 @@ export function StepOutput({
                     ? step.image_urls
                     : [];
 
-                const outputContent =
-                  typeof step.output === "string"
-                    ? step.output
-                    : step.output
-                      ? JSON.stringify(step.output, null, 2)
-                      : "";
-
                 const hasLogMarkers =
                   /\[Tool output\]|\[Code interpreter\]/.test(outputContent);
 
@@ -206,6 +207,18 @@ export function StepOutput({
                         }
                         className="h-[400px] border-0 rounded-none shadow-none"
                       />
+                    </div>
+                  );
+                }
+
+                if (!hasInlineOutput && hasGeneratedFiles) {
+                  return null;
+                }
+
+                if (!hasInlineOutput) {
+                  return (
+                    <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/30 px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                      No inline output was captured for this step.
                     </div>
                   );
                 }

@@ -235,7 +235,7 @@ export function StepContent({
         {formatted.content.instructions && (
           <div>
             <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">
-              Step Instructions (directive):
+              Instructions sent to the model:
             </span>
             <div className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700 max-h-64 overflow-y-auto scrollbar-hide-until-hover">
               {formatted.content.instructions}
@@ -251,13 +251,20 @@ export function StepContent({
     const hasMetadata =
       formatted.structure === "ai_input" &&
       typeof formatted.content === "object";
+    const contextValue = hasMetadata
+      ? (formatted.content as { input?: unknown }).input
+      : normalizedJsonValue;
+    const contextRaw =
+      typeof contextValue === "string"
+        ? contextValue
+        : JSON.stringify(contextValue, null, 2);
 
     // Extract image URLs from the JSON object (or from raw string if not parseable)
     const extractedImageUrls = showImagePreviews
-      ? normalizedJsonValue && typeof normalizedJsonValue === "object"
-        ? extractImageUrlsFromObject(normalizedJsonValue)
-        : typeof normalizedJsonValue === "string"
-          ? extractImageUrls(normalizedJsonValue)
+      ? contextValue && typeof contextValue === "object"
+        ? extractImageUrlsFromObject(contextValue)
+        : typeof contextValue === "string"
+          ? extractImageUrls(contextValue)
           : []
       : [];
 
@@ -268,15 +275,15 @@ export function StepContent({
           {hasMetadata && (
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                Context (form + dependencies):
+                Inputs from submission + previous steps:
               </span>
             </div>
           )}
           <JsonViewer
-            value={normalizedJsonValue}
-            raw={normalizedJsonRaw || contentString}
-            defaultMode="tree"
-            defaultExpandedDepth={2}
+            value={contextValue}
+            raw={contextRaw || normalizedJsonRaw || contentString}
+            defaultMode={hasMetadata ? "raw" : "tree"}
+            defaultExpandedDepth={hasMetadata ? 1 : 2}
           />
 
           {/* Render images found in JSON */}
@@ -405,7 +412,7 @@ export function StepContent({
           {hasMetadata && (
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                Context (form + dependencies):
+                Inputs from submission + previous steps:
               </span>
             </div>
           )}

@@ -38,7 +38,7 @@ export function JsonViewToggle({
           aria-pressed={viewMode === "markdown"}
           onClick={() => onChange("markdown")}
         >
-          Markdown
+          Summary
         </button>
         <button
           type="button"

@@ -30,6 +30,7 @@ export interface IcpResearchProfileInput {
 }
 
 const DEFAULT_MODEL = "o4-mini-deep-research";
+const OPENAI_WEB_SEARCH_TOOL_TYPE = "web_search_preview" as const;
 
 const ICP_RESEARCH_SYSTEM_PROMPT = `You are a market research analyst specializing in customer insight.
 Your task is to produce a concise, actionable ICP research report for a lead magnet strategist.
@@ -162,7 +163,7 @@ class IcpResearchService {
       input: prompt,
       reasoning: { effort: "high" as const },
       service_tier: "priority" as const,
-      tools: [{ type: "web_search" as const }],
+      tools: [{ type: OPENAI_WEB_SEARCH_TOOL_TYPE }],
       user: tenantId,
     };
 

@@ -26,6 +26,12 @@ const VALID_REASONING_EFFORTS = new Set(['none', 'low', 'medium', 'high', 'xhigh
 const VALID_TEXT_VERBOSITIES = new Set(['low', 'medium', 'high']);
 const DEFAULT_STEP_INSTRUCTIONS = 'Generate content based on form submission data.';
 
+const normalizeToolName = (toolName?: string): string | undefined =>
+  toolName === 'web_search_preview' ||
+  toolName === 'web_search_preview_2025_03_11'
+    ? 'web_search'
+    : toolName;
+
 export class WorkflowResponseParser {
   parseWorkflowResponse(
     cleaned: string,
@@ -118,10 +124,26 @@ export class WorkflowResponseParser {
       }
 
       if (step.tools && Array.isArray(step.tools)) {
-        step.tools = step.tools.filter((tool: string | { type: string }) => {
-          const toolName = typeof tool === 'string' ? tool : (tool as { type: string }).type;
-          return AVAILABLE_TOOLS.includes(toolName);
-        });
+        step.tools = step.tools
+          .map((tool: string | { type: string }) => {
+            const toolName = normalizeToolName(
+              typeof tool === 'string' ? tool : (tool as { type: string }).type,
+            );
+
+            if (!toolName || !AVAILABLE_TOOLS.includes(toolName)) {
+              return null;
+            }
+
+            if (typeof tool === 'string') {
+              return toolName;
+            }
+
+            return toolName === tool.type ? tool : { ...tool, type: toolName };
+          })
+          .filter(
+            (tool: string | { type: string } | null): tool is string | { type: string } =>
+              tool !== null,
+          );
       }
 
       const hasTools = Array.isArray(step.tools) && step.tools.length > 0;

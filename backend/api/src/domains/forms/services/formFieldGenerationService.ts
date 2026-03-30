@@ -107,7 +107,6 @@ The public_slug should be URL-friendly (lowercase, hyphens only). Return ONLY va
     });
 
     logger.info('[Form Field Generation Service] Calling OpenAI for form generation');
-    const formStartTime = Date.now();
     
     const formCompletionParams: any = {
       model: model || resolved.model || "gpt-5.2",
@@ -123,7 +122,6 @@ The public_slug should be URL-friendly (lowercase, hyphens only). Return ONLY va
       'form generation'
     );
 
-    const formDuration = Date.now() - formStartTime;
     const formModelUsed = formCompletion.model || formCompletionParams.model;
 
     // Track usage

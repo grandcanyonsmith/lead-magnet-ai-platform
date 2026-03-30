@@ -83,7 +83,7 @@ export function JsonNode({
             )}
           />
           <div className="min-w-0 flex-1">
-            <span className="text-cyan-700 dark:text-cyan-300">{name ?? "(root)"}</span>
+            <span className="text-cyan-700 dark:text-cyan-300">{name ?? "payload"}</span>
             <span className="text-gray-500 dark:text-gray-400">: </span>
             <span className="text-gray-700 dark:text-gray-200">[</span>
             <span className="text-gray-500 dark:text-gray-400">{formatItemCount(total)}</span>
@@ -140,7 +140,7 @@ export function JsonNode({
             )}
           />
           <div className="min-w-0 flex-1">
-            <span className="text-cyan-700 dark:text-cyan-300">{name ?? "(root)"}</span>
+            <span className="text-cyan-700 dark:text-cyan-300">{name ?? "payload"}</span>
             <span className="text-gray-500 dark:text-gray-400">: </span>
             <span className="text-gray-700 dark:text-gray-200">{"{"}</span>
             <span className="text-gray-500 dark:text-gray-400">{formatKeyCount(total)}</span>

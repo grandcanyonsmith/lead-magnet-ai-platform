@@ -189,7 +189,10 @@ const getToolName = (tool: any): string | undefined =>
   typeof tool === 'string' ? tool : tool?.type;
 
 const normalizeToolName = (toolName?: string): string | undefined =>
-  toolName === 'web_search_preview' ? 'web_search' : toolName;
+  toolName === 'web_search_preview' ||
+  toolName === 'web_search_preview_2025_03_11'
+    ? 'web_search'
+    : toolName;
 
 const sanitizeTools = (tools: any[]): any[] =>
   tools
@@ -201,7 +204,11 @@ const sanitizeTools = (tools: any[]): any[] =>
       if (typeof tool === 'string') {
         return normalizeToolName(tool);
       }
-      if (typeof tool === 'object' && tool?.type === 'web_search_preview') {
+      if (
+        typeof tool === 'object' &&
+        (tool?.type === 'web_search_preview' ||
+          tool?.type === 'web_search_preview_2025_03_11')
+      ) {
         return { ...tool, type: 'web_search' };
       }
       return tool;

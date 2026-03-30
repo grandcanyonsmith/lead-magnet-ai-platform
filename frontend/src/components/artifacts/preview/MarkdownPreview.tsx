@@ -351,7 +351,7 @@ export function MarkdownPreview({
                   <div className="text-center">
                     <FiFileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      No markdown content
+                      Empty markdown file
                     </p>
                   </div>
                 </div>
@@ -404,7 +404,7 @@ export function MarkdownPreview({
       emptyLabel: markdownError
         ? "Failed to load markdown"
         : isMarkdownEmpty
-          ? "No markdown content"
+          ? "Empty markdown file"
           : "Markdown File",
       loadingLabel: isMarkdownLoading ? "Loading markdown..." : undefined,
       isLoading: isMarkdownLoading,
@@ -429,7 +429,7 @@ export function MarkdownPreview({
               <div className="text-center">
                 <FiFileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  No markdown content
+                  Empty markdown file
                 </p>
               </div>
             </div>

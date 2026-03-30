@@ -54,7 +54,7 @@ export function PreviewRenderer({
   const [jsonRaw, setJsonRaw] = useState<string | null>(null);
   const [jsonError, setJsonError] = useState(false);
   const [jsonViewMode, setJsonViewMode] = useState<"markdown" | "json">(
-    "markdown",
+    "json",
   );
   const [stableObjectUrl, setStableObjectUrl] = useState(objectUrl);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -107,6 +107,7 @@ export function PreviewRenderer({
   const isMarkdownLike =
     effectiveContentType === "text/markdown" ||
     effectiveContentType === "text/plain";
+  const shouldAttemptJsonFromMarkdown = effectiveContentType === "text/plain";
 
   useEffect(() => {
     if (!isInView) return;
@@ -126,40 +127,83 @@ export function PreviewRenderer({
   ]);
 
   const fetchTextContent = useCallback(async (): Promise<string> => {
+    const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> => {
+      return Promise.race([
+        promise,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Fetch timed out")), ms),
+        ),
+      ]);
+    };
+
     if (artifactId) {
-      return await api.artifacts.getArtifactContent(artifactId);
+      return await withTimeout(api.artifacts.getArtifactContent(artifactId), 30000);
     }
     if (jobId && autoUploadKey) {
-      return await api.jobs.getJobAutoUploadContent(jobId, autoUploadKey);
+      return await withTimeout(
+        api.jobs.getJobAutoUploadContent(jobId, autoUploadKey),
+        30000,
+      );
     }
     if (previewObjectUrl) {
-      const res = await fetch(previewObjectUrl);
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+      try {
+        const res = await fetch(previewObjectUrl, {
+          signal: controller.signal,
+          redirect: "error",
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        const text = await res.text();
+        if (text.includes("<html") && text.includes("login")) {
+          throw new Error("Received login page instead of content");
+        }
+        return text;
+      } finally {
+        clearTimeout(timer);
       }
-      return await res.text();
     }
     throw new Error("No artifact ID or URL provided");
   }, [artifactId, autoUploadKey, jobId, previewObjectUrl]);
 
   useEffect(() => {
+    if (isCompactPreview) {
+      setIsInView(true);
+      return;
+    }
+
+    const el = containerRef.current;
+    if (!el) {
+      setIsInView(true);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsInView(true);
-          // Once in view, we can disconnect to prevent re-triggering
           observer.disconnect();
         }
       },
-      { threshold: 0.1, rootMargin: "50px" },
+      { threshold: 0.01, rootMargin: "200px" },
     );
 
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
+    observer.observe(el);
 
-    return () => observer.disconnect();
-  }, []);
+    const fallbackTimer = setTimeout(() => {
+      setIsInView((prev) => {
+        if (!prev) observer.disconnect();
+        return true;
+      });
+    }, 2000);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(fallbackTimer);
+    };
+  }, [isCompactPreview]);
 
   // Reset error state when preview source changes (switching to different artifact)
   useEffect(() => {
@@ -171,7 +215,7 @@ export function PreviewRenderer({
       setJsonError(false);
       setJsonContent(null);
       setJsonRaw(null);
-      setJsonViewMode("markdown");
+      setJsonViewMode("json");
     }
   }, [previewObjectUrl, artifactId, jobId, autoUploadKey]);
 
@@ -187,23 +231,20 @@ export function PreviewRenderer({
         try {
           const text = await fetchTextContent();
           setMarkdownContent(text);
-          setMarkdownError(false); // Clear any previous error on success
+          setMarkdownError(false);
         } catch (err: any) {
-          if (process.env.NODE_ENV === "development") {
-            console.error("Failed to fetch markdown:", err);
-          }
-          // If artifact not found, show a helpful message instead of error state
-          if (
-            err?.message?.includes("404") ||
-            err?.message?.includes("not found")
-          ) {
+          console.error("[PreviewRenderer] Failed to fetch markdown:", err);
+          const msg = err?.message || "";
+          if (msg.includes("404") || msg.includes("not found")) {
             setMarkdownContent(
               "**Artifact file not available**\n\nThe artifact file was not found in storage. It may have been deleted or not yet generated.",
             );
-            setMarkdownError(false);
           } else {
-            setMarkdownError(true);
+            setMarkdownContent(
+              `**Failed to load preview**\n\n${msg || "Unable to fetch artifact content. The file may require authentication or is temporarily unavailable."}`,
+            );
           }
+          setMarkdownError(false);
         }
       };
       fetchMarkdown();
@@ -232,12 +273,8 @@ export function PreviewRenderer({
       const fetchHtml = async () => {
         try {
           const text = await fetchTextContent();
-          // Extract HTML from markdown code blocks if present
           let extractedHtml = extractHtmlFromCodeBlocks(text);
 
-          // Local dev: artifacts may contain an injected editor overlay pointing at the production API.
-          // When previewing inside the local dashboard, rewrite it to use the local API so
-          // "Preview AI patch" works without hitting API Gateway.
           if (shouldRewriteEditorOverlayApiUrl()) {
             const localApiUrl =
               process.env.NEXT_PUBLIC_API_URL?.trim() ||
@@ -248,24 +285,25 @@ export function PreviewRenderer({
             );
           }
 
-          // Strip injected overlay/tracking scripts for in-dashboard preview to avoid sandbox issues.
-          setHtmlContent(stripInjectedLeadMagnetScripts(extractedHtml));
-          setHtmlError(false); // Clear any previous error on success
+          const cleanedHtml = stripInjectedLeadMagnetScripts(extractedHtml).trim();
+          setHtmlContent(
+            cleanedHtml ||
+              "<html><body><h1>Preview unavailable</h1><p>This HTML file was empty after preprocessing.</p></body></html>",
+          );
+          setHtmlError(false);
         } catch (err: any) {
-          if (process.env.NODE_ENV === "development") {
-            console.error("Failed to fetch HTML:", err);
-          }
-          // If artifact not found, show a helpful message instead of error state
-          if (
-            err?.message?.includes("404") ||
-            err?.message?.includes("not found")
-          ) {
+          console.error("[PreviewRenderer] Failed to fetch HTML:", err);
+          const msg = err?.message || "";
+          if (msg.includes("404") || msg.includes("not found")) {
             setHtmlContent(
               "<html><body><h1>Artifact file not available</h1><p>The artifact file was not found in storage. It may have been deleted or not yet generated.</p></body></html>",
             );
             setHtmlError(false);
           } else {
-            setHtmlError(true);
+            setHtmlContent(
+              `<html><body><h1>Failed to load preview</h1><p>${msg || "Unable to fetch artifact content. The file may require authentication or is temporarily unavailable."}</p></body></html>`,
+            );
+            setHtmlError(false);
           }
         }
       };
@@ -307,29 +345,14 @@ export function PreviewRenderer({
             setJsonError(true);
           }
         } catch (err: any) {
-          if (process.env.NODE_ENV === "development") {
-            console.error("Failed to fetch JSON:", err);
-          }
-          if (
-            err?.message?.includes("404") ||
-            err?.message?.includes("not found")
-          ) {
-            setJsonContent({ error: "Artifact file not available" });
-            setJsonRaw(
-              JSON.stringify(
-                {
-                  error: "Artifact file not available",
-                  message:
-                    "The artifact file was not found in storage. It may have been deleted or not yet generated.",
-                },
-                null,
-                2,
-              ),
-            );
-            setJsonError(false);
-          } else {
-            setJsonError(true);
-          }
+          console.error("[PreviewRenderer] Failed to fetch JSON:", err);
+          const msg = err?.message || "";
+          const errorPayload = msg.includes("404") || msg.includes("not found")
+            ? { error: "Artifact file not available", message: "The artifact file was not found in storage." }
+            : { error: "Failed to load preview", message: msg || "Unable to fetch artifact content." };
+          setJsonContent(errorPayload);
+          setJsonRaw(JSON.stringify(errorPayload, null, 2));
+          setJsonError(false);
         }
       };
       fetchJson();
@@ -347,7 +370,7 @@ export function PreviewRenderer({
 
   // Attempt to parse markdown content as JSON if it looks like one
   const parsedMarkdownJson = useMemo(() => {
-    if (markdownContent === null || !isMarkdownLike) return null;
+    if (markdownContent === null || !shouldAttemptJsonFromMarkdown) return null;
     try {
       const trimmed = markdownContent.trim();
       // Check if it looks like JSON before parsing
@@ -372,7 +395,7 @@ export function PreviewRenderer({
       return null;
     }
     return null;
-  }, [markdownContent, isMarkdownLike]);
+  }, [markdownContent, shouldAttemptJsonFromMarkdown]);
 
   const jsonMarkdown = useMemo(() => {
     if (jsonError) return null;
@@ -510,8 +533,7 @@ export function PreviewRenderer({
       ref={containerRef}
       className={`overflow-hidden ${className}`}
       style={{
-        contentVisibility: "auto",
-        minHeight: "0",
+        minHeight: "100px",
         height: "100%",
         width: "100%",
       }}

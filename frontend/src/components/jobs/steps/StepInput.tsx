@@ -62,7 +62,7 @@ export function StepInput({
         : "Input";
 
   const title = isAiStep
-    ? "Prompt = instructions + context (form submission + dependencies)"
+    ? "Instructions plus the data sent into this step"
     : undefined;
 
   const handleCopy = () => {
