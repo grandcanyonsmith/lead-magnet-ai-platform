@@ -4,7 +4,6 @@ export type OutputGroupKey =
   | "step_output"
   | "image"
   | "html"
-  | "auto_uploads"
   | "logs";
 
 export interface OutputGroupMeta {
@@ -29,7 +28,6 @@ export interface OutputPreviewMeta {
 
 const OUTPUT_GROUP_ORDER: OutputGroupKey[] = [
   "html",
-  "auto_uploads",
   "image",
   "step_output",
   "logs",
@@ -37,14 +35,9 @@ const OUTPUT_GROUP_ORDER: OutputGroupKey[] = [
 
 const OUTPUT_GROUP_META: Record<OutputGroupKey, Omit<OutputGroupMeta, "key">> = {
   html: {
-    label: "HTML",
+    label: "Pages",
     badgeClassName:
       "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200",
-  },
-  auto_uploads: {
-    label: "Auto Uploads",
-    badgeClassName:
-      "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-200",
   },
   image: {
     label: "Images",
@@ -52,7 +45,7 @@ const OUTPUT_GROUP_META: Record<OutputGroupKey, Omit<OutputGroupMeta, "key">> = 
       "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200",
   },
   step_output: {
-    label: "Other",
+    label: "Files",
     badgeClassName:
       "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200",
   },
@@ -64,10 +57,9 @@ const OUTPUT_GROUP_META: Record<OutputGroupKey, Omit<OutputGroupMeta, "key">> = 
 };
 
 const TYPE_DESCRIPTIONS_BY_GROUP: Record<OutputGroupKey, string[]> = {
-  step_output: ["step output", "step outputs", "output", "outputs"],
+  step_output: ["step output", "step outputs", "output", "outputs", "auto upload", "auto uploads", "auto"],
   image: ["image", "images"],
   html: ["html", "html output", "html outputs", "html final", "final html"],
-  auto_uploads: ["auto upload", "auto uploads", "auto"],
   logs: ["log", "logs"],
 };
 
@@ -80,11 +72,23 @@ export const getOutputUrl = (item: ArtifactGalleryItem) =>
 const isImageOutput = (item: ArtifactGalleryItem) => {
   const artifactType = String(item.artifact?.artifact_type || "").toLowerCase();
   const contentType = String(item.artifact?.content_type || "").toLowerCase();
+  const fileName = getArtifactFileName(item).toLowerCase();
+  const rawUrl = getOutputUrl(item);
+  const urlPath = (() => {
+    try {
+      return new URL(rawUrl).pathname.toLowerCase();
+    } catch {
+      return rawUrl.toLowerCase();
+    }
+  })();
+
   return (
     item.kind === "imageUrl" ||
     item.kind === "imageArtifact" ||
     contentType.startsWith("image/") ||
-    artifactType.includes("image")
+    artifactType.includes("image") ||
+    /\.(png|jpe?g|gif|webp|svg|ico)$/.test(fileName) ||
+    /\.(png|jpe?g|gif|webp|svg|ico)$/.test(urlPath)
   );
 };
 
@@ -130,7 +134,6 @@ const isHtmlOutput = (item: ArtifactGalleryItem) => {
 };
 
 export const getOutputGroupKey = (item: ArtifactGalleryItem): OutputGroupKey => {
-  if (item.kind === "autoUpload") return "auto_uploads";
   if (isLogOutput(item)) return "logs";
   if (isImageOutput(item)) return "image";
   if (isHtmlOutput(item)) return "html";
@@ -149,7 +152,6 @@ export const buildOutputGroups = (
     step_output: [],
     image: [],
     html: [],
-    auto_uploads: [],
     logs: [],
   };
 

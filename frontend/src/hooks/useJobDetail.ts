@@ -449,8 +449,8 @@ export function useJobExecution({
 
       // Now start the async work
       (async () => {
-        // Use jobSnapshot if provided, otherwise fall back to ref (latest value) or job from closure
-        const snapshot = jobSnapshot ?? jobRef.current ?? job;
+        // Use jobSnapshot if provided, otherwise fall back to the latest ref.
+        const snapshot = jobSnapshot ?? jobRef.current;
         if (!snapshot) {
           const errorMsg = "No job snapshot provided and job not available";
           setExecutionStepsError(errorMsg);
@@ -507,7 +507,7 @@ export function useJobExecution({
 
       return loadPromise;
     },
-    [jobId, job, setJob, enableExecutionSteps], // Include job to satisfy hook deps; main input still jobSnapshot
+    [jobId, setJob, enableExecutionSteps],
   );
 
   useEffect(() => {
@@ -588,6 +588,9 @@ export function useJobExecution({
       if (!enableExecutionSteps) {
         return;
       }
+      if (!jobRef.current) {
+        return;
+      }
 
       const now = Date.now();
       if (now - lastStepsFetchAt <= 2500) {
@@ -641,12 +644,14 @@ export function useJobExecution({
             if (data) {
               applyJobStatusUpdate(data);
             }
-            void loadExecutionSteps(jobRef.current).catch((error) => {
-              logger.debug("Final execution steps refresh error", {
-                context: "useJobExecution",
-                error,
+            if (jobRef.current) {
+              void loadExecutionSteps(jobRef.current).catch((error) => {
+                logger.debug("Final execution steps refresh error", {
+                  context: "useJobExecution",
+                  error,
+                });
               });
-            });
+            }
           },
           onError: (error) => {
             logger.debug("Job SSE stream error", {
@@ -708,8 +713,7 @@ export function useJobExecution({
             await loadJob();
             // Wait a tick for React to update the job prop and sync jobRef
             await new Promise((resolve) => setTimeout(resolve, 0));
-            // Use jobRef (synced with job prop) or fall back to job prop directly
-            const jobToUse = jobRef.current ?? job;
+            const jobToUse = jobRef.current;
             if (jobToUse) {
               loadExecutionSteps(jobToUse);
             } else {
@@ -744,7 +748,7 @@ export function useJobExecution({
         }, 5000);
       }
     },
-    [job, jobId, loadExecutionSteps, loadJob],
+    [jobId, loadExecutionSteps, loadJob],
   );
 
   return {

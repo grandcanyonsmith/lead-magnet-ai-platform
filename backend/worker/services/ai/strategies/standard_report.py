@@ -175,6 +175,23 @@ class StandardReportStrategy:
                 return obj.get(key)
             return getattr(obj, key, None)
 
+        def _format_tool_label(value: Optional[str]) -> Optional[str]:
+            if not value:
+                return None
+            raw = str(value).strip()
+            if not raw:
+                return None
+            friendly_names = {
+                "web_search_call": "Web Search",
+                "file_search_call": "File Search",
+                "mcp_call": "MCP",
+                "function_call": "Function Call",
+                "tool_call": "Tool Call",
+                "tool_calls": "Tool Call",
+                "code_interpreter_call": "Code Interpreter",
+            }
+            return friendly_names.get(raw, raw.replace("_", " ").strip().title())
+
         def _normalize_type(value: Any) -> str:
             if value is None:
                 return ""
@@ -240,12 +257,9 @@ class StandardReportStrategy:
                 tool_name = _get_attr(func, "name") if func else None
             if not tool_name:
                 tool_name = _get_attr(item, "server_label") or _get_attr(item, "server")
-            if tool_name:
-                try:
-                    return str(tool_name)
-                except Exception:
-                    return None
-            return None
+            if not tool_name:
+                tool_name = _normalize_type(_get_attr(item, "type"))
+            return _format_tool_label(tool_name)
 
         def _extract_tool_output_text(item: Any) -> str:
             output = (
@@ -375,6 +389,9 @@ class StandardReportStrategy:
                                 "function_call",
                                 "tool_call_output",
                                 "function_call_output",
+                                "web_search_call",
+                                "file_search_call",
+                                "mcp_call",
                             ):
                                 tool_name = _extract_tool_label(item)
                                 call_id = _get_attr(item, "call_id") or _get_attr(item, "id")
@@ -422,6 +439,9 @@ class StandardReportStrategy:
                                 "function_call",
                                 "tool_call_output",
                                 "function_call_output",
+                                "web_search_call",
+                                "file_search_call",
+                                "mcp_call",
                             ):
                                 tool_name = _extract_tool_label(item)
                                 call_id = _get_attr(item, "call_id") or _get_attr(item, "id")
@@ -445,6 +465,30 @@ class StandardReportStrategy:
                                             tool_name=tool_name,
                                             call_id=call_id_key,
                                         )
+                            continue
+
+                        if ev_type.startswith("response.web_search_call."):
+                            phase = ev_type.rsplit(".", 1)[-1]
+                            phase_message = {
+                                "in_progress": "Searching the web...",
+                                "searching": "Searching the web...",
+                                "completed": "Web search completed.",
+                                "failed": "Web search failed.",
+                            }.get(phase)
+                            if phase_message:
+                                _append_tool_log(phase_message, tool_name="Web Search")
+                            continue
+
+                        if ev_type.startswith("response.file_search_call."):
+                            phase = ev_type.rsplit(".", 1)[-1]
+                            phase_message = {
+                                "in_progress": "Searching files...",
+                                "searching": "Searching files...",
+                                "completed": "File search completed.",
+                                "failed": "File search failed.",
+                            }.get(phase)
+                            if phase_message:
+                                _append_tool_log(phase_message, tool_name="File Search")
                             continue
 
                         if not has_code_interpreter:
