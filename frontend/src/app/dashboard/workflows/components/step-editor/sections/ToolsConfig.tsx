@@ -67,6 +67,7 @@ export default function ToolsConfig({
         {AVAILABLE_TOOLS.map((tool) => {
           const selected = isToolSelected(tool.value);
           const Icon = tool.icon;
+          const checkboxId = `step-${index}-tool-${tool.value}`;
           return (
             <div
               key={tool.value}
@@ -77,40 +78,39 @@ export default function ToolsConfig({
               }`}
             >
               <div className="flex items-start gap-4">
-                <div
-                  className={`shrink-0 p-2.5 rounded-lg transition-colors ${
-                    selected
-                      ? "bg-primary/10 text-primary"
-                      : "bg-muted/50 text-muted-foreground"
-                  }`}
+                <label
+                  htmlFor={checkboxId}
+                  className="flex min-w-0 flex-1 cursor-pointer items-start gap-4"
                 >
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleToolToggle(tool.value)}
-                      className="text-left"
-                    >
-                      <div
-                        className={`text-sm font-semibold ${
-                          selected ? "text-primary" : "text-foreground"
-                        }`}
-                      >
-                        {tool.label}
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        {tool.description}
-                      </p>
-                    </button>
-                    <Checkbox
-                      checked={selected}
-                      onChange={() => handleToolToggle(tool.value)}
-                      className="mt-1"
-                    />
+                  <div
+                    className={`shrink-0 p-2.5 rounded-lg transition-colors ${
+                      selected
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted/50 text-muted-foreground"
+                    }`}
+                    aria-hidden="true"
+                  >
+                    <Icon className="w-5 h-5" />
                   </div>
-                </div>
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className={`text-sm font-semibold ${
+                        selected ? "text-primary" : "text-foreground"
+                      }`}
+                    >
+                      {tool.label}
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {tool.description}
+                    </p>
+                  </div>
+                </label>
+                <Checkbox
+                  id={checkboxId}
+                  checked={selected}
+                  onChange={() => handleToolToggle(tool.value)}
+                  className="mt-1"
+                />
               </div>
 
               {selected && tool.value === "computer_use_preview" && (

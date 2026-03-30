@@ -75,6 +75,8 @@ export default function FlowchartSidePanel({
     }
   };
 
+  const displayedStep = localStep || step;
+
   return (
     <Sheet
       open={isOpen}
@@ -97,18 +99,18 @@ export default function FlowchartSidePanel({
               </div>
               <SheetTitle
                 className="mt-1 break-words text-2xl font-semibold text-foreground line-clamp-2"
-                title={step.step_name || `Step ${index + 1}`}
+                title={displayedStep.step_name || `Step ${index + 1}`}
               >
-                {step.step_name || `Step ${index + 1}`}
+                {displayedStep.step_name || `Step ${index + 1}`}
               </SheetTitle>
               <SheetDescription
                 className="mt-1 line-clamp-2 text-sm text-muted-foreground"
                 title={
-                  step.step_description ||
+                  displayedStep.step_description ||
                   "Update the step details, instructions, and tools below."
                 }
               >
-                {step.step_description ||
+                {displayedStep.step_description ||
                   "Update the step details, instructions, and tools below."}
               </SheetDescription>
             </SheetHeader>

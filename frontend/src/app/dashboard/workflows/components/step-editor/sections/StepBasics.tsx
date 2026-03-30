@@ -41,7 +41,6 @@ export default function StepBasics({
           className={`${CONTROL_BASE} text-base font-semibold`}
           placeholder="e.g., Deep Research"
           required
-          aria-label="Instruction name"
           aria-required="true"
         />
       </div>
@@ -57,7 +56,6 @@ export default function StepBasics({
           className={`${CONTROL_BASE} min-h-[80px] resize-y leading-relaxed bg-muted/30 border-transparent hover:bg-background hover:border-input focus:bg-background focus:border-ring`}
           placeholder="Brief description of what this step does"
           rows={2}
-          aria-label="Instruction description"
         />
       </div>
     </div>

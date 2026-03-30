@@ -114,39 +114,22 @@ export default function WorkflowStepEditor({
       }
     >
       <div className="rounded-2xl border border-border/60 bg-background p-4 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-5 border-b border-border/60">
-          <div
-            className="flex items-center gap-4"
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary font-semibold shadow-inner">
-              {index + 1}
-            </div>
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-lg font-semibold text-foreground select-none">
-                  {localStep.step_name || "Untitled step"}
-                </h3>
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2 py-0.5 text-[11px] text-muted-foreground">
-                  Step {index + 1}
-                </span>
-                {localStep.is_deliverable && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
-                    Deliverable
-                  </span>
-                )}
-                {isFocusMode && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
-                    <FiMaximize2 className="h-3 w-3" aria-hidden />
-                    Focus
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Drag in the flowchart to reorder or edit below.
-              </p>
-            </div>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-muted/70 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+              Step {index + 1} of {totalSteps}
+            </span>
+            {localStep.is_deliverable && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                Deliverable
+              </span>
+            )}
+            {isFocusMode && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                <FiMaximize2 className="h-3 w-3" aria-hidden />
+                Focus
+              </span>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -191,29 +174,16 @@ export default function WorkflowStepEditor({
           </div>
         </div>
 
-        <div className="mt-6 space-y-6">
-          <CollapsibleSection
-            title="AI Assist (Beta)"
-            isCollapsed={isAssistCollapsed}
-            onToggle={() => setIsAssistCollapsed(!isAssistCollapsed)}
-          >
-            <AIAssist
-              workflowId={workflowId}
-              step={localStep}
-              index={index}
-              useWorkflowStepAI={workflowStepAI}
-              onAccept={(proposed) => {
-                setLocalStep(proposed);
-                onChange(index, proposed);
-              }}
-              collapsible={false}
-              allSteps={allSteps}
-            />
-          </CollapsibleSection>
-          <StepTester step={localStep} index={index} />
-        </div>
-
         <div className="mt-6 flex flex-col gap-6">
+          <div>
+            <StepEditorNav
+              sections={STEP_EDITOR_SECTIONS}
+              activeSection={activeSection}
+              onChange={setActiveSection}
+              isCompact={isFocusMode}
+              layout="horizontal"
+            />
+          </div>
           <div className="rounded-2xl border border-border/60 bg-background/90 shadow-sm">
             <div className="p-4 space-y-6 sm:p-6 sm:space-y-8">
               {activeSection === "basics" && (
@@ -327,15 +297,29 @@ export default function WorkflowStepEditor({
               )}
             </div>
           </div>
-          <div>
-            <StepEditorNav
-              sections={STEP_EDITOR_SECTIONS}
-              activeSection={activeSection}
-              onChange={setActiveSection}
-              isCompact={isFocusMode}
-              layout="horizontal"
-            />
-          </div>
+          {!isFocusMode && (
+            <div className="space-y-4 border-t border-border/60 pt-6">
+              <CollapsibleSection
+                title="AI Assist (Beta)"
+                isCollapsed={isAssistCollapsed}
+                onToggle={() => setIsAssistCollapsed(!isAssistCollapsed)}
+              >
+                <AIAssist
+                  workflowId={workflowId}
+                  step={localStep}
+                  index={index}
+                  useWorkflowStepAI={workflowStepAI}
+                  onAccept={(proposed) => {
+                    setLocalStep(proposed);
+                    onChange(index, proposed);
+                  }}
+                  collapsible={false}
+                  allSteps={allSteps}
+                />
+              </CollapsibleSection>
+              <StepTester key={index} step={localStep} index={index} />
+            </div>
+          )}
         </div>
       </div>
     </ErrorBoundary>

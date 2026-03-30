@@ -23,7 +23,7 @@ interface StepTesterProps {
 }
 
 export default function StepTester({ step, index }: StepTesterProps) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [testInput, setTestInput] = useState("{}");
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
@@ -34,6 +34,8 @@ export default function StepTester({ step, index }: StepTesterProps) {
     typeof setInterval
   > | null>(null);
   const activeRequestBodyRef = useRef<any>(null);
+  const testInputId = `step-test-input-${index}`;
+  const testInputHelpId = `step-test-input-help-${index}`;
 
   // Helper to determine API URL (duplicated from base.client.ts)
   const getApiUrl = () => {
@@ -406,7 +408,10 @@ export default function StepTester({ step, index }: StepTesterProps) {
         <div className="p-5 bg-white dark:bg-card space-y-6">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor={testInputId}
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 Test Input (JSON)
               </label>
               <button
@@ -421,11 +426,14 @@ export default function StepTester({ step, index }: StepTesterProps) {
             </div>
             <div className="relative">
               <textarea
+                id={testInputId}
                 value={testInput}
                 onChange={(e) => setTestInput(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all resize-y min-h-[120px]"
                 rows={5}
                 placeholder="{}"
+                aria-describedby={testInputHelpId}
+                spellCheck={false}
               />
               <div className="absolute bottom-3 right-3 pointer-events-none">
                 <span className="text-[10px] text-gray-400 px-2 py-1 bg-white/50 dark:bg-black/50 rounded-md backdrop-blur-sm border border-gray-200 dark:border-gray-700">
@@ -433,7 +441,10 @@ export default function StepTester({ step, index }: StepTesterProps) {
                 </span>
               </div>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+            <p
+              id={testInputHelpId}
+              className="text-xs text-gray-500 dark:text-gray-400 ml-1"
+            >
               Provide input variables that this step expects (e.g., from
               previous steps).
             </p>
