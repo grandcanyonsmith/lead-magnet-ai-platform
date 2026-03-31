@@ -229,7 +229,7 @@ export function WorkflowTab({
               Basic details about your lead magnet workflow.
             </p>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-4">
             <div className="space-y-2">
               <Label htmlFor="workflow_name">
                 Lead Magnet Name <span className="text-red-500">*</span>
@@ -244,7 +244,7 @@ export function WorkflowTab({
               />
             </div>
 
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <Label htmlFor="workflow_description">Description</Label>
               <Textarea
                 id="workflow_description"
