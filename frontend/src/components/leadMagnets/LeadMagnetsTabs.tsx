@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { SubHeaderTabs } from "@/components/ui/SubHeaderTabs";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface LeadMagnetsTabsProps {
   className?: string;
@@ -24,7 +25,7 @@ const tabs = [
 
 export function LeadMagnetsTabs({ className }: LeadMagnetsTabsProps) {
   const pathname = usePathname();
-  const activeId =
+  const activeKey =
     tabs.find((tab) =>
       tab.activePrefixes.some(
         (prefix) => pathname === prefix || pathname?.startsWith(prefix + "/"),
@@ -32,19 +33,34 @@ export function LeadMagnetsTabs({ className }: LeadMagnetsTabsProps) {
     )?.key || tabs[0].key;
 
   return (
-    <SubHeaderTabs
-      tabs={tabs.map((tab) => ({
-        id: tab.key,
-        label: tab.label,
-        href: tab.href,
-      }))}
-      activeId={activeId}
-      portalTargetId="dashboard-subheader"
-      className={className}
-      enableOverflowMenu
-      mobileMaxVisible={2}
-      compactMaxVisible={1}
-      compactBreakpointPx={420}
-    />
+    <div
+      role="tablist"
+      aria-label="Lead magnets navigation"
+      className={cn(
+        "inline-flex items-center gap-0.5 rounded-lg bg-muted p-0.5",
+        className,
+      )}
+    >
+      {tabs.map((tab) => {
+        const isActive = tab.key === activeKey;
+        return (
+          <Link
+            key={tab.key}
+            href={tab.href}
+            role="tab"
+            aria-selected={isActive}
+            tabIndex={isActive ? 0 : -1}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-150",
+              isActive
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {tab.label}
+          </Link>
+        );
+      })}
+    </div>
   );
 }
