@@ -33,7 +33,7 @@ export function RerunStepDialog({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="relative max-w-md bg-white p-6 sm:rounded-lg">
+      <DialogContent className="max-w-md bg-white p-6 sm:rounded-lg">
         {/* Icon */}
         <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-blue-100 rounded-full">
           <FiAlertCircle className="w-6 h-6 text-blue-600" />

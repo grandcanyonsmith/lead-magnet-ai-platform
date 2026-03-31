@@ -27,7 +27,7 @@ export function ResubmitModal({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="relative max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl ring-1 ring-black/[0.04] dark:border-gray-700 dark:bg-card dark:ring-white/5 sm:rounded-2xl">
+      <DialogContent className="max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl ring-1 ring-black/[0.04] dark:border-gray-700 dark:bg-card dark:ring-white/5 sm:rounded-2xl">
         {/* Icon */}
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-blue-200/60 bg-blue-100 dark:border-blue-800/40 dark:bg-blue-900/30">
           <FiAlertCircle className="h-6 w-6 text-blue-600 dark:text-blue-300" />

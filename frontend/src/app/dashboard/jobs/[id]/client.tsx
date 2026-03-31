@@ -33,6 +33,7 @@ import type {
   ArtifactGalleryItem,
   JobStepSummary,
 } from "@/types/job";
+import { toast } from "sonner";
 
 export default function JobDetailClient() {
   const router = useRouter();
@@ -347,9 +348,28 @@ export default function JobDetailClient() {
   };
 
   const handleEditStep = (stepIndex: number) => {
+    latestStepUpdateRef.current = null;
+
+    if (workflow != null) {
+      if (!workflow.steps?.[stepIndex]) {
+        toast.error(
+          "This step is not in the current workflow. Refresh the page or check the workflow editor.",
+        );
+        return;
+      }
+      setEditingStepIndex(stepIndex);
+      setIsSidePanelOpen(true);
+      return;
+    }
+
+    if (!job?.workflow_id) {
+      toast.error("This job has no workflow to edit.");
+      return;
+    }
+
+    // Workflow still loading after job fetch — open panel; JobDetailModals shows a loading sheet until workflow arrives.
     setEditingStepIndex(stepIndex);
     setIsSidePanelOpen(true);
-    latestStepUpdateRef.current = null;
   };
 
   const handleRerunStepClick = (stepIndex: number) => {
@@ -450,6 +470,7 @@ export default function JobDetailClient() {
           handleResubmitConfirm={handleResubmitConfirm}
           resubmitting={resubmitting}
           editingStepIndex={editingStepIndex}
+          jobWorkflowId={job.workflow_id ?? null}
           workflow={workflow}
           isSidePanelOpen={isSidePanelOpen}
           handleCancelEdit={handleCancelEdit}

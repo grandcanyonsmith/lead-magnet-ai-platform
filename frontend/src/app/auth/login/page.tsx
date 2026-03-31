@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, Suspense, useCallback } from "react";
+import { useState, useEffect, Suspense, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { authService } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { logger } from "@/utils/logger";
 import { Settings } from "@/types/settings";
@@ -11,10 +11,12 @@ import { Settings } from "@/types/settings";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { signIn, isAuthenticated, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const hasTriggeredAuthenticatedRedirect = useRef(false);
 
   useEffect(() => {
     // Pre-fill email from query params
@@ -32,13 +34,13 @@ function LoginForm() {
 
       if (!settings.onboarding_survey_completed) {
         // Redirect to onboarding survey
-        router.push("/onboarding/survey");
+        router.replace("/onboarding/survey");
       } else if (redirectParam) {
         // Redirect to specified path
-        router.push(redirectParam);
+        router.replace(redirectParam);
       } else {
         // Default to dashboard
-        router.push("/dashboard");
+        router.replace("/dashboard");
       }
     } catch (error) {
       logger.error("Failed to check onboarding status", {
@@ -46,50 +48,26 @@ function LoginForm() {
         context: "LoginPage",
       });
       // Default to dashboard on error
-      router.push("/dashboard");
+      router.replace("/dashboard");
     }
   }, [router, searchParams]);
 
-  const waitForCognitoTokens = useCallback(
-    async (maxAttempts = 20, delay = 150): Promise<boolean> => {
-      // Our app also stores tokens under custom keys (used by the API client).
-      // Prefer those first so local/mock auth flows don't hang waiting for Cognito SDK keys.
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const customIdToken = localStorage.getItem("id_token");
-        const customAccessToken = localStorage.getItem("access_token");
-        
-        if (customIdToken || customAccessToken) {
-          logger.info("Tokens found in custom storage", {
-            context: "LoginPage",
-          });
-          return true;
-        }
+  useEffect(() => {
+    if (
+      authLoading ||
+      !isAuthenticated ||
+      hasTriggeredAuthenticatedRedirect.current
+    ) {
+      return;
+    }
 
-        const clientId = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || "";
-        if (clientId) {
-          const lastAuthUser = localStorage.getItem(
-            `CognitoIdentityServiceProvider.${clientId}.LastAuthUser`,
-          );
-          if (lastAuthUser) {
-            const idToken = localStorage.getItem(
-              `CognitoIdentityServiceProvider.${clientId}.${lastAuthUser}.idToken`,
-            );
-            if (idToken) {
-              logger.info("Tokens found in Cognito storage", {
-                context: "LoginPage",
-              });
-              return true;
-            }
-          }
-        }
-        
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-
-      return false;
-    },
-    [],
-  );
+    hasTriggeredAuthenticatedRedirect.current = true;
+    setLoading(true);
+    logger.info("Auth context ready, redirecting authenticated user", {
+      context: "LoginPage",
+    });
+    void checkOnboardingAndRedirect();
+  }, [authLoading, isAuthenticated, checkOnboardingAndRedirect]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,32 +75,12 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const result = await authService.signIn(email, password);
+      const result = await signIn(email, password);
       if (result.success) {
-        logger.info("Sign in successful, waiting for tokens", {
+        logger.info("Sign in successful, waiting for auth context", {
           context: "LoginPage",
         });
-
-        // Wait for Cognito tokens to be stored in localStorage
-        const tokensReady = await waitForCognitoTokens();
-        
-        if (!tokensReady) {
-          logger.error("Tokens not ready after max attempts", {
-            context: "LoginPage",
-          });
-          setError("Authentication tokens not ready. Please try again.");
-          setLoading(false);
-          return;
-        }
-
-        logger.info("Tokens ready, proceeding with redirect", {
-          context: "LoginPage",
-        });
-
-        // Give a small additional delay to ensure everything is settled
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        
-        await checkOnboardingAndRedirect();
+        return;
       } else {
         setError(result.error || "Failed to sign in");
         setLoading(false);
