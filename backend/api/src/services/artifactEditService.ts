@@ -526,7 +526,7 @@ export class ArtifactEditService {
             params.fileName,
           ),
           input: buildEditPrompt(params),
-          reasoning: { effort: "high" },
+          reasoning: { effort: "medium" },
           service_tier: "priority",
           max_output_tokens: 20_000,
         } as any),
