@@ -106,7 +106,10 @@ export async function runShellToolLoop(
   let resetWorkspaceNext =
     providedWorkspaceId ? Boolean(args.resetWorkspace) : args.resetWorkspace ?? true;
 
-  const model = "gpt-5.2";
+  const model =
+    typeof args.model === "string" && args.model.trim().length > 0
+      ? args.model.trim()
+      : "gpt-5.2";
   const maxSteps = Number.isFinite(args.maxSteps)
     ? Math.max(1, Math.min(25, Math.floor(args.maxSteps!)))
     : 10;

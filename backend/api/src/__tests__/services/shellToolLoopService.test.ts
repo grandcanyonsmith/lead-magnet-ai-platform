@@ -65,8 +65,12 @@ describe('shellToolLoopService', () => {
     expect(result.outputText).toBe('done');
     expect(responsesCreate).toHaveBeenCalledTimes(2);
 
+    const initialArgs = (responsesCreate as any).mock.calls[0][0];
+    expect(initialArgs.model).toBe('gpt-5.1');
+
     // Follow-up call should include shell_call_output with the max_output_length and output array.
     const followUpArgs = (responsesCreate as any).mock.calls[1][0];
+    expect(followUpArgs.model).toBe('gpt-5.1');
     expect(followUpArgs.previous_response_id).toBe('resp_1');
     expect(Array.isArray(followUpArgs.input)).toBe(true);
     expect(followUpArgs.input[0]).toMatchObject({
