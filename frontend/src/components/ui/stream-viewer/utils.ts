@@ -2,6 +2,7 @@ import {
   formatLogMessage,
   looksLikeHtml,
 } from "@/app/dashboard/workflows/components/step-editor/LogFormatter";
+import { extractLatestHtmlFromShellCommand } from "@/utils/shellFileExtraction";
 
 export interface LogEntry {
   timestamp: number;
@@ -96,6 +97,8 @@ export const extractHtmlFromMessage = (message: string) => {
     const inner = genericMatch[1].trim();
     if (looksLikeHtml(inner)) return inner;
   }
+  const shellGeneratedHtml = extractLatestHtmlFromShellCommand(trimmed);
+  if (shellGeneratedHtml) return shellGeneratedHtml;
   if (looksLikeHtml(trimmed)) return trimmed;
   return null;
 };

@@ -38,6 +38,7 @@ export declare const TABLE_NAMES: {
     readonly TRACKING_EVENTS: "leadmagnet-tracking-events";
     readonly RATE_LIMITS: "leadmagnet-rate-limits";
     readonly HTML_PATCH_REQUESTS: "leadmagnet-html-patch-requests";
+    readonly ARTIFACT_EDIT_REQUESTS: "leadmagnet-artifact-edit-requests";
 };
 /**
  * Lambda function names

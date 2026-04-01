@@ -15,7 +15,7 @@ from services.execution_step_manager import ExecutionStepManager
 from services.usage_service import UsageService
 from services.artifact_finalizer import ArtifactFinalizer
 from services.context_builder import ContextBuilder
-from utils.content_detector import detect_content_type
+from utils.content_detector import resolve_artifact_content
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +95,12 @@ class JobCompletionService:
                         step_outputs[-1].get('output', '')
                     )
 
-            final_content = deliverable_context or ""
+            raw_final_content = deliverable_context or ""
             last_step_name = step_outputs[-1].get('step_name', '') if step_outputs else ''
-            file_ext = detect_content_type(str(final_content), str(last_step_name))
+            final_content, file_ext = resolve_artifact_content(
+                str(raw_final_content),
+                str(last_step_name),
+            )
             if file_ext == '.html':
                 final_artifact_type = 'html_final'
                 final_filename = 'final.html'

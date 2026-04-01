@@ -211,6 +211,18 @@ export function formatLiveOutputText(value: string): string {
   return formatInlinePythonHeredocs(withShellBreaks);
 }
 
+const ESCAPED_CONTROL_CHAR_REGEX = /\\(?:r\\n|n|r|t|"|')/;
+
+function decodeCommonEscapes(value: string): string {
+  return value
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\"/g, '"')
+    .replace(/\\'/g, "'");
+}
+
 export function isJSON(str: string): boolean {
   try {
     JSON.parse(str);
@@ -239,21 +251,39 @@ export function isMarkdown(str: string): boolean {
 export function isHTML(str: string): boolean {
   if (typeof str !== "string") return false;
   const trimmed = str.trim();
+  if (!trimmed) return false;
+
+  const looksLikeMarkdown = isMarkdown(trimmed);
+
+  if (
+    looksLikeMarkdown &&
+    !/^<(?:!DOCTYPE\s+html|html|head|body|main|section|article|div|table|svg|canvas|form)\b/i.test(
+      trimmed,
+    )
+  ) {
+    return false;
+  }
+
   // Check for HTML patterns
   const htmlPatterns = [
     /^<!DOCTYPE\s+html/i, // DOCTYPE declaration
     /^<html[\s>]/i, // HTML tag
+    /^<head[\s>]/i, // Head tag
+    /^<body[\s>]/i, // Body tag
     /<\/html>\s*$/i, // Closing HTML tag
     /^<\!--[\s\S]*?-->/, // HTML comment
   ];
-  // Check if it contains HTML tags
-  const hasHTMLTags = /<[a-z][\s\S]*>/i.test(trimmed);
-  const hasClosingTags = /<\/[a-z]+>/i.test(trimmed);
+  const hasHTMLTags = /<[a-z][\w:-]*\b[^>]*>/i.test(trimmed);
+  const hasClosingTags = /<\/[a-z][\w:-]*>/i.test(trimmed);
+  const hasBalancedTagPair =
+    /<([a-z][\w:-]*)\b[^>]*>[\s\S]*<\/\1>/i.test(trimmed);
+  const startsWithTag = /^<([a-z][\w:-]*)\b[^>]*>/i.test(trimmed);
 
   // If it has both opening and closing tags, or matches specific patterns
   return (
     htmlPatterns.some((pattern) => pattern.test(trimmed)) ||
-    (hasHTMLTags && hasClosingTags)
+    (startsWithTag && hasClosingTags) ||
+    (hasBalancedTagPair && hasHTMLTags && hasClosingTags)
   );
 }
 
@@ -371,6 +401,59 @@ interface WebhookOutput {
   error?: string | null;
 }
 
+function classifyStringContent(
+  value: string,
+  depth = 0,
+): {
+  content: string | unknown;
+  type: "json" | "markdown" | "text" | "html";
+} {
+  const trimmed = value.trim();
+
+  if (depth < 2 && trimmed) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed === "string") {
+        return classifyStringContent(parsed, depth + 1);
+      }
+      return { content: parsed, type: "json" };
+    } catch {
+      // Continue with string classification below.
+    }
+  }
+
+  const candidates = [value];
+  if (ESCAPED_CONTROL_CHAR_REGEX.test(value)) {
+    const decoded = decodeCommonEscapes(value);
+    if (decoded !== value) {
+      candidates.push(decoded);
+    }
+  }
+
+  for (const candidate of candidates) {
+    if (!isHTML(candidate)) continue;
+    const strippedText = stripHtmlToText(candidate);
+    const shouldUseMarkdown =
+      strippedText.length > 0 &&
+      isMarkdown(strippedText) &&
+      !hasStructuredHtmlTags(candidate);
+
+    if (shouldUseMarkdown) {
+      return { content: strippedText, type: "markdown" };
+    }
+
+    return { content: candidate, type: "html" };
+  }
+
+  for (const candidate of candidates) {
+    if (isMarkdown(candidate)) {
+      return { content: candidate, type: "markdown" };
+    }
+  }
+
+  return { content: value, type: "text" };
+}
+
 export function formatStepOutput(step: ExecutionStep): {
   content: string | unknown;
   type: "json" | "markdown" | "text" | "html";
@@ -392,33 +475,7 @@ export function formatStepOutput(step: ExecutionStep): {
     };
   }
   if (typeof step.output === "string") {
-    // Check if it's HTML first (before JSON, as HTML might contain JSON-like syntax)
-    if (isHTML(step.output)) {
-      const strippedText = stripHtmlToText(step.output);
-      const shouldUseMarkdown =
-        strippedText.length > 0 &&
-        isMarkdown(strippedText) &&
-        !hasStructuredHtmlTags(step.output);
-
-      if (shouldUseMarkdown) {
-        return { content: strippedText, type: "markdown" };
-      }
-
-      return { content: step.output, type: "html" };
-    }
-    // Check if it's JSON
-    if (isJSON(step.output)) {
-      try {
-        return { content: JSON.parse(step.output), type: "json" };
-      } catch {
-        // If parsing fails, treat as text
-      }
-    }
-    // Check if it's Markdown
-    if (isMarkdown(step.output)) {
-      return { content: step.output, type: "markdown" };
-    }
-    return { content: step.output, type: "text" };
+    return classifyStringContent(step.output);
   }
   return { content: step.output, type: "json" };
 }

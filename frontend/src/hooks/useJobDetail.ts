@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { logger } from "@/utils/logger";
+import { subscribeToArtifactEditCompleted } from "@/utils/jobs/artifactEditEvents";
 import type { Job, JobStatusResponse } from "@/types/job";
 import type { Workflow } from "@/types/workflow";
 import type { FormSubmission, Form } from "@/types/form";
@@ -534,6 +535,33 @@ export function useJobExecution({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId, executionStepsS3Key, hasLoadedExecutionSteps, enableExecutionSteps]); // Use memoized S3 key value instead of job reference
+
+  useEffect(() => {
+    if (!jobId) {
+      return;
+    }
+
+    return subscribeToArtifactEditCompleted((detail) => {
+      if (detail.jobId && detail.jobId !== jobId) {
+        return;
+      }
+
+      void (async () => {
+        try {
+          await loadJob();
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          if (jobRef.current && enableExecutionSteps) {
+            await loadExecutionSteps(jobRef.current);
+          }
+        } catch (error) {
+          logger.debug("Artifact edit refresh error", {
+            context: "useJobExecution",
+            error,
+          });
+        }
+      })();
+    });
+  }, [jobId, loadExecutionSteps, loadJob, enableExecutionSteps]);
 
   useEffect(() => {
     if (!enableExecutionSteps || !enablePolling) {

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { EyeIcon, PencilSquareIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import { PreviewCard } from "@/components/artifacts/PreviewCard";
+import { ArtifactEditAction } from "@/components/jobs/detail/ArtifactEditAction";
 import { OutputPreview } from "@/components/jobs/detail/OutputPreview";
 import { OutputCardActions } from "@/components/jobs/detail/OutputCardActions";
 import { openJobDocumentInNewTab } from "@/utils/jobs/openJobDocument";
@@ -15,6 +16,7 @@ import {
   getOutputLabel,
   getOutputPreviewMeta,
   getOutputUrl,
+  isEditableArtifactItem,
   shouldShowOutputDescription,
 } from "@/utils/jobs/outputs";
 
@@ -275,6 +277,7 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
   const preview = getOutputPreviewMeta(item);
   const displayLabel = getOutputLabel(item, groupKey);
   const showDescription = shouldShowOutputDescription(groupKey, item.description);
+  const canEditArtifact = isEditableArtifactItem(item);
 
   const footerMeta =
     item.kind === "jobOutput" && item.jobId ? (
@@ -313,22 +316,28 @@ function ArtifactCard({ item, onPreview }: ArtifactCardProps) {
           </Link>
         </Tooltip>
       ) : null}
+      <ArtifactEditAction artifact={item.artifact} />
       <OutputCardActions
         url={artifactUrl}
         artifactId={item.artifact?.artifact_id}
         contentType={item.artifact?.content_type}
       />
     </div>
-  ) : isHtml && editorHref ? (
-    <Tooltip content="Open in AI Editor" position="top">
-      <Link
-        href={editorHref}
-        onClick={(event) => event.stopPropagation()}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-      >
-        <PencilSquareIcon className="h-4 w-4" />
-      </Link>
-    </Tooltip>
+  ) : canEditArtifact || (isHtml && editorHref) ? (
+    <div className="flex items-center gap-1">
+      {isHtml && editorHref ? (
+        <Tooltip content="Open in AI Editor" position="top">
+          <Link
+            href={editorHref}
+            onClick={(event) => event.stopPropagation()}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <PencilSquareIcon className="h-4 w-4" />
+          </Link>
+        </Tooltip>
+      ) : null}
+      <ArtifactEditAction artifact={item.artifact} />
+    </div>
   ) : null;
 
   return (

@@ -27,6 +27,7 @@ export enum TableKey {
   TRACKING_EVENTS = 'trackingEvents',
   RATE_LIMITS = 'rateLimits',
   HTML_PATCH_REQUESTS = 'htmlPatchRequests',
+  ARTIFACT_EDIT_REQUESTS = 'artifactEditRequests',
 }
 
 /**
@@ -53,6 +54,7 @@ export interface TableMap {
   [TableKey.TRACKING_EVENTS]: dynamodb.ITable;
   [TableKey.RATE_LIMITS]: dynamodb.ITable;
   [TableKey.HTML_PATCH_REQUESTS]: dynamodb.ITable;
+  [TableKey.ARTIFACT_EDIT_REQUESTS]: dynamodb.ITable;
 }
 
 /**

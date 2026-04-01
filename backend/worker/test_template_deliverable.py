@@ -55,6 +55,39 @@ def test_orchestrator_detects_html_final_from_content():
     assert "<html>" in final_content
 
 
+def test_orchestrator_extracts_html_from_shell_tool_output():
+    """Deliverable extraction should pull real HTML out of shell heredoc tool output."""
+    orchestrator = _make_orchestrator()
+
+    workflow = {"steps": [{"step_name": "Build deliverable"}]}
+    step_outputs = [{
+        "step_name": "Build deliverable",
+        "output": """Done - I created the file.
+
+[Tool output]
+$ cat > index.html <<'EOF'
+<!DOCTYPE html>
+<html><body>LANDING</body></html>
+EOF""",
+    }]
+
+    final_content, final_type, final_filename = orchestrator._generate_final_content(
+        workflow=workflow,
+        step_outputs=step_outputs,
+        accumulated_context=step_outputs[0]["output"],
+        submission_data={},
+        field_label_map={},
+        execution_steps=[],
+        job_id="job_test",
+        tenant_id="tenant_test",
+    )
+
+    assert final_type == "html_final"
+    assert final_filename == "final.html"
+    assert final_content.startswith("<!DOCTYPE html>")
+    assert "[Tool output]" not in final_content
+
+
 def test_orchestrator_uses_terminal_step_outputs_for_deliverable_context():
     """Deliverable context should be derived from terminal step outputs."""
     orchestrator = _make_orchestrator()

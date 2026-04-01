@@ -8,6 +8,8 @@ import {
 import { InlineImage } from "./InlineImage";
 import { JsonViewer } from "@/components/ui/JsonViewer";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
+import { JsonPreview } from "@/components/artifacts/preview/JsonPreview";
+import { convertJsonToMarkdown } from "@/components/artifacts/preview/utils";
 
 function LazySyntaxHighlighter({
   value,
@@ -69,6 +71,7 @@ interface StepContentProps {
   };
   imageUrls?: string[]; // Optional array of image URLs to render inline
   showImagePreviews?: boolean;
+  jsonDisplayMode?: "viewer" | "summary";
 }
 
 /**
@@ -152,8 +155,16 @@ export function StepContent({
   formatted,
   imageUrls = [],
   showImagePreviews = true,
+  jsonDisplayMode = "viewer",
 }: StepContentProps) {
   const [showRendered, setShowRendered] = useState(true);
+  const [jsonViewMode, setJsonViewMode] = useState<"markdown" | "json">(
+    jsonDisplayMode === "summary" ? "markdown" : "json",
+  );
+
+  useEffect(() => {
+    setJsonViewMode(jsonDisplayMode === "summary" ? "markdown" : "json");
+  }, [jsonDisplayMode, formatted.content, formatted.type]);
 
   const getContentString = (): string => {
     if (typeof formatted.content === "string") {
@@ -258,6 +269,14 @@ export function StepContent({
       typeof contextValue === "string"
         ? contextValue
         : JSON.stringify(contextValue, null, 2);
+    const jsonMarkdownPreview =
+      jsonDisplayMode === "summary"
+        ? convertJsonToMarkdown(contextValue)
+        : null;
+    const resolvedJsonViewMode =
+      jsonMarkdownPreview && jsonDisplayMode === "summary"
+        ? jsonViewMode
+        : "json";
 
     // Extract image URLs from the JSON object (or from raw string if not parseable)
     const extractedImageUrls = showImagePreviews
@@ -279,12 +298,27 @@ export function StepContent({
               </span>
             </div>
           )}
-          <JsonViewer
-            value={contextValue}
-            raw={contextRaw || normalizedJsonRaw || contentString}
-            defaultMode={hasMetadata ? "raw" : "tree"}
-            defaultExpandedDepth={hasMetadata ? 1 : 2}
-          />
+          {jsonDisplayMode === "summary" ? (
+            <JsonPreview
+              isFullScreen={false}
+              isCompactPreview={false}
+              fileName="step-output.json"
+              isInView
+              jsonContent={contextValue}
+              jsonRaw={contextRaw || normalizedJsonRaw || contentString}
+              jsonError={false}
+              jsonMarkdownPreview={jsonMarkdownPreview}
+              resolvedJsonViewMode={resolvedJsonViewMode}
+              setJsonViewMode={setJsonViewMode}
+            />
+          ) : (
+            <JsonViewer
+              value={contextValue}
+              raw={contextRaw || normalizedJsonRaw || contentString}
+              defaultMode={hasMetadata ? "raw" : "tree"}
+              defaultExpandedDepth={hasMetadata ? 1 : 2}
+            />
+          )}
 
           {/* Render images found in JSON */}
           {renderImageStrip(extractedImageUrls, {

@@ -26,6 +26,7 @@ export class EnvConfig {
   readonly trackingEventsTable: string;
   readonly rateLimitsTable: string;
   readonly htmlPatchRequestsTable: string;
+  readonly artifactEditRequestsTable: string;
 
   // AWS Configuration
   readonly awsRegion: string;
@@ -139,6 +140,10 @@ export class EnvConfig {
     this.htmlPatchRequestsTable = this.getWithDefault(
       "HTML_PATCH_REQUESTS_TABLE",
       "leadmagnet-html-patch-requests",
+    );
+    this.artifactEditRequestsTable = this.getWithDefault(
+      "ARTIFACT_EDIT_REQUESTS_TABLE",
+      "leadmagnet-artifact-edit-requests",
     );
 
     // AWS Configuration

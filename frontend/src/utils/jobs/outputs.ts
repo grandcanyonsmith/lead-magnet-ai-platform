@@ -1,3 +1,4 @@
+import type { Artifact } from "@/types/artifact";
 import type { ArtifactGalleryItem } from "@/types/job";
 
 export type OutputGroupKey =
@@ -63,8 +64,59 @@ const TYPE_DESCRIPTIONS_BY_GROUP: Record<OutputGroupKey, string[]> = {
   logs: ["log", "logs"],
 };
 
-const getArtifactFileName = (item: ArtifactGalleryItem) =>
+export const getArtifactFileName = (item: ArtifactGalleryItem) =>
   item.artifact?.file_name || item.artifact?.artifact_name || item.label || "";
+
+const normalizeEditableContentType = (
+  contentType?: string | null,
+  fileName?: string | null,
+) => {
+  const normalized = String(contentType || "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
+
+  if (normalized) {
+    return normalized;
+  }
+
+  const lowerFileName = String(fileName || "").trim().toLowerCase();
+  if (lowerFileName.endsWith(".html") || lowerFileName.endsWith(".htm")) {
+    return "text/html";
+  }
+  if (lowerFileName.endsWith(".md") || lowerFileName.endsWith(".markdown")) {
+    return "text/markdown";
+  }
+  if (lowerFileName.endsWith(".json")) {
+    return "application/json";
+  }
+  if (lowerFileName.endsWith(".txt")) {
+    return "text/plain";
+  }
+  return "";
+};
+
+export const isEditableArtifact = (artifact?: Artifact | null) => {
+  if (!artifact?.artifact_id) {
+    return false;
+  }
+
+  const fileName = artifact.file_name || artifact.artifact_name || "";
+  const normalizedType = normalizeEditableContentType(
+    artifact.content_type || artifact.mime_type,
+    fileName,
+  );
+
+  return (
+    normalizedType === "text/html" ||
+    normalizedType === "text/plain" ||
+    normalizedType === "text/markdown" ||
+    normalizedType === "application/json"
+  );
+};
+
+export const isEditableArtifactItem = (item: ArtifactGalleryItem) =>
+  isEditableArtifact(item.artifact);
 
 export const getOutputUrl = (item: ArtifactGalleryItem) =>
   item.artifact?.object_url || item.artifact?.public_url || item.url || "";

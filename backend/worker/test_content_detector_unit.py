@@ -9,7 +9,7 @@ from pathlib import Path
 worker_dir = Path(__file__).parent
 sys.path.insert(0, str(worker_dir))
 
-from utils.content_detector import detect_content_type
+from utils.content_detector import detect_content_type, resolve_artifact_content
 
 
 def test_detects_json_object():
@@ -33,6 +33,31 @@ def test_detects_html():
 def test_detects_html_in_code_fence():
     html = "```html\n<!DOCTYPE html><html><body>OK</body></html>\n```"
     assert detect_content_type(html, "Some Step") == ".html"
+
+
+def test_detects_html_from_shell_heredoc_with_preface():
+    content = """Done - I created the HTML file.
+
+[Tool output]
+$ cat > index.html <<'EOF'
+<!DOCTYPE html>
+<html><body>OK</body></html>
+EOF"""
+    assert detect_content_type(content, "Some Step") == ".html"
+
+
+def test_resolve_artifact_content_extracts_shell_html_payload():
+    content = """Done - I created the HTML file.
+
+[Tool output]
+$ cat > index.html <<'EOF'
+<!DOCTYPE html>
+<html><body>OK</body></html>
+EOF"""
+    resolved_content, extension = resolve_artifact_content(content, "Some Step")
+    assert extension == ".html"
+    assert resolved_content.startswith("<!DOCTYPE html>")
+    assert "[Tool output]" not in resolved_content
 
 
 def test_defaults_to_markdown():

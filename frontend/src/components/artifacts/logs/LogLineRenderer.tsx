@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { LazySyntaxHighlighter } from "./LazySyntaxHighlighter";
 import {
   FilteredCommandEntry,
@@ -17,6 +17,145 @@ interface LogLineRendererProps {
   expandedOutputs: Set<string>;
   toggleExpandedOutput: (key: string) => void;
   handleCopyText: (value: string, label: string) => void;
+}
+
+interface GeneratedCommandFileCardProps {
+  fileName: string;
+  content: string;
+  contentType: string;
+  hasQuery: boolean;
+  trimmedQuery: string;
+  handleCopyText: (value: string, label: string) => void;
+}
+
+const actionButtonClassName =
+  "rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60";
+
+function GeneratedCommandFileCard({
+  fileName,
+  content,
+  contentType,
+  hasQuery,
+  trimmedQuery,
+  handleCopyText,
+}: GeneratedCommandFileCardProps) {
+  const [showSource, setShowSource] = useState(false);
+  const resolvedContentType = contentType || "text/plain";
+  const isHtmlPreview =
+    resolvedContentType === "text/html" ||
+    resolvedContentType === "image/svg+xml";
+  const { preview, isTruncated } = useMemo(() => getOutputPreview(content), [content]);
+  const displaySource = showSource ? content : preview;
+  const displayContent = hasQuery
+    ? highlightMatches(displaySource, trimmedQuery)
+    : displaySource;
+  const canToggleSource = isHtmlPreview || isTruncated;
+  const shouldRenderSource = !isHtmlPreview || showSource || hasQuery;
+  const sourceToggleLabel = isHtmlPreview
+    ? showSource
+      ? "Hide source"
+      : "Show source"
+    : showSource
+      ? "Show less"
+      : "Show more";
+  const objectUrl = useMemo(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof URL === "undefined" ||
+      typeof URL.createObjectURL !== "function"
+    ) {
+      return null;
+    }
+    const blob = new Blob([content], { type: resolvedContentType });
+    return URL.createObjectURL(blob);
+  }, [content, resolvedContentType]);
+
+  useEffect(() => {
+    if (hasQuery) {
+      setShowSource(true);
+    }
+  }, [hasQuery]);
+
+  useEffect(() => {
+    return () => {
+      if (objectUrl && typeof URL.revokeObjectURL === "function") {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [objectUrl]);
+
+  return (
+    <div className="rounded-md border border-sky-500/20 bg-sky-950/20">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-[10px] text-slate-300">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="rounded-full bg-sky-400/15 px-2 py-0.5 font-semibold text-sky-200">
+            Generated file
+          </span>
+          <span className="max-w-full truncate font-mono text-slate-100">
+            {fileName}
+          </span>
+          <span className="rounded-full bg-white/5 px-2 py-0.5 text-slate-400">
+            {resolvedContentType}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-1">
+          <button
+            type="button"
+            onClick={() => handleCopyText(content, `${fileName} source`)}
+            className={actionButtonClassName}
+          >
+            Copy source
+          </button>
+          {objectUrl && (
+            <a
+              href={objectUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={actionButtonClassName}
+            >
+              Open
+            </a>
+          )}
+          {objectUrl && (
+            <a
+              href={objectUrl}
+              download={fileName}
+              className={actionButtonClassName}
+            >
+              Download
+            </a>
+          )}
+          {canToggleSource && (
+            <button
+              type="button"
+              onClick={() => setShowSource((current) => !current)}
+              className={actionButtonClassName}
+            >
+              {sourceToggleLabel}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isHtmlPreview && objectUrl && (
+        <div className="border-t border-sky-500/20 bg-white">
+          <iframe
+            src={objectUrl}
+            title={`${fileName} preview`}
+            className="h-56 w-full border-0"
+            sandbox="allow-scripts allow-forms allow-popups"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      )}
+
+      {shouldRenderSource && (
+        <pre className="m-0 whitespace-pre-wrap break-words border-t border-sky-500/20 px-3 py-2 font-mono text-[11px] text-slate-100">
+          {displayContent}
+        </pre>
+      )}
+    </div>
+  );
 }
 
 export const LogLineRenderer: React.FC<LogLineRendererProps> = ({
@@ -78,6 +217,16 @@ export const LogLineRenderer: React.FC<LogLineRendererProps> = ({
                   wordBreak: "break-word",
                 },
               }}
+            />
+          ) : segment.type === "file" ? (
+            <GeneratedCommandFileCard
+              key={`file-${segment.fileName}-${index}`}
+              fileName={segment.fileName}
+              content={segment.content}
+              contentType={segment.contentType}
+              hasQuery={hasQuery}
+              trimmedQuery={trimmedQuery}
+              handleCopyText={handleCopyText}
             />
           ) : (
             renderShell(segment.content, `shell-${index}`)

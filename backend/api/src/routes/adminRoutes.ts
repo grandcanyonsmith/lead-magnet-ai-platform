@@ -1,5 +1,6 @@
 import { submissionsController } from "../controllers/submissions";
 import { artifactsController } from "../controllers/artifacts";
+import { artifactEditsController } from "../controllers/artifactEditsController";
 import { settingsController } from "../controllers/settings";
 import { billingController } from "../controllers/billing";
 import { analyticsController } from "../controllers/analytics";
@@ -57,6 +58,38 @@ export function registerAdminRoutes(): void {
     "/admin/artifacts/:id",
     async (params, _body, _query, tenantId) => {
       return await artifactsController.get(tenantId!, params.id);
+    },
+  );
+
+  router.register(
+    "POST",
+    "/admin/artifacts/:id/edit",
+    async (params, body, _query, tenantId) => {
+      return await artifactEditsController.startEdit(
+        tenantId!,
+        params.id,
+        body,
+      );
+    },
+  );
+
+  router.register(
+    "GET",
+    "/admin/artifact-edits/:id/stream",
+    async (params, _body, _query, tenantId, context) => {
+      return await artifactEditsController.streamStatus(
+        tenantId!,
+        params.id,
+        context,
+      );
+    },
+  );
+
+  router.register(
+    "GET",
+    "/admin/artifact-edits/:id",
+    async (params, _body, _query, tenantId) => {
+      return await artifactEditsController.getStatus(tenantId!, params.id);
     },
   );
 

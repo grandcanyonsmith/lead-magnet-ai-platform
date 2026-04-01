@@ -15,7 +15,7 @@ from services.container_file_citation_service import ContainerFileCitationServic
 from services.execution_step_manager import ExecutionStepManager
 from services.usage_service import UsageService
 from services.image_artifact_service import ImageArtifactService
-from utils.content_detector import detect_content_type
+from utils.content_detector import resolve_artifact_content
 from core.prompts import PROMPT_CONFIGS
 
 logger = logging.getLogger(__name__)
@@ -327,15 +327,16 @@ class AIStepProcessor:
                     exc_info=True,
                 )
 
-        # Determine file extension based on content and step name
-        file_ext = detect_content_type(step_output, step_name)
+        # Keep raw step output for execution history, but store the primary
+        # deliverable payload as the step artifact when we can detect one.
+        artifact_content, file_ext = resolve_artifact_content(step_output, step_name)
         
         # Store step output as artifact
         step_artifact_id = self.artifact_service.store_artifact(
             tenant_id=tenant_id,
             job_id=job_id,
             artifact_type='step_output',
-            content=step_output,
+            content=artifact_content,
             filename=f'step_{step_index + 1}_{step_name.lower().replace(" ", "_")}{file_ext}'
         )
         

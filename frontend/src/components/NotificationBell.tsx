@@ -9,10 +9,15 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/Popover";
+import { subscribeToNotificationsRefresh } from "@/utils/notifications/notificationEvents";
 
 interface Notification {
   notification_id: string;
-  type: "workflow_created" | "job_completed";
+  type:
+    | "workflow_created"
+    | "job_completed"
+    | "artifact_edit_completed"
+    | "artifact_edit_failed";
   title: string;
   message: string;
   read: boolean;
@@ -58,7 +63,14 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
       loadNotifications();
     }, 30000);
 
-    return () => clearInterval(interval);
+    const unsubscribe = subscribeToNotificationsRefresh(() => {
+      void loadNotifications();
+    });
+
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+    };
   }, [loadNotifications]);
 
   const handleMarkAsRead = async (

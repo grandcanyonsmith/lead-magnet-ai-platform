@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ArtifactEditAction } from "@/components/jobs/detail/ArtifactEditAction";
 import { PreviewCard } from "@/components/artifacts/PreviewCard";
 import { OutputCardActions } from "@/components/jobs/detail/OutputCardActions";
 import { OutputPreview } from "@/components/jobs/detail/OutputPreview";
@@ -9,6 +10,7 @@ import {
   getOutputLabel,
   getOutputPreviewMeta,
   getOutputUrl,
+  isEditableArtifactItem,
   shouldShowOutputDescription,
   type OutputGroupKey,
 } from "@/utils/jobs/outputs";
@@ -108,6 +110,20 @@ export function JobOverviewSection({
                         );
                         const displayLabel = getOutputLabel(item, activeGroup.key);
                         const outputUrl = getOutputUrl(item);
+                        const canEditArtifact = isEditableArtifactItem(item);
+                        const actions =
+                          outputUrl || canEditArtifact ? (
+                            <div className="flex items-center gap-1">
+                              <ArtifactEditAction artifact={item.artifact} />
+                              {outputUrl ? (
+                                <OutputCardActions
+                                  url={outputUrl}
+                                  artifactId={item.artifact?.artifact_id}
+                                  contentType={item.artifact?.content_type}
+                                />
+                              ) : null}
+                            </div>
+                          ) : null;
                         return (
                           <PreviewCard
                             key={item.id}
@@ -121,15 +137,7 @@ export function JobOverviewSection({
                                 className="h-full w-full"
                               />
                             }
-                            actions={
-                              outputUrl ? (
-                                <OutputCardActions
-                                  url={outputUrl}
-                                  artifactId={item.artifact?.artifact_id}
-                                  contentType={item.artifact?.content_type}
-                                />
-                              ) : null
-                            }
+                            actions={actions}
                             onClick={onPreview ? () => onPreview(item) : undefined}
                             className={outputCardClassName}
                             previewClassName={previewSizeClass}

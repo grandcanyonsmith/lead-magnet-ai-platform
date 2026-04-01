@@ -30,6 +30,7 @@ export interface SelectProps {
   "aria-describedby"?: string
   searchable?: boolean
   searchPlaceholder?: string
+  portal?: boolean
 }
 
 const toOptions = (child: React.ReactNode, groupIndex = 0): SelectOption[] => {
@@ -81,6 +82,7 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
       "aria-describedby": ariaDescribedBy,
       searchable,
       searchPlaceholder,
+      portal = true,
       children,
     },
     ref,
@@ -152,6 +154,7 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(
           >
             <Listbox.Options
               anchor="bottom start"
+              portal={portal}
               modal={false}
               onWheel={(e) => e.stopPropagation()}
               className="z-[60] mt-1 max-h-60 w-[var(--button-width)] max-w-[calc(100vw-2rem)] overflow-auto overscroll-contain rounded-md border border-input bg-popover py-1 text-sm shadow-md ring-1 ring-black/5 focus:outline-none"

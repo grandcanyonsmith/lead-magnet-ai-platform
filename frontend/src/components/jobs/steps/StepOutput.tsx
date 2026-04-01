@@ -215,6 +215,7 @@ export function StepOutput({
                     formatted={formattedOutput}
                     imageUrls={stepImageUrls}
                     showImagePreviews={false}
+                    jsonDisplayMode="summary"
                   />
                 );
               })()}

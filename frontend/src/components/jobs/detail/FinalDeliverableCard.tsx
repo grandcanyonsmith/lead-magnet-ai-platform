@@ -7,7 +7,13 @@ import {
 } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { openJobDocumentInNewTab } from "@/utils/jobs/openJobDocument";
-import { getOutputUrl, getOutputPreviewMeta, getOutputGroupKey } from "@/utils/jobs/outputs";
+import {
+  getOutputUrl,
+  getOutputPreviewMeta,
+  getOutputGroupKey,
+  isEditableArtifact,
+} from "@/utils/jobs/outputs";
+import { ArtifactEditAction } from "@/components/jobs/detail/ArtifactEditAction";
 import { OutputPreview } from "@/components/jobs/detail/OutputPreview";
 import type { ArtifactGalleryItem } from "@/types/job";
 
@@ -24,6 +30,7 @@ export function FinalDeliverableCard({
   const artifactUrl = getOutputUrl(item);
   const groupKey = getOutputGroupKey(item);
   const preview = getOutputPreviewMeta(item);
+  const canEditArtifact = isEditableArtifact(item.artifact);
 
   const handleViewOutput = async () => {
     if (!item.jobId || opening) return;
@@ -69,25 +76,34 @@ export function FinalDeliverableCard({
             {opening ? "Opening..." : "View Output"}
           </button>
 
-          {artifactUrl && (
+          {(artifactUrl || canEditArtifact) && (
             <>
-              <a
-                href={artifactUrl}
-                download
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                aria-label="Download"
-              >
-                <ArrowDownTrayIcon className="h-5 w-5" />
-              </a>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); void handleCopy(); }}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                aria-label="Share"
-              >
-                <ArrowUpOnSquareIcon className="h-5 w-5" />
-              </button>
+              <ArtifactEditAction
+                artifact={item.artifact}
+                buttonClassName="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                tooltipContent="Edit this file with AI"
+              />
+              {artifactUrl ? (
+                <>
+                  <a
+                    href={artifactUrl}
+                    download
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    aria-label="Download"
+                  >
+                    <ArrowDownTrayIcon className="h-5 w-5" />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); void handleCopy(); }}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    aria-label="Share"
+                  >
+                    <ArrowUpOnSquareIcon className="h-5 w-5" />
+                  </button>
+                </>
+              ) : null}
             </>
           )}
         </div>

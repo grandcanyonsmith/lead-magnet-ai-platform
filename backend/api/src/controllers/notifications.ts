@@ -7,7 +7,11 @@ import { parseLimitParam } from "../utils/pagination";
 
 const NOTIFICATIONS_TABLE = env.notificationsTable;
 
-export type NotificationType = "workflow_created" | "job_completed";
+export type NotificationType =
+  | "workflow_created"
+  | "job_completed"
+  | "artifact_edit_completed"
+  | "artifact_edit_failed";
 
 export interface NotificationData {
   notification_id: string;

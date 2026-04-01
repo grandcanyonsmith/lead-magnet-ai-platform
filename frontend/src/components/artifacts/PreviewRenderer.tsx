@@ -410,7 +410,13 @@ export function PreviewRenderer({
   }, [parsedMarkdownJson]);
 
   const jsonMarkdownPreview = jsonMarkdown ?? parsedMarkdownJsonMarkdown;
-  const resolvedJsonViewMode = jsonMarkdownPreview ? jsonViewMode : "json";
+  // Compact cards do not render the JSON/summary toggle, so prefer the summary view
+  // whenever we can synthesize one from JSON content.
+  const resolvedJsonViewMode = jsonMarkdownPreview
+    ? isCompactPreview
+      ? "markdown"
+      : jsonViewMode
+    : "json";
 
   if (!previewObjectUrl && !artifactId) {
     return (

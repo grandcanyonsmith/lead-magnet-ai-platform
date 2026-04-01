@@ -2,7 +2,7 @@
  * Hook for fetching and organizing artifacts by step order
  */
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { api } from "@/lib/api";
 import { Artifact } from "@/types/artifact";
 import { MergedStep } from "@/types/job";
@@ -48,23 +48,23 @@ export function useStepArtifacts(options: UseStepArtifactsOptions) {
     stepsRef.current = steps;
   }, [steps]);
 
-  // Fetch artifacts only when jobId changes
-  useEffect(() => {
-    const fetchArtifacts = async () => {
+  const fetchArtifacts = useCallback(
+    async (force: boolean = false) => {
       if (!isEnabled) return;
       if (!jobId) return;
 
-      // Skip if we already fetched artifacts for this jobId
-      if (lastFetchedJobIdRef.current === jobId) {
+      if (!force && lastFetchedJobIdRef.current === jobId) {
         return;
       }
 
       try {
         setLoading(true);
-        setArtifacts([]);
-        setImageArtifactsByStep(new Map());
-        setFileArtifactsByStep(new Map());
-        
+        if (force || lastFetchedJobIdRef.current !== jobId) {
+          setArtifacts([]);
+          setImageArtifactsByStep(new Map());
+          setFileArtifactsByStep(new Map());
+        }
+
         const response = await api.getArtifacts({
           job_id: jobId,
           limit: 200,
@@ -78,10 +78,14 @@ export function useStepArtifacts(options: UseStepArtifactsOptions) {
       } finally {
         setLoading(false);
       }
-    };
+    },
+    [isEnabled, jobId],
+  );
 
-    fetchArtifacts();
-  }, [jobId, isEnabled]);
+  // Fetch artifacts only when jobId changes
+  useEffect(() => {
+    void fetchArtifacts();
+  }, [fetchArtifacts]);
 
   useEffect(() => {
     if (!isEnabled && loading) {
@@ -166,5 +170,10 @@ export function useStepArtifacts(options: UseStepArtifactsOptions) {
     fileArtifactsByStep,
     artifacts,
     loading,
+    refresh: async () => {
+      if (!jobId) return;
+      lastFetchedJobIdRef.current = undefined;
+      await fetchArtifacts(true);
+    },
   };
 }

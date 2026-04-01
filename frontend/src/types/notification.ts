@@ -4,7 +4,11 @@
 
 import { BaseEntity } from "./common";
 
-export type NotificationType = "workflow_created" | "job_completed";
+export type NotificationType =
+  | "workflow_created"
+  | "job_completed"
+  | "artifact_edit_completed"
+  | "artifact_edit_failed";
 
 export type RelatedResourceType = "workflow" | "job";
 

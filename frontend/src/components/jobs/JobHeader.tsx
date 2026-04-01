@@ -10,6 +10,8 @@ import {
   EllipsisVerticalIcon,
   PencilSquareIcon,
 } from "@heroicons/react/24/outline";
+import { Badge, type BadgeProps } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
   DropdownMenu,
@@ -67,6 +69,20 @@ const STATUS_BORDER_CLASS: Record<Status, string> = {
   failed: "border-red-500",
 };
 
+const STATUS_BADGE_VARIANT: Record<Status, NonNullable<BadgeProps["variant"]>> = {
+  pending: "outline",
+  processing: "warning",
+  completed: "success",
+  failed: "destructive",
+};
+
+const STATUS_LABEL: Record<Status, string> = {
+  pending: "Pending",
+  processing: "Running",
+  completed: "Completed",
+  failed: "Failed",
+};
+
 export function JobHeader({
   error,
   resubmitting,
@@ -107,18 +123,31 @@ export function JobHeader({
     runSelector?.label ||
     (job?.job_id ? `Job ${job.job_id.slice(0, 8)}` : "");
   const showRunBreadcrumb = Boolean(runLabel);
+  const titleLabel =
+    runSelector?.label && runSelector.label !== workflowLabel
+      ? runSelector.label
+      : workflowLabel;
+  const titleContextLabel =
+    titleLabel !== workflowLabel ? workflowLabel : null;
 
   const effectiveStatus = error ? "failed" : job?.status;
   const statusBorderClass = effectiveStatus
     ? STATUS_BORDER_CLASS[effectiveStatus]
     : "border-transparent";
+  const statusLabel = effectiveStatus ? STATUS_LABEL[effectiveStatus] : null;
+  const statusBadgeVariant = effectiveStatus
+    ? STATUS_BADGE_VARIANT[effectiveStatus]
+    : undefined;
   const statusSummaryParts: string[] = [];
   if (effectiveStatus === "completed" || effectiveStatus === "failed") {
-    const label = effectiveStatus === "completed" ? "Completed" : "Failed";
     const duration = jobDuration?.label;
-    statusSummaryParts.push(duration ? `${label} in ${duration}` : label);
-  } else if (effectiveStatus === "processing") {
-    statusSummaryParts.push("Processing...");
+    if (duration) {
+      statusSummaryParts.push(
+        effectiveStatus === "completed"
+          ? `Completed in ${duration}`
+          : `Failed after ${duration}`,
+      );
+    }
   }
   if (stepsSummary?.total) {
     statusSummaryParts.push(`${stepsSummary.total} step${stepsSummary.total === 1 ? "" : "s"}`);
@@ -127,8 +156,8 @@ export function JobHeader({
     statusSummaryParts.push(`$${totalCost.toFixed(2)}`);
   }
   const headingContent = (
-    <span className="flex min-w-0 flex-col gap-2">
-      <span className="flex min-w-0 flex-wrap items-center gap-1 text-xs font-medium text-muted-foreground sm:text-sm">
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-1 text-xs font-medium text-muted-foreground sm:text-sm">
         <Link
           href="/dashboard/jobs"
           className="transition-colors hover:text-foreground"
@@ -163,26 +192,49 @@ export function JobHeader({
             </span>
           </>
         )}
-      </span>
-      <span
-        className="block min-w-0 truncate text-foreground"
-        title={workflowLabel}
-      >
-        {workflowLabel}
-      </span>
+      </div>
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="flex min-w-0 flex-wrap items-start gap-2 sm:items-center">
+          <h1 className="min-w-0 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            <span className="block truncate" title={titleLabel}>
+              {titleLabel}
+            </span>
+          </h1>
+          {statusLabel && statusBadgeVariant && (
+            <Badge
+              variant={statusBadgeVariant}
+              className="shrink-0 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em]"
+            >
+              {effectiveStatus === "processing" && (
+                <ArrowPathIcon className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              )}
+              {statusLabel}
+            </Badge>
+          )}
+        </div>
+        {titleContextLabel && (
+          <p className="text-sm text-muted-foreground">
+            Lead magnet:{" "}
+            <span className="font-medium text-foreground/80">
+              {titleContextLabel}
+            </span>
+          </p>
+        )}
+      </div>
       {statusSummaryParts.length > 0 && (
-        <span className="flex flex-wrap items-center gap-2">
-          {statusSummaryParts.map((part) => (
-            <span
-              key={part}
-              className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground"
+        <div className="flex flex-wrap items-center gap-2">
+          {statusSummaryParts.map((part, index) => (
+            <Badge
+              key={`${part}-${index}`}
+              variant="outline"
+              className="border-border/60 bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground"
             >
               {part}
-            </span>
+            </Badge>
           ))}
-        </span>
+        </div>
       )}
-    </span>
+    </div>
   );
 
   const stats = buildJobHeaderStats({
@@ -257,88 +309,91 @@ export function JobHeader({
           />
         }
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1">
-            <button
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+          <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-background/80 p-1 shadow-sm">
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               aria-label="Previous job"
               title={isNavDisabled ? "Loading jobs..." : "Previous job"}
               onClick={() => handleJobNavigate(previousJobHref)}
               disabled={isNavDisabled || !previousJobHref}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-8 w-8 rounded-md"
             >
-              <ChevronLeftIcon className="h-5 w-5" />
-            </button>
-            <button
+              <ChevronLeftIcon className="h-4 w-4" />
+            </Button>
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               aria-label="Next job"
               title={isNavDisabled ? "Loading jobs..." : "Next job"}
               onClick={() => handleJobNavigate(nextJobHref)}
               disabled={isNavDisabled || !nextJobHref}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-8 w-8 rounded-md"
             >
-              <ChevronRightIcon className="h-5 w-5" />
-            </button>
+              <ChevronRightIcon className="h-4 w-4" />
+            </Button>
           </div>
 
           {onRefresh && (
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={onRefresh}
               disabled={refreshing}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="gap-2"
             >
               <ArrowPathIcon
                 className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
               />
               {refreshing ? "Refreshing..." : "Refresh data"}
-            </button>
+            </Button>
           )}
 
-          <button
+          <Button
             type="button"
             onClick={onResubmit}
             disabled={resubmitting}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="gap-2"
           >
             <ArrowUturnLeftIcon className="h-4 w-4" />
             {resubmitting ? "Resubmitting..." : "Resubmit"}
-          </button>
-        </div>
+          </Button>
 
-        {workflow?.workflow_id && (
-          <DropdownMenu>
-            <div className="relative inline-block text-left ml-auto">
+          {workflow?.workflow_id && (
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="icon"
                   aria-label="Job actions"
-                  className="inline-flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="shrink-0"
                 >
-                  <EllipsisVerticalIcon className="h-5 w-5" />
-                </button>
+                  <EllipsisVerticalIcon className="h-4 w-4" />
+                </Button>
               </DropdownMenuTrigger>
-            </div>
-            <DropdownMenuContent
-              align="end"
-              side="bottom"
-              sideOffset={8}
-              className="w-52 divide-y divide-gray-100 dark:divide-gray-800 rounded-lg bg-white dark:bg-gray-900 shadow-lg ring-1 ring-black/5 dark:ring-white/10 z-50"
-            >
-              <div className="px-1 py-1">
+              <DropdownMenuContent
+                align="end"
+                side="bottom"
+                sideOffset={8}
+                className="w-52"
+              >
                 <DropdownMenuItem
                   onClick={() =>
                     resolvedEditHref ? router.push(resolvedEditHref) : undefined
                   }
-                  className="group flex w-full items-center rounded-md px-2 py-2 text-sm transition-colors text-gray-700 dark:text-gray-300"
+                  className="gap-2"
                 >
-                  <PencilSquareIcon className="mr-2 h-4 w-4" />
+                  <PencilSquareIcon className="h-4 w-4" />
                   Edit lead magnet
                 </DropdownMenuItem>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </PageHeader>
     </div>
   );

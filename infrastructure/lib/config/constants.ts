@@ -41,6 +41,7 @@ export const TABLE_NAMES = {
   TRACKING_EVENTS: 'leadmagnet-tracking-events',
   RATE_LIMITS: 'leadmagnet-rate-limits',
   HTML_PATCH_REQUESTS: 'leadmagnet-html-patch-requests',
+  ARTIFACT_EDIT_REQUESTS: 'leadmagnet-artifact-edit-requests',
 } as const;
 
 /**
@@ -174,6 +175,7 @@ export const TABLE_ENV_VAR_MAP: Record<TableKey, string> = {
   trackingEvents: 'TRACKING_EVENTS_TABLE',
   rateLimits: 'RATE_LIMITS_TABLE',
   htmlPatchRequests: 'HTML_PATCH_REQUESTS_TABLE',
+  artifactEditRequests: 'ARTIFACT_EDIT_REQUESTS_TABLE',
 } as const;
 
 /**

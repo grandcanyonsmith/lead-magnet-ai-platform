@@ -1,3 +1,5 @@
+import { extractShellCreatedFiles } from "@/utils/shellFileExtraction";
+
 export const LARGE_COMMAND_THRESHOLD = 12;
 export const LARGE_CALL_THRESHOLD = 4;
 export const MAX_OUTPUT_PREVIEW_LINES = 14;
@@ -63,7 +65,15 @@ export interface FilteredLogEntry {
   matchedCount: number;
 }
 
-export type ShellCommandSegment = { type: "shell" | "python"; content: string };
+export type ShellCommandSegment =
+  | { type: "shell"; content: string }
+  | { type: "python"; content: string }
+  | {
+      type: "file";
+      content: string;
+      fileName: string;
+      contentType: string;
+    };
 
 export const EMPTY_LOGS: ShellExecutorCallLog[] = [];
 
@@ -155,6 +165,10 @@ export const extractPythonDashC = (line: string): string | null => {
 export const splitShellCommandSegments = (command: string): ShellCommandSegment[] => {
   const normalized = command.replace(/\r\n/g, "\n");
   const lines = normalized.split("\n");
+  const createdFiles = extractShellCreatedFiles(normalized);
+  const createdFilesByStartLine = new Map(
+    createdFiles.map((item) => [item.startLineIndex, item]),
+  );
   const segments: ShellCommandSegment[] = [];
   let shellBuffer: string[] = [];
   let pythonBuffer: string[] = [];
@@ -187,6 +201,19 @@ export const splitShellCommandSegments = (command: string): ShellCommandSegment[
           pythonEndMarker = marker;
           continue;
         }
+      }
+      const createdFile = createdFilesByStartLine.get(i);
+      if (createdFile) {
+        shellBuffer.push(line);
+        flushShell();
+        segments.push({
+          type: "file",
+          content: createdFile.content,
+          fileName: createdFile.fileName,
+          contentType: createdFile.contentType,
+        });
+        i = createdFile.endLineIndex;
+        continue;
       }
       const inlineCode = extractPythonDashC(line);
       if (inlineCode) {

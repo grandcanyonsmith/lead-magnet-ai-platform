@@ -1,8 +1,10 @@
 import React from "react";
 import { FiCode, FiFileText, FiImage, FiFile } from "react-icons/fi";
+import { ArtifactEditAction } from "@/components/jobs/detail/ArtifactEditAction";
 import { OutputCardActions } from "@/components/jobs/detail/OutputCardActions";
 import { Badge } from "@/components/ui/Badge";
 import { Artifact } from "@/types/artifact";
+import { isEditableArtifact } from "@/utils/jobs/outputs";
 
 interface GeneratedFilesListProps {
   fileArtifacts: Artifact[];
@@ -131,6 +133,7 @@ export function GeneratedFilesList({ fileArtifacts }: GeneratedFilesListProps) {
             artifact.size_bytes || artifact.file_size_bytes,
           );
           const iconMeta = getFileIcon(artifact);
+          const canEditArtifact = isEditableArtifact(artifact);
 
           return (
             <div
@@ -168,13 +171,18 @@ export function GeneratedFilesList({ fileArtifacts }: GeneratedFilesListProps) {
                   ) : null}
                 </div>
               </div>
-              {artifactUrl ? (
+              {artifactUrl || canEditArtifact ? (
                 <div className="shrink-0">
-                  <OutputCardActions
-                    url={artifactUrl}
-                    artifactId={artifact.artifact_id}
-                    contentType={artifact.content_type}
-                  />
+                  <div className="flex items-center gap-1">
+                    <ArtifactEditAction artifact={artifact} />
+                    {artifactUrl ? (
+                      <OutputCardActions
+                        url={artifactUrl}
+                        artifactId={artifact.artifact_id}
+                        contentType={artifact.content_type}
+                      />
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
             </div>

@@ -327,7 +327,18 @@ export class DatabaseStack extends cdk.Stack {
       ]
     );
 
-    // Table 20: Folders (legacy table - keep resource definition to maintain CloudFormation exports)
+    // Table 20: Artifact Edit Requests (async per-file edits, TTL for cleanup)
+    const artifactEditRequestsTable = createTable(
+      this,
+      'ArtifactEditRequestsTable',
+      {
+        tableName: TABLE_NAMES.ARTIFACT_EDIT_REQUESTS,
+        partitionKey: { name: 'edit_id', type: dynamodb.AttributeType.STRING },
+        timeToLiveAttribute: 'ttl',
+      }
+    );
+
+    // Table 21: Folders (legacy table - keep resource definition to maintain CloudFormation exports)
     // This table exists in DynamoDB and CloudFormation - keep the resource definition unchanged
     // CloudFormation will reference existing table without modifications
     // Note: Not included in tablesMap as it's legacy and not used by application code
@@ -381,6 +392,7 @@ export class DatabaseStack extends cdk.Stack {
       [TableKey.TRACKING_EVENTS]: trackingEventsTable,
       [TableKey.RATE_LIMITS]: rateLimitsTable,
       [TableKey.HTML_PATCH_REQUESTS]: htmlPatchRequestsTable,
+      [TableKey.ARTIFACT_EDIT_REQUESTS]: artifactEditRequestsTable,
     };
 
     // CloudFormation outputs

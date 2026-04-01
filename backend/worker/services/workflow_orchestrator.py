@@ -13,7 +13,7 @@ from services.step_processor import StepProcessor
 from services.context_builder import ContextBuilder
 from services.field_label_service import FieldLabelService
 from services.job_completion_service import JobCompletionService
-from utils.content_detector import detect_content_type
+from utils.content_detector import resolve_artifact_content
 from utils.step_utils import normalize_step_order
 
 logger = logging.getLogger(__name__)
@@ -224,9 +224,12 @@ class WorkflowOrchestrator:
                 )
                 deliverable_context = accumulated_context
 
-        final_content = deliverable_context if deliverable_context else accumulated_context
+        raw_final_content = deliverable_context if deliverable_context else accumulated_context
         last_step_name = step_outputs[-1].get('step_name', '') if step_outputs else ''
-        file_ext = detect_content_type(str(final_content or ""), str(last_step_name or ""))
+        final_content, file_ext = resolve_artifact_content(
+            str(raw_final_content or ""),
+            str(last_step_name or ""),
+        )
         if file_ext == '.html':
             final_artifact_type = 'html_final'
             final_filename = 'final.html'

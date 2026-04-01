@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useStepArtifacts } from "@/hooks/useStepArtifacts";
 import { useJobAutoUploads } from "@/hooks/useJobAutoUploads";
 import { buildArtifactGalleryItems } from "@/utils/jobs/artifacts";
+import { subscribeToArtifactEditCompleted } from "@/utils/jobs/artifactEditEvents";
 import { Job, MergedStep } from "@/types/job";
 
 export function useJobArtifactsData({
@@ -18,13 +19,18 @@ export function useJobArtifactsData({
     fileArtifactsByStep,
     artifacts: jobArtifacts,
     loading: loadingArtifacts,
+    refresh: refreshArtifacts,
   } = useStepArtifacts({
     jobId: job?.job_id,
     steps: mergedSteps,
     enabled: shouldLoadExecutionSteps,
   });
 
-  const { items: autoUploads, loading: loadingAutoUploads } = useJobAutoUploads({
+  const {
+    items: autoUploads,
+    loading: loadingAutoUploads,
+    refresh: refreshAutoUploads,
+  } = useJobAutoUploads({
     jobId: job?.job_id,
     enabled: shouldLoadExecutionSteps,
     jobStatus: job?.status,
@@ -61,6 +67,26 @@ export function useJobArtifactsData({
 
   const loadingOutputs = loadingArtifacts || loadingAutoUploads;
 
+  useEffect(() => {
+    if (!shouldLoadExecutionSteps || !job?.job_id) {
+      return;
+    }
+
+    return subscribeToArtifactEditCompleted((detail) => {
+      if (detail.jobId && detail.jobId !== job.job_id) {
+        return;
+      }
+
+      void refreshArtifacts();
+      void refreshAutoUploads();
+    });
+  }, [
+    job?.job_id,
+    refreshArtifacts,
+    refreshAutoUploads,
+    shouldLoadExecutionSteps,
+  ]);
+
   return {
     imageArtifactsByStep,
     fileArtifactsByStep,
@@ -68,5 +94,8 @@ export function useJobArtifactsData({
     autoUploads,
     artifactGalleryItems,
     loadingOutputs,
+    refreshOutputs: async () => {
+      await Promise.all([refreshArtifacts(), refreshAutoUploads()]);
+    },
   };
 }

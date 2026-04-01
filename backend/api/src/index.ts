@@ -78,6 +78,21 @@ export const handler = async (
     }
   }
 
+  // Handle artifact edit request (async Lambda invocation)
+  if (event.source === 'artifact-edit-request' && event.edit_id) {
+    try {
+      const { handleArtifactEditRequest } = await import('./controllers/artifactEditHandler');
+      return await handleArtifactEditRequest(event);
+    } catch (error: any) {
+      logger.error('Error processing artifact edit request', {
+        error: error.message,
+        editId: event.edit_id,
+        stack: error.stack,
+      });
+      throw error;
+    }
+  }
+
   // Normal API Gateway request
   const apiEvent = event as APIGatewayProxyEventV2;
   logger.info('Incoming request', {
