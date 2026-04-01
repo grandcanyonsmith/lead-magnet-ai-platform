@@ -14,10 +14,6 @@ export interface OpenJobDocumentOptions {
    */
   fallbackUrl?: string;
   /**
-   * How long to wait before revoking the blob URL.
-   */
-  revokeAfterMs?: number;
-  /**
    * Provide a string to show a success toast, or set to false/undefined to skip.
    */
   successToast?: string | false;
@@ -81,7 +77,6 @@ export async function openJobDocumentInNewTab(
 
   const {
     fallbackUrl,
-    revokeAfterMs = 5000,
     successToast,
     showLoadingToast = true,
   } = options;
@@ -150,49 +145,38 @@ export async function openJobDocumentInNewTab(
     }
   }
 
-  let blobUrl: string | null = null;
-
   try {
-    // Fetch the blob URL
-    blobUrl = await api.getJobDocumentBlobUrl(jobId);
+    const html = await api.getJobDocument(jobId);
 
-    if (!blobUrl) {
-      throw new Error("Failed to create blob URL");
+    if (!html) {
+      throw new Error("Document is empty");
     }
 
-    // Navigate the window if we opened one, otherwise use anchor click
     if (!windowWasBlocked && loadingWindow) {
       try {
-        loadingWindow.location.href = blobUrl;
+        loadingWindow.document.open();
+        loadingWindow.document.write(html);
+        loadingWindow.document.close();
         try { loadingWindow.opener = null; } catch { /* cross-origin */ }
       } catch {
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.target = "_blank";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        loadingWindow.close();
+        throw new Error("Failed to render document in new tab");
       }
     } else {
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.target = "_blank";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const popup = window.open("", "_blank");
+      if (popup) {
+        popup.document.open();
+        popup.document.write(html);
+        popup.document.close();
+        try { popup.opener = null; } catch { /* cross-origin */ }
+      } else {
+        throw new Error("Popup blocked");
+      }
     }
 
-    // Clean up loading toast
     if (loadingToastId) {
       toast.dismiss(loadingToastId);
     }
-
-    // Schedule blob URL revocation
-    window.setTimeout(() => {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-      }
-    }, revokeAfterMs);
 
     if (successToast) {
       toast.success(successToast);
@@ -200,12 +184,10 @@ export async function openJobDocumentInNewTab(
 
     return "opened";
   } catch (error: unknown) {
-    // Clean up loading toast
     if (loadingToastId) {
       toast.dismiss(loadingToastId);
     }
 
-    // Close the loading window if we opened one
     if (!windowWasBlocked && loadingWindow) {
       try {
         loadingWindow.close();
@@ -215,7 +197,6 @@ export async function openJobDocumentInNewTab(
     }
 
     if (fallbackUrl) {
-      // Use anchor element approach for fallback URL
       const link = document.createElement("a");
       link.href = fallbackUrl;
       link.target = "_blank";
@@ -227,16 +208,10 @@ export async function openJobDocumentInNewTab(
       toast.error(
         "Could not open via secure viewer — opened direct link instead.",
       );
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-      }
       return "fallback_opened";
     }
 
     toast.error(getUserFacingErrorMessage(error));
-    if (blobUrl) {
-      URL.revokeObjectURL(blobUrl);
-    }
     return "error";
   }
 }
