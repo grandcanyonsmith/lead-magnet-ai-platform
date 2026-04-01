@@ -112,15 +112,10 @@ export function registerJobRoutes(): void {
   router.register(
     "GET",
     "/admin/jobs/:id",
-    async (params, _body, _query, tenantId, context) => {
-      // Cache job details for 30 seconds
-      // Note: If job status updates frequently, we might need shorter TTL or cache invalidation
-      const cacheHandler = cacheMiddleware(30 * 1000);
-      return await cacheHandler(
-        context?.event,
-        tenantId,
-        async () => await jobsController.get(tenantId!, params.id),
-      );
+    async (params, _body, _query, tenantId) => {
+      // Job detail refreshes are used immediately after reruns, edits, and resubmits,
+      // so this route must always return the latest job state.
+      return await jobsController.get(tenantId!, params.id);
     },
   );
 

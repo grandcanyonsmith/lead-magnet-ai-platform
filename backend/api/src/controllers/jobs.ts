@@ -13,6 +13,19 @@ import { RequestContext } from "../routes/router";
 
 const JOBS_TABLE = env.jobsTable;
 const SUBMISSIONS_TABLE = env.submissionsTable;
+const ARTIFACTS_TABLE = env.artifactsTable;
+const PRIMARY_DOCUMENT_ARTIFACT_TYPES = new Set([
+  "html_final",
+  "markdown_final",
+  "json_final",
+]);
+const PRIMARY_DOCUMENT_FILE_NAMES = new Set([
+  "final.html",
+  "final.htm",
+  "final.md",
+  "final.markdown",
+  "final.json",
+]);
 
 class JobsController {
   private buildStatusPayload(job: any) {
@@ -30,6 +43,101 @@ class JobsController {
 
   private isTerminalStatus(status: unknown): boolean {
     return status !== "pending" && status !== "processing";
+  }
+
+  private getArtifactFileName(artifact: any): string {
+    return String(artifact?.artifact_name || artifact?.file_name || "")
+      .trim()
+      .toLowerCase();
+  }
+
+  private isInternalReportArtifact(artifact: any): boolean {
+    const artifactType = String(artifact?.artifact_type || "").toLowerCase();
+    const fileName = this.getArtifactFileName(artifact);
+
+    return artifactType === "report_markdown" || fileName.includes("report.md");
+  }
+
+  private isPrimaryDocumentArtifact(artifact: any): boolean {
+    const artifactType = String(artifact?.artifact_type || "").toLowerCase();
+    const fileName = this.getArtifactFileName(artifact);
+
+    return (
+      PRIMARY_DOCUMENT_ARTIFACT_TYPES.has(artifactType) ||
+      PRIMARY_DOCUMENT_FILE_NAMES.has(fileName)
+    );
+  }
+
+  private async resolveDocumentArtifactId(job: any): Promise<string | null> {
+    if (!ARTIFACTS_TABLE) {
+      throw new ApiError(
+        "ARTIFACTS_TABLE environment variable is not configured",
+        500,
+      );
+    }
+
+    const artifactIds = Array.isArray(job?.artifacts)
+      ? job.artifacts.filter(
+          (artifactId: unknown): artifactId is string =>
+            typeof artifactId === "string" && artifactId.trim() !== "",
+        )
+      : [];
+
+    if (artifactIds.length === 0) {
+      return null;
+    }
+
+    let artifacts: any[] = [];
+
+    try {
+      artifacts = await db.batchGet(
+        ARTIFACTS_TABLE,
+        artifactIds.map((artifactId: string) => ({ artifact_id: artifactId })),
+      );
+    } catch (error) {
+      logger.warn(
+        `[JobsController] Failed to batch fetch artifacts for job ${job.job_id}`,
+        { error },
+      );
+    }
+
+    const artifactMap = new Map(
+      artifacts
+        .filter((artifact) => artifact?.artifact_id)
+        .map((artifact) => [artifact.artifact_id, artifact]),
+    );
+    const artifactsInJobOrder = artifactIds
+      .map((artifactId: string) => artifactMap.get(artifactId))
+      .filter(Boolean);
+
+    const outputUrl = String(job?.output_url || "").trim();
+    if (outputUrl) {
+      const matchingArtifact = artifactsInJobOrder.find((artifact: any) => {
+        const publicUrl = String(artifact?.public_url || "").trim();
+        const objectUrl = String(artifact?.object_url || "").trim();
+        return publicUrl === outputUrl || objectUrl === outputUrl;
+      });
+
+      if (matchingArtifact?.artifact_id) {
+        return matchingArtifact.artifact_id;
+      }
+    }
+
+    const primaryArtifact = artifactsInJobOrder.find((artifact: any) =>
+      this.isPrimaryDocumentArtifact(artifact),
+    );
+    if (primaryArtifact?.artifact_id) {
+      return primaryArtifact.artifact_id;
+    }
+
+    const fallbackArtifact = artifactsInJobOrder.find(
+      (artifact: any) => !this.isInternalReportArtifact(artifact),
+    );
+    if (fallbackArtifact?.artifact_id) {
+      return fallbackArtifact.artifact_id;
+    }
+
+    return artifactIds[1] || artifactIds[0] || null;
   }
 
   async list(
@@ -364,49 +472,7 @@ class JobsController {
       throw new ApiError("No artifacts found for this job", 404);
     }
 
-    // Try to find html_final or markdown_final artifact first
-    const ARTIFACTS_TABLE = env.artifactsTable;
-    if (!ARTIFACTS_TABLE) {
-      throw new ApiError(
-        "ARTIFACTS_TABLE environment variable is not configured",
-        500,
-      );
-    }
-
-    let finalArtifactId: string | null = null;
-
-    // Look for html_final or markdown_final artifact (check in reverse order)
-    const artifactsReversed = [...job.artifacts].reverse();
-    // Use batchGet to fetch all artifacts at once
-    const artifactKeys = artifactsReversed.map((id) => ({
-      artifact_id: id,
-    }));
-
-    try {
-      const artifacts = await db.batchGet(ARTIFACTS_TABLE, artifactKeys);
-      const artifactMap = new Map(artifacts.map((a) => [a.artifact_id, a]));
-
-      for (const artifactId of artifactsReversed) {
-        const artifact = artifactMap.get(artifactId);
-        if (
-          artifact &&
-          (artifact.artifact_type === "html_final" ||
-            artifact.artifact_type === "markdown_final")
-        ) {
-          finalArtifactId = artifactId;
-          break;
-        }
-      }
-    } catch (error) {
-      logger.warn(`Failed to batch fetch artifacts for job ${jobId}`, {
-        error,
-      });
-    }
-
-    // Fallback to last artifact if no final artifact found
-    if (!finalArtifactId) {
-      finalArtifactId = job.artifacts[job.artifacts.length - 1];
-    }
+    const finalArtifactId = await this.resolveDocumentArtifactId(job);
 
     if (!finalArtifactId) {
       throw new ApiError("Final artifact not found", 404);
@@ -562,44 +628,7 @@ class JobsController {
       throw new ApiError("No artifacts found for this job", 404);
     }
 
-    const ARTIFACTS_TABLE = env.artifactsTable;
-    if (!ARTIFACTS_TABLE) {
-      throw new ApiError(
-        "ARTIFACTS_TABLE environment variable is not configured",
-        500,
-      );
-    }
-
-    let finalArtifactId: string | null = null;
-
-    const artifactsReversed = [...job.artifacts].reverse();
-    // Use batchGet to fetch all artifacts at once
-    const artifactKeys = artifactsReversed.map((id) => ({
-      artifact_id: id,
-    }));
-
-    try {
-      const artifacts = await db.batchGet(ARTIFACTS_TABLE, artifactKeys);
-      const artifactMap = new Map(artifacts.map((a) => [a.artifact_id, a]));
-
-      for (const artifactId of artifactsReversed) {
-        const artifact = artifactMap.get(artifactId);
-        if (
-          artifact &&
-          (artifact.artifact_type === "html_final" ||
-            artifact.artifact_type === "markdown_final")
-        ) {
-          finalArtifactId = artifactId;
-          break;
-        }
-      }
-    } catch (error) {
-      logger.warn(
-        `Failed to batch fetch artifacts for public document route`,
-        { error },
-      );
-    }
-
+    const finalArtifactId = await this.resolveDocumentArtifactId(job);
     if (!finalArtifactId) {
       throw new ApiError("Final artifact not found", 404);
     }

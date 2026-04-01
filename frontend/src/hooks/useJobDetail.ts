@@ -213,6 +213,7 @@ export function useJobResource(
     if (!jobId || jobId.trim() === "" || jobId === "_") {
       setError("Invalid job ID. Please select a job from the list.");
       setJob(null);
+      jobRef.current = null;
       setWorkflow(null);
       setSubmission(null);
       setForm(null);
@@ -236,12 +237,21 @@ export function useJobResource(
 
     // Store the promise IMMEDIATELY before starting async work
     loadingPromiseRef.current = loadPromise;
+    const jobIdSnapshot = jobId;
 
     // Now start the async work
     (async () => {
+      const isStaleLoad = () =>
+        jobIdRef.current !== jobIdSnapshot ||
+        loadingPromiseRef.current !== loadPromise;
+
       try {
-        const jobIdSnapshot = jobId;
         const data = await api.getJob(jobIdSnapshot);
+        if (isStaleLoad()) {
+          promiseResolve?.();
+          return;
+        }
+
         setJob(data);
         jobRef.current = data; // Update ref with latest job value
         setLastLoadedAt(new Date());
@@ -255,19 +265,27 @@ export function useJobResource(
           message?: string;
         };
         console.error("Failed to load job:", error);
+        if (isStaleLoad()) {
+          promiseResolve?.();
+          return;
+        }
+
         setError(
           err.response?.data?.message ||
             err.message ||
             "Failed to load lead magnet",
         );
         setJob(null);
+        jobRef.current = null;
         setWorkflow(null);
         setSubmission(null);
         setForm(null);
         setLoading(false);
         promiseReject?.(error);
       } finally {
-        setLoading(false);
+        if (!isStaleLoad()) {
+          setLoading(false);
+        }
         // Clear the promise ref when done (only if it's still this promise)
         if (loadingPromiseRef.current === loadPromise) {
           loadingPromiseRef.current = null;
@@ -408,11 +426,16 @@ export function useJobExecution({
 
   // Track latest job value to avoid stale closures
   const jobRef = useRef<Job | null>(null);
+  const jobIdRef = useRef(jobId);
 
   // Keep jobRef in sync with job prop
   useEffect(() => {
     jobRef.current = job;
   }, [job]);
+
+  useEffect(() => {
+    jobIdRef.current = jobId;
+  }, [jobId]);
 
   // Extract S3 key as a stable value to avoid re-running effect when job reference changes
   const executionStepsS3Key = useMemo(
@@ -431,6 +454,7 @@ export function useJobExecution({
   const loadExecutionSteps = useCallback(
     async (jobSnapshot?: Job | null) => {
       if (!jobId || !enableExecutionSteps) return;
+      const jobIdSnapshot = jobId;
 
       // If there's already a load in progress for this jobId, return the existing promise
       if (loadingExecutionStepsPromiseRef.current) {
@@ -450,14 +474,20 @@ export function useJobExecution({
 
       // Now start the async work
       (async () => {
+        const isStaleLoad = () =>
+          jobIdRef.current !== jobIdSnapshot ||
+          loadingExecutionStepsPromiseRef.current !== loadPromise;
+
         // Use jobSnapshot if provided, otherwise fall back to the latest ref.
         const snapshot = jobSnapshot ?? jobRef.current;
         if (!snapshot) {
           const errorMsg = "No job snapshot provided and job not available";
-          setExecutionStepsError(errorMsg);
-          setHasLoadedExecutionSteps(true); // Mark as loaded to prevent retries
-          if (promiseReject) {
-            promiseReject(new Error(errorMsg));
+          if (isStaleLoad()) {
+            promiseResolve?.();
+          } else {
+            setExecutionStepsError(errorMsg);
+            setHasLoadedExecutionSteps(true); // Mark as loaded to prevent retries
+            promiseReject?.(new Error(errorMsg));
           }
           // Clear the promise ref when done
           if (loadingExecutionStepsPromiseRef.current === loadPromise) {
@@ -467,7 +497,12 @@ export function useJobExecution({
         }
 
         try {
-          const executionSteps = await api.getExecutionSteps(jobId);
+          const executionSteps = await api.getExecutionSteps(jobIdSnapshot);
+          if (isStaleLoad()) {
+            promiseResolve?.();
+            return;
+          }
+
           if (Array.isArray(executionSteps)) {
             setJob((prevJob) =>
               prevJob
@@ -484,15 +519,20 @@ export function useJobExecution({
             promiseReject?.(new Error(errorMsg));
           }
         } catch (err: unknown) {
+          if (isStaleLoad()) {
+            promiseResolve?.();
+            return;
+          }
+
           const error = err as {
             response?: { data?: { message?: string } };
             message?: string;
           };
           let errorMsg = `Error fetching execution steps: ${error.response?.data?.message || error.message || "Unknown error"}`;
-          if (snapshot?.execution_steps_s3_key) {
+          if (snapshot.execution_steps_s3_key) {
             errorMsg += ` (S3 Key: ${snapshot.execution_steps_s3_key})`;
           }
-          console.error(`❌ ${errorMsg} for job ${jobId}`, {
+          console.error(`❌ ${errorMsg} for job ${jobIdSnapshot}`, {
             error: err,
             response: error.response,
           });
