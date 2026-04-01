@@ -11,11 +11,11 @@ import { withTimeout } from "./timeout";
 import { logger } from "./logger";
 
 /**
- * Default timeout for OpenAI Responses API calls (120 seconds).
- * Covers most standard calls; callers can override for longer operations
- * (e.g. deep research, shell loops).
+ * Default timeout for OpenAI Responses API calls (300 seconds).
+ * Needs headroom for large artifact edits (big HTML files, etc.)
+ * and reasoning-heavy calls. Callers can override for specific operations.
  */
-export const RESPONSES_TIMEOUT_MS = 120_000;
+export const RESPONSES_TIMEOUT_MS = 300_000;
 
 /**
  * Call an async function with optional timeout.

@@ -40,7 +40,7 @@ export function FolderModals({
         open={showCreateFolderModal}
         onOpenChange={setShowCreateFolderModal}
       >
-        <DialogContent className="z-[100] max-w-md overflow-hidden rounded-2xl p-6 sm:rounded-2xl">
+        <DialogContent className="max-w-md overflow-hidden rounded-2xl p-6 sm:rounded-2xl">
           <DialogHeader className="space-y-0 text-left">
             <DialogTitle className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
               Create New Folder
@@ -87,7 +87,7 @@ export function FolderModals({
           if (!open) setShowMoveFolderModal(null);
         }}
       >
-        <DialogContent className="z-[100] max-w-md overflow-hidden rounded-2xl p-6 sm:rounded-2xl">
+        <DialogContent className="max-w-md overflow-hidden rounded-2xl p-6 sm:rounded-2xl">
           <DialogHeader className="space-y-0 text-left">
             <DialogTitle className="text-lg font-medium leading-6 text-gray-900 dark:text-white">
               Move to Folder

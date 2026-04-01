@@ -109,7 +109,7 @@ export function QuickEditStepModal({
         if (!open) handleClose();
       }}
     >
-      <DialogContent className="z-50 flex max-h-[90vh] w-full max-w-4xl flex-col gap-0 overflow-hidden p-0 sm:rounded-lg">
+      <DialogContent className="flex max-h-[90vh] w-full max-w-4xl flex-col gap-0 overflow-hidden p-0 sm:rounded-lg">
         {/* Header */}
         <PanelHeader className="flex-shrink-0 border-gray-200 bg-white px-6 py-4 dark:border-gray-700 dark:bg-card">
           <div className="flex items-center gap-2">

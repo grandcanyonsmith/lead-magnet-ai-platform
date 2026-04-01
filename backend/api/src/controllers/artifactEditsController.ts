@@ -38,18 +38,20 @@ class ArtifactEditsController {
 
     try {
       if (env.isDevelopment()) {
-        logger.info("[ArtifactEditsController] Local mode - processing edit synchronously", {
+        logger.info("[ArtifactEditsController] Local mode - processing edit in background", {
           editId: request.edit_id,
           artifactId,
         });
         const { handleArtifactEditRequest } = await import("./artifactEditHandler");
-        const response = (await handleArtifactEditRequest({
+        handleArtifactEditRequest({
           source: "artifact-edit-request",
           edit_id: request.edit_id,
-        })) as { statusCode?: number };
-        if ((response?.statusCode || 500) >= 400) {
-          throw new Error("Artifact edit processing failed in local mode");
-        }
+        }).catch((err: any) => {
+          logger.error("[ArtifactEditsController] Background edit failed", {
+            editId: request.edit_id,
+            error: err?.message || String(err),
+          });
+        });
       } else {
         const functionTarget = env.getLambdaInvokeTarget();
         await lambdaClient.send(

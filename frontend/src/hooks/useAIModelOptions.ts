@@ -21,6 +21,7 @@ const normalizeValue = (value?: string | null): string => {
 const MODEL_LABELS = new Map<string, string>(
   AI_MODELS.map((model) => [model.value, model.label]),
 );
+const SUPPORTED_MODEL_ORDER: string[] = AI_MODELS.map((model) => model.value);
 
 const resolveLabel = (value: string): string =>
   MODEL_LABELS.get(value) ?? value;
@@ -31,12 +32,32 @@ export function useAIModelOptions(
   const { models, loading, error } = useAIModels();
 
   const options = useMemo<AIModelOption[]>(() => {
-    const baseOptions = models
-      .map((model) => ({
-        value: model.id,
-        label: model.name || resolveLabel(model.id),
-      }))
-      .filter((option) => option.value);
+    const modelsById = new Map(
+      models
+        .map((model) => [model.id, model] as const)
+        .filter(([id]) => Boolean(id)),
+    );
+
+    const seen = new Set<string>();
+    const baseOptions: AIModelOption[] = [];
+
+    for (const id of SUPPORTED_MODEL_ORDER) {
+      const model = modelsById.get(id);
+      if (!model) continue;
+      seen.add(id);
+      baseOptions.push({
+        value: id,
+        label: model.name || resolveLabel(id),
+      });
+    }
+
+    for (const [id, model] of modelsById) {
+      if (seen.has(id)) continue;
+      baseOptions.push({
+        value: id,
+        label: model.name || id,
+      });
+    }
 
     const current = normalizeValue(currentModel);
     const fallback = normalizeValue(fallbackModel);

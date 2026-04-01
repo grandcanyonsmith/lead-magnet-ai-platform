@@ -149,7 +149,7 @@ export function StepEditModal({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="z-50 max-h-[90vh] w-full max-w-2xl gap-0 overflow-y-auto p-0 sm:rounded-lg">
+      <DialogContent className="max-h-[90vh] w-full max-w-2xl gap-0 overflow-y-auto p-0 sm:rounded-lg">
         {/* Header */}
         <PanelHeader className="border-border bg-card">
           <DialogTitle className="text-lg font-semibold text-foreground">

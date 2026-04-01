@@ -161,11 +161,12 @@ export function ArtifactEditModal({
   const toastIdRef = useRef<string | number | null>(null);
   const completedEditIdRef = useRef<string | null>(null);
   const latestStatusRef = useRef<ArtifactEditStatusResponse | null>(null);
+  const previousOpenRef = useRef(open);
   const { options: modelOptions, loading: modelsLoading } = useAIModelOptions({
     currentModel: selectedModel,
     fallbackModel: DEFAULT_AI_MODEL,
   });
-  const resolveDefaultModel = useCallback(() => {
+  const defaultModel = useMemo(() => {
     if (modelOptions.some((option) => option.value === DEFAULT_AI_MODEL)) {
       return DEFAULT_AI_MODEL;
     }
@@ -182,23 +183,26 @@ export function ArtifactEditModal({
     }
 
     if (!modelOptions.some((option) => option.value === selectedModel)) {
-      setSelectedModel(resolveDefaultModel());
+      setSelectedModel(defaultModel);
     }
-  }, [modelOptions, open, resolveDefaultModel, selectedModel]);
+  }, [defaultModel, modelOptions, open, selectedModel]);
 
   const resetState = useCallback(() => {
     setPrompt("");
     setStatus(null);
     setEvents([]);
     setStreamError(null);
-    setSelectedModel(resolveDefaultModel());
+    setSelectedModel(defaultModel);
     completedEditIdRef.current = null;
     latestStatusRef.current = null;
     toastIdRef.current = null;
-  }, [resolveDefaultModel]);
+  }, [defaultModel]);
 
   useEffect(() => {
-    if (!open && !running) {
+    const wasOpen = previousOpenRef.current;
+    previousOpenRef.current = open;
+
+    if (wasOpen && !open && !running) {
       resetState();
     }
   }, [open, resetState, running]);
@@ -356,9 +360,7 @@ export function ArtifactEditModal({
         toast.error(message, { id: toastIdRef.current || undefined });
       }
     } finally {
-      if (!abortController.signal.aborted) {
-        setRunning(false);
-      }
+      setRunning(false);
     }
   }, [
     applyStatus,
@@ -444,7 +446,6 @@ export function ArtifactEditModal({
                   placeholder={modelsLoading ? "Loading models..." : "Select model"}
                   disabled={modelsLoading || running}
                   searchable
-                  portal={false}
                   searchPlaceholder="Search models..."
                   options={modelOptions}
                 />

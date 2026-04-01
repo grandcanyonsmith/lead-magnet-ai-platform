@@ -87,9 +87,8 @@ export class BaseApiClient {
           this.handleUnauthorized(error);
         }
         
-        // Retry logic for network errors and 5xx errors
         const config = error.config;
-        if (config && !config._retry) {
+        if (config && !config._retry && !config._skipRetry) {
           const shouldRetry = this.shouldRetry(error);
           if (shouldRetry) {
             config._retry = true;

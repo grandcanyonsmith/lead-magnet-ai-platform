@@ -74,10 +74,12 @@ export class ArtifactsClient extends BaseApiClient {
     artifactId: string,
     payload: { prompt: string; model: string },
   ): Promise<ArtifactEditStatusResponse> {
-    return this.post<ArtifactEditStatusResponse>(
+    const response = await this.client.post<ArtifactEditStatusResponse>(
       `/admin/artifacts/${artifactId}/edit`,
       payload,
+      { _skipRetry: true } as any,
     );
+    return response.data;
   }
 
   async getArtifactEditStatus(

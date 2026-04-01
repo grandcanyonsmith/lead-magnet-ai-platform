@@ -135,7 +135,7 @@ export const FullScreenPreviewModal = React.memo(
           if (!open) onClose();
         }}
       >
-        <DialogContent className="fixed inset-0 left-0 top-0 z-50 flex h-[100dvh] max-h-none w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden border-0 bg-transparent p-0 shadow-none data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0 data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0 sm:rounded-none">
+        <DialogContent className="fixed inset-0 left-0 top-0 z-[9999] flex h-[100dvh] max-h-none w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden border-0 bg-transparent p-0 shadow-none data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0 data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0 sm:rounded-none">
           <div className="relative flex h-full w-full flex-col overflow-hidden">
             {/* Navigation Buttons */}
             {hasPrevious && (

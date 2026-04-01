@@ -92,7 +92,14 @@ export function PreviewCard({
                 ) : null}
                 {meta ? <div className="mt-1">{meta}</div> : null}
               </div>
-              {actions}
+              {actions ? (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
+                  {actions}
+                </div>
+              ) : null}
             </div>
           )}
         </div>
